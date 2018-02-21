@@ -15,6 +15,7 @@ classdef gmmpdf
     
     properties (Dependent)
         pdf
+        Entropy
     end
     
     methods
@@ -68,13 +69,13 @@ classdef gmmpdf
             pdf = genP_x(obj.parameters,obj.getDataDomain());
         end
         
-        function H = getEntropy(obj)
-            obj.pdf = obj.genPDF();
-            N = length(obj.pdf);
-            if sum(obj.pdf)~=1
-                obj.pdf = obj.pdf/sum(obj.pdf);
+        function Entropy = get.Entropy(obj)
+            p1 = obj.pdf;
+            N = length(p1);
+            if sum(p1)~=1
+                p1 = p1/sum(p1,'omitnan');
             end
-            H = -dot(obj.pdf,log(obj.pdf))/log(N);
+            Entropy = -dot(p1,log(p1))/log(N);
         end
         
         function dataAxis = getDataDomain(obj)
@@ -83,24 +84,18 @@ classdef gmmpdf
         
         function plotPDF(obj)
             figure('name','Probability density function');
-            plot(obj.getDataDomain(),obj.genPDF());grid('on')
+            plot(obj.getDataDomain(),obj.pdf);grid('on')
         end
         
         function kld = comparePDF(obj,obj2)
             if isa(obj2,'gmmpdf')
-                if isempty(obj.pdf)
-                    obj.genPDF();
-                end
-                if isempt(obj2.pdf)
-                    obj2.genPDF();
-                end
                 if length(obj.pdf) ~= length(obj2.pdf)
                     obj2.dataDomain = obj.dataDomain;
                     obj2.resolution = obj.resolution;
                     obj2.genPDF();
                 end
-                kld = dot(obj.pdf,log(obj.pdf ./ obj2.pdf))/log(...
-                    length(obj.pdf));
+                kld = dot(obj.pdf,log(obj.pdf ./ obj2.pdf))/... P1*ln(P1/P2)
+                    log(length(obj.pdf));
             end
         end
     end
