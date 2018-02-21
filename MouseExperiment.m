@@ -3,12 +3,10 @@ classdef MouseExperiment
     %   Detailed explanation goes here
     
     properties
-        AnimalName
-        Genotype
-        Birthday
-        ExperimentDate
-        
-                
+        AnimalName = '';
+        Genotype = '';
+        Birthday = datetime();
+        ExperimentDate = datetime;  
     end
     
     methods
