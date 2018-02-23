@@ -29,8 +29,8 @@ for csp = 1:Ns
 end
 [pB, pT, pS]=...       Bursts            Tonic Spikes          Non-spiking
     estimateStimuliPDF(stimStack(1:Nb,:),stimStack(Nb+1:end,:),stimNotSpike);
-KL_SB = KullbackLeiblerDivergence(pS,pB);
-KL_ST = KullbackLeiblerDivergence(pS,pT);
+KL_SB = pS.comparePDF(pB);
+KL_ST = pS.comparePDF(pT);
 STAb = mean(stimStack(1:Nb,:),1);               % Burst spikes STA
 STAt = mean(stimStack(Nb+1:end,:),1);           % Tonic spikes STA
 STSTDb = std(stimStack(1:Nb,:),[],1);
@@ -40,16 +40,15 @@ end
 function [pB,pT,pS] = estimateStimuliPDF(burstStim,tonicStim,stim)
 M = 3;
 err = 1e-3;
+xLow = min(stim);
+xHigh = max(stim);
+dataRange = [xLow,xHigh];
 prB = emforgmm(burstStim,M,err,0);        % Stimuli PDF for busrts
 prT = emforgmm(tonicStim,M,err,0);  % Stimuli PDF for tonic sp
 prS = emforgmm(stim,M,err,0);        % Stimuli PDF for non-sp
-pB = getPDFFromGMM(prB,burstStim);
-pT = getPDFFromGMM(prT,tonicStim);
-pS = getPDFFromGMM(prS,stim);
-end
-
-function plotSTA(STA, stimStack, STSTD)
-
+pB = gmmpdf(prB,dataRange);
+pT = gmmpdf(prT,dataRange);
+pS = gmmpdf(prS,dataRange);
 end
 
 function [bIdx, tIdx] = getInitialBurstSpike(spT,maxISI)
