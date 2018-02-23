@@ -6,9 +6,7 @@ classdef MouseExperiment
         AnimalName
         Genotype
         Birthday
-        ExperimentDate
-        
-                
+        ExperimentDate  
     end
     
     methods
