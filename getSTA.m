@@ -33,6 +33,7 @@ KL_SB = pS.comparePDF(pB);
 KL_ST = pS.comparePDF(pT);
 STAb = mean(stimStack(1:Nb,:),1);               % Burst spikes STA
 STAt = mean(stimStack(Nb+1:end,:),1);           % Tonic spikes STA
+
 STSTDb = std(stimStack(1:Nb,:),[],1);
 STSTDt = std(stimStack(Nb+1:end,:),[],1);
 end

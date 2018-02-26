@@ -3,10 +3,8 @@ mx = 1/max(x);
 x=x*mx;
 dx=diff(x);
 if max(dx)>thresh
-    %sp= x>thresh;
-    %if ~sum(sp,'omitnan')
-    sp = find(x>thresh);
-    if ~isempty(sp)
+    sp= x>thresh;
+    if ~sum(sp,'omitnan')
         if size(sp,1) < size(sp,2)
             sp=sp';
         end
@@ -20,8 +18,8 @@ if max(dx)>thresh
         starts=sp;
         ends=sp+5;
         
-        %ends(find(ends>numel(x)))=numel(x);
-        ends(ends>numel(x))=numel(x);
+        ends(find(ends>numel(x)))=numel(x);
+        %ends(ends>numel(x))=numel(x);
         nsp=[];
         for i=1:numel(sp)
             v=x(starts(i):ends(i));
