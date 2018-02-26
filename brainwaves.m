@@ -178,12 +178,13 @@ end
 [m, n] = size(EEGsignals);
 whm = zeros(m,n,5);
 
-[b50,a50] = butter(2,[(2*48)/sampling_frequency,...
-    (2*52)/sampling_frequency],'stop');
+[b50,a50] = butter(2,[(2*49)/sampling_frequency,...
+    (2*51)/sampling_frequency],'stop');
 % 50 Hz notch filter.
-[bhpf,ahpf] = cheby2(4,60,0.4/sampling_frequency,'high');
-% 0.4 Hz (HIGH)
-[blpf,alpf] = cheby2(2,60,100/sampling_frequency,'low');
+% The cheby filter has too many ripples in the passing band. EIC 2018
+% [bhpf,ahpf] = cheby2(4,60,0.4/sampling_frequency,'high');
+% % 0.4 Hz (HIGH)
+% [blpf,alpf] = cheby2(2,60,100/sampling_frequency,'low');
 % 100 Hz (LOW)
 
 % w [wave number -> 1 alpha, 2 beta, 3 gamma, 4 delta and 5 theta]
@@ -194,10 +195,10 @@ for w = 1:5
         [b,a] = butter(2,[(2*cutfreq(2,w))/sampling_frequency...
             (2*cutfreq(1,w))/sampling_frequency]);        
         for c=1:m
-            EEGsignals(c,:) = filtfilt(b50,a50,EEGsignals(c,:));
-            EEGsignals(c,:) = filtfilt(blpf,alpf,EEGsignals(c,:));
-            EEGsignals(c,:) = filtfilt(bhpf,ahpf,EEGsignals(c,:));
-            whm(c,:,w) = filtfilt(b,a,EEGsignals(c,:));            
+            aux = filtfilt(b50,a50,EEGsignals(c,:));
+            % EEGsignals(c,:) = filtfilt(blpf,alpf,EEGsignals(c,:));
+            % EEGsignals(c,:) = filtfilt(bhpf,ahpf,EEGsignals(c,:));
+            whm(c,:,w) = filtfilt(b,a,aux);            
         end
         disp(['Filtering wave: ',wavename{w}])
     end
