@@ -1,4 +1,4 @@
-function [MagnitudeImage, AngleImage] =...
+function [sonoStruct] =...
     sonogram(signal,sampling_frequency, overlap, window_duration)
 %SONOGRAM Returns the time-frequency components for the given signal.
 %   This function accepts 4 arguments: signal, which is the time series to
@@ -17,8 +17,10 @@ Nzp = 2^ceil(log2(Nw));
 NonOverWin = round(Nw * (1-overlap));
 disp(NonOverWin)
 lenImg = round(N/NonOverWin);
-MagnitudeImage = zeros((Nzp/2),lenImg);
-AngleImage = MagnitudeImage;
+SpectrumImage = zeros((Nzp/2),lenImg);
+
+% MagnitudeImage = zeros((Nzp/2),lenImg);
+% AngleImage = MagnitudeImage;
 currentWindow = 1;
 cw = 1;
 tfWin = flattopwin(Nw,'symmetric')';
@@ -28,14 +30,18 @@ while currentWindow + Nw <= N
     winSig = sigSeg .* tfWin;
     zpSignal = padarray(winSig',(Nzp-Nw)/2)';
     ftSigSeg = fft(zpSignal);
-    halfFt = ftSigSeg(1:Nzp/2);
-    MagnitudeImage(:,cw) = 20*log10(abs(halfFt))';
-    AngleImage(:,cw) = unwrap(angle(halfFt))';
+    SpectrumImage(:,cw) = ftSigSeg(1:Nzp/2);
+%     MagnitudeImage(:,cw) = 20*log10(abs(halfFt))';
+%     AngleImage(:,cw) = unwrap(angle(halfFt))';
+    
     currentWindow = currentWindow + NonOverWin;
     cw = cw + 1;
     % waitbar(currentWindow/N)
 end
 % close(h)
-
+tx = 0:1/sampling_frequency:(N-1)/sampling_frequency;
+fx = 0:sampling_frequency/(Nzp):(sampling_frequency*(Nzp-2))/(2*Nzp);
+sonoStruct = struct('SpectrumImage',SpectrumImage,...
+    'TimeAxis',tx,'FrequencyAxis',fx);
 end
 
