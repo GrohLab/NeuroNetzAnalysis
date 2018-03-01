@@ -39,7 +39,7 @@ while currentWindow + Nw <= N
     % waitbar(currentWindow/N)
 end
 % close(h)
-tx = 0:NonOverWin/sampling_frequency:(NonOverWin*(lenImg-1))/sampling_frequency;
+tx = 0:NonOverWin/sampling_frequency:(N-1)/sampling_frequency;
 fx = 0:sampling_frequency/(Nzp):(sampling_frequency*(Nzp-2))/(2*Nzp);
 sonoStruct = struct('SpectrumImage',SpectrumImage,...
     'TimeAxis',tx,'FrequencyAxis',fx);
