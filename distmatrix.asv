@@ -28,10 +28,9 @@ elseif ischar(n)
             [pdfs2,len2] = size(P2);
             if len1 == len2
                 dist = zeros(pdfs1, pdfs2);
-                for cpdf = 1:pdfs1
-                    for cmpdf = 1:pdfs2
-                        dist(cpdf,cmpdf) =...
-                            KullbackLeiblerDivergence(P1(cpdf,:),P2(cmpdf,:));
+                for cpdf = 1:pdf1
+                    for cmpdf = 1:pdf2
+                        dist(cpdf,cmpdf) = k
                     end
                 end
             else
