@@ -108,10 +108,6 @@ classdef gmmpdf
             pvEnd = [0,diff(pvDirty)] < -mean(pvDirty);
             if sum(pvStr) ~= sum(pvEnd)
                 % Problem to solve!
-                [mx,mxPos] = max(obj.pdf);
-                xaxis = obj.getDataDomain;
-                ppeaks = [mx;xaxis(mxPos)];
-                valleys = [0;0];
             else
                 criticalAreasStr = find(pvStr);
                 criticalAreasEnd = find(pvEnd);
@@ -124,11 +120,7 @@ classdef gmmpdf
                 valleys = zeros(2,criticalAreas);
                 xaxis = obj.getDataDomain;
                 for ca = 1:criticalAreas
-                    if mean(criticalAreasStr(ca)-criticalAreasEnd(ca)) < 0
-                        shrtDomn = criticalAreasStr(ca):criticalAreasEnd(ca);
-                    else
-                        shrtDomn = criticalAreasEnd(ca):criticalAreasStr(ca);
-                    end
+                    shrtDomn = criticalAreasStr(ca):criticalAreasEnd(ca);
                     [mx(ca),mxPos(ca)] = max(px(shrtDomn));
                     [mn(ca),mnPos(ca)] = min(px(shrtDomn));
                     if mxPos(ca) - mnPos(ca) < 0
@@ -139,8 +131,8 @@ classdef gmmpdf
                         valleys(2,ca) = xaxis(shrtDomn(mnPos(ca)));
                     end
                 end
-                ppeaks(:,sum(ppeaks,1)==0) = [];
-                valleys(:,sum(valleys,1)==0) = [];
+                ppeaks(sum(ppeaks,1)==0) = [];
+                valleys(sum(valleys,1)==0) = [];
             end
         end
     end
