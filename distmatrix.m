@@ -3,7 +3,8 @@ function [ dist ] = distmatrix( P1,P2,n )
 %   n is the norm from 1 to a reasonable number (not inf included).
 if nargin == 2
     n = 2;
-elseif nargin > 3
+end
+if nargin > 3
     error('This function just accepts 2 input vectors, and the norm order.')
 elseif isnumeric(n)
     [points,dimension]=size(P1);
