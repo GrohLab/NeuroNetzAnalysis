@@ -12,11 +12,13 @@ if row > col
     s = s';
 end
 [bT, tT] = getInitialBurstSpike(sp,maxISI*fs);
+
 spT = [bT,tT];          % Stack first bursts and then tonic spikes
 Ns = length(spT);
 Nb = length(bT);
 winel = round(win*fs); % window elements
-[stimStack, stimNotSpike] = getEventTriggeredStimulus(winel,Ns,spT,s);
+% [stimStack, stimNotSpike] = getEventTriggeredStimulus(winel,Ns,spT,s);
+[stimStack, ~] = getEventTriggeredStimulus(winel,Ns,spT,s);
 
 %% Gaussian Mixture Model estimation
 % [pB, pT, pS]=...       Bursts            Tonic Spikes          Non-spiking
