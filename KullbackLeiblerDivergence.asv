@@ -4,8 +4,8 @@ function kbd = KullbackLeiblerDivergence(P1,P2)
 if abs(sum(P1) - 1.0) > 1e-3
     P1 = P1/sum(P1);
 end
-if length(P1) == length(P2)
-    N = length(P1);
+if length(P1.PDF) == length(P2.PDF)
+    N = length(P1.PDF);
     if abs(sum(P2) - 1) > 1e-3
         P2 = P2/sum(P2);
     end
@@ -14,5 +14,5 @@ else
     fprintf([],'! he distributions have different resolutions (different length)!\n')
     return;
 end
-kbd = dot(P1,log2(P1 ./ P2))/log2(N);
+kbd = dot(P1.PDF,log(P1.PDF ./ P2.PDF))/log(N);
 end
