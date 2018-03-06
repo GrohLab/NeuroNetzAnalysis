@@ -38,14 +38,12 @@ end
 function [x_out,y_out]=check_orientation(x,y)
 [xx,~] = size(x);
 [yx,~] = size(y);
+x_out = x;
+y_out = y;
 if xx > 1
     x_out = x';
-else
-    x_out = x;
 end
 if yx > 1
     y_out = y';
-else
-    y_out = y;
 end
 end
