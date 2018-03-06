@@ -4,6 +4,9 @@ function [STA, STSTD] = getSTA(sp,s,maxISI,win,fs)
 % $t_0$ corresponds to the considered spike time $sp_i$ and the absolute
 % difference between $t$ and $t_0$ is 'win' in \milli seconds. Usually 10
 % ms.
+
+% NEED TO TAKE ALL THE INPUTS INTO CONSIDERATION!!
+
 [row,col] = size(s);
 if row > col
     s = s';
@@ -16,8 +19,11 @@ winel = round(win*fs); % window elements
 stimStack = zeros(Ns,winel);
 stimNotSpike = zeros(1,Ns*winel);
 suma = 1;
+stimIdxs = false(size(s));
 for csp = 1:Ns
     stimStack(csp,:) = s(spT(csp)-winel+1:spT(csp));
+    stimIdxs(spT(csp)-winel+1:spT(csp)) = true;
+    disp(['Window size: ',sprintf('%d - %d',spT(csp)-winel+1,spT(csp))])
     if csp == 1
         aux = s(1:spT(csp)-winel);
     else
@@ -27,12 +33,29 @@ for csp = 1:Ns
     stimNotSpike(suma:suma+lngth-1) = aux;
     suma = suma + lngth;
 end
-[pB, pT, pS]=...       Bursts            Tonic Spikes          Non-spiking
-    estimateStimuliPDF(stimStack(1:Nb,:),stimStack(Nb+1:end,:),stimNotSpike);
-KL_SB = pS.comparePDF(pB);
-KL_ST = pS.comparePDF(pT);
+%% Gaussian Mixture Model estimation
+% [pB, pT, pS]=...       Bursts            Tonic Spikes          Non-spiking
+%     estimateStimuliPDF(stimStack(1:Nb,:),stimStack(Nb+1:end,:),stimNotSpike);
+% KL_SB = pS.comparePDF(pB);
+% KL_ST = pS.comparePDF(pT);
+% Use the histogram values instead of estimating a pdf.
+%%
 STAb = mean(stimStack(1:Nb,:),1);               % Burst spikes STA
 STAt = mean(stimStack(Nb+1:end,:),1);           % Tonic spikes STA
+STAkernel = mean(stimStack,1);
+filtStim = cconv(s,STAkernel,length(s));
+histFig = figure('Name','Prior and conditional');
+%ax(1) = subplot(1,2,1);ps = 
+hs = histogram(filtStim,64,'Normalization','probability','DisplayStyle','stairs');
+hold on;
+hss = histogram(filtStim(stimIdxs),64,'Normalization','probability',...
+    'DisplayStyle','stairs');legend({'p(s)','p(s|sp)'})
+title('Prior probability OR stimuli probability');xlabel('X (mV)')
+ylabel('p(s)');
+%ax(2) = subplot(1,2,2);pss = histogram(ax(2),filtStim(stimIdxs),64);
+%title('Conditional probability p(stimuli|spike)');xlabel('X (mV)')
+%ylabel('p(s|sp)')
+
 
 STSTDb = std(stimStack(1:Nb,:),[],1);
 STSTDt = std(stimStack(Nb+1:end,:),[],1);
