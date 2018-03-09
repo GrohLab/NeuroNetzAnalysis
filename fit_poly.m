@@ -26,9 +26,13 @@ elseif ischar(m)
             [Yhat, mdl] = detrend_profile(1,x,exp(y));
             rsq = goodnessFit([x',exp(y)'],mdl);
             auxA = log(mdl(2));
+        case {'sin','cos'}
+            [Yhat, mdl] = detrend_profile(1,x,acos(y/range(y)));
+            rsq = goodnessFit([x',acos(y/range(y))'],mdl);
+            auxA = cos(mdl(2));
         otherwise
             error(...
-                'The option is either not yet implemented or there is a typo: %s\nOnly ''e'' or ''log''',m)
+                'The option is either not yet implemented or there is a typo: %s\nOnly ''e'', ''log'', ''cos'', or  ''sin''',m)
     end
     auxB = mdl(1);
     mdl = [auxA;auxB];

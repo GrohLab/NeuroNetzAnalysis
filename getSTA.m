@@ -1,4 +1,4 @@
-function [STA, STSTD] = getSTA(sp,s,maxISI,win,fs)
+function [STAb, STAt] = getSTA(sp,s,maxISI,win,fs)
 % GETSTA gets an average of the stimulus $s$ starting at time $t$ and
 % ending at time $t_0$, with a sampling period of $\delta$T. The time point
 % $t_0$ corresponds to the considered spike time $sp_i$ and the absolute
@@ -30,14 +30,14 @@ winel = round(win*fs); % window elements
 STAb = mean(stimStack(1:Nb,:),1);               % Burst spikes STA
 STAt = mean(stimStack(Nb+1:end,:),1);           % Tonic spikes STA
 STAkernel = mean(stimStack,1);
-filtStim = cconv(s,STAkernel,length(s));
-histFig = figure('Name','Prior and conditional');
-hs = histogram(filtStim,64,'Normalization','probability','DisplayStyle','stairs');
-hold on;
-hss = histogram(filtStim(stimIdxs),64,'Normalization','probability',...
-    'DisplayStyle','stairs');legend({'p(s)','p(s|sp)'})
-title('Prior probability OR stimuli probability');xlabel('X (mV)')
-ylabel('p(s)');
+% filtStim = cconv(s,STAkernel,length(s));
+% histFig = figure('Name','Prior and conditional');
+% hs = histogram(filtStim,64,'Normalization','probability','DisplayStyle','stairs');
+% hold on;
+% hss = histogram(filtStim(stimIdxs),64,'Normalization','probability',...
+%     'DisplayStyle','stairs');legend({'p(s)','p(s|sp)'})
+% title('Prior probability OR stimuli probability');xlabel('X (mV)')
+% ylabel('p(s)');
 
 STSTDb = std(stimStack(1:Nb,:),[],1);
 STSTDt = std(stimStack(Nb+1:end,:),[],1);
@@ -50,7 +50,10 @@ Sstack = zeros(totalSpikes,prevSamples);
 NSstack = zeros(1,totalSpikes*prevSamples);
 suma = 1;
 for csp = 1:totalSpikes
+    if spikeTimes(csp)-prevSamples+1 >= 1
     Sstack(csp,:) = stimulus(spikeTimes(csp)-prevSamples+1:spikeTimes(csp));
+    else, continue;
+    end
     if csp == 1
         aux = stimulus(1:spikeTimes(csp)-prevSamples);
     else
@@ -75,16 +78,4 @@ prS = emforgmm(stim,M,err,0);        % Stimuli PDF for non-sp
 pB = gmmpdf(prB,dataRange);
 pT = gmmpdf(prT,dataRange);
 pS = gmmpdf(prS,dataRange);
-end
-
-function [bIdx, tIdx] = getInitialBurstSpike(spT,maxISI)
-% GETINITIALBUSRTSPIKE gets the first spike time for each burst and the
-% tonic spikes are unmodified according to the maximum
-% inter-spiking-interval.
-delta_spT = [inf,diff(spT)];
-fsIdx = delta_spT >= maxISI;    % First spike index (burst-wise)
-bsIdx = [~fsIdx(2:end) & fsIdx(1:end-1),fsIdx(end)];
-tsIdx = ~bsIdx & fsIdx;
-bIdx = spT(bsIdx);
-tIdx = spT(tsIdx);
 end

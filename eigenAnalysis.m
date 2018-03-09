@@ -1,4 +1,4 @@
-function  [vctrs,measures] = eigenAnalysis(analiticalSignals,idxs)
+function  [vctrs,measures] = eigenAnalysis(analiticalSignals,idxs,normFlag)
 %EIGENANALYSIS Summary of this function goes here
 %   Detailed explanation goes here
 [Ns,samples] = size(analiticalSignals);
@@ -6,17 +6,27 @@ if Ns > samples
     analiticalSignals = analiticalSignals';
     analiticalSignals = conj(analiticalSignals);    
 end
-if nargin == 1
-    % All the signal for the analysis
-    idxs = true(1,samples);
+if nargin < 3
+    normFlag = false;
+    if nargin < 2
+        idxs = true(1,samples);
+    end
+else
+    if isempty(idxs)
+        idxs = true(1,samples);
+    end
 end
 sigCS = zeros(2,2,Ns);
 vctrs = zeros(2,2,Ns);
 measures = zeros(3,Ns);
 for cs = 1:Ns
     % Normalizing each signal to the infinity norm.
-    currentSignal = analiticalSignals(cs,:)/...
-        norm(analiticalSignals,'inf');
+    if normFlag
+        currentSignal = analiticalSignals(cs,:)/...
+            norm(analiticalSignals,'inf');
+    else
+        currentSignal = analiticalSignals(cs,:);
+    end
     sigCS(:,:,cs) = cov(real(currentSignal(idxs)),...
         imag(currentSignal(idxs)));
     [vctrs(:,:,cs),L] = eig(sigCS(:,:,cs));

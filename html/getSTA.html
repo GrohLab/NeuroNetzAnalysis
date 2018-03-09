@@ -1,0 +1,224 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>getSTA</title><meta name="generator" content="MATLAB 9.3"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2018-03-08"><meta name="DC.source" content="getSTA.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; } 
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><h2>Contents</h2><div><ul><li><a href="#3">Gaussian Mixture Model estimation</a></li></ul></div><pre class="codeinput"><span class="keyword">function</span> [STAb, STAt] = getSTA(sp,s,maxISI,win,fs)
+</pre><pre class="codeinput"><span class="comment">% GETSTA gets an average of the stimulus $s$ starting at time $t$ and</span>
+<span class="comment">% ending at time $t_0$, with a sampling period of $\delta$T. The time point</span>
+<span class="comment">% $t_0$ corresponds to the considered spike time $sp_i$ and the absolute</span>
+<span class="comment">% difference between $t$ and $t_0$ is 'win' in \milli seconds. Usually 10</span>
+<span class="comment">% ms.</span>
+
+<span class="comment">% NEED TO TAKE ALL THE INPUTS INTO CONSIDERATION!!</span>
+
+[row,col] = size(s);
+<span class="keyword">if</span> row &gt; col
+    s = s';
+<span class="keyword">end</span>
+[bT, tT] = getInitialBurstSpike(sp,maxISI*fs);
+
+spT = [bT,tT];          <span class="comment">% Stack first bursts and then tonic spikes</span>
+Ns = length(spT);
+Nb = length(bT);
+winel = round(win*fs); <span class="comment">% window elements</span>
+<span class="comment">% [stimStack, stimNotSpike] = getEventTriggeredStimulus(winel,Ns,spT,s);</span>
+[stimStack, ~] = getEventTriggeredStimulus(winel,Ns,spT,s);
+</pre><pre class="codeoutput error">Not enough input arguments.
+
+Error in getSTA (line 10)
+[row,col] = size(s);
+</pre><h2 id="3">Gaussian Mixture Model estimation</h2><p>[pB, pT, pS]=...       Bursts            Tonic Spikes          Non-spiking     estimateStimuliPDF(stimStack(1:Nb,:),stimStack(Nb+1:end,:),stimNotSpike); KL_SB = pS.comparePDF(pB); KL_ST = pS.comparePDF(pT); Use the histogram values instead of estimating a pdf!!</p><pre class="codeinput">STAb = mean(stimStack(1:Nb,:),1);               <span class="comment">% Burst spikes STA</span>
+STAt = mean(stimStack(Nb+1:end,:),1);           <span class="comment">% Tonic spikes STA</span>
+STAkernel = mean(stimStack,1);
+<span class="comment">% filtStim = cconv(s,STAkernel,length(s));</span>
+<span class="comment">% histFig = figure('Name','Prior and conditional');</span>
+<span class="comment">% hs = histogram(filtStim,64,'Normalization','probability','DisplayStyle','stairs');</span>
+<span class="comment">% hold on;</span>
+<span class="comment">% hss = histogram(filtStim(stimIdxs),64,'Normalization','probability',...</span>
+<span class="comment">%     'DisplayStyle','stairs');legend({'p(s)','p(s|sp)'})</span>
+<span class="comment">% title('Prior probability OR stimuli probability');xlabel('X (mV)')</span>
+<span class="comment">% ylabel('p(s)');</span>
+
+STSTDb = std(stimStack(1:Nb,:),[],1);
+STSTDt = std(stimStack(Nb+1:end,:),[],1);
+</pre><pre class="codeinput"><span class="keyword">end</span>
+
+<span class="keyword">function</span> [Sstack, NSstack] = getEventTriggeredStimulus(prevSamples,<span class="keyword">...</span>
+    totalSpikes,spikeTimes,stimulus)
+
+Sstack = zeros(totalSpikes,prevSamples);
+NSstack = zeros(1,totalSpikes*prevSamples);
+suma = 1;
+<span class="keyword">for</span> csp = 1:totalSpikes
+    Sstack(csp,:) = stimulus(spikeTimes(csp)-prevSamples+1:spikeTimes(csp));
+    <span class="keyword">if</span> csp == 1
+        aux = stimulus(1:spikeTimes(csp)-prevSamples);
+    <span class="keyword">else</span>
+        aux = stimulus(spikeTimes(csp-1)+1:spikeTimes(csp)-prevSamples);
+    <span class="keyword">end</span>
+    lngth = length(aux);
+    NSstack(suma:suma+lngth-1) = aux;
+    suma = suma + lngth;
+<span class="keyword">end</span>
+
+<span class="keyword">end</span>
+
+<span class="keyword">function</span> [pB,pT,pS] = estimateStimuliPDF(burstStim,tonicStim,stim)
+M = 3;
+err = 1e-3;
+xLow = min(stim);
+xHigh = max(stim);
+dataRange = [xLow,xHigh];
+prB = emforgmm(burstStim,M,err,0);        <span class="comment">% Stimuli PDF for busrts</span>
+prT = emforgmm(tonicStim,M,err,0);  <span class="comment">% Stimuli PDF for tonic sp</span>
+prS = emforgmm(stim,M,err,0);        <span class="comment">% Stimuli PDF for non-sp</span>
+pB = gmmpdf(prB,dataRange);
+pT = gmmpdf(prT,dataRange);
+pS = gmmpdf(prS,dataRange);
+<span class="keyword">end</span>
+</pre><p class="footer"><br><a href="http://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2017b</a><br></p></div><!--
+##### SOURCE BEGIN #####
+function [STAb, STAt] = getSTA(sp,s,maxISI,win,fs)
+% GETSTA gets an average of the stimulus $s$ starting at time $t$ and
+% ending at time $t_0$, with a sampling period of $\delta$T. The time point
+% $t_0$ corresponds to the considered spike time $sp_i$ and the absolute
+% difference between $t$ and $t_0$ is 'win' in \milli seconds. Usually 10
+% ms.
+
+% NEED TO TAKE ALL THE INPUTS INTO CONSIDERATION!!
+
+[row,col] = size(s);
+if row > col
+    s = s';
+end
+[bT, tT] = getInitialBurstSpike(sp,maxISI*fs);
+
+spT = [bT,tT];          % Stack first bursts and then tonic spikes
+Ns = length(spT);
+Nb = length(bT);
+winel = round(win*fs); % window elements
+% [stimStack, stimNotSpike] = getEventTriggeredStimulus(winel,Ns,spT,s);
+[stimStack, ~] = getEventTriggeredStimulus(winel,Ns,spT,s);
+
+%% Gaussian Mixture Model estimation
+% [pB, pT, pS]=...       Bursts            Tonic Spikes          Non-spiking
+%     estimateStimuliPDF(stimStack(1:Nb,:),stimStack(Nb+1:end,:),stimNotSpike);
+% KL_SB = pS.comparePDF(pB);
+% KL_ST = pS.comparePDF(pT);
+% Use the histogram values instead of estimating a pdf!!
+
+STAb = mean(stimStack(1:Nb,:),1);               % Burst spikes STA
+STAt = mean(stimStack(Nb+1:end,:),1);           % Tonic spikes STA
+STAkernel = mean(stimStack,1);
+% filtStim = cconv(s,STAkernel,length(s));
+% histFig = figure('Name','Prior and conditional');
+% hs = histogram(filtStim,64,'Normalization','probability','DisplayStyle','stairs');
+% hold on;
+% hss = histogram(filtStim(stimIdxs),64,'Normalization','probability',...
+%     'DisplayStyle','stairs');legend({'p(s)','p(s|sp)'})
+% title('Prior probability OR stimuli probability');xlabel('X (mV)')
+% ylabel('p(s)');
+
+STSTDb = std(stimStack(1:Nb,:),[],1);
+STSTDt = std(stimStack(Nb+1:end,:),[],1);
+end
+
+function [Sstack, NSstack] = getEventTriggeredStimulus(prevSamples,...
+    totalSpikes,spikeTimes,stimulus)
+
+Sstack = zeros(totalSpikes,prevSamples);
+NSstack = zeros(1,totalSpikes*prevSamples);
+suma = 1;
+for csp = 1:totalSpikes
+    Sstack(csp,:) = stimulus(spikeTimes(csp)-prevSamples+1:spikeTimes(csp));
+    if csp == 1
+        aux = stimulus(1:spikeTimes(csp)-prevSamples);
+    else
+        aux = stimulus(spikeTimes(csp-1)+1:spikeTimes(csp)-prevSamples);
+    end
+    lngth = length(aux);
+    NSstack(suma:suma+lngth-1) = aux;
+    suma = suma + lngth;
+end
+
+end
+
+function [pB,pT,pS] = estimateStimuliPDF(burstStim,tonicStim,stim)
+M = 3;
+err = 1e-3;
+xLow = min(stim);
+xHigh = max(stim);
+dataRange = [xLow,xHigh];
+prB = emforgmm(burstStim,M,err,0);        % Stimuli PDF for busrts
+prT = emforgmm(tonicStim,M,err,0);  % Stimuli PDF for tonic sp
+prS = emforgmm(stim,M,err,0);        % Stimuli PDF for non-sp
+pB = gmmpdf(prB,dataRange);
+pT = gmmpdf(prT,dataRange);
+pS = gmmpdf(prS,dataRange);
+end
+##### SOURCE END #####
+--></body></html>
