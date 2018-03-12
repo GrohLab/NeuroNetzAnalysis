@@ -20,8 +20,9 @@ psthPrev = 0.5;
 % Time after the stimulus onset.
 psthPost = 1;
 % psthStack = zeros(Nex,(psthPrev+psthPost)*fsLFP + 1);
-psthStack = zeros(2,(psthPrev+psthPost)*fsLFP + 1,Nex);
-expNLst = zeros(Nex,2);
+psthStack = zeros(3,(psthPrev+psthPost)*fsLFP + 1,Nex);
+expNLst = zeros(Nex,3);
+lightDurations = [];
 for cex = 1:Nex
     fprintf('Dealing with experiment %s...\n',...
         RecDB.Properties.RowNames{cex})
@@ -46,12 +47,19 @@ for cex = 1:Nex
             % Translating the spike times to 1 kHz (or fsLFP)
             sp = round(expDD.Spikes*(fsLFP/fs));
             %% Whiskers periods loading
-            [whiskPeriods,wp] = getWhiskPeriods(expDD,fs,fsLFP,Nl);
+            [whiskPeriods,wp] = getStimPeriods(expDD,fs,fsLFP,'w');
             whiskSP = sp(whiskPeriods(sp));
             nonwhiskSP = sp(~whiskPeriods(sp));
+            %% Light Periods loading
+            [lightPeriods,lp] = getStimPeriods(expDD,fs,fsLFP,'l'); %#ok<ASGLU>
+            lightDurations = [lightDurations,expDD.LightLength/fs]; %#ok<AGROW>
+            figure;histogram(expDD.LightLength/fs);
+            %% Puff loading
+            [puffPeriods, ~] = getStimPeriods(expDD,fs,fsLFP,'p');
             %% LFP Analyses
             % Inter spike interval 10 ms
-            [~, ~, spT] = getInitialBurstSpike(sp/fsLFP,0.01);
+            % [~, ~, spT] = getInitialBurstSpike(sp/fsLFP,0.01);
+            
             % Overall, whisking, non whisking
             conditionsIdxs = {sp,whiskSP,nonwhiskSP};
             % Spike correlation with the filtered LFP
@@ -59,10 +67,14 @@ for cex = 1:Nex
                 corrSpLFP(nonwhiskSP,LFP,fsLFP,[0.5,100]);
             % Whisker aligned STAs
             [STAb(cex,:),STAt(cex,:)]=getSTA(wp,LFP,0.01,0.5,fsLFP);
-            [~,lp] = getLightPeriods(expDD,fs,fsLFP,Nl);
+            
             expNLst(cex) = sum(0<lp);
-            [psthStack(:,:,cex),expNLst(cex,1),expNLst(cex,2)]=getPSTH(spT,...
-                lp,whiskPeriods,LFP,psthPrev,psthPost,fsLFP);
+            % PSTH -- account for all the spikes (intra-burst spikes)
+            spT = false(1,Nl);
+            spT(sp) = true;
+            [psthStack(:,:,cex),expNLst(cex,:)]=getPSTH(spT,...
+                [lp;expDD.LightLength/fs],whiskPeriods,puffPeriods,LFP,...
+                psthPrev,psthPost,fsLFP);
 %             for ws = 1:3
 %                 psthStack(cex,:,ws) = getPSTH(spT,...
 %                     lp,whiskPeriods,LFP,psthPrev,psthPost,fsLFP);
@@ -83,12 +95,12 @@ LFPana = struct('CorrelationInformation',struct('AmpAndLoc',corrInfo,...
     'NeuronType',NeurType,...
     'STA',struct('Bursts',STAb,'Tonic',STAt),...
     'PSTH',struct('Overall',psthStack(1,:,:),...
+    'Whisking',psthStack(2,:,:),...
+    'NonWhisking',psthStack(3,:,:),...
     'NTrials',expNLst));
-%                   'Whisking',psthStack(1,:,:),...
-%                   'NonWhisking',psthStack(2,:,:),...
-                  
-
+% figure;histogram(lightDurations);
 end
+
 function [fk, k, amp, pos] = corrSpLFP(sp,LFP,fsLFP,freqBand)
 LFPf = brainwaves(LFP,fsLFP,{'alpha',freqBand(1),freqBand(2)});
 LFPf = zscore(LFPf);
@@ -102,24 +114,34 @@ k = k(k >= -500 & k <= 500);
 pos = k(lg);
 end
 
-function [lightPeriods,lp] = getLightPeriods(dd,fs,fs2,N)
-lp = round(dd.LightStart*(fs2/fs));
-wl = round(dd.LightLength*(fs2/fs));
-lightPeriods = false(1,N);
-for counter = 1:length(lp)
-    lightPeriods(lp(counter):lp(counter)+wl(counter)) = true;
+function [stimPeriods,stimStart] = getStimPeriods(dd,fs,fs2,stimString)
+fact = fs2/fs;
+switch stimString
+    case 'w'
+        stimStart = round(dd.WhiskingStart*fact);
+        stimLength = round(dd.WhiskingLength*fact);
+    case 'l'
+        stimStart = round(dd.LightStart*fact);
+        stimLength = round(dd.LightLength*fact);
+    case 'p'
+        stimStart = round(dd.PuffStart*fact);
+        stimLength = round(dd.PuffLength*fact);
+    case 't'
+        stimStart = round(dd.TouchStart*fact);
+        stimLength = round(dd.TouchLength*fact);
+    otherwise
+        stimPeriods = dd.LengthTime;
+        stimStart = 0;
+        fprintf('No stimuli recognized...')
+        return;
+end
+stimPeriods = false(1,round(dd.LengthTime*fs2));
+for counter = 1:length(stimStart)
+    stimPeriods(...
+        stimStart(counter):stimStart(counter)+stimLength(counter)) = true;
 end
 end
 
-function [whiskPeriods,wp] = getWhiskPeriods(dd,fs,fs2,N)
-wp = round(dd.WhiskingStart*(fs2/fs));
-wl = round(dd.WhiskingLength*(fs2/fs));
-whiskPeriods = false(1,N);
-for counter = 1:length(wp)
-    whiskPeriods(wp(counter):wp(counter)+wl(counter)) =...
-        true(1,wl(counter)+1);
-end
-end
 
 function [LFP,whisker] = loadLFPAndWhisker(LFPprobeDepth,ExpName,EphysPath)
 % LFP is recorded in 16 linear channels along cortex. The order from white

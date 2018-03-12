@@ -1,4 +1,5 @@
-function [PSTH,WT,NWT] = getPSTH(spT,stimPeriods,whp,LFP,winPre,winPost,fs)
+function [PSTH,Trials] = getPSTH(spT,stimPeriods,whp,puffPeriods,LFP,...
+    winPre,winPost,fs)
 % GETSTA gets an average of the stimulus $s$ starting at time $t$ and
 % ending at time $t_0$, with a sampling period of $\delta$T. The time point
 % $t_0$ corresponds to the considered spike time $sp_i$ and the absolute
@@ -7,38 +8,52 @@ function [PSTH,WT,NWT] = getPSTH(spT,stimPeriods,whp,LFP,winPre,winPost,fs)
 winel = round(winPre*fs); % window elements
 postSamples = round(winPost*fs);
 len = length(LFP);
-[PSTH,WT,NWT] = getPeriStimuliSpikes(winel,postSamples,stimPeriods,whp,spT,fs,len);
+[PSTH,Trials] = getPeriStimuliSpikes(...
+    winel,postSamples,stimPeriods,whp,puffPeriods,spT,len,fs);
 
 end
 
-function [SpSum, WT, NWT] = getPeriStimuliSpikes(prevSamples,...
-    postSamples,stimTime,wh,spT,fs,sigLen)
+function [SpSum, Trials] = getPeriStimuliSpikes(prevSamples,...
+    postSamples,stimTime,wh,puffPeriods,logSpTrain,sigLen,fs)
+% Initializing the output variables.
+puffOmit = 0.2; % Puff omitting window 100 ms
 SpSumW = zeros(1,prevSamples+postSamples+1);
 SpSumNW = zeros(1,prevSamples+postSamples+1);
-Nst = sum(stimTime>0);
-logSpTrain = false(1,sigLen);
-logSpTrain(round(spT*fs)) = true;
+SpSumA = zeros(1,prevSamples+postSamples+1);
+Nst = sum(stimTime(1,:)>0);
 WT = 0;
 NWT = 0;
+AT = 0;
+puffLight = 0;
 for cst = 1:Nst
-    segmIdxs = [stimTime(cst)-prevSamples,stimTime(cst)+postSamples];
-    if segmIdxs(1) < 1 || segmIdxs(2) > sigLen
-        fprintf('hehe the window is outside the signal domain. We will just ignore it.\n')
-        continue;
-    else
-        spTrainSegment = logSpTrain(segmIdxs(1):segmIdxs(2));
-        SpSumW = SpSumW + spTrainSegment;
-        WT = WT + 1;
-%         if wh(stimTime(cst))
-%             WT = WT + 1;
-%             SpSumW = SpSumW + spTrainSegment;
-%         else
-%             NWT = NWT + 1;
-%             SpSumNW = SpSumNW + spTrainSegment;
-%         end
+    % Taking a look only at light stimuli lasting 0.5 seconds
+    if stimTime(2,cst) > 0.4 %&& stimTime(2,cst) < 0.6
+        segmIdxs = [stimTime(1,cst)-prevSamples,stimTime(1,cst)+postSamples];
+        if segmIdxs(1) < 1 || segmIdxs(2) > sigLen
+            fprintf('Window is outside the signal domain. Ignoring...\n')
+            continue;
+        else
+            if ~sum(puffPeriods(stimTime(1,cst)-round(puffOmit*fs):...
+                    stimTime(1,cst)+round(puffOmit*fs)))
+                spTrainSegment = logSpTrain(segmIdxs(1):segmIdxs(2));
+                SpSumA = SpSumA + spTrainSegment;
+                AT = AT + 1;
+                if wh(stimTime(1,cst))
+                    WT = WT + 1;
+                    SpSumW = SpSumW + spTrainSegment;
+                else
+                    NWT = NWT + 1;
+                    SpSumNW = SpSumNW + spTrainSegment;
+                end
+            else
+                puffLight = puffLight + 1;
+            end
+        end
     end
 end
-SpSum = [SpSumW;SpSumNW];
+fprintf('Puff: %d\n',puffLight)
+SpSum = [SpSumA;SpSumW;SpSumNW];
+Trials = [AT;WT;NWT];
 end
 
 % function [pB,pT,pS] = estimateStimuliPDF(burstStim,tonicStim,stim)
