@@ -23,13 +23,17 @@ psthPost = 1;
 psthStack = zeros(3,(psthPrev+psthPost)*fsLFP + 1,Nex);
 expNLst = zeros(Nex,3);
 lightDurations = [];
+vectStack = zeros(2,6,Nex);
+Mstack = zeros(5,3,Nex);
+
 for cex = 1:Nex
     fprintf('Dealing with experiment %s...\n',...
         RecDB.Properties.RowNames{cex})
+    LFPprobeDepth=ExpDB{{RecDB.AnimalName{cex}}, 'LfpCoord'}(3);
+    expDD = discData(cex);
+    Nl = round(expDD.LengthInd*(fsLFP/fs));
     if LFPprobeDepth && ~isempty(LFPprobeDepth)
-        expDD = discData(cex);
         ExpName = RecDB.Properties.RowNames{cex};
-        LFPprobeDepth=ExpDB{{RecDB.AnimalName{cex}}, 'LfpCoord'}(3);
         sp = round(expDD.Spikes*(fsLFP/fs));
         spT = false(1,Nl);
         spT(sp) = true;
@@ -42,13 +46,16 @@ for cex = 1:Nex
         lightDurations = [lightDurations,expDD.LightLength/fs]; %#ok<AGROW>
         %% Puff loading
         [puffPeriods, ~] = getStimPeriods(expDD,fs,fsLFP,'p');
+        conditionsIdxs = {sp,whiskSP,nonwhiskSP};
+        
         if RecDB.UsableLFP(cex) %&& RecDB.Light(cex)
             [LFP, whisker] = loadLFPAndWhisker(...
                 LFPprobeDepth,ExpName,EphysPath);
-            Nl = length(LFP);
-            [psthStack(:,:,cex),expNLst(cex,:)]=getPSTH(spT,...
-                [lp;expDD.LightLength/fs],whiskPeriods,puffPeriods,LFP,...
-                psthPrev,psthPost,fsLFP);
+            if RecDB.Light(cex)
+                [psthStack(:,:,cex),expNLst(cex,:)]=getPSTH(spT,...
+                    [lp;expDD.LightLength/fs],whiskPeriods,puffPeriods,LFP,...
+                    psthPrev,psthPost,fsLFP);
+            end
             [corrSignal(cex,:),~,corrInfo(1,cex),corrInfo(2,cex)] =...
                 corrSpLFP(nonwhiskSP,LFP,fsLFP,[0.5,100]);
             % Whisker aligned STAs
@@ -56,9 +63,14 @@ for cex = 1:Nex
         else
             [~, whisker] = loadLFPAndWhisker(...
                 LFPprobeDepth,ExpName,EphysPath);
-            Nl = length(whisker);
         end
-        []
+        filtWhisk = brainwaves(whisker,fsLFP,{'alpha',5,50});
+        anaWhisk = hilbert(filtWhisk);
+        for ccon = 0:2
+            [vectStack(:,ccon*2 +1:(ccon+1)*2,cex),Mstack(:,ccon+1,cex)] =...
+                eigenAnalysis(anaWhisk,conditionsIdxs{ccon+1},true);
+        end
+        
         %% Type of cell recorded and its spikes
         switch RecDB.PhysioNucleus(cex)
             case 'POm'
@@ -69,14 +81,20 @@ for cex = 1:Nex
                 NeurType(3,cex) = true;
         end
         cexNT = NeurName{NeurType(:,cex)};
-        % Translating the spike times to 1 kHz (or fsLFP)
+        figure('Name',cexNT)
+        ph = polarhistogram(angle(anaWhisk(conditionsIdxs{2})));hold on;
+        polarplot(atan2(vectStack(2,4,cex),vectStack(1,4,cex)),max(ph.BinCounts),'or')
+        polarplot(atan2(vectStack(2,3,cex),vectStack(1,3,cex)),min(ph.BinCounts),'og')
+        % The eigen vectors seem to be semi-random with the angle
+        % distributions!!
+        
         
         %% LFP Analyses
         % Inter spike interval 10 ms
         % [~, ~, spT] = getInitialBurstSpike(sp/fsLFP,0.01);
         
         % Overall, whisking, non whisking
-        conditionsIdxs = {sp,whiskSP,nonwhiskSP};
+        
         % Spike correlation with the filtered LFP
         
         
@@ -91,22 +109,20 @@ for cex = 1:Nex
     end
     
 end
-% LFPana = struct('CorrelationInformation',struct('AmpAndLoc',corrInfo,...
-%     'NormalizedCorrelationSignal',corrSignal),...
-%     'NeuronType',NeurType,...
-%     'STA',struct('Bursts',STAb,'Tonic',STAt),...
-%     'PSTH',struct('Overall',squeeze(psthStack(:,:,1)),...
-%                   'Whisking',squeeze(psthStack(:,:,2)),...
-%                   'NonWhisking',squeeze(psthStack(:,:,3)),...
-%                   'NTrials',expNLst));
+
 LFPana = struct('CorrelationInformation',struct('AmpAndLoc',corrInfo,...
     'NormalizedCorrelationSignal',corrSignal),...
     'NeuronType',NeurType,...
     'STA',struct('Bursts',STAb,'Tonic',STAt),...
-    'PSTH',struct('Overall',psthStack(1,:,:),...
-    'Whisking',psthStack(2,:,:),...
-    'NonWhisking',psthStack(3,:,:),...
-    'NTrials',expNLst));
+    'PSTH',struct(...
+        'Overall',psthStack(1,:,:),...
+        'Whisking',psthStack(2,:,:),...
+        'NonWhisking',psthStack(3,:,:),...
+        'NTrials',expNLst),...
+    'EigenAnalysis',struct(...
+        'Overall',struct('Vectors',vectStack(:,1:2,:),'Measures',squeeze(Mstack(:,1,:))),...
+        'Whisking',struct('Vectors',vectStack(:,3:4,:),'Measures',squeeze(Mstack(:,2,:))),...
+        'NonWhisking',struct('Vectors',vectStack(:,5:6,:),'Measures',squeeze(Mstack(:,3,:)))));
 % figure;histogram(lightDurations);
 end
 
