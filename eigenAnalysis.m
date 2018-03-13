@@ -1,13 +1,21 @@
 function  [vctrs,measures] = eigenAnalysis(analiticalSignals,idxs,normFlag)
-%EIGENANALYSIS Summary of this function goes here
-%   Detailed explanation goes here
+%EIGENANALYSIS Computes the eigenvectors and values for the given
+%analitical signal.
+%   [vectrs, measures] = eigenAnalysis(analiticalSignal, indexes, normFlag)
+%   The function accepts 1, 2, or 3 input arguments. The analitical signal
+%   is the signal to be considered and processed, the indexes are to select
+%   specific samples in the signal e. g. whisking spikes, triggered evoked
+%   spikes, etc., and the normFlag is recommended to be set to True in
+%   phase-locking value computations. Otherwise, the normalization step can
+%   be skipped.
+
 [Ns,samples] = size(analiticalSignals);
 if Ns > samples
     analiticalSignals = analiticalSignals';
     analiticalSignals = conj(analiticalSignals);    
 end
 if nargin < 3
-    normFlag = false;
+    normFlag = true;
     if nargin < 2
         idxs = true(1,samples);
     end
@@ -22,8 +30,8 @@ measures = zeros(3,Ns);
 for cs = 1:Ns
     % Normalizing each signal to the infinity norm.
     if normFlag
-        currentSignal = analiticalSignals(cs,:)/...
-            norm(analiticalSignals,'inf');
+        currentSignal = analiticalSignals(cs,:)./...
+            abs(analiticalSignals(cs,:));
     else
         currentSignal = analiticalSignals(cs,:);
     end
