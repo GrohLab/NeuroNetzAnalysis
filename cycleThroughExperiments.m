@@ -15,7 +15,7 @@ staWindowSamples = round(0.5*fsLFP);
 STAb = zeros(Nex,staWindowSamples);
 STAt = STAb;
 corrSignal = zeros(Nex,1001);
-% Time before the stimulus onset 
+% Time before the stimulus onset
 psthPrev = 0.5;
 % Time after the stimulus onset.
 psthPost = 1;
@@ -26,61 +26,70 @@ lightDurations = [];
 for cex = 1:Nex
     fprintf('Dealing with experiment %s...\n',...
         RecDB.Properties.RowNames{cex})
-    if RecDB.UsableLFP(cex) && RecDB.Light(cex)
+    if LFPprobeDepth && ~isempty(LFPprobeDepth)
+        expDD = discData(cex);
+        ExpName = RecDB.Properties.RowNames{cex};
         LFPprobeDepth=ExpDB{{RecDB.AnimalName{cex}}, 'LfpCoord'}(3);
-        if LFPprobeDepth && ~isempty(LFPprobeDepth)
-            expDD = discData(cex);
-            ExpName = RecDB.Properties.RowNames{cex};
+        sp = round(expDD.Spikes*(fsLFP/fs));
+        spT = false(1,Nl);
+        spT(sp) = true;
+        %% Whiskers periods loading
+        [whiskPeriods,wp] = getStimPeriods(expDD,fs,fsLFP,'w');
+        whiskSP = sp(whiskPeriods(sp));
+        nonwhiskSP = sp(~whiskPeriods(sp));
+        %% Light Periods loading
+        [lightPeriods,lp] = getStimPeriods(expDD,fs,fsLFP,'l'); %#ok<ASGLU>
+        lightDurations = [lightDurations,expDD.LightLength/fs]; %#ok<AGROW>
+        %% Puff loading
+        [puffPeriods, ~] = getStimPeriods(expDD,fs,fsLFP,'p');
+        if RecDB.UsableLFP(cex) %&& RecDB.Light(cex)
             [LFP, whisker] = loadLFPAndWhisker(...
                 LFPprobeDepth,ExpName,EphysPath);
             Nl = length(LFP);
-            %% Type of cell recorded and its spikes
-            switch RecDB.PhysioNucleus(cex)
-                case 'POm'
-                    NeurType(1,cex) = true;
-                case 'VPM'
-                    NeurType(2,cex) = true;
-                otherwise
-                    NeurType(3,cex) = true;
-            end
-            cexNT = NeurName{NeurType(:,cex)};
-            % Translating the spike times to 1 kHz (or fsLFP)
-            sp = round(expDD.Spikes*(fsLFP/fs));
-            %% Whiskers periods loading
-            [whiskPeriods,wp] = getStimPeriods(expDD,fs,fsLFP,'w');
-            whiskSP = sp(whiskPeriods(sp));
-            nonwhiskSP = sp(~whiskPeriods(sp));
-            %% Light Periods loading
-            [lightPeriods,lp] = getStimPeriods(expDD,fs,fsLFP,'l'); %#ok<ASGLU>
-            lightDurations = [lightDurations,expDD.LightLength/fs]; %#ok<AGROW>
-            figure;histogram(expDD.LightLength/fs);
-            %% Puff loading
-            [puffPeriods, ~] = getStimPeriods(expDD,fs,fsLFP,'p');
-            %% LFP Analyses
-            % Inter spike interval 10 ms
-            % [~, ~, spT] = getInitialBurstSpike(sp/fsLFP,0.01);
-            
-            % Overall, whisking, non whisking
-            conditionsIdxs = {sp,whiskSP,nonwhiskSP};
-            % Spike correlation with the filtered LFP
+            [psthStack(:,:,cex),expNLst(cex,:)]=getPSTH(spT,...
+                [lp;expDD.LightLength/fs],whiskPeriods,puffPeriods,LFP,...
+                psthPrev,psthPost,fsLFP);
             [corrSignal(cex,:),~,corrInfo(1,cex),corrInfo(2,cex)] =...
                 corrSpLFP(nonwhiskSP,LFP,fsLFP,[0.5,100]);
             % Whisker aligned STAs
             [STAb(cex,:),STAt(cex,:)]=getSTA(wp,LFP,0.01,0.5,fsLFP);
-            
-            expNLst(cex) = sum(0<lp);
-            % PSTH -- account for all the spikes (intra-burst spikes)
-            spT = false(1,Nl);
-            spT(sp) = true;
-            [psthStack(:,:,cex),expNLst(cex,:)]=getPSTH(spT,...
-                [lp;expDD.LightLength/fs],whiskPeriods,puffPeriods,LFP,...
-                psthPrev,psthPost,fsLFP);
-%             for ws = 1:3
-%                 psthStack(cex,:,ws) = getPSTH(spT,...
-%                     lp,whiskPeriods,LFP,psthPrev,psthPost,fsLFP);
-%             end
+        else
+            [~, whisker] = loadLFPAndWhisker(...
+                LFPprobeDepth,ExpName,EphysPath);
+            Nl = length(whisker);
         end
+        []
+        %% Type of cell recorded and its spikes
+        switch RecDB.PhysioNucleus(cex)
+            case 'POm'
+                NeurType(1,cex) = true;
+            case 'VPM'
+                NeurType(2,cex) = true;
+            otherwise
+                NeurType(3,cex) = true;
+        end
+        cexNT = NeurName{NeurType(:,cex)};
+        % Translating the spike times to 1 kHz (or fsLFP)
+        
+        %% LFP Analyses
+        % Inter spike interval 10 ms
+        % [~, ~, spT] = getInitialBurstSpike(sp/fsLFP,0.01);
+        
+        % Overall, whisking, non whisking
+        conditionsIdxs = {sp,whiskSP,nonwhiskSP};
+        % Spike correlation with the filtered LFP
+        
+        
+        expNLst(cex) = sum(0<lp);
+        % PSTH -- account for all the spikes (intra-burst spikes)
+        
+        
+        %             for ws = 1:3
+        %                 psthStack(cex,:,ws) = getPSTH(spT,...
+        %                     lp,whiskPeriods,LFP,psthPrev,psthPost,fsLFP);
+        %             end
     end
+    
 end
 % LFPana = struct('CorrelationInformation',struct('AmpAndLoc',corrInfo,...
 %     'NormalizedCorrelationSignal',corrSignal),...
