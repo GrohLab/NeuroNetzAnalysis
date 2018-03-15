@@ -23,9 +23,12 @@ psthPost = 1;
 psthStack = zeros(3,(psthPrev+psthPost)*fsLFP + 1,Nex);
 expNLst = zeros(Nex,3);
 lightDurations = [];
+% Eigenvector and Eigenvalue storage:
+% 2 dimensions, 6 vectors for three conditions (2 each) and the total
+% number of experiments.
 vectStack = zeros(2,6,Nex);
-Mstack = zeros(5,3,Nex);
-
+Mstack = zeros(7,3,Nex);
+MRL = zeros(2,3,Nex);
 for cex = 1:Nex
     fprintf('Dealing with experiment %s...\n',...
         RecDB.Properties.RowNames{cex})
@@ -66,9 +69,26 @@ for cex = 1:Nex
         end
         filtWhisk = brainwaves(whisker,fsLFP,{'alpha',5,50});
         anaWhisk = hilbert(filtWhisk);
+        anaWhiskNorm = anaWhisk./abs(anaWhisk);
         for ccon = 0:2
+            MRL(:,ccon+1,cex) = [mean(real(anaWhiskNorm(conditionsIdxs{ccon+1})));...
+                mean(imag(anaWhiskNorm(conditionsIdxs{ccon+1})))];
+            wrappedSignal = [angle(anaWhisk(conditionsIdxs{ccon+1})),...
+                angle(anaWhisk(conditionsIdxs{ccon+1}))-2*pi,...
+                angle(anaWhisk(conditionsIdxs{ccon+1}))+2*pi];
+            if ccon ~=1
+                wrappedSignal = downsample(wrappedSignal,3);
+            end
+            paraMatrix = emforgmm(wrappedSignal,12,1e-6,1);
+            wideAnglePDF = gmmpdf(paraMatrix,[-2*pi,2*pi]);
+            magn = wideAnglePDF.pdf/max(wideAnglePDF.pdf);
+            angl = wideAnglePDF.getDataDomain;
+            eigSignal = complex(cos(angl).*magn, sin(angl).*magn);
             [vectStack(:,ccon*2 +1:(ccon+1)*2,cex),Mstack(:,ccon+1,cex)] =...
-                eigenAnalysis(anaWhisk,conditionsIdxs{ccon+1},true);
+                eigenAnalysis(eigSignal,[],false);
+%             figure;ph=polarhistogram(angle(anaWhisk(conditionsIdxs{ccon+1})));
+%             hold on;polarplot(wideAnglePDF.getDataDomain,wideAnglePDF.pdf*...
+%                 (max(ph.BinCounts)/max(wideAnglePDF.pdf)))
         end
         
         %% Type of cell recorded and its spikes
@@ -80,15 +100,18 @@ for cex = 1:Nex
             otherwise
                 NeurType(3,cex) = true;
         end
-        cexNT = NeurName{NeurType(:,cex)};
-        figure('Name',cexNT)
-        ph = polarhistogram(angle(anaWhisk(conditionsIdxs{2})));hold on;
-        polarplot(atan2(vectStack(2,4,cex),vectStack(1,4,cex)),max(ph.BinCounts),'or')
-        polarplot(atan2(vectStack(2,3,cex),vectStack(1,3,cex)),min(ph.BinCounts),'og')
-        % The eigen vectors seem to be semi-random with the angle
-        % distributions!!
-        
-        
+%         cexNT = NeurName{NeurType(:,cex)};
+%         whiskerPhase = figure('Name',cexNT);
+%         ph = polarhistogram(angle(anaWhisk(conditionsIdxs{2})),'DisplayName','\phi|spike histogram');hold on;
+%         polarplot(atan2(vectStack(2,4,cex),vectStack(1,4,cex)),max(ph.BinCounts),'DisplayName','EigenVector','Marker','o')
+%         polarplot(atan2(Mstack(7,2,cex),Mstack(6,2,cex)),max(ph.BinCounts),'DisplayName','MRL_{pdf}','Marker','o')
+%         polarplot(atan2(MRL(2,2),MRL(1,2)),max(ph.BinCounts),'DisplayName','MRL_{data}','Marker','o')
+%         polarplot(angle(eigSigPerm),abs(eigSigPerm)*max(ph.BinCounts),'DisplayName','GMM fit')
+%         title(sprintf('MRL_{pdf}: %1.4f, L_2/L_1: %1.4f, MRL_{data}: %1.3f',hypot(Mstack(7,2,cex),Mstack(6,2,cex)),...
+%             Mstack(1,2,cex),hypot(MRL(1,2),MRL(2,2))));legend('show')
+%         fn = sprintf('PL_%s_%s',ExpName,NeurName{NeurType(:,cex)});
+%         savefig(whiskerPhase,fullfile('.\Database\WhiskerHistogramFigures\',fn))
+%         close(whiskerPhase)
         %% LFP Analyses
         % Inter spike interval 10 ms
         % [~, ~, spT] = getInitialBurstSpike(sp/fsLFP,0.01);
@@ -120,9 +143,9 @@ LFPana = struct('CorrelationInformation',struct('AmpAndLoc',corrInfo,...
         'NonWhisking',psthStack(3,:,:),...
         'NTrials',expNLst),...
     'EigenAnalysis',struct(...
-        'Overall',struct('Vectors',vectStack(:,1:2,:),'Measures',squeeze(Mstack(:,1,:))),...
-        'Whisking',struct('Vectors',vectStack(:,3:4,:),'Measures',squeeze(Mstack(:,2,:))),...
-        'NonWhisking',struct('Vectors',vectStack(:,5:6,:),'Measures',squeeze(Mstack(:,3,:)))));
+        'Overall',struct('Vectors',vectStack(:,1:2,:),'Measures',squeeze(Mstack(:,1,:)),'DataMRL',squeeze(MRL(:,1,:))),...
+        'Whisking',struct('Vectors',vectStack(:,3:4,:),'Measures',squeeze(Mstack(:,2,:)),'DataMRL',squeeze(MRL(:,2,:))),...
+        'NonWhisking',struct('Vectors',vectStack(:,5:6,:),'Measures',squeeze(Mstack(:,3,:)),'DataMRL',squeeze(MRL(:,3,:)))));
 % figure;histogram(lightDurations);
 end
 
