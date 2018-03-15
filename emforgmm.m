@@ -106,7 +106,7 @@ display(['Final likelihood: ',num2str(likelihood)])
 % Selecting those parameters with a contibution bigger than 1% but
 % constrainting that at least the 99% is kept.
 if clin || likelihood < 0
-    warning('Cleaning the parameter matrix.')
+%     warning('Cleaning the parameter matrix.')
     I = 0.005;
     params = select_imp_params(params,I,1-I);
 end
@@ -115,7 +115,7 @@ if (~isempty(params) || sum(params(:,1)) ~= 0) && nargout == 2
     threshold = findthreshGMM(params, data);
     % threshold = 1;
 else
-    disp('Not a lucky day...')
+%     disp('Not a lucky day...')
     threshold = NaN;
 end
 
