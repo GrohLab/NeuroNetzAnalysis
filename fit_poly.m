@@ -27,8 +27,8 @@ elseif ischar(m)
             rsq = goodnessFit([x',exp(y)'],mdl);
             auxA = log(mdl(2));
         case {'sin','cos'}
-            [Yhat, mdl] = detrend_profile(1,x,acos(y/range(y)));
-            rsq = goodnessFit([x',acos(y/range(y))'],mdl);
+            [Yhat, mdl] = detrend_profile(1,x,acos(y));
+            rsq = goodnessFit([x',acos(y)'],mdl);
             auxA = cos(mdl(2));
         otherwise
             error(...
