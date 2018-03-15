@@ -26,7 +26,7 @@ else
 end
 sigCS = zeros(2,2,Ns);
 vctrs = zeros(2,2,Ns);
-measures = zeros(5,Ns);
+measures = zeros(7,Ns);
 for cs = 1:Ns
     % Normalizing each signal to the infinity norm.
     if normFlag
@@ -38,14 +38,17 @@ for cs = 1:Ns
     sigCS(:,:,cs) = cov(real(currentSignal(idxs)),...
         imag(currentSignal(idxs)));
     [vctrs(:,:,cs),L] = eig(sigCS(:,:,cs));
-    vctrs(:,:,cs) = vctrs(:,:,cs)*L;
+    vctrs(:,:,cs) = vctrs(:,:,cs)*sqrt(L);
     L = diag(L);
+    MeanVect = [mean(real(currentSignal(idxs)));...
+                mean(imag(currentSignal(idxs)))];
     % Measuring the spread of the points
     measures(:,cs) = [...
         max(L)\min(L);... 
         hypot(L(1),L(2));...
         atan2(vctrs(2,2,cs),vctrs(1,2,cs));...
         L;...
+        MeanVect...
         ];
 end
 
