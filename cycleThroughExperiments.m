@@ -50,7 +50,9 @@ for cex = 1:Nex
         %% Puff loading
         [puffPeriods, ~] = getStimPeriods(expDD,fs,fsLFP,'p');
         conditionsIdxs = {sp,whiskSP,nonwhiskSP};
-        
+        %% Touch loading
+        [touchPeriods, ~] = getStimPeriods(expDD,fs,fsLFP,'t');
+        %%
         if RecDB.UsableLFP(cex) %&& RecDB.Light(cex)
             [LFP, whisker] = loadLFPAndWhisker(...
                 LFPprobeDepth,ExpName,EphysPath);
@@ -86,9 +88,14 @@ for cex = 1:Nex
             eigSignal = complex(cos(angl).*magn, sin(angl).*magn);
             [vectStack(:,ccon*2 +1:(ccon+1)*2,cex),Mstack(:,ccon+1,cex)] =...
                 eigenAnalysis(eigSignal,[],false);
-%             figure;ph=polarhistogram(angle(anaWhisk(conditionsIdxs{ccon+1})));
-%             hold on;polarplot(wideAnglePDF.getDataDomain,wideAnglePDF.pdf*...
-%                 (max(ph.BinCounts)/max(wideAnglePDF.pdf)))
+            figure;ph=polarhistogram(angle(anaWhisk(conditionsIdxs{ccon+1})));
+            hold on;polarplot(wideAnglePDF.getDataDomain,wideAnglePDF.pdf*...
+                (max(ph.BinCounts)/max(wideAnglePDF.pdf)))
+            figure;
+            pn = polarhistogram(angle(anaWhisk),ph.BinEdges);
+            pn2 = ph.BinCounts./pn.BinCounts;
+            figure;
+            polarhistogram('BinEdges',ph.BinEdges,'BinCounts',pn2)
         end
         
         %% Type of cell recorded and its spikes
@@ -162,7 +169,7 @@ k = k(k >= -500 & k <= 500);
 pos = k(lg);
 end
 
-function [stimPeriods,stimStart] = getStimPeriods(dd,fs,fs2,stimString)
+function [stimPeriods,stimStart,stimRF] = getStimPeriods(dd,fs,fs2,stimString)
 fact = fs2/fs;
 switch stimString
     case 'w'
@@ -188,6 +195,7 @@ for counter = 1:length(stimStart)
     stimPeriods(...
         stimStart(counter):stimStart(counter)+stimLength(counter)) = true;
 end
+stimRF = [stimStart',stimLength'];
 end
 
 
