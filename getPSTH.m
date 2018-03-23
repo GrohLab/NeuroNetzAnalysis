@@ -1,6 +1,7 @@
-function PSTHstack = getPSTH(spT,alignP,timeSpan,fs,consEvents)
+function [PSTHstack, LFPstack, Wstack] =...
+    getPSTH(spT,alignP,timeSpan,fs,consEvents)
 % GETPSTH returns a stack of spikes aligned to a certain event ''alignT''
-% considering the events ''consEvents''. 
+% considering the events in the cell array ''consEvents''.
 
 % Computing the size of the PSTH stack
 [auxR,auxC] = size(alignP);
@@ -14,23 +15,76 @@ if raf > 2 || raf < 1
     PSTHstack = NaN;
     return;
 end
+Ne = 0;
 if nargin == 5
-    Ne = length(consEvents);
-else
-    Ne = 0;
+    typ = whos('consEvents');
+    switch typ.class
+        case 'double'
+            [~, Ne] = size(consEvents);
+            if mod(Ne,2)
+                Ne = Ne/2;
+            else
+                fprintf('Omitting the events to consider.\n')
+                Ne = 0;
+            end
+        case 'cell'
+            Ne = length(consEvents);
+        otherwise
+            fprintf('The events to consider are not in recognized format.\n')
+    end
 end
 % Preallocation of the spike-stack:
 toi = sum(timeSpan);
 prevSamples = ceil(timeSpan(1) * fs);
 postSamples = ceil(timeSpan(2) * fs);
-Nt = ceil(toi*fs) + 1;
-PSTHstack = boolean(2+Ne,Nt,Na);
+Nt = round(toi*fs) + 1;
+PSTHstack = false(2+Ne,Nt,Na);
+LFPstack = zeros(Nt,Na);
+Wstack = LFPstack;
 for cap = 1:Na
     segmIdxs = [alignP(cap,1)-prevSamples,alignP(cap,1)+postSamples];
-   
-    
+    % The segments should be in the range of the spike train.
+    if segmIdxs(1) >= 1 && segmIdxs(2) <= length(spT)
+        spSeg = spT(segmIdxs(1):segmIdxs(2));
+    else
+        Na = Na - 1;
+        continue;
+    end
+    PSTHstack(2,:,cap) = spSeg;
+    % Find 'overlapping' periods in time of interest
+    alignPeriod = getEventPeriod(alignP,{alignP},cap,prevSamples,postSamples);
+    PSTHstack(1,:,cap) = alignPeriod;
+    if Ne
+        PSTHstack(3:2+Ne,:,cap) =...
+            getEventPeriod(alignP, consEvents, cap, prevSamples, postSamples);
+    end
+end
 end
 
+% Aligning the events according to the considered time point. The inputs
+% are time indices called Tdx as in Time inDeX.
+function evntOn = getEventPeriod(alignTdx, evntTdx, cap, prev, post)
+% Assuming that the considered events are always cells.
+if isempty(evntTdx)
+    evntOn = [];
+    return;
+else
+    evntOn = false(numel(evntTdx),prev+post+1);
+    for ce = 1:length(evntTdx)
+        relTdx = evntTdx{ce}(:,1) - alignTdx(cap,1);
+        inToi = find(relTdx >= -prev & relTdx < post);
+        if ~isempty(inToi)
+            psthIdx = evntTdx{ce}(inToi,1)-alignTdx(cap,1) + prev + 1;
+            lenIdx = evntTdx{ce}(inToi,2);
+            for cep = 1:numel(psthIdx)
+                idxs = psthIdx(cep):psthIdx(cep)+lenIdx(cep)-1;
+                idxs = idxs(idxs <= post+prev+1);
+                evntOn(ce,idxs) = true;
+            end
+        end
+    end
+end
+end
 % function [PSTH,Trials] = getPSTH(spT,stimPeriods,whp,puffPeriods,LFP,...
 %     winPre,winPost,fs)
 % % GETSTA gets an average of the stimulus $s$ starting at time $t$ and
@@ -43,9 +97,9 @@ end
 % len = length(LFP);
 % [PSTH,Trials] = getPeriStimuliSpikes(...
 %     winel,postSamples,stimPeriods,whp,puffPeriods,spT,len,fs);
-% 
+%
 % end
-% 
+%
 % function [SpSum, Trials] = getPeriStimuliSpikes(prevSamples,...
 %     postSamples,stimTime,wh,puffPeriods,logSpTrain,sigLen,fs)
 % % Initializing the output variables.
