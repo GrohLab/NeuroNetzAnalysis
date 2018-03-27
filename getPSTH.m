@@ -85,6 +85,8 @@ else
     end
 end
 end
+
+
 % function [PSTH,Trials] = getPSTH(spT,stimPeriods,whp,puffPeriods,LFP,...
 %     winPre,winPost,fs)
 % % GETSTA gets an average of the stimulus $s$ starting at time $t$ and
