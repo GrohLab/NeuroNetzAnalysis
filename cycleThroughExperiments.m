@@ -29,15 +29,66 @@ lightDurations = [];
 vectStack = zeros(2,6,Nex);
 Mstack = zeros(7,3,Nex);
 MRL = zeros(2,3,Nex);
+%% Directories:
+rawFiltResponsesPath = fullfile(EphysPath,'continuousEphys');
+LFPPath = fullfile(EphysPath,'LFP');
+WhiskerPath = fullfile(EphysPath,'Whisker');
+AnalysisPath = fullfile(EphysPath,'AnalysisMatFiles');
+load([fullfile(EphysPath),'EmptyHead.mat'],'ExampleHead')
 for cex = 1:Nex
     fprintf('Dealing with experiment %s...\n',...
         RecDB.Properties.RowNames{cex})
     LFPprobeDepth=ExpDB{{RecDB.AnimalName{cex}}, 'LfpCoord'}(3);
     expDD = discData(cex);
     Nl = round(expDD.LengthInd*(fsLFP/fs));
-    if LFPprobeDepth && ~isempty(LFPprobeDepth)
+    if LFPprobeDepth
         ExpName = RecDB.Properties.RowNames{cex};
+        %% Loading the raw response and the filtered response
+        try
+            load([fullfile(rawFiltResponsesPath,ExpName),'.mat'],'fR')
+        catch RError
+            disp(['No raw response in ',ExpName])
+            fR = [];
+        end
+        try
+            load([fullfile(rawFiltResponsesPath,ExpName),'.mat'],'rR')
+        catch FError
+            disp(['No filtered response in ',ExpName])
+            rR = [];
+        end
+        %% Load LFP and whisker
+        [LFP, whisker] = loadLFPAndWhisker(...
+            LFPprobeDepth,ExpName,EphysPath);
+        
+        %% Reconstruct triggers
+        lightSignal = getStimPeriods(expDD,fs,fsLFP,'l');
+        puffSignal = getStimPeriods(expDD,fs,fsLFP,'p');
+        touchSignal = getStimPeriods(expDD,fs,fsLFP,'t');
+        whiskingSignal = getStimPeriods(expDD,fs,fsLFP,'w');
+        poleSignal = getStimPeriods(expDD,fs,fsLFP,'pl');
+        groomingSignal = getStimPeriods(expDD,fs,fsLFP,'g');
+        excludeSignal = getStimPeriods(expDD,fs,fsLFP,'x');
+        %% Spikes information 'spikesFindingData'
         sp = round(expDD.Spikes*(fsLFP/fs));
+        minISI = 1000*(min(diff(sp))/fsLFP); % Minimal ISI in ms.
+        ppms = fsLFP/1000;
+        %% Building the analysis structures
+        spikeFindingData = struct('thresh',[],'minISI',minISI,...
+            'spikes',sp,'ppms',ppms,'timestamp',[]);
+        filteredResponse = createStructure(fR,fs,ExampleHead);
+        RawResponse = createStructure(rR,fs,ExampleHead);
+        EEG = createStructure(LFP,fsLFP,ExampleHead);
+        Triggers = struct('whisker',whisker,'light',lightSignal,...
+            'puff',puffSignal,'touch',touchSignal,...
+            'whisking',whiskingSignal,'pole',poleSignal,...
+            'grooming',groomingSignal,'exclude',excludeSignal);
+        notes = {};
+        Conditions = {};
+        save([fullfile(EphysPath,'AnalysisMatFiles',ExpName),'.mat'],...
+            'notes','RawResponse','Triggers','filteredResponse','EEG',...
+            'spikeFindingData','Conditions')
+        continue;
+        
         spT = false(1,Nl);
         spT(sp) = true;
         %% Whiskers periods loading
@@ -45,13 +96,12 @@ for cex = 1:Nex
         whiskSP = sp(whiskPeriods(sp));
         nonwhiskSP = sp(~whiskPeriods(sp));
         %% Light Periods loading
-        [lightPeriods,lp] = getStimPeriods(expDD,fs,fsLFP,'l'); %#ok<ASGLU>
         lightDurations = [lightDurations,expDD.LightLength/fs]; %#ok<AGROW>
         %% Puff loading
-        [puffPeriods, ~] = getStimPeriods(expDD,fs,fsLFP,'p');
+        
         conditionsIdxs = {sp,whiskSP,nonwhiskSP};
         %% Touch loading
-        [touchPeriods, ~] = getStimPeriods(expDD,fs,fsLFP,'t');
+        [touchPeriods, ~, rafTouch] = getStimPeriods(expDD,fs,fsLFP,'t');
         %%
         if RecDB.UsableLFP(cex) %&& RecDB.Light(cex)
             [LFP, whisker] = loadLFPAndWhisker(...
@@ -107,18 +157,18 @@ for cex = 1:Nex
             otherwise
                 NeurType(3,cex) = true;
         end
-%         cexNT = NeurName{NeurType(:,cex)};
-%         whiskerPhase = figure('Name',cexNT);
-%         ph = polarhistogram(angle(anaWhisk(conditionsIdxs{2})),'DisplayName','\phi|spike histogram');hold on;
-%         polarplot(atan2(vectStack(2,4,cex),vectStack(1,4,cex)),max(ph.BinCounts),'DisplayName','EigenVector','Marker','o')
-%         polarplot(atan2(Mstack(7,2,cex),Mstack(6,2,cex)),max(ph.BinCounts),'DisplayName','MRL_{pdf}','Marker','o')
-%         polarplot(atan2(MRL(2,2),MRL(1,2)),max(ph.BinCounts),'DisplayName','MRL_{data}','Marker','o')
-%         polarplot(angle(eigSigPerm),abs(eigSigPerm)*max(ph.BinCounts),'DisplayName','GMM fit')
-%         title(sprintf('MRL_{pdf}: %1.4f, L_2/L_1: %1.4f, MRL_{data}: %1.3f',hypot(Mstack(7,2,cex),Mstack(6,2,cex)),...
-%             Mstack(1,2,cex),hypot(MRL(1,2),MRL(2,2))));legend('show')
-%         fn = sprintf('PL_%s_%s',ExpName,NeurName{NeurType(:,cex)});
-%         savefig(whiskerPhase,fullfile('.\Database\WhiskerHistogramFigures\',fn))
-%         close(whiskerPhase)
+        %         cexNT = NeurName{NeurType(:,cex)};
+        %         whiskerPhase = figure('Name',cexNT);
+        %         ph = polarhistogram(angle(anaWhisk(conditionsIdxs{2})),'DisplayName','\phi|spike histogram');hold on;
+        %         polarplot(atan2(vectStack(2,4,cex),vectStack(1,4,cex)),max(ph.BinCounts),'DisplayName','EigenVector','Marker','o')
+        %         polarplot(atan2(Mstack(7,2,cex),Mstack(6,2,cex)),max(ph.BinCounts),'DisplayName','MRL_{pdf}','Marker','o')
+        %         polarplot(atan2(MRL(2,2),MRL(1,2)),max(ph.BinCounts),'DisplayName','MRL_{data}','Marker','o')
+        %         polarplot(angle(eigSigPerm),abs(eigSigPerm)*max(ph.BinCounts),'DisplayName','GMM fit')
+        %         title(sprintf('MRL_{pdf}: %1.4f, L_2/L_1: %1.4f, MRL_{data}: %1.3f',hypot(Mstack(7,2,cex),Mstack(6,2,cex)),...
+        %             Mstack(1,2,cex),hypot(MRL(1,2),MRL(2,2))));legend('show')
+        %         fn = sprintf('PL_%s_%s',ExpName,NeurName{NeurType(:,cex)});
+        %         savefig(whiskerPhase,fullfile('.\Database\WhiskerHistogramFigures\',fn))
+        %         close(whiskerPhase)
         %% LFP Analyses
         % Inter spike interval 10 ms
         % [~, ~, spT] = getInitialBurstSpike(sp/fsLFP,0.01);
@@ -145,14 +195,14 @@ LFPana = struct('CorrelationInformation',struct('AmpAndLoc',corrInfo,...
     'NeuronType',NeurType,...
     'STA',struct('Bursts',STAb,'Tonic',STAt),...
     'PSTH',struct(...
-        'Overall',psthStack(1,:,:),...
-        'Whisking',psthStack(2,:,:),...
-        'NonWhisking',psthStack(3,:,:),...
-        'NTrials',expNLst),...
+    'Overall',psthStack(1,:,:),...
+    'Whisking',psthStack(2,:,:),...
+    'NonWhisking',psthStack(3,:,:),...
+    'NTrials',expNLst),...
     'EigenAnalysis',struct(...
-        'Overall',struct('Vectors',vectStack(:,1:2,:),'Measures',squeeze(Mstack(:,1,:)),'DataMRL',squeeze(MRL(:,1,:))),...
-        'Whisking',struct('Vectors',vectStack(:,3:4,:),'Measures',squeeze(Mstack(:,2,:)),'DataMRL',squeeze(MRL(:,2,:))),...
-        'NonWhisking',struct('Vectors',vectStack(:,5:6,:),'Measures',squeeze(Mstack(:,3,:)),'DataMRL',squeeze(MRL(:,3,:)))));
+    'Overall',struct('Vectors',vectStack(:,1:2,:),'Measures',squeeze(Mstack(:,1,:)),'DataMRL',squeeze(MRL(:,1,:))),...
+    'Whisking',struct('Vectors',vectStack(:,3:4,:),'Measures',squeeze(Mstack(:,2,:)),'DataMRL',squeeze(MRL(:,2,:))),...
+    'NonWhisking',struct('Vectors',vectStack(:,5:6,:),'Measures',squeeze(Mstack(:,3,:)),'DataMRL',squeeze(MRL(:,3,:)))));
 % figure;histogram(lightDurations);
 end
 
@@ -171,6 +221,8 @@ end
 
 function [stimPeriods,stimStart,stimRF] = getStimPeriods(dd,fs,fs2,stimString)
 fact = fs2/fs;
+stimStart = [];
+stimLength = [];
 switch stimString
     case 'w'
         stimStart = round(dd.WhiskingStart*fact);
@@ -184,6 +236,24 @@ switch stimString
     case 't'
         stimStart = round(dd.TouchStart*fact);
         stimLength = round(dd.TouchLength*fact);
+    case 'pl'
+        if ~isempty(dd.Sections.Pole)
+            stimStart = round(dd.Sections.Pole(:,1)*fact);
+            stimLength = round((dd.Sections.Pole(:,2)-dd.Sections.Pole(:,1))...
+                * fact);
+        end
+    case 'g'
+        if ~isempty(dd.Sections.Grooming)
+            stimStart = round(dd.Sections.Grooming(:,1)*fact);
+            stimLength = round((dd.Sections.Grooming(:,2)-dd.Sections.Grooming(:,1))...
+                * fact);
+        end
+    case 'x'
+        if ~isempty(dd.Sections.Exclude)
+            stimStart = round(dd.Sections.Exclude(:,1)*fact);
+            stimLength = round((dd.Sections.Exclude(:,2)-dd.Sections.Exclude(:,1))...
+                * fact);
+        end
     otherwise
         stimPeriods = dd.LengthTime;
         stimStart = 0;
@@ -210,9 +280,34 @@ LFPdepth=LFPprobeDepth - (50:100:1550);
 LFPchIdx = LFPsort(find(LFPdepth < 900, 1));
 % Loading only the L5 LFP from the 16 channels file
 LFP_L5 = sprintf('LFPch%d',LFPchIdx);
-LFP = load([EphysPath, 'LFP\', ExpName, '.mat'],LFP_L5);
-whisker = load([EphysPath, 'Whisker\', ExpName, '.mat'],...
-    'WhiskerAngle');
-whisker = struct2array(whisker);
-LFP = struct2array(LFP);
+try
+    LFP = load([EphysPath, 'LFP\', ExpName, '.mat'],LFP_L5);
+    LFP = struct2array(LFP);
+catch
+    LFP = [];
+end
+try
+    whisker = load([EphysPath, 'Whisker\', ExpName, '.mat'],...
+        'WhiskerAngle');
+    whisker = struct2array(whisker);
+catch
+    whisker = [];
+end
+end
+
+function varStruct = createStructure(chan,fs,exHead)
+if ~isempty(chan)
+    auxHead = getChannelHeader(exHead,fs,chan);
+    varStruct = struct('data',chan,'header',auxHead);
+else
+    varStruct = struct('data',[],'header',exHead);
+end
+end
+
+function head = getChannelHeader(exHead,fs,chan)
+head = exHead;
+head.min = min(chan);
+head.max = max(chan);
+head.SamplingFrequency = fs;
+head.npoints = numel(chan);
 end
