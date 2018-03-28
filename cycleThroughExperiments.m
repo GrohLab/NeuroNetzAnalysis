@@ -61,36 +61,49 @@ for cex = 1:Nex
             LFPprobeDepth,ExpName,EphysPath);
         
         %% Reconstruct triggers
-        lightSignal = getStimPeriods(expDD,fs,fsLFP,'l');
-        puffSignal = getStimPeriods(expDD,fs,fsLFP,'p');
-        touchSignal = getStimPeriods(expDD,fs,fsLFP,'t');
-        whiskingSignal = getStimPeriods(expDD,fs,fsLFP,'w');
-        poleSignal = getStimPeriods(expDD,fs,fsLFP,'pl');
-        groomingSignal = getStimPeriods(expDD,fs,fsLFP,'g');
-        excludeSignal = getStimPeriods(expDD,fs,fsLFP,'x');
+        lightSignal = getStimPeriods(expDD,fs,fs,'l');
+        puffSignal = getStimPeriods(expDD,fs,fs,'p');
+        touchSignal = getStimPeriods(expDD,fs,fs,'t');
+        whiskingSignal = getStimPeriods(expDD,fs,fs,'w');
+        poleSignal = getStimPeriods(expDD,fs,fs,'pl');
+        groomingSignal = getStimPeriods(expDD,fs,fs,'g');
+        excludeSignal = getStimPeriods(expDD,fs,fs,'x');
         %% Spikes information 'spikesFindingData'
-        sp = round(expDD.Spikes*(fsLFP/fs));
-        minISI = 1000*(min(diff(sp))/fsLFP); % Minimal ISI in ms.
-        ppms = fsLFP/1000;
+        [~,sp,~] = getStimPeriods(expDD,fs,fs,'s');
+        minISI = 1000*(min(diff(sp))/fs); % Minimal ISI in ms.
+        ppms = fs/1000;
         %% Building the analysis structures
         spikeFindingData = struct('thresh',[],'minISI',minISI,...
             'spikes',sp,'ppms',ppms,'timestamp',[]);
         filteredResponse = createStructure(fR,fs,ExampleHead);
         RawResponse = createStructure(rR,fs,ExampleHead);
         EEG = createStructure(LFP,fsLFP,ExampleHead);
-        Triggers = struct('whisker',whisker,'light',lightSignal,...
+        Triggers = struct('whisker',whiskingSignal,'light',lightSignal,...
             'puff',puffSignal,'touch',touchSignal,...
-            'whisking',whiskingSignal,'pole',poleSignal,...
+            'whisking',whisker,'pole',poleSignal,...
             'grooming',groomingSignal,'exclude',excludeSignal);
-        notes = {};
-        Conditions = {};
-        save([fullfile(EphysPath,'AnalysisMatFiles',ExpName),'.mat'],...
+        switch RecDB.PhysioNucleus(cex)
+            case 'POm'
+                NeurType(1,cex) = true;
+                notes = {'POm'};
+            case 'VPM'
+                NeurType(2,cex) = true;
+                notes = {'VPM'};
+            case 'intermediate'
+                NeurType(3,cex) = true;
+                notes = {'intermediate'};
+            otherwise
+                NeurType(3,cex) = true;
+                notes = {'other'};
+        end 
+        % Conditions variable cannot be created yet. The conditions for the
+        % awaken state are way complexer than the anaesthesized mice.
+        Conditions = {}; 
+        save([fullfile(EphysPath,'AnalysisMatFiles',ExpName),'analysis.mat'],...
             'notes','RawResponse','Triggers','filteredResponse','EEG',...
             'spikeFindingData','Conditions')
         continue;
         
-        spT = false(1,Nl);
-        spT(sp) = true;
         %% Whiskers periods loading
         [whiskPeriods,wp] = getStimPeriods(expDD,fs,fsLFP,'w');
         whiskSP = sp(whiskPeriods(sp));
@@ -220,10 +233,14 @@ pos = k(lg);
 end
 
 function [stimPeriods,stimStart,stimRF] = getStimPeriods(dd,fs,fs2,stimString)
+% 'Down-sampling' the time indeces for the stimulus/triggers
 fact = fs2/fs;
 stimStart = [];
 stimLength = [];
 switch stimString
+    case 's'
+        stimStart = round(dd.Spikes*fact);
+        stimLength = zeros(size(stimStart));
     case 'w'
         stimStart = round(dd.WhiskingStart*fact);
         stimLength = round(dd.WhiskingLength*fact);
