@@ -1,18 +1,28 @@
-classdef MouseExperiment
-    %UNTITLED6 Summary of this class goes here
+classdef MouseExperiment < handle
+    %MOUSEEXPERIMENT Parent class dealing with the organization and
+    %processing (?) of the experiments
     %   Detailed explanation goes here
     
-    properties
-        AnimalName = '';
-        Genotype = '';
-        Birthday = datetime();
+    properties (SetAccess = 'private')
+        % Unchangable properties of the experiment
+        AnimalName
         ExperimentDate
+        AnimalBirthday
+        Experimenter
+        Gender
     end
     
-    methods
-        function obj = untitled6(inputArg1,inputArg2)
-            %UNTITLED6 Construct an instance of this class
-            %   Detailed explanation goes here
+    properties (Dependent)
+        PSTH
+    end
+    
+    
+    methods (Abstract)
+        function obj = MouseExperiment(inputArg1,inputArg2)
+            %MOUSEEXPERIMENT
+            %   The constructor of this class imports the information from
+            %   different types of file, from the workspace, or from manual
+            %   input.
             obj.Property1 = inputArg1 + inputArg2;
         end
         
