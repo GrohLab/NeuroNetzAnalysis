@@ -93,7 +93,8 @@ classdef GeneralWaveform
                 end
             end
         end
-        function spkTimeStamps = getSpikesTimeStamps(obj,thresh,minISI)
+        
+        function [spkTimeStamps, obj] = getSpikesTimeStamps(obj,thresh,minISI)
             mx = 1/max(obj.Data);
             x=obj.Data*mx;
             dx=diff(x);
