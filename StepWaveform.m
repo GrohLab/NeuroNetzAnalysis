@@ -1,23 +1,32 @@
 classdef StepWaveform < GeneralWaveform
-    %UNTITLED2 Summary of this class goes here
-    %   Detailed explanation goes here
+    %STEPWAVEFORM is derived from the GeneralWaveform class and contains
+    %only the extra necessary properties to produce time stamps for
+    %triggering or anyother desired method.
     
-    properties (SetAccess = 'private')
-        Rise
-        Fall
+    
+    properties (Dependent)
+        RiseAndFall
     end
     
     methods
-        function obj = StepWaveform()
-            %UNTITLED2 Construct an instance of this class
+        function obj = StepWaveform(data, samplingFreq, units, title)
+            %STEPWAVEFORM Construct an instance of this class
             %   Detailed explanation goes here
-            
+            obj@GeneralWaveform(data,samplingFreq, units,title);
         end
         
-        function outputArg = method1(obj,inputArg)
-            %METHOD1 Summary of this method goes here
-            %   Detailed explanation goes here
-            outputArg = obj.Property1 + inputArg;
+        function  RaF = get.RiseAndFall(obj)
+            ds = diff(obj.Data);
+            rise = false(obj.NSamples,1);    % Rising edge times
+            fall = rise;                    % Falling edge times
+            % Maximum value divided by three
+            rise(2:end) = ds > max(abs(ds))/3;
+            fall(1:end-1) = ds < min(ds)/3;
+            if sum(rise) ~= sum(fall)
+                warning('The cardinality of the rising edges is different for the falling edges\n')
+            else                
+                RaF = [rise,fall];
+            end
         end
     end
 end
