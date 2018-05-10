@@ -7,9 +7,12 @@ classdef SpikeWaveform < GeneralWaveform
         Bursts = BurstTrain();
     end
     properties (Dependent)
-        Ns
+        NumberOfSpikes = [];
     end
-    
+    properties (GetAccess = 'private',SetAccess = 'private')
+        NormThreshold = [];
+        MinISI = 1e-3;          % 1 ms
+    end
     methods
         function obj = SpikeWaveform(data, samplingFreq, units, title)
             %UNTITLED2 Construct an instance of this class
@@ -20,8 +23,10 @@ classdef SpikeWaveform < GeneralWaveform
         function [spkTimeStamps, obj] = getSpikesTimeStamps(obj,thresh,minISI)
             mx = 1/max(obj.Data);
             x=obj.Data*mx;
-            dx=diff(x);
-            if max(dx)>thresh % What does this if statement mean?
+            disp(['Distance to the RMS: ',num2str(exp(-abs(rms(x)-thresh)))])
+            % dx=diff(x);
+            % if max(dx)>thresh % What does this if statement mean?
+            if thresh < max(x)
                 %sp= x>thresh;
                 %if ~sum(sp,'omitnan')
                 sp = find(x>thresh);
@@ -29,7 +34,7 @@ classdef SpikeWaveform < GeneralWaveform
                     if size(sp,1) < size(sp,2)
                         sp=sp';
                     end
-                    dsp=[1000000;diff(sp)];
+                    dsp=[inf;diff(sp)];
                     %indices=find(dsp>minISI);
                     indices=dsp>minISI;
                     
@@ -41,7 +46,7 @@ classdef SpikeWaveform < GeneralWaveform
                     
                     %ends(find(ends>numel(x)))=numel(x);
                     ends(ends>numel(x))=numel(x);
-                    nsp=[];
+                    nsp=zeros(1,length(sp));
                     for i=1:numel(sp)
                         v=x(starts(i):ends(i));
                         m=find(v==max(v));
@@ -54,6 +59,10 @@ classdef SpikeWaveform < GeneralWaveform
                 spkTimeStamps=[];
             end
             obj.Spikes = spkTimeStamps;
+        end
+        
+        function obj = set.Spikes(obj, spks)
+            obj.Spikes = spks;
         end
         
         function [Bursts, firstSpikes, C, BurstLength]=returnBursts(sp,isiCutoff)
