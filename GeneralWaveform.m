@@ -8,17 +8,23 @@ classdef GeneralWaveform
         SamplingFreq
         Time
     end
-    
     properties
         Units
         Title
+    end
+    properties (Dependent)
+        Spectrum = [];
+    end
+    properties (Static)
+        Nw = 0;
     end
     
     
     methods
         function obj = GeneralWaveform(data, samplingFreq, units, title)
             %GENERALWAVEFORM Construct an instance of this class. It takes
-            %two arguments: data and samplingfrequency which
+            %two mandatory arguments: data and samplingFreq, and two
+            %optional: units and title, which can be modified afterwards.
             %   Detailed explanation goes here
             if nargin > 0 && ~isempty(data)
                 [rows, samples] = size(data);
@@ -28,8 +34,8 @@ classdef GeneralWaveform
                 obj.Data = double(data);
                 obj.SamplingFreq = samplingFreq;
                 obj.NSamples = length(data);
-                obj.Time =...
-                    0:1/obj.SamplingFreq:(obj.NSamples-1)/obj.SamplingFreq;
+                obj.Time = seconds(...
+                    0:1/obj.SamplingFreq:(obj.NSamples-1)/obj.SamplingFreq);
                 if nargin >= 3
                     if ischar(units)
                         obj.Units = units;
@@ -71,6 +77,11 @@ classdef GeneralWaveform
             figure();h = plot(obj.Time,obj.Data,varargin{:});
             ylabel(obj.Units);xlabel('Time (s)');title(obj.Title)
         end
+        
+        function spectrum = get.Spectrum(obj)
+            spectrum = FourierSpectrum(obj);
+        end
+        
     end
 end
 
