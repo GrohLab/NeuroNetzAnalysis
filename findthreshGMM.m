@@ -3,7 +3,8 @@ function thrsh = findthreshGMM(params,data)
 %function given its estimated parameters and the data from which the
 %parameters were estimated.
 data = data(:);
-[p_x, xaxis] = genP_x(params,data); % Final distributions
+xaxis = linspace(min(data),max(data),numel(data));
+p_x = genP_x(params,xaxis); % Final distributions
 % The derivative of the logarithm of the absolute values from a first
 % derivative returns spikes where the first derivative is equal to zero.
 ad_px = diff(log(abs(diff(log(p_x))))); 
