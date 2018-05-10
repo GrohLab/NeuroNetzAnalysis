@@ -4,7 +4,7 @@ function [bIdx, tIdx, spIdx] = getInitialBurstSpike(spT,maxISI)
 if ~isrow(spT)
     spT = spT';
 end
-delta_spT = cat(find(size(spT)==1),inf,diff(spT));
+delta_spT = cat(find(size(spT)~=1),inf,diff(spT));
 % delta_spT = [inf,diff(spT)];
 fsIdx = delta_spT >= maxISI;    % First spike index (burst-wise)
 bsIdx = [~fsIdx(2:end) & fsIdx(1:end-1),fsIdx(end)];
