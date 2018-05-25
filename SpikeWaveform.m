@@ -1,26 +1,43 @@
-classdef SpikeWaveform < GeneralWaveform
+classdef SpikeWaveform < DiscreteWaveform
     %UNTITLED2 Summary of this class goes here
     %   Detailed explanation goes here
     
     properties (SetAccess = 'private')
-        Spikes = [];
+        % Multi or difficult spikes using Ultra Mega Sort 2000:
+        UMSdata (1,1) UMSDataLoader;
         Bursts = BurstTrain();
     end
+    properties
+        TimeStamps
+    end
     properties (Dependent)
-        NumberOfSpikes = [];
+        NumberOfSpikes;
     end
     properties (GetAccess = 'private',SetAccess = 'private')
         NormThreshold = [];
-        MinISI = 1e-3;          % 1 ms
+        MinISI (1,1) double = 1e-3;          % 1 ms
     end
     methods
-        function obj = SpikeWaveform(data, samplingFreq, units, title)
+        function obj = SpikeWaveform(varargin)
             %UNTITLED2 Construct an instance of this class
             %   Detailed explanation goes here
-            obj@GeneralWaveform(data, samplingFreq, units, title)
+            obj = obj@DiscreteWaveform(varargin);
+            if ~nargin
+                disp('Using UMS interface')
+            end
         end
         
-        function [spkTimeStamps, obj] = getSpikesTimeStamps(obj,thresh,minISI)
+        function obj = set.TimeStamps(obj, spks)
+            obj.Spikes = spks;
+        end
+        
+        % Function to use UMS to extract the spikes from the given data.
+        function obj = getSpikes_UMS(varargin)
+            obj.UMSdata = UMSDataLoader(varargin);
+            obj.UMSdata.UMS2kPipeline;
+            
+        end
+        function [spkTimeStamps, obj] = getSpikes_Thresh_ISI(obj,thresh,minISI)
             mx = 1/max(obj.Data);
             x=obj.Data*mx;
             disp(['Distance to the RMS: ',num2str(exp(-abs(rms(x)-thresh)))])
@@ -58,11 +75,7 @@ classdef SpikeWaveform < GeneralWaveform
             else
                 spkTimeStamps=[];
             end
-            obj.Spikes = spkTimeStamps;
-        end
-        
-        function obj = set.Spikes(obj, spks)
-            obj.Spikes = spks;
+            obj.TimeStamps = spkTimeStamps;
         end
         
         function [Bursts, firstSpikes, C, BurstLength]=returnBursts(sp,isiCutoff)

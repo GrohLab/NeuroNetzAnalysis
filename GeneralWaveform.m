@@ -1,32 +1,24 @@
-classdef GeneralWaveform
+classdef GeneralWaveform < handle
     %GENERALWAVEFORM implements a class for the
     %   Detailed explanation goes here
     
     properties (SetAccess = 'private')
-        Data 
+        Data (:,:) double = [];
         NSamples
-        SamplingFreq
+        SamplingFreq (1,1) double = 2e4;
         Time
     end
     properties
-        Units
-        Title
+        Units (1,:) char = 'mV';
+        Title (1,:) char = '';
     end
-    properties (Dependent)
-        Spectrum = [];
-    end
-    properties (Static)
-        Nw = 0;
-    end
-    
-    
     methods
         function obj = GeneralWaveform(data, samplingFreq, units, title)
             %GENERALWAVEFORM Construct an instance of this class. It takes
             %two mandatory arguments: data and samplingFreq, and two
             %optional: units and title, which can be modified afterwards.
             %   Detailed explanation goes here
-            if nargin > 0 && ~isempty(data)
+            if nargin > 0 && ~isempty(data) && isnumeric(data)
                 [rows, samples] = size(data);
                 if rows > samples
                     data = data';
@@ -49,13 +41,15 @@ classdef GeneralWaveform
                             warning('String expected; Title not assigned.')
                         end
                     end
-                else
+                elseif nargin > 4
                     disp('Too many input arguments')
                 end
+            else
+                obj.Data = [];
             end
         end
         
-        function obj = set.Title(obj,title)
+        function set.Title(obj,title)
             if ischar(title)
                 obj.Title = title;
             else
@@ -63,7 +57,7 @@ classdef GeneralWaveform
             end
         end
         
-        function obj = set.Units(obj, units)
+        function set.Units(obj, units)
             if ischar(units)
                 obj.Units = units;
             else
@@ -76,10 +70,6 @@ classdef GeneralWaveform
             %correct time and units.
             figure();h = plot(obj.Time,obj.Data,varargin{:});
             ylabel(obj.Units);xlabel('Time (s)');title(obj.Title)
-        end
-        
-        function spectrum = get.Spectrum(obj)
-            spectrum = FourierSpectrum(obj);
         end
         
     end
