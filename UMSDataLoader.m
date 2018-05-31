@@ -69,7 +69,7 @@ classdef UMSDataLoader < handle
                     dataMatrix = zeros(Ns,nargin);
                     for carg = 1:nargin
                         temp = varargin{carg};
-                        if iscolumn(temp)
+                        if isrow(temp)
                             temp = temp';
                         end
                         dataMatrix(:,carg) =  temp;
@@ -84,7 +84,6 @@ classdef UMSDataLoader < handle
         end % Constructor
         %% Ultra Mega Sort 2000 Pipeline
         function obj = UMS2kPipeline(obj)
-            
             spikesLocal = ss_default_params(obj.SamplingFrequency,...
                 'thresh',obj.Thresh,...
                 'window_size',obj.WindowSize,'shadow',obj.Shadow,...
@@ -96,9 +95,23 @@ classdef UMSDataLoader < handle
             spikesLocal = ss_align(spikesLocal);
             spikesLocal = ss_kmeans(spikesLocal);
             spikesLocal = ss_energy(spikesLocal);
-            obj.SpikeUMSStruct = ss_aggregate(spikesLocal);
-            splitmerge_tool(obj.SpikeUMSStruct)
-            
+            spikesLocal = ss_aggregate(spikesLocal);
+            splitmerge_tool(spikesLocal)
+            h = gcf;
+            set(h,'CloseRequestFcn',{@obj.getSpikeStructureCls,h})
+            try
+                while strcmp(h.BeingDeleted,'off')
+                    waitforbuttonpress
+                end
+            catch
+                
+            end
+        end
+        function getSpikeStructureCls(obj,varargin)
+            h = varargin{end};
+            figdata = get(h,'UserData');
+            obj.SpikeUMSStruct = figdata.spikes;
+            delete(h)
         end
         %% SET AND GET SpikeUMSStruct
         function set.SpikeUMSStruct(obj,structIn)
@@ -153,6 +166,7 @@ classdef UMSDataLoader < handle
                 disp(['The UMS2k pipeline hasn''t been ran or ',...
                     'the spike structure hasn''t been saved'])
                 disp('No spike times extracted, therefore none returned')
+                return;
             end
             if sum(clst == spkClust)
                 obj.SpikeTimes =...
@@ -165,7 +179,10 @@ classdef UMSDataLoader < handle
         end
         
         function samplesNumber = get.Ns(obj)
-            samplesNumber = numel(obj.Data{1});
+            samplesNumber = 0;
+            if ~isempty(obj.Data)
+                samplesNumber = numel(obj.Data{1});
+            end
         end
         function disp(obj)
             fprintf('UMSDataLoader object:\nSamples: %d\n',obj.Ns)
@@ -226,5 +243,8 @@ classdef UMSDataLoader < handle
             end % Try to load the data cell from file
             
         end
+        
     end % Static methods
 end % classdef
+
+

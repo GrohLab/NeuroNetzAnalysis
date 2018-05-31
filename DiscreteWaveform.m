@@ -3,15 +3,14 @@ classdef (Abstract) DiscreteWaveform < GeneralWaveform
     %   Detailed explanation goes here
     
     properties (Abstract)
-        TimeStamps
+        Triggers 
     end
     
     methods
-        function obj = DiscreteWaveform(varargin)
+        function obj = DiscreteWaveform(data, samplingFreq, units, title)
             %UNTITLED3 Construct an instance of this class
             %   Detailed explanation goes here
-            obj = obj@GeneralWaveform(varargin);
-        end
-        
+            obj = obj@GeneralWaveform(data, samplingFreq, units, title);
+        end        
     end
 end

@@ -3,7 +3,7 @@ classdef GeneralWaveform < handle
     %   Detailed explanation goes here
     
     properties (SetAccess = 'private')
-        Data (:,:) double = [];
+        Data = [];
         NSamples
         SamplingFreq (1,1) double = 2e4;
         Time
@@ -18,12 +18,16 @@ classdef GeneralWaveform < handle
             %two mandatory arguments: data and samplingFreq, and two
             %optional: units and title, which can be modified afterwards.
             %   Detailed explanation goes here
-            if nargin > 0 && ~isempty(data) && isnumeric(data)
+            if nargin > 0 && ~isempty(data) && (isnumeric(data) || isa(data,'logical'))
                 [rows, samples] = size(data);
                 if rows > samples
                     data = data';
                 end                
-                obj.Data = double(data);
+                if isnumeric(data)
+                    obj.Data = double(data);
+                elseif islogical(data)
+                    obj.Data = logical(data);
+                end
                 obj.SamplingFreq = samplingFreq;
                 obj.NSamples = length(data);
                 obj.Time = seconds(...
@@ -71,7 +75,18 @@ classdef GeneralWaveform < handle
             figure();h = plot(obj.Time,obj.Data,varargin{:});
             ylabel(obj.Units);xlabel('Time (s)');title(obj.Title)
         end
+       
+        function set.SamplingFreq(obj,newFs)
+            if newFs < 1
+                warning('The given number is samller than 1. Assuming ''sampling period''')
+                newFs = 1/newFs;
+            end
+            obj.SamplingFreq = newFs;
+        end
         
+    end
+    methods (Abstract)
+        disp(obj)
     end
 end
 

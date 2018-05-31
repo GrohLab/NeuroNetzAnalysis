@@ -6,9 +6,10 @@ classdef SpikeWaveform < DiscreteWaveform
         % Multi or difficult spikes using Ultra Mega Sort 2000:
         UMSdata (1,1) UMSDataLoader;
         Bursts = BurstTrain();
+        
     end
     properties
-        TimeStamps
+        Triggers
     end
     properties (Dependent)
         NumberOfSpikes;
@@ -18,24 +19,99 @@ classdef SpikeWaveform < DiscreteWaveform
         MinISI (1,1) double = 1e-3;          % 1 ms
     end
     methods
-        function obj = SpikeWaveform(varargin)
+        function obj = SpikeWaveform(data, samplingFreq, units, title)
             %UNTITLED2 Construct an instance of this class
             %   Detailed explanation goes here
-            obj = obj@DiscreteWaveform(varargin);
+            if nargin < 3
+                units = 'mV';
+                title = '';
+                if nargin < 2
+                    samplingFreq = 2e4;
+                end
+            end
+            if nargin == 0
+                super_args = cell(1,4);
+                data = [];
+            end
+            super_args{1} = data;
+            super_args{2} = samplingFreq;
+            super_args{3} = units;
+            super_args{4} = title;
+            obj = obj@DiscreteWaveform(super_args{:});
             if ~nargin
-                disp('Using UMS interface')
+                disp('Use UMS interface')
             end
         end
         
-        function obj = set.TimeStamps(obj, spks)
-            obj.Spikes = spks;
+        function disp(obj)
+            if ~isempty(obj.Data)
+                disp('SpikeWaveform object----')
+                fprintf('Data size: %d\n',obj.NSamples)
+                if ~mod(obj.SamplingFreq,1e3)
+                    fprintf('Sampling frequency: %0.3f kHz\n',...
+                        obj.SamplingFreq/1000)
+                else
+                    fprintf('Sampling frequency: %f Hz\n',obj.SamplingFreq)
+                end
+                if ~isempty(obj.Triggers)
+                    fprintf('Spikes: %d\n',obj.NumberOfSpikes)
+                end
+            else
+                disp(obj.UMSdata)
+            end
+        end
+        
+        function trigs = get.Triggers(obj)
+            trigs = obj.Triggers;
+        end
+        
+        function set.Triggers(obj, spks)
+            if isnumeric(spks) && ~sum(sum(ceil(spks) - floor(spks)))
+                obj.Triggers = spks;
+            else
+                error('Value or type not accepted (Indices are accepted)')
+            end
         end
         
         % Function to use UMS to extract the spikes from the given data.
-        function obj = getSpikes_UMS(varargin)
-            obj.UMSdata = UMSDataLoader(varargin);
-            obj.UMSdata.UMS2kPipeline;
-            
+        function getSpikes_UMS(obj,varargin)
+            if numel(varargin) ~= 0
+                obj.UMSdata = UMSDataLoader(varargin{:});
+                disp('TODO: Try equalizing the data between objects')
+            elseif ~isempty(obj.Data)
+                obj.UMSdata = UMSDataLoader(obj.Data);
+                if ~isempty(obj.SamplingFreq)
+                    obj.UMSdata.SamplingFrequency = obj.SamplingFreq;
+                end
+            else
+                disp('Data needed to extract spikes')
+                return;
+            end
+            if ~isfield(obj.UMSdata.SpikeUMSStruct,'assigns')
+                if ~isempty(obj.UMSdata.Data)
+                    obj.UMSdata.UMS2kPipeline;
+                else
+                    disp('No data loaded yet')
+                    return
+                end
+            end
+            disp('Merged final clusters: ')
+            avCls = unique(obj.UMSdata.SpikeUMSStruct.assigns);
+            for ccl = 1:numel(avCls)
+                fprintf('%d ',avCls(ccl))
+            end
+            fprintf('\n')
+            cls = input('Which cluster is belonging to the desired spikes?','s');
+            cls = str2double(cls);
+            if sum(cls==avCls)
+                obj.UMSdata.getSpikeTimes(cls)
+                obj.Triggers = round(obj.UMSdata.SpikeTimes*...
+                    obj.SamplingFreq);
+                disp('Spikes succesfully extracted')
+            else
+                disp('Such cluster doesn''t exist, please select another')
+                obj.getSpikes_UMS;
+            end
         end
         function [spkTimeStamps, obj] = getSpikes_Thresh_ISI(obj,thresh,minISI)
             mx = 1/max(obj.Data);

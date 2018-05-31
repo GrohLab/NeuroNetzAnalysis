@@ -1,9 +1,14 @@
 function [PSTHstack, LFPstack, Wstack] =...
-    getPSTH(spT,alignP,timeSpan,fs,consEvents)
+    getPSTH(spT,alignP,timeSpan,fs,LFP,consEvents)
 % GETPSTH returns a stack of spikes aligned to a certain event ''alignT''
 % considering the events in the cell array ''consEvents''.
 
 % Computing the size of the PSTH stack
+if isa(alignP,'logical')
+    alWf = StepWaveform(alignP,fs,'on-off','Align triggers');
+    alignP = alWf.Triggers;
+end
+
 [auxR,auxC] = size(alignP);
 if auxR < auxC
     alignP = alignP';
@@ -16,7 +21,7 @@ if raf > 2 || raf < 1
     return;
 end
 Ne = 0;
-if nargin == 5
+if nargin == 6
     typ = whos('consEvents');
     switch typ.class
         case 'double'
@@ -29,6 +34,16 @@ if nargin == 5
             end
         case 'cell'
             Ne = length(consEvents);
+            consEvents2 = consEvents;
+            evntTrain = cellfun(@islogical,consEvents);
+            % Converting the logical event trains into indices
+            for ce = 1:Ne
+                if evntTrain(ce)
+                    stWv = StepWaveform(consEvents{ce},fs);
+                    consEvents2{ce} = stWv.Triggers;
+                end
+            end
+            consEvents = consEvents2;
         otherwise
             fprintf('The events to consider are not in recognized format.\n')
     end
@@ -41,6 +56,12 @@ Nt = round(toi*fs) + 1;
 PSTHstack = false(2+Ne,Nt,Na);
 LFPstack = zeros(Nt,Na);
 Wstack = LFPstack;
+if isnumeric(spT)
+    mxS = spT(end) + Nt;
+    spTemp = false(1,mxS);
+    spTemp(spT) = true;
+    spT = spTemp;
+end
 for cap = 1:Na
     segmIdxs = [alignP(cap,1)-prevSamples,alignP(cap,1)+postSamples];
     % The segments should be in the range of the spike train.
@@ -57,6 +78,11 @@ for cap = 1:Na
     if Ne
         PSTHstack(3:2+Ne,:,cap) =...
             getEventPeriod(alignP, consEvents, cap, prevSamples, postSamples);
+    end
+    % Getting the LFP segments taking into account the different sampling
+    % frequencies i.e. LFP-->1 kHz Spikes --> 20 kHz
+    if exist('LFP','var') && ~isempty(LFP)
+        LFPstack(:,cap) = LFP(round((segmIdxs(1):segmIdxs(2))*(1e3/fs)));
     end
 end
 end
