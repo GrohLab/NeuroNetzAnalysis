@@ -1,4 +1,5 @@
 %% Initialization
+clearvars
 ToniDir = '.\Database\EphysData\AnalysisMatFiles';
 expFiles = dir(fullfile(ToniDir,'*analysis.mat'));
 UMS = false;
@@ -28,6 +29,7 @@ for cf = 1:numel(expFiles)
     baseName = baseName(1:end-8);
     if mkdir(ToniDir,baseName)
         if ~exist(fullfile(ToniDir,baseName,expFiles(cf).name),'file')
+            disp(['Trying to move file ',expFiles(cf).name])
             if ~movefile(fullfile(ToniDir,expFiles(cf).name),...
                     fullfile(ToniDir,basename))
                 writeLogFile(logFile,[expFiles(cf).name, ' couldn''t be found'])
@@ -45,9 +47,9 @@ for cf = 1:numel(expFiles)
                 UMS = true;
             elseif ~isempty(UMS)
                 writeLogFile(logFile,[baseName,...
-                    ' no filtered response found.'])
-                spT = find(strcmp(RecDB.Properties.RowNames, baseName));
-                
+                    ' no filtered response found.\t Using Toni''s extracted time stamps'])
+                expIdx = find(strcmp(RecDB.Properties.RowNames, baseName));
+                spT = DiscreteData(expIdx).Spikes;
                 UMS = false;
             end
         catch
@@ -58,24 +60,40 @@ for cf = 1:numel(expFiles)
         try
             if UMS
                 save(fileName,'UMSSpikeStruct','a')
+                writeLogFile(logFile,[fileName,...
+                ' UMS2k structure appended'])
             end
         catch
-            writeLogFile(logFile,[fileName,...
-                ' unwritable!'])
+            writeLogFile(logFile,[fileName, ' unwritable!'])
+            disp([fileName,' unwritable!'])
         end
         cellType = RecDB(baseName,'PhysioNucleus');
+        cellType = string(cellType.PhysioNucleus);
         % Whisker onset
-        RaF = whiskWf.Triggers;
-        whiskerMovement = Triggered
-        [PSTHstack1,LFPstack1,~] = getPSTH(spT,Raf(:,1),...
-            [100,200]*m,fs,EEG.data,{});
-        % Whisker offset
         whiskWf = StepWaveform(Triggers.whisker,fs);
-        [PSTHstack2,LFPstack2,~] = getPSTH(spT,RaF(:,2),[100,200]*m,...
-            fs,EEG.data,{});
+        RaF = whiskWf.Triggers;
+        whiskerMovement = Triggers.whisking;
+        fieldNames = fieldnames(Triggers);
+        allEvents = struct2cell(Triggers);
+        consEvents = allEvents(~ismember(fieldNames,{'whisking','whisker'}));
+        [PSTHstackW,LFPstackW,~] = getPSTH(spT,RaF,...
+            [100,200]*m,fs,EEG.data,Triggers.whisking,consEvents);
+        % Whisker offset
+        [PSTHstackNW,LFPstackNW,~] = getPSTH(spT,RaF(:,2),[100,200]*m,...
+            fs,EEG.data,Triggers.whisking,consEvents);
         
+        %% Creating the PSTH figures
+        switch cellType
+            case 'POm'
+                
+            case 'VPM'
+                
+            otherwise
+        end
         
     else
+        writeLogFile(logFile,[fullfile(ToniDir,baseName), ' couldn''t be created'])
+        disp([fullfile(ToniDir,baseName), ' couldn''t be created'])
     end
 end
 
