@@ -12,7 +12,7 @@ classdef UMSDataLoader < handle
         % Detecting parameters
         DetectMethod = 'auto';
         Thresh = 3.9;
-        Shadow = 0.75;            % ms, enforced dead region after each spike
+        Shadow = 0.85;            % ms, enforced dead region after each spike
         RefractoryPeriod = 2.5;  % ms, refractory period (for calculation refractory period violations)
         % Alignment parameters
         WindowSize  = 1.5;       % ms, width of a spike
