@@ -1,18 +1,66 @@
-function [PSTHstack, LFPstack, Wstack] =...
-    getPSTH(spT,alignP,timeSpan,fs,LFP,consEvents)
-% GETPSTH returns a stack of spikes aligned to a certain event ''alignT''
-% considering the events in the cell array ''consEvents''.
+function [PSTH, figID] = getPSTH(PSTHstack, plotQ, saveQ, cellType, binSz, fs)
+% GETPSTH returns a peri-stimulus triggered histogram given a triggered
+% aligned stack in the form MxNxT, where M is the number of channels to
+% align, N is the number of samples (time) and T is the number of aligning
+% triggers found in the channel. 
+% The kicking out process needs to be implemented in a dynamical form. The
+% events after the (first) spike channel are a guide to kick row of the
+% spikes out. For now, we will kick out all of the rows which contain a
+% true in the observed time. 
 
 % Computing the size of the PSTH stack
-if isa(alignP,'logical')
-    alWf = StepWaveform(alignP,fs,'on-off','Align triggers');
-    alignP = alWf.Triggers;
+if nargin < 6
+    fs = 2e4;
+    if nargin < 5
+        binSz = 1/2e4;
+        if nargin < 4
+            cellType = 'POm';
+            if nargin < 3
+                saveQ = false;
+                if nargin < 2
+                    plotQ = false;
+                end
+            end
+        end
+    end
+end
+[Ne, Nt, Na] = size(PSTHstack);
+
+% Kicking out everything that contains a true in the channel. No light, no
+% puff, no touch. Nothing.
+kickOutIdx = [];
+if size(PSTHstack,1) > 2
+    kickOutIdx = squeeze(sum(PSTHstack(3:end,:,:),2));
+    kickOutIdx(kickOutIdx ~= 0) = true;
+end
+PSTH = zeros(2,ceil(Nt/binSz));
+PSTH = squeeze(sum(PSTHstack(:,kickOutIdx),3));
+binEls = round(binSz * fs);
+cb = 0;
+while cb < Naux/binEls - 1
+    PSTH(cb+1) = sum(auxCounts(cb*binEls+1:(cb+1)*binEls));
+    cb = cb + 1;
+end
+if plotQ
+    switch cellType
+        case 'POm'
+            % Black for POm
+            colr = 'k';
+        case 'VPM'
+            % Gray for VPM
+            colr = 0.6 * ones(1,3);
+        otherwise
+            % Cyan for other.
+            colr = [77, 210, 255]/255;
+    end
+    % Create figure for the PSTH. The color is determined by the cell type
+    figID = figure('Name',[cellType, ' PSTH'],'Color',[1,1,1]);
+    
+else
+    return;
 end
 
-[auxR,auxC] = size(alignP);
-if auxR < auxC
-    alignP = alignP';
-end
+
 [Na, raf] = size(alignP);
 if raf > 2 || raf < 1
     fprintf(['Warning! The alignment matrix is expected to have ',...
@@ -80,9 +128,12 @@ for cap = 1:Na
             getEventPeriod(alignP, consEvents, cap, prevSamples, postSamples);
     end
     % Getting the LFP segments taking into account the different sampling
-    % frequencies i.e. LFP-->1 kHz Spikes --> 20 kHz
+    % frequencies i.e. LFP-->1 kHz Spikes --> 20 kHz HARD CODE!! BEWARE!!
     if exist('LFP','var') && ~isempty(LFP)
         LFPstack(:,cap) = LFP(round((segmIdxs(1):segmIdxs(2))*(1e3/fs)));
+    end
+    if exist('whiskerMovement','var') && ~isempty(whiskerMovement)
+        Wstack(:,cap) = whiskerMovement(round((segmIdxs(1):segmIdxs(2))*(1e3/fs)));
     end
 end
 end
