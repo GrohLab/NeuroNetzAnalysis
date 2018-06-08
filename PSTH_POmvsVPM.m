@@ -69,6 +69,7 @@ for cf = 1:numel(expFiles)
         end
         cellType = RecDB(baseName,'PhysioNucleus');
         cellType = string(cellType.PhysioNucleus);
+        timeLapse = [500,1e3]*m;
         % Whisker onset
         whiskWf = StepWaveform(Triggers.whisker,fs);
         RaF = whiskWf.Triggers;
@@ -76,21 +77,15 @@ for cf = 1:numel(expFiles)
         fieldNames = fieldnames(Triggers);
         allEvents = struct2cell(Triggers);
         consEvents = allEvents(~ismember(fieldNames,{'whisking','whisker'}));
-        [PSTHstackW,LFPstackW,~] = getPSTH(spT,RaF,...
-            [100,200]*m,fs,EEG.data,Triggers.whisking,consEvents);
+        [PSTHstackW,LFPstackW,WstackW] = getStack(spT,RaF,'on',...
+            timeLapse,fs,EEG.data,Triggers.whisking,consEvents);
+        [~,FigID] = plotTriggeredEvents(PSTHstackW,LFPstackW,WstackW,timeLapse,cellType,0.01,fs);
+        
         % Whisker offset
-        [PSTHstackNW,LFPstackNW,~] = getPSTH(spT,RaF(:,2),[100,200]*m,...
-            fs,EEG.data,Triggers.whisking,consEvents);
+        [PSTHstackNW,LFPstackNW,WstackNW] = getStack(spT,RaF,'off',...
+            timeLapse,fs,EEG.data,Triggers.whisking,consEvents);
         
-        %% Creating the PSTH figures
-        switch cellType
-            case 'POm'
-                
-            case 'VPM'
-                
-            otherwise
-        end
-        
+
     else
         writeLogFile(logFile,[fullfile(ToniDir,baseName), ' couldn''t be created'])
         disp([fullfile(ToniDir,baseName), ' couldn''t be created'])
