@@ -142,25 +142,25 @@ else
         fnalStep = relTdx(offIdx,2) + prev + 1;
         % Event rising, falling or both into the alignment window as a
         % first condition. 
+        stCount = 1;
+        ndCount = 1;
         for cstp = 1:numel(allIdx)
             % If there is no rising edge found, then the step is considered
             % to start before the window and it will be true since the
             % start of the window. Otherwise, the obvious index is taken.
             if onIdx(allIdx(cstp))
-                disp('Rising edge found')
-                strt = initStep(allIdx(cstp));
+                strt = initStep(stCount);
+                stCount = stCount + 1;
             else
-                disp('Rising edge not found')
                 strt = 1;
             end
             % Same case. If the falling edge is not found, the step is
             % considered to end in a later time point than the considered
             % window and it will be true from the rising edge to the end.
             if offIdx(allIdx(cstp))
-                disp('Falling edge found')
-                fnal = fnalStep(allIdx(cstp));
+                fnal = fnalStep(ndCount);
+                ndCount = ndCount + 1;
             else
-                disp('Falling edge not found')
                 fnal = post + prev + 1;
             end
             evntOn(ce,strt:fnal) = true;
