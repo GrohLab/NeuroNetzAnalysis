@@ -79,16 +79,19 @@ if isnumeric(spT)
 end
 %% Cutting the events into the desired segments.
 for cap = 1:Na
+    % Considering the rising or the falling edge of the step function.
     if strcmp(ONOFF, 'on')
         segmIdxs = [alignP(cap,1)-prevSamples,alignP(cap,1)+postSamples];
+        segmIdxsLFP = round([(alignP(cap,1)*fsConv)-prevSamplesLFP,...
+            (alignP(cap,1)*fsConv)+postSamplesLFP]);
     elseif strcmp(ONOFF, 'off')
         segmIdxs = [alignP(cap,2)-prevSamples,alignP(cap,2)+postSamples];
+        segmIdxsLFP = round([(alignP(cap,2)*fsConv)-prevSamplesLFP,...
+            (alignP(cap,2)*fsConv)+postSamplesLFP]);
     end
     % The segments should be in the range of the spike train.
     if segmIdxs(1) >= 1 && segmIdxs(2) <= length(spT)
         spSeg = spT(segmIdxs(1):segmIdxs(2));
-        segmIdxsLFP = round([(alignP(cap,1)*fsConv)-prevSamplesLFP,...
-            (alignP(cap,1)*fsConv)+postSamplesLFP]);
     else
         Na = Na - 1;
         continue;
