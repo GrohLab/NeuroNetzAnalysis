@@ -67,24 +67,26 @@ for cf = 1:numel(expFiles)
             writeLogFile(logFile,[fileName, ' unwritable!'])
             disp([fileName,' unwritable!'])
         end
+        % Initialization for the stack building
         cellType = RecDB(baseName,'PhysioNucleus');
         cellType = string(cellType.PhysioNucleus);
         timeLapse = [500,1e3]*m;
-        % Whisker onset
         whiskWf = StepWaveform(Triggers.whisker,fs);
         RaF = whiskWf.Triggers;
         whiskerMovement = Triggers.whisking;
         fieldNames = fieldnames(Triggers);
         allEvents = struct2cell(Triggers);
         consEvents = allEvents(~ismember(fieldNames,{'whisking','whisker'}));
+        
+        % Whisker onset
         [PSTHstackW,LFPstackW,WstackW] = getStack(spT,RaF,'on',...
             timeLapse,fs,EEG.data,Triggers.whisking,consEvents);
-        [~,FigID] = plotTriggeredEvents(PSTHstackW,LFPstackW,WstackW,timeLapse,cellType,0.01,fs);
+        [~,FigID] = plotTriggeredEvents(PSTHstackW,LFPstackW,WstackW,timeLapse,cellType,50*m,fs);
         
         % Whisker offset
         [PSTHstackNW,LFPstackNW,WstackNW] = getStack(spT,RaF,'off',...
             timeLapse,fs,EEG.data,Triggers.whisking,consEvents);
-        
+        [~,FigID] = plotTriggeredEvents(PSTHstackNW,LFPstackNW,WstackNW,timeLapse,cellType,20*m,fs);
 
     else
         writeLogFile(logFile,[fullfile(ToniDir,baseName), ' couldn''t be created'])

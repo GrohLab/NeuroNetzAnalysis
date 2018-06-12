@@ -1,6 +1,6 @@
 function [expStack, LFPstack, Wstack] =...
     getStack(spT,alignP,ONOFF,timeSpan,fs,LFP,whiskerMovement,consEvents)
-% GETPSTH returns a stack of spikes aligned to a certain event ''alignT''
+% GETSTACK returns a stack of spikes aligned to a certain event ''alignT''
 % considering the events in the cell array ''consEvents''.
 
 %% Computing the size of the PSTH stack
@@ -79,16 +79,19 @@ if isnumeric(spT)
 end
 %% Cutting the events into the desired segments.
 for cap = 1:Na
+    % Considering the rising or the falling edge of the step function.
     if strcmp(ONOFF, 'on')
         segmIdxs = [alignP(cap,1)-prevSamples,alignP(cap,1)+postSamples];
+        segmIdxsLFP = round([(alignP(cap,1)*fsConv)-prevSamplesLFP,...
+            (alignP(cap,1)*fsConv)+postSamplesLFP]);
     elseif strcmp(ONOFF, 'off')
         segmIdxs = [alignP(cap,2)-prevSamples,alignP(cap,2)+postSamples];
+        segmIdxsLFP = round([(alignP(cap,2)*fsConv)-prevSamplesLFP,...
+            (alignP(cap,2)*fsConv)+postSamplesLFP]);
     end
     % The segments should be in the range of the spike train.
     if segmIdxs(1) >= 1 && segmIdxs(2) <= length(spT)
         spSeg = spT(segmIdxs(1):segmIdxs(2));
-        segmIdxsLFP = round([(alignP(cap,1)*fsConv)-prevSamplesLFP,...
-            (alignP(cap,1)*fsConv)+postSamplesLFP]);
     else
         Na = Na - 1;
         continue;
@@ -124,20 +127,46 @@ if isempty(evntTdx)
 else
     evntOn = false(numel(evntTdx),prev+post+1);
     for ce = 1:length(evntTdx)
+        % Change of implementation. Considering the on set OR the offset of
+        % a step pulse.
         if strcmp(ONOFF,'on')
-            relTdx = evntTdx{ce}(:,1) - alignTdx(cap,1);
+            relTdx = evntTdx{ce} - alignTdx(cap,1);
         else
-            relTdx = evntTdx{ce}(:,2) - alignTdx(cap,2);
+            relTdx = evntTdx{ce} - alignTdx(cap,2);
         end
-        inToi = find(relTdx >= -prev & relTdx < post);
-        if ~isempty(inToi)
-            psthIdx = evntTdx{ce}(inToi,1)-alignTdx(cap,1) + prev + 1;
-            lenIdx = evntTdx{ce}(inToi,2)-evntTdx{ce}(inToi,1) + 1;
-            for cep = 1:numel(psthIdx)
-                idxs = psthIdx(cep):psthIdx(cep)+lenIdx(cep)-1;
-                idxs = idxs(idxs <= post+prev+1);
-                evntOn(ce,idxs) = true;
+        
+        % Indexes for encountered rising (onIdx) and falling (offIdx) edges
+        onIdx = relTdx(:,1) >= -prev & relTdx(:,1) < post; 
+        offIdx = relTdx(:,2) >= -prev & relTdx(:,2) < post;
+        % Indexes considering the partial or complete step that falls into
+        % the considered segment.
+        allIdx = find(onIdx | offIdx);
+        initStep = relTdx(onIdx,1) + prev + 1;
+        fnalStep = relTdx(offIdx,2) + prev + 1;
+        % Event rising, falling or both into the alignment window as a
+        % first condition. 
+        stCount = 1;
+        ndCount = 1;
+        for cstp = 1:numel(allIdx)
+            % If there is no rising edge found, then the step is considered
+            % to start before the window and it will be true since the
+            % start of the window. Otherwise, the obvious index is taken.
+            if onIdx(allIdx(cstp))
+                strt = initStep(stCount);
+                stCount = stCount + 1;
+            else
+                strt = 1;
             end
+            % Same case. If the falling edge is not found, the step is
+            % considered to end in a later time point than the considered
+            % window and it will be true from the rising edge to the end.
+            if offIdx(allIdx(cstp))
+                fnal = fnalStep(ndCount);
+                ndCount = ndCount + 1;
+            else
+                fnal = post + prev + 1;
+            end
+            evntOn(ce,strt:fnal) = true;
         end
     end
 end

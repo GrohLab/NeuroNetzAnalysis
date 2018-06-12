@@ -14,12 +14,13 @@ auxCounts = sum(PSTHstack(:,:,~kIdx),3);
 % Binning process.
 binEls = round(binSz * fs);
 PSTH = zeros(1,ceil(Nt/binEls));
-trig = zeros(1,ceil(Nt/binEls));
+% trig = zeros(1,ceil(Nt/binEls));
 cb = 0;
 sweeps = Na - sum(kIdx);
+trig = auxCounts(1,:)/sum(~kIdx);
 while cb < Nt/binEls - 1
     PSTH(cb+1) = sum(auxCounts(2,cb*binEls+1:(cb+1)*binEls));
-    trig(cb+1) = sum(auxCounts(1,cb*binEls+1:(cb+1)*binEls));
+%     trig(cb+1) = sum(auxCounts(1,cb*binEls+1:(cb+1)*binEls));
     cb = cb + 1;
 end
 end

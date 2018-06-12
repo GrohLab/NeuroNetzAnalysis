@@ -1,6 +1,6 @@
 function [PSTH, figID] =...
     plotTriggeredEvents(PSTHstack, LFPstack, Wstack, timeLapse, cellType, binSz, fs)
-% plotTriggeredEvents returns a peri-stimulus triggered histogram given a
+% PLOTTRIGGEREDEVENTS returns a peri-stimulus triggered histogram given a
 % triggered aligned stack in the form MxNxT, where M is the number of
 % channels to align, N is the number of samples (time) and T is the number
 % of aligning triggers found in the channel. The kicking out process needs
@@ -14,7 +14,7 @@ if binSz >= 1
     binSz = binSz*1e-3;
 end
 
-[Ne, ~, Na] = size(PSTHstack);
+[Ne, Nt, Na] = size(PSTHstack);
 fsLFP = 1e3;
 %% Cleaning the stack
 % Kicking out everything that contains a true in the channel. No light, no
@@ -59,17 +59,21 @@ for cl = size(spksStack,2):-1:1
 end
 ax(1).XColor = 'none';
 ylabel('Trials');box off
-T = xx(find(PSTHstack(1,:,1)==1,1,'first'));set(gca,'XTickLabel',[])
-hold on;plot([T,T],[0,Na-sum(~kickAlignmentIDx)],'Color',[37, 154, 3]/255)
+% T = xx(find(PSTHstack(1,:,1)==1,1,'first'));set(gca,'XTickLabel',[])
+T = xx(round((Nt*timeLapse(1) - timeLapse(2))/sum(timeLapse))+1);
+set(gca,'XTickLabel',[]);hold on;
+plot([T,T],[0,Na-sum(~kickAlignmentIDx)],'Color',[37, 154, 3]/255)
 axis([-timeLapse(1),timeLapse(2),0,sum(~kickAlignmentIDx)+1])
 % PSTH PLOT
 ax(2) = subplot(5,1,4,'Color','none');
 bar(ax(2),-timeLapse(1):binSz:timeLapse(2),PSTH/(binSz*sweeps),1,...
     'EdgeColor','none','FaceColor',colr);
 hold on;ylabel('Frequency [Hz]');box off;xlabel(['Time_{',num2str(binSz*1e3),' ms} [s]'])
-binEls = round(binSz * fs);
+% binEls = round(binSz * fs);
 yyaxis(ax(2),'right')
-area(ax(2),-timeLapse(1):binSz:timeLapse(2),(trig/(binEls*sweeps)),...
+% area(ax(2),-timeLapse(1):binSz:timeLapse(2),(trig/(binEls*sweeps)),...
+%     'EdgeColor','none','FaceAlpha',0.3,'FaceColor',[37, 154, 3]/255)
+area(ax(2),-timeLapse(1):1/fs:timeLapse(2),trig,...
     'EdgeColor','none','FaceAlpha',0.3,'FaceColor',[37, 154, 3]/255)
 ylabel('Probability of whisking');set(gca,'YColor',[37, 154, 3]/255)
 % AVERAGE LFP
