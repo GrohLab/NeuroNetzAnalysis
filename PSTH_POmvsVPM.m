@@ -77,16 +77,20 @@ for cf = 1:numel(expFiles)
         fieldNames = fieldnames(Triggers);
         allEvents = struct2cell(Triggers);
         consEvents = allEvents(~ismember(fieldNames,{'whisking','whisker'}));
-        
+        binningTime = 50*m;
         % Whisker onset
         [PSTHstackW,LFPstackW,WstackW] = getStack(spT,RaF,'on',...
             timeLapse,fs,EEG.data,Triggers.whisking,consEvents);
-        [~,FigID] = plotTriggeredEvents(PSTHstackW,LFPstackW,WstackW,timeLapse,cellType,50*m,fs);
+        [~,FigID] =...
+            plotTriggeredEvents(PSTHstackW, LFPstackW, WstackW,...
+            timeLapse, cellType, binningTime, fs);
         
         % Whisker offset
-        [PSTHstackNW,LFPstackNW,WstackNW] = getStack(spT,RaF,'off',...
-            timeLapse,fs,EEG.data,Triggers.whisking,consEvents);
-        [~,FigID] = plotTriggeredEvents(PSTHstackNW,LFPstackNW,WstackNW,timeLapse,cellType,20*m,fs);
+        [PSTHstackNW,LFPstackNW,WstackNW] = getStack(spT, RaF, 'off',...
+            timeLapse, fs, EEG.data, Triggers.whisking, consEvents);
+        [~,FigID] =...
+            plotTriggeredEvents(PSTHstackNW, LFPstackNW, WstackNW,...
+            timeLapse, cellType, binningTime, fs);
 
     else
         writeLogFile(logFile,[fullfile(ToniDir,baseName), ' couldn''t be created'])
