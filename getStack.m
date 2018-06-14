@@ -92,6 +92,12 @@ for cap = 1:Na
     % The segments should be in the range of the spike train.
     if segmIdxs(1) >= 1 && segmIdxs(2) <= length(spT)
         spSeg = spT(segmIdxs(1):segmIdxs(2));
+        if ~(segmIdxsLFP(1) >= 1 && segmIdxsLFP(2) <= length(LFP)) ||...
+                ~(segmIdxsLFP(1) >= 1 && segmIdxsLFP(2) <= length(whiskerMovement))
+            OUTFLAG = true;
+        else
+            OUTFLAG = false;
+        end
     else
         Na = Na - 1;
         continue;
@@ -108,11 +114,15 @@ for cap = 1:Na
     end
     % Getting the LFP segments taking into account the different sampling
     % frequencies i.e. LFP-->1 kHz Spikes --> 20 kHz HARD CODE!! BEWARE!!
-    if exist('LFP','var') && ~isempty(LFP)
-        LFPstack(:,cap) = LFP(round((segmIdxsLFP(1):segmIdxsLFP(2))));
-    end
-    if exist('whiskerMovement','var') && ~isempty(whiskerMovement)
-        Wstack(:,cap) = whiskerMovement(round((segmIdxsLFP(1):segmIdxsLFP(2))));
+    if ~OUTFLAG
+        if exist('LFP','var') && ~isempty(LFP)
+            LFPstack(:,cap) = LFP(round((segmIdxsLFP(1):segmIdxsLFP(2))));
+        end
+        if exist('whiskerMovement','var') && ~isempty(whiskerMovement)
+            Wstack(:,cap) = whiskerMovement(round((segmIdxsLFP(1):segmIdxsLFP(2))));
+        end
+    else
+        disp('What to do in case that the indexes are outside the window?')
     end
 end
 end
