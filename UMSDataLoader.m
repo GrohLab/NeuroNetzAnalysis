@@ -8,7 +8,7 @@ classdef UMSDataLoader < handle
         SpikeUMSStruct
     end
     properties
-        SamplingFrequency = 2e4;
+        SamplingFrequency (1,1) double = 2e4;
         % Detecting parameters
         DetectMethod = 'auto';
         Thresh = 3.9;
@@ -23,11 +23,13 @@ classdef UMSDataLoader < handle
         KmeansClusterSize = 500; %  target size for miniclusters
     end % properties
     properties (Dependent)
-        Ns 
+        Ns
+        Nch
     end
     properties (SetAccess = 'private',GetAccess = 'private')
         % Default value is for the Poly design unaccesible to the user:
-        PolyChanOrder = [8, 9, 7, 10, 4, 13, 5, 12, 2, 15, 1, 16, 6, 11, 3, 14];
+        PolyChanOrder (1,:) int16 =...
+            [8, 9, 7, 10, 4, 13, 5, 12, 2, 15, 1, 16, 6, 11, 3, 14];
     end
     methods
         function obj = UMSDataLoader(varargin)
@@ -72,7 +74,7 @@ classdef UMSDataLoader < handle
                         if isrow(temp)
                             temp = temp';
                         end
-                        dataMatrix(:,carg) =  temp;
+                        dataMatrix(:,carg) =  temp(1:Ns);
                     end
                     data{1} = double(dataMatrix);
                 end
@@ -91,7 +93,9 @@ classdef UMSDataLoader < handle
                 'refractory_period',obj.RefractoryPeriod,...
                 'max_jitter',obj.MaxJitter,'agg_cutoff',obj.AggCutoff,...
                 'kmeans_clustersize',obj.KmeansClusterSize);
-            spikesLocal = ss_detect(obj.Data,spikesLocal);
+            % The data is ordered as it is given to UMS2k to process.
+            tempData{1} = obj.Data{1}(:,obj.PolyChanOrder);
+            spikesLocal = ss_detect(tempData, spikesLocal);
             spikesLocal = ss_align(spikesLocal);
             spikesLocal = ss_kmeans(spikesLocal);
             spikesLocal = ss_energy(spikesLocal);
@@ -104,9 +108,9 @@ classdef UMSDataLoader < handle
                     waitforbuttonpress
                 end
             catch
-                
             end
         end
+        
         function getSpikeStructureCls(obj,varargin)
             h = varargin{end};
             figdata = get(h,'UserData');
@@ -177,18 +181,89 @@ classdef UMSDataLoader < handle
                     'HINT! You can see the cluster number in the splitmerge tool ;)'])
             end
         end
-        
+        %% Poly channel order modification
+        function changeChannelOrder(obj,newChanOrd)
+            obj.PolyChanOrder = newChanOrd;
+        end
+        function set.PolyChanOrder(obj,newChanOrd)
+            if ~isempty(obj.Data{1})
+                if  obj.Nch == length(newChanOrd)
+                    disp('Changing the channel order')
+                    obj.PolyChanOrder = newChanOrd;
+                else
+                    fprintf(['The data has %d channels and the new',...
+                        ' order has %d numbers.'], obj.Nch,...
+                        length(newChanOrd))
+                    yn = input('Would you like to continue?','s');
+                    if yn == 'y' || yn == 'Y'
+                        obj.PolyChanOrder = newChanOrd;
+                        disp(obj)
+                    end
+                end
+            else
+                obj.PolyChanOrder = newChanOrd;
+            end
+        end
+        % Number of samples per channel
         function samplesNumber = get.Ns(obj)
             samplesNumber = 0;
             if ~isempty(obj.Data)
-                samplesNumber = numel(obj.Data{1});
+                samplesNumber = size(obj.Data{1},1);
             end
         end
+        % Number of channels in the data set
+        function numberOfChannels = get.Nch(obj)
+            numberOfChannels = 0;
+            if ~isempty(obj.Data{1})
+                numberOfChannels = size(obj.Data{1},2);
+            end
+        end
+        % Display of the object. Called everytime there is no semicolon.
         function disp(obj)
             fprintf('UMSDataLoader object:\nSamples: %d\n',obj.Ns)
             fprintf('Sampling Frequency: %.3f kHz\n',obj.SamplingFrequency/1e3)
             fprintf('Detection method: %s\n',obj.DetectMethod)
             fprintf('Threshold: %f\n',obj.Thresh)
+            fprintf('Channel order: \n')
+            for cch = 1:length(obj.PolyChanOrder)
+                fprintf('%d: %d\n',cch,obj.PolyChanOrder(cch))
+            end
+        end
+        % Plot the data in the object on different levels
+        function h = plot(obj,varargin)
+            if ~isempty(obj.Data{1})
+                h = figure('Name','UltraMegaSort2000 data','Color',[1,1,1]);
+                means = mean(obj.Data{1},1);
+                stds = std(obj.Data{1},[],1);
+                
+                
+                if length(obj.PolyChanOrder) >= obj.Nch
+                    tx = 0:1/obj.SamplingFrequency:...
+                        (obj.Ns-1)/obj.SamplingFrequency;
+                    lbls = cell(1,obj.Nch);
+                    lvl = cumsum(stds(obj.PolyChanOrder)*30);
+                    for cch = 1:obj.Nch
+                        lbls{cch} = [num2str(cch),' (',...
+                            num2str(obj.PolyChanOrder(cch)),')'];
+                        tempChan = obj.Data{1}(:,obj.PolyChanOrder(cch));
+                        tempChan = tempChan -...
+                            means(obj.PolyChanOrder(cch)) + lvl(...
+                            obj.PolyChanOrder(cch));
+                        plot(tx,tempChan,varargin{:})
+                        if cch == 1
+                            hold on
+                        end
+                    end
+                    hold off;box off
+                    set(gca,'YTick',lvl,'YTickLabel',lbls)
+                    xlabel('Time [s]');title('Loaded data')
+                else
+                    fprintf(...
+                        ['The number of channels in the data is ',...
+                        'different from the order of channels!\nMaybe',...
+                        ' change the PolyChanOrder property.'])
+                end
+            end
         end
     end % methods
     
