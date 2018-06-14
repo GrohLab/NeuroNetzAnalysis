@@ -1,4 +1,4 @@
-function [PSTH, figID] =...
+function [PSTH, figID, kickAlignmentIDx] =...
     plotTriggeredEvents(PSTHstack, LFPstack, Wstack, timeLapse, cellType, binSz, fs)
 % PLOTTRIGGEREDEVENTS returns a peri-stimulus triggered histogram given a
 % triggered aligned stack in the form MxNxT, where M is the number of
@@ -18,7 +18,7 @@ end
 fsLFP = 1e3;
 %% Cleaning the stack
 % Kicking out everything that contains a true in the channel. No light, no
-% puff, no touch. Nothing.
+% puff, no touch. Nothing. Inverted variable: kick means to keep.
 if size(PSTHstack,1) > 2
     kickOutIdx = squeeze(sum(PSTHstack(3:end,:,:),2)) > 0;
     kickAlignmentIDx = sum(kickOutIdx,1) > 0;
@@ -44,7 +44,7 @@ end
 %% Plot the information extracted from the stack.
 % Create figure for the PSTH. The color is determined by the cell type
 % RASTER PLOT
-figID = figure('Name',[char(cellType), ' Raster, PSTH and average traces'],...
+figID(1) = figure('Name',[char(cellType), ' Raster, PSTH and average traces'],...
     'Color',[1,1,1]);
 ax(1) = subplot(5,1,[2,3],'Color','none');
 spksStack = squeeze(PSTHstack(2,:,~kickAlignmentIDx));
@@ -58,11 +58,11 @@ for cl = size(spksStack,2):-1:1
     end
 end
 ax(1).XColor = 'none';
-ylabel('Trials');box off
+ylabel(['Trials (',num2str(sum(~kickAlignmentIDx)),'/',num2str(Na),')']);
+box off;T = xx(round((Nt*timeLapse(1) - timeLapse(2))/sum(timeLapse))+1);
 % T = xx(find(PSTHstack(1,:,1)==1,1,'first'));set(gca,'XTickLabel',[])
-T = xx(round((Nt*timeLapse(1) - timeLapse(2))/sum(timeLapse))+1);
 set(gca,'XTickLabel',[]);hold on;
-plot([T,T],[0,Na-sum(~kickAlignmentIDx)],'Color',[37, 154, 3]/255)
+plot([T,T],[0,sum(~kickAlignmentIDx)],'Color',[37, 154, 3]/255)
 axis([-timeLapse(1),timeLapse(2),0,sum(~kickAlignmentIDx)+1])
 % PSTH PLOT
 ax(2) = subplot(5,1,4,'Color','none');
@@ -84,6 +84,7 @@ plotAverageTrace(axLFP(1),timeLapse,LFPmean,LFPstd,'LFP',fsLFP)
 axLFP(2) = subplot(5,1,5);
 plotAverageTrace(axLFP(2),timeLapse,Wmean,Wstd,'Whisker',fsLFP)
 linkaxes([ax,axLFP],'x')
+
 end
 
 function plotAverageTrace(ax,timeLapse,y,sigma,signalName,fs)
