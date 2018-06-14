@@ -11,6 +11,10 @@ classdef (Abstract) DiscreteWaveform < GeneralWaveform
             %UNTITLED3 Construct an instance of this class
             %   Detailed explanation goes here
             obj = obj@GeneralWaveform(data, samplingFreq, units, title);
-        end        
+            
+        end 
+        function h = plot(obj,varargin)
+            h = plot@GeneralWaveform(obj,varargin{:});
+        end
     end
 end
