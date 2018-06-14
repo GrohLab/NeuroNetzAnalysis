@@ -73,7 +73,10 @@ classdef SpikeWaveform < DiscreteWaveform
             end
         end
         
-        % Function to use UMS to extract the spikes from the given data.
+        function Ns = get.NumberOfSpikes(obj)
+            Ns = numel(obj.Triggers);
+        end
+        % Method to use UMS to extract the spikes from the given data.
         function getSpikes_UMS(obj,varargin)
             if numel(varargin) ~= 0
                 obj.UMSdata = UMSDataLoader(varargin{:});
@@ -113,6 +116,16 @@ classdef SpikeWaveform < DiscreteWaveform
                 obj.getSpikes_UMS;
             end
         end
+        
+        function h = plot(obj,varargin)
+            h = plot@DiscreteWaveform(obj,varargin{:});
+            if ~isempty(obj.Triggers)
+                yyaxis('right');
+                plot(obj.Time(obj.Triggers),ones(1,obj.NumberOfSpikes),...
+                    'LineStyle','none','Marker','.');
+            end
+        end
+        
         function [spkTimeStamps, obj] = getSpikes_Thresh_ISI(obj,thresh,minISI)
             mx = 1/max(obj.Data);
             x=obj.Data*mx;
