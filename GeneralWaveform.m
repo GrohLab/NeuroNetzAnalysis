@@ -2,10 +2,10 @@ classdef GeneralWaveform < handle
     %GENERALWAVEFORM implements a class for the
     %   Detailed explanation goes here
     
-    properties (SetAccess = 'private')
+    properties (SetAccess = 'protected')
+        SamplingFreq (1,1) double = 2e4;
         Data = [];
         NSamples
-        SamplingFreq (1,1) double = 2e4;
         Time
     end
     properties
@@ -73,9 +73,9 @@ classdef GeneralWaveform < handle
             %PLOT opens a new figure and plots the waveform with its
             %correct time and units.
             figure();h = plot(obj.Time,obj.Data,varargin{:});
-            ylabel(obj.Units);xlabel('Time (s)');title(obj.Title)
+            ylabel(obj.Units);xlabel('Time (s)');title(obj.Title);
         end
-       
+        
         function set.SamplingFreq(obj,newFs)
             if newFs < 1
                 warning('The given number is samller than 1. Assuming ''sampling period''')
