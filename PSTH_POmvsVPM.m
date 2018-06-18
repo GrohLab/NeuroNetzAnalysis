@@ -104,7 +104,7 @@ for cf = 1:numel(expFiles)
         fieldNames = fieldnames(Triggers);
         allEvents = struct2cell(Triggers);
         consEvents = allEvents(~ismember(fieldNames,{'whisking','whisker'}));
-        binningTime = 50*m;
+        binningTime = 10*m;
         
         % Whisker onset
         [PSTHstackW,LFPstackW,WstackW] = getStack(spT, RaF, 'on',...
