@@ -1,7 +1,7 @@
 classdef UMSDataLoader < handle
     % DATALOADER 
     properties (SetAccess = 'private')
-        Data = [];
+        Data(1,:) cell = {};
         SpikeTimes
     end
     properties
@@ -23,8 +23,8 @@ classdef UMSDataLoader < handle
         KmeansClusterSize = 500; %  target size for miniclusters
     end % properties
     properties (Dependent)
-        Ns
-        Nch
+        Ns                      % Number of samples
+        Nch                     % Number of channels
     end
     properties (SetAccess = 'private',GetAccess = 'private')
         % Default value is for the Poly design unaccesible to the user:
@@ -48,7 +48,7 @@ classdef UMSDataLoader < handle
                 elseif ischar(varargin{1})
                     disp('Building from file...')
                     data = UMSDataLoader.LoadFromFile(...
-                        varargin{1},obj.PolyChanOrder);
+                        varargin{1},sort(obj.PolyChanOrder,'ascend'));
                 elseif iscell(varargin{1})
                    data = varargin{1};
                 else
@@ -103,11 +103,26 @@ classdef UMSDataLoader < handle
             splitmerge_tool(spikesLocal)
             h = gcf;
             set(h,'CloseRequestFcn',{@obj.getSpikeStructureCls,h})
+            % When the figure is closed, the spikes structure is saved in
+            % the object for spike extraction from the human recognised
+            % cluster.
             try
                 while strcmp(h.BeingDeleted,'off')
                     waitforbuttonpress
                 end
             catch
+            end
+        end
+        
+        function changeDataFromFile(obj,fileName,ordered,chanOrder)
+            % Loads the channels with the provided numbers 
+            if nargin < 3
+            obj.Data = obj.LoadFromFile(fileName,obj.PolyChanOrder);
+            elseif ordered && nargin == 4
+                obj.Data = obj.LoadFromFile(fileName,chanOrder);
+            else
+                fprintf('Importing all channels in their original order')
+                obj.Data = obj.LoadFromFile(fileName,[]);
             end
         end
         
@@ -148,7 +163,7 @@ classdef UMSDataLoader < handle
             end
         end % get SpikeTimes
         
-        function obj = getSpikeTimes(obj,varargin)
+        function getSpikeTimes(obj,varargin)
             spkClust = 0;
             for na = 1:nargin-1
                 if isa(varargin{na},'struct')
@@ -185,8 +200,9 @@ classdef UMSDataLoader < handle
         function changeChannelOrder(obj,newChanOrd)
             obj.PolyChanOrder = newChanOrd;
         end
+        
         function set.PolyChanOrder(obj,newChanOrd)
-            if ~isempty(obj.Data{1})
+            if ~isempty(obj.Data)
                 if  obj.Nch == length(newChanOrd)
                     disp('Changing the channel order')
                     obj.PolyChanOrder = newChanOrd;
@@ -234,12 +250,12 @@ classdef UMSDataLoader < handle
             if ~isempty(obj.Data{1})
                 h = figure('Name','UltraMegaSort2000 data','Color',[1,1,1]);
                 means = mean(obj.Data{1},1);
-                stds = std(obj.Data{1},[],1);
+                stds = std(obj.Data{1}(:,obj.PolyChanOrder),[],1);
                 
                 
                 if length(obj.PolyChanOrder) >= obj.Nch
-                    tx = 0:1/obj.SamplingFrequency:...
-                        (obj.Ns-1)/obj.SamplingFrequency;
+                    tx = seconds(0:1/obj.SamplingFrequency:...
+                        (obj.Ns-1)/obj.SamplingFrequency);
                     lbls = cell(1,obj.Nch);
                     lvl = cumsum(stds(obj.PolyChanOrder)*30);
                     for cch = 1:obj.Nch
@@ -247,8 +263,7 @@ classdef UMSDataLoader < handle
                             num2str(obj.PolyChanOrder(cch)),')'];
                         tempChan = obj.Data{1}(:,obj.PolyChanOrder(cch));
                         tempChan = tempChan -...
-                            means(obj.PolyChanOrder(cch)) + lvl(...
-                            obj.PolyChanOrder(cch));
+                            means(obj.PolyChanOrder(cch)) + lvl(cch);
                         plot(tx,tempChan,varargin{:})
                         if cch == 1
                             hold on
@@ -261,7 +276,8 @@ classdef UMSDataLoader < handle
                     fprintf(...
                         ['The number of channels in the data is ',...
                         'different from the order of channels!\nMaybe',...
-                        ' change the PolyChanOrder property.'])
+                        ' change the Chanel Order property using the',...
+                        ' changeChanOrder method.'])
                 end
             end
         end
@@ -281,6 +297,9 @@ classdef UMSDataLoader < handle
                         'chan*');
                     Ns = min(structfun(@numel,chanVars));
                     chanNames = fieldnames(chanVars);
+                    if ~exist('channelOrder','var') || isempty(channelOrder)
+                        channelOrder = 1:numel(chanNames);
+                    end
                     dataMatrix = zeros(Ns,numel(channelOrder));
                     for cch = 1:numel(channelOrder)
                         auxChan = chanVars.(chanNames{channelOrder(cch)})(1:Ns);
@@ -306,10 +325,9 @@ classdef UMSDataLoader < handle
                     errCorr = input(['Did you mean: ',filesInDir(shortDist+2).name,...
                         '? (y/n)'], 's');
                     if errCorr == 'y' || errCorr == 'Y'
-                        auxObj = UMSDataLoader();
                         data = UMSDataLoader.LoadFromFile(...
                             fullfile(inDir,filesInDir(shortDist+2).name),...
-                            auxObj.PolyChanOrder);
+                            channelOrder);
                     else
                         disp('Loading aborted!')
                         data = [];
