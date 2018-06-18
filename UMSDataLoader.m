@@ -85,7 +85,7 @@ classdef UMSDataLoader < handle
             disp('Constructed!')
         end % Constructor
         %% Ultra Mega Sort 2000 Pipeline
-        function obj = UMS2kPipeline(obj)
+        function obj = UMS2kPipeline(obj, processChannels)
             spikesLocal = ss_default_params(obj.SamplingFrequency,...
                 'thresh',obj.Thresh,...
                 'window_size',obj.WindowSize,'shadow',obj.Shadow,...
@@ -94,7 +94,10 @@ classdef UMSDataLoader < handle
                 'max_jitter',obj.MaxJitter,'agg_cutoff',obj.AggCutoff,...
                 'kmeans_clustersize',obj.KmeansClusterSize);
             % The data is ordered as it is given to UMS2k to process.
-            tempData{1} = obj.Data{1}(:,obj.PolyChanOrder);
+            % The ordering of the channels is not necessary at this point.
+            % Probably a good idea is to order the channels already by the
+            % beguinning.
+            % tempData{1} = obj.Data{1}(:,obj.PolyChanOrder);
             spikesLocal = ss_detect(tempData, spikesLocal);
             spikesLocal = ss_align(spikesLocal);
             spikesLocal = ss_kmeans(spikesLocal);
