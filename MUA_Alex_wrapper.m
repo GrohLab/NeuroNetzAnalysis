@@ -50,7 +50,7 @@ for i=1:num_trials
 end
 
 % save Data_1300_1600_3415_w_puff_marker_filtered.mat Data '-v7.3'
-save([fname,'channel.mat'], 'Data', '-v7.3')
+save([fname,'data.mat'], 'Data', '-v7.3')
 disp('imported data into "Data"')
 
 
@@ -58,8 +58,9 @@ disp('imported data into "Data"')
 
 % 1:4 3:6 7:10 12:15
 % 1:4 3:6 7:10 5:8 9:12
+% 1:4 4:7 7:10 10:13 13:16
 data={};
-ch=[1:4]; %  channels for sorting
+ch = 13:16; %  channels for sorting
 for i=1:numel(ch)
     data{1,1}(:,i)=Data{1,1}(:,ch(i));
 end
@@ -80,7 +81,8 @@ splitmerge_tool(spikes)
 %%
 % stand alone outlier tool
 outlier_tool(spikes)
-
+%% Save
+save([fname,'channel2.mat'],'spikes') %Change here for a sequencial name
 %% collect clusters into cell array sortedData (exlude garbage clusters)
 
 % fdir='C:\Users\alex\Desktop\16chanelanalysis\120213\01_whiskeronly_sorted\'; cd(fdir);
@@ -106,7 +108,7 @@ end
 
 
 % include= [15: 20]; % [3 5 17]
-% sortedData=sortedData(include,:) % which units ?
+%% sortedData=sortedData(include,:) % which units ?
 save('SpikeTimes_all_channels.mat','sortedData')
 
 
