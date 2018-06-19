@@ -1,9 +1,10 @@
 %% import data from spike2 into mat
 % fname='1300_1600_3320_whisker.smr'
-fname='M137_C5_smrx';
-fdir='C:\Users\neuro\Documents\MATLAB\16 channel\';
 
-X=importSMR([fname,'.smrx'],fdir,0);
+fname='M7_C3_Mech_05mW'; % EIC Sailaja's analysis
+% fdir='C:\Users\neuro\Documents\MATLAB\16 channel\';
+fdir = 'F:\Experiments_2018\15_5_2018';
+%X=importSMR([fname,'.mat'],fdir,0);
 
 %%
 % 
@@ -16,7 +17,8 @@ cd(fdir)
 load([fname, '.mat'])
 
 num_trials   = 1;
-Fs           = 20000;
+% Fs           = 20000; The sampling frequency is taken from the file.
+Fs           = head1.SamplingFrequency;
 num_channels =  16;
 trial_dur    = 100;
 
@@ -47,8 +49,9 @@ for i=1:num_trials
     clear ns
 end
 
-save Data_1300_1600_3415_w_puff_marker_filtered.mat Data '-v7.3'
-disp(['imported data into "Data"'])
+% save Data_1300_1600_3415_w_puff_marker_filtered.mat Data '-v7.3'
+save([fname,'channel.mat'], 'Data', '-v7.3')
+disp('imported data into "Data"')
 
 
 %% run the detection and clustering functions
@@ -80,7 +83,7 @@ outlier_tool(spikes)
 
 %% collect clusters into cell array sortedData (exlude garbage clusters)
 
-fdir='C:\Users\alex\Desktop\16chanelanalysis\120213\01_whiskeronly_sorted\'; cd(fdir);
+% fdir='C:\Users\alex\Desktop\16chanelanalysis\120213\01_whiskeronly_sorted\'; cd(fdir);
 str='channel';exclude={};
 chanData=matchfiles(fdir,str,exclude); % helper function collects folders
 sortedData={};
@@ -104,7 +107,7 @@ end
 
 % include= [15: 20]; % [3 5 17]
 % sortedData=sortedData(include,:) % which units ?
-
+save('SpikeTimes_all_channels.mat','sortedData')
 
 
 %% raster plot and coincident spike times
