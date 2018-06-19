@@ -1,9 +1,9 @@
 %% multiunit recording practice
-clear all
-cd 'D:\Dropbox\16 Channel Recording may 2018'
-clear all
+% cd 'D:\Dropbox\16 Channel Recording may 2018'
+cd 'F:\Experiments_2018\15_5_2018'
+clearvars
 load SpikeTimes_all_channels.mat
-load M137_C5_Mech_L6_05mW_Triggersanalysis Conditions Triggers
+load M7_C3_Mech_05mWanalysis.mat Conditions Triggers
 
 
 
