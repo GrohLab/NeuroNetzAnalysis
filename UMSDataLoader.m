@@ -5,7 +5,7 @@ classdef UMSDataLoader < handle
         SpikeTimes
     end
     properties
-        SpikeUMSStruct
+        SpikeUMSStruct;
     end
     properties
         SamplingFrequency (1,1) double = 2e4;
@@ -124,10 +124,16 @@ classdef UMSDataLoader < handle
             end
         end
         function getSpikeStructureCls(obj,varargin)
-            h = varargin{2};
-            strIdx = varargin{3};
-            figdata = get(h,'UserData');
-            obj.SpikeUMSStruct(strIdx) = figdata.spikes;
+            try
+                h = varargin{3};
+                strIdx = varargin{4};
+                figdata = get(h,'UserData');
+                obj.SpikeUMSStruct(strIdx) = figdata.spikes;
+                
+            catch
+                disp('There was a problem reading the spike structure')
+                disp('I am on debugging process... :( ')
+            end
             delete(h)
         end
         
