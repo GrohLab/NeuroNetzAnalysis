@@ -109,7 +109,7 @@ end
 
 %% raster plot and coincident spike times
 
-d=0.002; %window for coincidence detection (d beore spike)
+d=0.002; %window for coincidence detection (d before spike)
 % d=1/10000;
 includeIdenticalSp=0; % include identical spike times in column 4 (i.e. double sorted spike times)
 time_a=405; %only for raster plot
