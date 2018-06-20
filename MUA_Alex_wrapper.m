@@ -58,9 +58,10 @@ disp('imported data into "Data"')
 
 % 1:4 3:6 7:10 12:15
 % 1:4 3:6 7:10 5:8 9:12
-% 1:4 4:7 7:10 10:13 13:16
+channelPacks = {1:4 4:7 7:10 10:13 13:16};
+chanPackIdx = 1;
 data={};
-ch = 13:16; %  channels for sorting
+ch = channelPacks{chanPackIdx}; %  channels for sorting
 for i=1:numel(ch)
     data{1,1}(:,i)=Data{1,1}(:,ch(i));
 end
@@ -82,10 +83,11 @@ splitmerge_tool(spikes)
 % stand alone outlier tool
 outlier_tool(spikes)
 %% Save
-save([fname,'channel2.mat'],'spikes') %Change here for a sequencial name
+save([fname,'channe',num2str(chanPackIdx),'.mat'],'spikes')
 %% collect clusters into cell array sortedData (exlude garbage clusters)
 
-% fdir='C:\Users\alex\Desktop\16chanelanalysis\120213\01_whiskeronly_sorted\'; cd(fdir);
+% fdir='C:\Users\alex\Desktop\16chanelanalysis\120213\01_whiskeronly_sorted\';
+% cd(fdir);
 str='channel';exclude={};
 chanData=matchfiles(fdir,str,exclude); % helper function collects folders
 sortedData={};
