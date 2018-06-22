@@ -1,5 +1,5 @@
 classdef UMSDataLoader < handle
-    % DATALOADER 
+    % DATALOADER
     properties (SetAccess = 'private')
         Data(1,:) cell = {};
         SpikeTimes
@@ -30,63 +30,27 @@ classdef UMSDataLoader < handle
         % Default value is for the Poly design unaccesible to the user:
         PolyChanOrder (1,:) int16 =...
             [8, 9, 7, 10, 4, 13, 5, 12, 2, 15, 1, 16, 6, 11, 3, 14];
-        
     end
     methods
-        function obj = UMSDataLoader(varargin)
+        function obj = UMSDataLoader(filename,chanOrder)
             % For UMS2k to process the spike traces, it needs a cell array
             % of Nt (number of trials) which contains a Ns x Nch (number of
             % samples x number of channels) matrix. This object arranges
             % the given data into such format from a file or from the
             % workspace.
             if nargin == 1
-                if isnumeric(varargin{1})
-                    if isrow(varargin{1})
-                        data{1} = double(varargin{1})';
-                    else
-                        data{1} = double(varargin{1});
-                    end
-                elseif ischar(varargin{1})
-                    disp('Building from file...')
-                    data = UMSDataLoader.LoadFromFile(...
-                        varargin{1},sort(obj.PolyChanOrder,'ascend'));
-                elseif iscell(varargin{1})
-                   data = varargin{1};
-                else
-                    error('Sorry! I wouldn''t know how to deal with this input')
-                end
-            elseif nargin >= 2
-                disp('Joining the channels into a matrix...')
-                disp('(min_chan_length x #_channels)')
-                try 
-                    dataMat = double(cell2mat(varargin));
-                    [Ns, Nch] = size(dataMat);
-                    if Ns < Nch
-                        dataMat = dataMat';
-                    end
-                    data{1} = dataMat;
-                catch
-                    szs = cell2mat(cellfun(@size,varargin,...
-                        'UniformOutput',false)');
-                    Ns = min(szs(szs ~= 1));
-                    dataMatrix = zeros(Ns,nargin);
-                    for carg = 1:nargin
-                        temp = varargin{carg};
-                        if isrow(temp)
-                            temp = temp';
-                        end
-                        dataMatrix(:,carg) =  temp(1:Ns);
-                    end
-                    data{1} = double(dataMatrix);
-                end
-            else
-                data = [];
+                data = UMSDataLoader.LoadFromFile(...
+                    filename,sort(obj.PolyChanOrder,'ascend'));
+            elseif nargin == 2
+                data = UMSDataLoader.LoadFromFile(...
+                    filename,chanOrder);
+                obj.changeChannelOrder(chanOrder);
             end
             obj.Data = data;
             disp('Constructed!')
         end % Constructor
         %% Ultra Mega Sort 2000 Pipeline
-        function obj = UMS2kPipeline(obj, consChans, strIdx)
+        function obj = UMS2kPipeline(obj)
             spikesLocal = ss_default_params(obj.SamplingFrequency,...
                 'thresh',obj.Thresh,...
                 'window_size',obj.WindowSize,'shadow',obj.Shadow,...
@@ -98,13 +62,7 @@ classdef UMSDataLoader < handle
             % The ordering of the channels is not necessary at this point.
             % Probably a good idea is to order the channels already by the
             % beguinning.
-            if ~exist('consChans','var')
-                consChans = obj.PolyChanOrder;
-            end
-            if ~exist('strIdx','var')
-                strIdx = 1;
-            end
-            tempData{1} = obj.Data{1}(:,consChans);
+            tempData{1} = obj.Data{1};
             spikesLocal = ss_detect(tempData, spikesLocal);
             spikesLocal = ss_align(spikesLocal);
             spikesLocal = ss_kmeans(spikesLocal);
@@ -112,7 +70,11 @@ classdef UMSDataLoader < handle
             spikesLocal = ss_aggregate(spikesLocal);
             splitmerge_tool(spikesLocal)
             h = gcf;
+            
+            % getSpikeStructureCls is a private method which is only used
+            % in this context.
             set(h,'CloseRequestFcn',{@obj.getSpikeStructureCls,h,strIdx})
+            
             % When the figure is closed, the spikes structure is saved in
             % the object for spike extraction from the human recognised
             % cluster.
@@ -122,51 +84,11 @@ classdef UMSDataLoader < handle
                 end
             catch
             end
-        end
-        function getSpikeStructureCls(obj,varargin)
-            try
-                h = varargin{3};
-                strIdx = varargin{4};
-                figdata = get(h,'UserData');
-                obj.SpikeUMSStruct(strIdx) = figdata.spikes;
-                
-            catch
-                disp('There was a problem reading the spike structure')
-                disp('I am on debugging process... :( ')
-            end
-            delete(h)
-        end
-        
-        % Loop for processing only the considered channels in the cycle
-        function getClusters(obj,consChannels)
-            if exist('consChannels','var')
-                datatype = class(consChannels);
-                switch datatype
-                    case 'cell'
-                        Nc = size(consChannels,2);
-                        for ccl = 1:Nc
-                            smlPck = consChannels{ccl};
-                            obj.UMS2kPipeline(obj.PolyChanOrder(smlPck),ccl);
-                        end
-                    case 'double'
-                        obj.UMS2kPipeline(obj.PolyChanOrder(consChannels))
-                    case 'string'
-                        if strcmp(consChannels,'all')
-                            obj.UMS2kPipeline(obj.PolyChanOrder)
-                        else
-                            disp(['The string flag is only to ',...
-                                'select all the channels with the keyword ''all'''])
-                        end
-                    otherwise
-                        disp(['Unrecognized input. Please provide with ',...
-                            ' the channels to consider.'])
-                end
-            end
             
         end
         
         function changeDataFromFile(obj,fileName,chanOrder)
-            % Loads the channels with the provided numbers 
+            % Loads the channels with the provided numbers
             if nargin < 3
                 fprintf('Importing all channels in their original order')
                 [obj.Data, obj.SamplingFrequency] =...
@@ -174,6 +96,7 @@ classdef UMSDataLoader < handle
             elseif nargin == 3
                 [obj.Data, obj.SamplingFrequency] =...
                     obj.LoadFromFile(fileName,chanOrder);
+                obj.changeChannelOrder(chanOrder);
             end
         end
         
@@ -201,7 +124,7 @@ classdef UMSDataLoader < handle
         end
         %% GET & SET SpikeTimes
         function spksTime = get.SpikeTimes(obj)
-             %#ok<*MCSUP>
+            %#ok<*MCSUP>
             if ~isempty(obj.SpikeTimes)
                 spksTime = obj.SpikeTimes;
             else
@@ -249,13 +172,17 @@ classdef UMSDataLoader < handle
         end
         
         function set.PolyChanOrder(obj,newChanOrd)
+            % The channel order will change if the Data property is empty,
+            % if the user agrees to change the order even if the number of
+            % channels
             if ~isempty(obj.Data)
-                if  obj.Nch == length(newChanOrd)
-                    disp('Changing the channel order')
-                    obj.PolyChanOrder = newChanOrd;
+                if obj.Nch == length(newChanOrd)
+                    if ~sum(abs(obj.PolyChanOrder - newChanOrd))
+                        obj.PolyChanOrder = newChanOrd;
+                    end
                 else
-                    fprintf(['The data has %d channels and the new',...
-                        ' order has %d numbers.'], obj.Nch,...
+                    fprintf(['WARNING! The data has %d channels and the',...
+                        ' new order has %d numbers.'], obj.Nch,...
                         length(newChanOrd))
                     yn = input('Would you like to continue?','s');
                     if yn == 'y' || yn == 'Y'
@@ -287,6 +214,9 @@ classdef UMSDataLoader < handle
             fprintf('Sampling Frequency: %.3f kHz\n',obj.SamplingFrequency/1e3)
             fprintf('Detection method: %s\n',obj.DetectMethod)
             fprintf('Threshold: %f\n',obj.Thresh)
+            if ~isempty(obj.Data)
+                fprintf('Number of channels: %d',obj.Nch)
+            end
             fprintf('Channel order: \n')
             for cch = 1:length(obj.PolyChanOrder)
                 fprintf('%d: %d\n',cch,obj.PolyChanOrder(cch))
@@ -327,7 +257,21 @@ classdef UMSDataLoader < handle
             end
         end
     end % methods
-    
+    methods (Access = 'private')
+        function getSpikeStructureCls(obj,varargin)
+            try
+                h = varargin{3};
+                strIdx = varargin{4};
+                figdata = get(h,'UserData');
+                obj.SpikeUMSStruct(strIdx) = figdata.spikes;
+                
+            catch
+                disp('There was a problem reading the spike structure')
+                disp('I am on debugging process... :( ')
+            end
+            delete(h)
+        end
+    end
     methods (Static)
         function [data, fs, channelOrder] =...
                 LoadFromFile(fileName,channelOrder)
