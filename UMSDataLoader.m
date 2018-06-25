@@ -10,7 +10,7 @@ classdef UMSDataLoader < handle
     properties
         SamplingFrequency (1,1) double = 2e4;
         % Detecting parameters
-        DetectMethod (1,1) char = 'auto';
+        DetectMethod char = 'auto';
         Thresh (1,1) single= 3.9;
         Shadow (1,1) single= 0.85;            % ms, enforced dead region after each spike
         RefractoryPeriod (1,1) single = 2.5;  % ms, refractory period (for calculation refractory period violations)
@@ -331,7 +331,6 @@ classdef UMSDataLoader < handle
             if ~exist('channelOrder','var') || isempty(channelOrder)
                 channelOrder = chanIDs;
             end
-            load(fileName,['head',num2str(chanIDs(1))])
             dataMatrix = zeros(Ns,numel(channelOrder));
             chanReadOut = zeros(1,numel(chanIDs));
             chanKeepIdx = true(1,numel(channelOrder));
