@@ -10,17 +10,17 @@ classdef UMSDataLoader < handle
     properties
         SamplingFrequency (1,1) double = 2e4;
         % Detecting parameters
-        DetectMethod = 'auto';
-        Thresh = 3.9;
-        Shadow = 0.85;            % ms, enforced dead region after each spike
-        RefractoryPeriod = 2.5;  % ms, refractory period (for calculation refractory period violations)
+        DetectMethod (1,1) char = 'auto';
+        Thresh (1,1) single= 3.9;
+        Shadow (1,1) single= 0.85;            % ms, enforced dead region after each spike
+        RefractoryPeriod (1,1) single = 2.5;  % ms, refractory period (for calculation refractory period violations)
         % Alignment parameters
-        WindowSize  = 1.5;       % ms, width of a spike
-        CrossTime = 0.6;         % ms, alignment point for peak of waveform
-        MaxJitter = 0.6;         % ms, width of window used to detect peak after threshold crossing
+        WindowSize (1,1) single = 1.5;       % ms, width of a spike
+        CrossTime (1,1) single = 0.6;         % ms, alignment point for peak of waveform
+        MaxJitter (1,1) single = 0.6;         % ms, width of window used to detect peak after threshold crossing
         % sorting parameters
-        AggCutoff = .05;         %  higher = less aggregation, lower = more aggregation
-        KmeansClusterSize = 500; %  target size for miniclusters
+        AggCutoff (1,1) single = .05;         %  higher = less aggregation, lower = more aggregation
+        KmeansClusterSize (1,1) int8 = 500; %  target size for miniclusters
     end % properties
     properties (Dependent)
         Ns                      % Number of samples
@@ -30,6 +30,7 @@ classdef UMSDataLoader < handle
         % Default value is for the Poly design unaccesible to the user:
         PolyChanOrder (1,:) int16 =...
             [8, 9, 7, 10, 4, 13, 5, 12, 2, 15, 1, 16, 6, 11, 3, 14];
+        FileName char;
     end
     methods
         function obj = UMSDataLoader(filename,chanOrder)
@@ -39,14 +40,19 @@ classdef UMSDataLoader < handle
             % the given data into such format from a file or from the
             % workspace.
             if nargin == 1
-                data = UMSDataLoader.LoadFromFile(...
-                    filename,sort(obj.PolyChanOrder,'ascend'));
+                [data, fs, chanReadOut, fileNameOut] = UMSDataLoader.LoadFromFile(...
+                    filename,[]);
             elseif nargin == 2
-                data = UMSDataLoader.LoadFromFile(...
+                [data, fs, chanReadOut, fileNameOut] = UMSDataLoader.LoadFromFile(...
                     filename,chanOrder);
-                obj.changeChannelOrder(chanOrder);
             end
-            obj.Data = data;
+            if ~isempty(data)
+                obj.FileName = fileNameOut;
+                obj.Data = data;
+                obj.changeChannelOrder(chanReadOut);
+                obj.SamplingFrequency = fs;
+            end
+            
             disp('Constructed!')
         end % Constructor
         %% Ultra Mega Sort 2000 Pipeline
@@ -89,14 +95,19 @@ classdef UMSDataLoader < handle
         
         function changeDataFromFile(obj,fileName,chanOrder)
             % Loads the channels with the provided numbers
-            if nargin < 3
-                fprintf('Importing all channels in their original order')
-                [obj.Data, obj.SamplingFrequency] =...
+            if nargin == 2
+                fprintf('Importing all channels in their original order.\n')
+                [data, fs, chanReadOut, fileNameOut] =...
                     obj.LoadFromFile(fileName,[]);
             elseif nargin == 3
-                [obj.Data, obj.SamplingFrequency] =...
-                    obj.LoadFromFile(fileName,chanOrder);
-                obj.changeChannelOrder(chanOrder);
+                [data, fs, chanReadOut, fileNameOut] =...
+                    obj.LoadFromFile(fileName,chanOrder); 
+            end
+            if ~isempty(data)
+                obj.Data = data;
+                obj.SamplingFrequency = fs;
+                obj.changeChannelOrder(chanReadOut);
+                obj.FileName = fileNameOut;
             end
         end
         
@@ -177,9 +188,7 @@ classdef UMSDataLoader < handle
             % channels
             if ~isempty(obj.Data)
                 if obj.Nch == length(newChanOrd)
-                    if ~sum(abs(obj.PolyChanOrder - newChanOrd))
-                        obj.PolyChanOrder = newChanOrd;
-                    end
+                    obj.PolyChanOrder = newChanOrd;
                 else
                     fprintf(['WARNING! The data has %d channels and the',...
                         ' new order has %d numbers.'], obj.Nch,...
@@ -208,20 +217,24 @@ classdef UMSDataLoader < handle
                 numberOfChannels = size(obj.Data{1},2);
             end
         end
+        
         % Display of the object. Called everytime there is no semicolon.
         function disp(obj)
-            fprintf('UMSDataLoader object:\nSamples: %d\n',obj.Ns)
+            fprintf('---UMSDataLoader object---\n')
+            fprintf('File name: %s\n',obj.FileName)
+            fprintf('Samples: %d\n',obj.Ns)
             fprintf('Sampling Frequency: %.3f kHz\n',obj.SamplingFrequency/1e3)
             fprintf('Detection method: %s\n',obj.DetectMethod)
             fprintf('Threshold: %f\n',obj.Thresh)
             if ~isempty(obj.Data)
-                fprintf('Number of channels: %d',obj.Nch)
+                fprintf('Number of channels: %d\n',obj.Nch)
             end
             fprintf('Channel order: \n')
             for cch = 1:length(obj.PolyChanOrder)
                 fprintf('%d: %d\n',cch,obj.PolyChanOrder(cch))
             end
         end
+        
         % Plot the data in the object on different levels
         function h = plot(obj,varargin)
             if ~isempty(obj.Data{1})
@@ -261,10 +274,8 @@ classdef UMSDataLoader < handle
         function getSpikeStructureCls(obj,varargin)
             try
                 h = varargin{3};
-                strIdx = varargin{4};
                 figdata = get(h,'UserData');
-                obj.SpikeUMSStruct(strIdx) = figdata.spikes;
-                
+                obj.SpikeUMSStruct = figdata.spikes;
             catch
                 disp('There was a problem reading the spike structure')
                 disp('I am on debugging process... :( ')
@@ -273,66 +284,92 @@ classdef UMSDataLoader < handle
         end
     end
     methods (Static)
-        function [data, fs, channelOrder] =...
+        function [data, fs, chanReadOut, fileNameOut] =...
                 LoadFromFile(fileName,channelOrder)
             try
-                disp('Loading precompiled data array...')
-                load(fileName,'Data')
-                data = Data;
+                chanVars = load(fileName,...
+                    'chan*');
+                headVars = load(fileName,...
+                    'head*');
             catch
-                disp('Not found.')
-                disp('Compiling channels...')
-                try
-                    chanVars = load(fileName,...
-                        'chan*');
-                    headVars = load(fileName,'head*');
-                    Ns = min(structfun(@numel,chanVars));
-                    chanNames = fieldnames(chanVars);
-                    headNames = fieldnames(headVars);
-                    if ~exist('channelOrder','var') || isempty(channelOrder)
-                        channelOrder = 1:numel(chanNames);
+                % If the file is not found, the given name is compared
+                % against all the files in the given directory and in case
+                % that the name is 'close' enough, it is presented to the
+                % user.
+                disp('No recognizable variables nor file!')
+                [inDir,fname,ftype] = fileparts(fileName);
+                filesInDir = dir(inDir);
+                simFile = zeros(1,numel(filesInDir)-2);
+                for cf = 3:numel(filesInDir)
+                    simFile(cf-2) = sum(diag(...
+                        distmatrix(...
+                        (filesInDir(cf).name)',...
+                        ([fname,ftype])')));
+                end
+                [~,shortDist] = min(simFile);
+                disp('Only .mat files will be recognized!')
+                errCorr = input(['Did you mean: ',filesInDir(shortDist+2).name,...
+                    '? (y/n)'], 's');
+                if errCorr == 'y' || errCorr == 'Y'
+                    fileNameOut = fullfile(inDir,filesInDir(shortDist+2).name);
+                    [data, fs, chanReadOut, fileNameOut] = UMSDataLoader.LoadFromFile(...
+                        fileNameOut, channelOrder);
+                else
+                    disp('Loading aborted!')
+                    data = [];
+                    fs = 0;
+                    chanReadOut = 1;
+                end
+                return
+            end % Try to construct or compile the channels together.
+            Ns = min(structfun(@numel,chanVars));
+            chanNames = fieldnames(chanVars);
+            headNames = fieldnames(headVars);
+            chanIDs = arrayfun(@str2double,...
+                cellfun(@(x) x(5:end),chanNames,'UniformOutput',false));
+            chanTitle = cell(1,numel(chanIDs));
+            if ~exist('channelOrder','var') || isempty(channelOrder)
+                channelOrder = chanIDs;
+            end
+            load(fileName,['head',num2str(chanIDs(1))])
+            dataMatrix = zeros(Ns,numel(channelOrder));
+            chanReadOut = zeros(1,numel(chanIDs));
+            chanKeepIdx = true(1,numel(channelOrder));
+            for cch = 1:numel(channelOrder)
+                inFl = chanIDs == channelOrder(cch);
+                % Something important to consider is that the importing
+                % could be taking repeated channels if and only if they
+                % exist in the file.
+                if sum(inFl)
+                    auxChan = chanVars.(chanNames{chanIDs(inFl)})(1:Ns);
+                    auxHead = headVars.(headNames{chanIDs(inFl)});
+                    chanTitle(cch) = {auxHead.title};
+                    if isrow(auxChan)
+                        auxChan = auxChan';
                     end
-                    dataMatrix = zeros(Ns,numel(channelOrder));
-                    for cch = 1:numel(channelOrder)
-                        auxChan = chanVars.(chanNames{channelOrder(cch)})(1:Ns);
-                        if isrow(auxChan)
-                            auxChan = auxChan';
+                    if cch == 1
+                        try
+                            fs = auxHead.SamplingFrequency;
+                        catch
+                            disp(['No information about the ',...
+                                'sampling frequency in this file.'])
+                            fs = 2e4;
+                            fprintf('Setting sampling frequency: %0.1f kHz\n',...
+                                fs/1e3)
                         end
-                        if cch == 1
-                            fs = headVars.(headNames{channelOrder(cch)})...
-                                .SamplingFrequency;
-                        end
-                        dataMatrix(:,cch) = auxChan;
                     end
-                    data{1} = dataMatrix;
-                catch
-                    disp('No recognizable variables nor file!')
-                    [inDir,fname,ftype] = fileparts(fileName);
-                    filesInDir = dir(inDir);
-                    simFile = zeros(1,numel(filesInDir)-2);
-                    for cf = 3:numel(filesInDir)
-                        simFile(cf-2) = sum(diag(...
-                            distmatrix(...
-                            (filesInDir(cf).name)',...
-                            ([fname,ftype])')));
-                    end
-                    [~,shortDist] = min(simFile);
-                    disp('Only .mat files will be recognized!')
-                    errCorr = input(['Did you mean: ',filesInDir(shortDist+2).name,...
-                        '? (y/n)'], 's');
-                    if errCorr == 'y' || errCorr == 'Y'
-                        data = UMSDataLoader.LoadFromFile(...
-                            fullfile(inDir,filesInDir(shortDist+2).name),...
-                            channelOrder);
-                    else
-                        disp('Loading aborted!')
-                        data = [];
-                    end
-                end % Try to construct or compile the channels together.
-            end % Try to load the data cell from file
-            
+                    chanReadOut(cch) = channelOrder(cch);
+                    dataMatrix(:,cch) = auxChan;
+                else
+                    chanKeepIdx(cch) = false;
+                    fprintf('Channel %d is not part of this recording!\n',...
+                        channelOrder(cch))
+                end
+            end
+            chanReadOut(chanReadOut==0) = [];
+            fileNameOut = fileName;
+            data{1} = dataMatrix(:,chanKeepIdx);
         end
-        
     end % Static methods
 end % classdef
 
