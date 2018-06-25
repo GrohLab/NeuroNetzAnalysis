@@ -20,7 +20,7 @@ classdef UMSDataLoader < handle
         MaxJitter (1,1) single = 0.6;         % ms, width of window used to detect peak after threshold crossing
         % sorting parameters
         AggCutoff (1,1) single = .05;         %  higher = less aggregation, lower = more aggregation
-        KmeansClusterSize (1,1) int8 = 500; %  target size for miniclusters
+        KmeansClusterSize (1,1) double = 500; %  target size for miniclusters
     end % properties
     properties (Dependent)
         Ns                      % Number of samples
@@ -79,7 +79,7 @@ classdef UMSDataLoader < handle
             
             % getSpikeStructureCls is a private method which is only used
             % in this context.
-            set(h,'CloseRequestFcn',{@obj.getSpikeStructureCls,h,strIdx})
+            set(h,'CloseRequestFcn',{@obj.getSpikeStructureCls,h})
             
             % When the figure is closed, the spikes structure is saved in
             % the object for spike extraction from the human recognised
@@ -231,7 +231,7 @@ classdef UMSDataLoader < handle
             end
             fprintf('Channel order: \n')
             for cch = 1:length(obj.PolyChanOrder)
-                fprintf('%d: %d\n',cch,obj.PolyChanOrder(cch))
+                fprintf('Channel %d has ID %d from the file\n',cch,obj.PolyChanOrder(cch))
             end
         end
         
@@ -273,7 +273,7 @@ classdef UMSDataLoader < handle
     methods (Access = 'private')
         function getSpikeStructureCls(obj,varargin)
             try
-                h = varargin{3};
+                h = varargin{end};
                 figdata = get(h,'UserData');
                 obj.SpikeUMSStruct = figdata.spikes;
             catch
@@ -322,7 +322,7 @@ classdef UMSDataLoader < handle
                 end
                 return
             end % Try to construct or compile the channels together.
-            Ns = min(structfun(@numel,chanVars));
+            Ns = max(structfun(@numel,chanVars));
             chanNames = fieldnames(chanVars);
             headNames = fieldnames(headVars);
             chanIDs = arrayfun(@str2double,...
@@ -334,13 +334,15 @@ classdef UMSDataLoader < handle
             dataMatrix = zeros(Ns,numel(channelOrder));
             chanReadOut = zeros(1,numel(chanIDs));
             chanKeepIdx = true(1,numel(channelOrder));
+            Nsamples = zeros(1,numel(chanIDs));
             for cch = 1:numel(channelOrder)
                 inFl = chanIDs == channelOrder(cch);
                 % Something important to consider is that the importing
                 % could be taking repeated channels if and only if they
                 % exist in the file.
                 if sum(inFl)
-                    auxChan = chanVars.(chanNames{chanIDs(inFl)})(1:Ns);
+                    auxChan = chanVars.(chanNames{chanIDs(inFl)});
+                    Nsamples(cch) = length(auxChan);
                     auxHead = headVars.(headNames{chanIDs(inFl)});
                     chanTitle(cch) = {auxHead.title};
                     if isrow(auxChan)
@@ -365,9 +367,11 @@ classdef UMSDataLoader < handle
                         channelOrder(cch))
                 end
             end
+            Nsamples(Nsamples==0) = [];
+            Ns = min(Nsamples);
             chanReadOut(chanReadOut==0) = [];
             fileNameOut = fileName;
-            data{1} = dataMatrix(:,chanKeepIdx);
+            data{1} = dataMatrix(1:Ns,chanKeepIdx);
         end
     end % Static methods
 end % classdef
