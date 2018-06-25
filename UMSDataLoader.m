@@ -167,7 +167,12 @@ classdef UMSDataLoader < handle
                 disp('No spike times extracted, therefore none returned')
                 return;
             end
-            if sum(clst == spkClust)
+            % Return the spike times only if 1.- the cluster number exist;
+            % 2.- the cluste is not garbage; or 3.- the cluster is a good
+            % unit.
+            if sum(clst == spkClust) && (4 ~= obj.SpikeUMSStruct.labels(...
+                    clst == spkClust,2) || obj.SpikeUMSStruct.labels(...
+                    clst == spkClust,2) == 2)
                 obj.SpikeTimes =...
                     spikes.spiketimes(spikes.assigns == spkClust);
             else
@@ -202,7 +207,7 @@ classdef UMSDataLoader < handle
                 obj.PolyChanOrder = newChanOrd;
             end
         end
-        
+        %% Get dependent variables
         % Number of samples per channel
         function samplesNumber = get.Ns(obj)
             samplesNumber = 0;
@@ -228,7 +233,7 @@ classdef UMSDataLoader < handle
             end
         end
         
-        % Display of the object. Called everytime there is no semicolon.
+        %% Display of the object. Called everytime there is no semicolon.
         function disp(obj)
             fprintf('---UMSDataLoader object---\n')
             fprintf('File name: %s\n',obj.FileName)
