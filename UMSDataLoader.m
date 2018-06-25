@@ -3,28 +3,28 @@ classdef UMSDataLoader < handle
     properties (SetAccess = 'private')
         Data(1,:) cell = {};
         SpikeTimes
-    end
-    properties
         SpikeUMSStruct;
     end
+    
     properties
         SamplingFrequency (1,1) double = 2e4;
         % Detecting parameters
         DetectMethod char = 'auto';
-        Thresh (1,1) single= 3.9;
-        Shadow (1,1) single= 0.85;            % ms, enforced dead region after each spike
-        RefractoryPeriod (1,1) single = 2.5;  % ms, refractory period (for calculation refractory period violations)
+        Thresh (1,1) double= 3.9;
+        Shadow (1,1) double= 0.9;            % ms, enforced dead region after each spike
+        RefractoryPeriod (1,1) double= 2.5;  % ms, refractory period (for calculation refractory period violations)
         % Alignment parameters
-        WindowSize (1,1) single = 1.5;       % ms, width of a spike
-        CrossTime (1,1) single = 0.6;         % ms, alignment point for peak of waveform
-        MaxJitter (1,1) single = 0.6;         % ms, width of window used to detect peak after threshold crossing
+        WindowSize (1,1) double = 1.5;       % ms, width of a spike
+        CrossTime (1,1) double = 0.6;         % ms, alignment point for peak of waveform
+        MaxJitter (1,1) double = 0.6;         % ms, width of window used to detect peak after threshold crossing
         % sorting parameters
-        AggCutoff (1,1) single = .05;         %  higher = less aggregation, lower = more aggregation
+        AggCutoff (1,1) double = .05;         %  higher = less aggregation, lower = more aggregation
         KmeansClusterSize (1,1) double = 500; %  target size for miniclusters
     end % properties
     properties (Dependent)
         Ns                      % Number of samples
         Nch                     % Number of channels
+        Time                    % Time axis
     end
     properties (SetAccess = 'private',GetAccess = 'private')
         % Default value is for the Poly design unaccesible to the user:
@@ -111,8 +111,6 @@ classdef UMSDataLoader < handle
             end
         end
         
-        
-        
         %% SET AND GET SpikeUMSStruct
         function set.SpikeUMSStruct(obj,structIn)
             if isstruct(structIn) && isfield(structIn,'params')
@@ -133,6 +131,7 @@ classdef UMSDataLoader < handle
         function spksStruct = get.SpikeUMSStruct(obj)
             spksStruct = obj.SpikeUMSStruct;
         end
+        
         %% GET & SET SpikeTimes
         function spksTime = get.SpikeTimes(obj)
             %#ok<*MCSUP>
@@ -140,7 +139,7 @@ classdef UMSDataLoader < handle
                 spksTime = obj.SpikeTimes;
             else
                 spksTime = [];
-                disp('No spike times extracted yet');
+                % disp('No spike times extracted yet');
             end
         end % get SpikeTimes
         
@@ -203,6 +202,7 @@ classdef UMSDataLoader < handle
                 obj.PolyChanOrder = newChanOrd;
             end
         end
+        
         % Number of samples per channel
         function samplesNumber = get.Ns(obj)
             samplesNumber = 0;
@@ -210,11 +210,21 @@ classdef UMSDataLoader < handle
                 samplesNumber = size(obj.Data{1},1);
             end
         end
+        
         % Number of channels in the data set
         function numberOfChannels = get.Nch(obj)
             numberOfChannels = 0;
             if ~isempty(obj.Data{1})
                 numberOfChannels = size(obj.Data{1},2);
+            end
+        end
+        
+        function timeOut = get.Time(obj)
+            if ~isempty(obj.Data{1})
+                timeOut = seconds(0:1/obj.SamplingFrequency:...
+                    (obj.Ns-1)/obj.SamplingFrequency);
+            else
+                timeOut = 0;
             end
         end
         
@@ -240,21 +250,25 @@ classdef UMSDataLoader < handle
             if ~isempty(obj.Data{1})
                 h = figure('Name','UltraMegaSort2000 data','Color',[1,1,1]);
                 means = mean(obj.Data{1},1);
-                stds = std(obj.Data{1}(:,obj.PolyChanOrder),[],1);
-                if length(obj.PolyChanOrder) >= obj.Nch
-                    tx = seconds(0:1/obj.SamplingFrequency:...
-                        (obj.Ns-1)/obj.SamplingFrequency);
+                stds = std(obj.Data{1},[],1);
+                if length(obj.PolyChanOrder) == obj.Nch
+                    tx = obj.Time;
                     lbls = cell(1,obj.Nch);
-                    lvl = cumsum(stds(obj.PolyChanOrder)*30);
+                    lvl = cumsum(stds*30);
                     for cch = 1:obj.Nch
-                        lbls{cch} = [num2str(cch),' (',...
+                        lbls{cch} = [num2str(cch),' (ID ',...
                             num2str(obj.PolyChanOrder(cch)),')'];
-                        tempChan = obj.Data{1}(:,obj.PolyChanOrder(cch));
+                        tempChan = obj.Data{1}(:,cch);
                         tempChan = tempChan -...
-                            means(obj.PolyChanOrder(cch)) + lvl(cch);
+                            means(cch) + lvl(cch);
                         plot(tx,tempChan,varargin{:})
                         if cch == 1
                             hold on
+                        end
+                        if ~isempty(obj.SpikeTimes)
+                            spIx = round(obj.SamplingFrequency*obj.SpikeTimes);
+                            plot(tx(spIx), tempChan(spIx),...
+                                'LineStyle','none','Marker','.')
                         end
                     end
                     hold off;box off
