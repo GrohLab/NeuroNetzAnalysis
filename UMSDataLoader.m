@@ -376,9 +376,9 @@ classdef UMSDataLoader < handle
                 % could be taking repeated channels if and only if they
                 % exist in the file.
                 if sum(inFl)
-                    auxChan = chanVars.(chanNames{chanIDs(inFl)});
+                    auxChan = chanVars.(chanNames{inFl});
                     Nsamples(cch) = length(auxChan);
-                    auxHead = headVars.(headNames{chanIDs(inFl)});
+                    auxHead = headVars.(headNames{inFl});
                     chanTitle(cch) = {auxHead.title};
                     if isrow(auxChan)
                         auxChan = auxChan';
