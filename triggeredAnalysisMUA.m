@@ -70,7 +70,7 @@ end
 
 
 if plotit
-    t=[-timeBefore:timeAfter]/ppms;
+    t=[1:size(uptrig_light,2)]/ppms-timeBefore/ppms;
     m=get(gca,'ylim');m=m(end)*.9;
     p=plot(t,mean(uptrig_light)*m,'b','linewidth',.5)
     hold on
@@ -83,7 +83,6 @@ end
 
 
 if plotit
-    t=[-timeBefore:timeAfter]/ppms;
     m=get(gca,'ylim');m=m(end)*.9;
     p=plot(t,mean(uptrig_EEG)*m,'g','linewidth',2)
     hold on

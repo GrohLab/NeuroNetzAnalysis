@@ -164,7 +164,7 @@ classdef SpikeWaveform < DiscreteWaveform
             else
                 spkTimeStamps=[];
             end
-            obj.TimeStamps = spkTimeStamps;
+            obj.Triggers = spkTimeStamps;
         end
         
         function [Bursts, firstSpikes, C, BurstLength]=returnBursts(sp,isiCutoff)

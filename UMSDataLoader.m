@@ -98,6 +98,10 @@ classdef UMSDataLoader < handle
             
         end
         
+        function invertSignals(obj)
+            obj.Data{1} = -obj.Data{1};
+        end
+        
         function changeDataFromFile(obj,fileName,chanOrder)
             % Loads the channels with the provided numbers
             if nargin == 2
@@ -113,23 +117,18 @@ classdef UMSDataLoader < handle
                 obj.SamplingFrequency = fs;
                 obj.changeChannelOrder(chanReadOut);
                 obj.FileName = fileNameOut;
+                obj.SpikeTimes = [];
+                obj.SpikeUMSStruct = [];
             end
         end
         
         %% SET AND GET SpikeUMSStruct
         function set.SpikeUMSStruct(obj,structIn)
             if isstruct(structIn) && isfield(structIn,'params')
-                if ~isempty(obj.SpikeUMSStruct)
-                    yon = input(['The structure is not empty, ',...
-                        'do you wish to overwrite? (y/n)'],'s');
-                    if yon == 'y' || yon == 'Y'
-                        obj.SpikeUMSStruct = structIn;
-                    end
-                else
-                    obj.SpikeUMSStruct = structIn;
-                end
+                obj.SpikeUMSStruct = structIn;
             else
-                fprintf('The given input is not a valid structure.')
+                fprintf('Deleting the UMS spikes structure...\n')
+                obj.deleteSpikeUMSStruct;
             end
         end
         
@@ -137,7 +136,11 @@ classdef UMSDataLoader < handle
             spksStruct = obj.SpikeUMSStruct;
         end
         
-        %% GET & SET SpikeTimes
+        function deleteSpikeUMSStruct(obj)
+            obj.SpikeUMSStruct = [];
+        end
+        
+        %% GET, SET and SAVE SpikeTimes
         function spksTime = get.SpikeTimes(obj)
             %#ok<*MCSUP>
             if ~isempty(obj.SpikeTimes)
@@ -148,23 +151,9 @@ classdef UMSDataLoader < handle
             end
         end % get SpikeTimes
         
-        function getSpikeTimes(obj,varargin)
-            spkClust = 0;
-            for na = 1:nargin-1
-                if isa(varargin{na},'struct')
-                    spikes = varargin{na};
-                elseif isa(varargin{na},'double')
-                    spkClust = varargin{na};
-                else
-                    disp('Input ignored...')
-                    disp(varargin{na})
-                end
-            end
-            if exist('spikes','var') && isfield(spikes,'assigns')
-                clst = unique(spikes.assigns);
-            elseif ~isempty(obj.SpikeUMSStruct) &&...
+        function getSpikeTimes(obj)
+            if ~isempty(obj.SpikeUMSStruct) &&...
                     isfield(obj.SpikeUMSStruct,'assigns')
-                clst = unique(obj.SpikeUMSStruct.assigns);
                 spikes = obj.SpikeUMSStruct;
             else
                 disp(['The UMS2k pipeline hasn''t been ran or ',...
@@ -175,17 +164,38 @@ classdef UMSDataLoader < handle
             % Return the spike times only if 1.- the cluster number exist;
             % 2.- the cluste is not garbage; or 3.- the cluster is a good
             % unit.
-            if sum(clst == spkClust) && (4 ~= obj.SpikeUMSStruct.labels(...
-                    clst == spkClust,2) || obj.SpikeUMSStruct.labels(...
-                    clst == spkClust,2) == 2)
-                obj.SpikeTimes =...
-                    spikes.spiketimes(spikes.assigns == spkClust);
+            lbls = obj.SpikeUMSStruct.labels;
+            goodSpks = lbls(:,2) == 2 | lbls(:,2) ~= 4;
+            
+            obj.SpikeTimes =...
+                spikes.spiketimes(spikes.assigns == lbls(goodSpks,1));
+        end
+        
+        function saveSpikeTimes(obj)
+            [inDir, baseName, ~] = fileparts(obj.FileName);
+            sortFileName = [fullfile(inDir,baseName),'sorted.mat'];
+            if ~isempty(obj.SpikeTimes)
+                if ~exist(sortFileName,'file')
+                    spikes = obj.SpikeUMSStruct;
+                    spkTms = obj.SpikeTimes;
+                    SPKS1 = struct('spikes',spikes,...
+                        'spkTms',round(obj.SamplingFrequency*spkTms));
+                    try
+                        save(sortFileName,'SPKS1')
+                    catch 
+                        disp('There was a problem saving the file')
+                    end
+                else
+                    disp('The sorted file exists. We should discuss what to do in the lab meeting')
+                    % The idea is to append a structure that contains the
+                    % parameters used for the sorting and the extracted
+                    % spike times. 
+                end
             else
-                disp('The seleted cluster is non existing!')
-                disp(['Please select a valid spike cluster. ',...
-                    'HINT! You can see the cluster number in the splitmerge tool ;)'])
+                return;
             end
         end
+        
         %% Poly channel order modification
         function changeChannelOrder(obj,newChanOrd)
             obj.PolyChanOrder = newChanOrd;
@@ -365,9 +375,9 @@ classdef UMSDataLoader < handle
                 % could be taking repeated channels if and only if they
                 % exist in the file.
                 if sum(inFl)
-                    auxChan = chanVars.(chanNames{chanIDs(inFl)});
+                    auxChan = chanVars.(chanNames{inFl});
                     Nsamples(cch) = length(auxChan);
-                    auxHead = headVars.(headNames{chanIDs(inFl)});
+                    auxHead = headVars.(headNames{inFl});
                     chanTitle(cch) = {auxHead.title};
                     if isrow(auxChan)
                         auxChan = auxChan';
