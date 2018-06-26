@@ -1,7 +1,14 @@
 function [expStack, LFPstack, Wstack] =...
     getStack(spT,alignP,ONOFF,timeSpan,fs,LFP,whiskerMovement,consEvents)
 % GETSTACK returns a stack of spikes aligned to a certain event ''alignT''
-% considering the events in the cell array ''consEvents''.
+% considering the events in the cell array ''consEvents''. The alignment
+% can be done with the on-set or the off-set of the triggers using the
+% ONOFF option. The default is 'on'. The timeSpan is given in a 1x2 array
+% with the time before the trigger as the first element and the time after
+% the trigger as the second element. The sampling frequency is always
+% important and it is given in Hz. The LFP and whisker movement are
+% examples of triggered averages from continuous signals. Finally, the
+% consEvents are 
 
 %% Computing the size of the PSTH stack
 if isa(alignP,'logical')
