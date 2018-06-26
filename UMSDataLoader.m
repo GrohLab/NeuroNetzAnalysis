@@ -390,7 +390,7 @@ classdef UMSDataLoader < handle
                         end
                     end
                     chanReadOut(cch) = channelOrder(cch);
-                    dataMatrix(:,cch) = auxChan;
+                    dataMatrix(1:Nsamples(cch),cch) = auxChan;
                 else
                     chanKeepIdx(cch) = false;
                     fprintf('Channel %d is not part of this recording!\n',...
