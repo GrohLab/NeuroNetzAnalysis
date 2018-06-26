@@ -156,12 +156,10 @@ classdef UMSDataLoader < handle
             % 2.- the cluste is not garbage; or 3.- the cluster is a good
             % unit.
             lbls = obj.SpikeUMSStruct.labels;
-            notGarbage = lbls(:,2) ~= 4;
-            goodSpks = lbls(:,2) == 2;
+            goodSpks = lbls(:,2) == 2 | lbls(:,2) ~= 4;
             
             obj.SpikeTimes =...
-                spikes.spiketimes(spikes.assigns == lbls(notGarbage,1) | ...
-                spikes.assigns == lbls(goodSpks,1));
+                spikes.spiketimes(spikes.assigns == lbls(goodSpks,1));
         end
         
         function saveSpikeTimes(obj)
