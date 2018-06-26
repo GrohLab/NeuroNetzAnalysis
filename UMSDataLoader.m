@@ -116,19 +116,10 @@ classdef UMSDataLoader < handle
         %% SET AND GET SpikeUMSStruct
         function set.SpikeUMSStruct(obj,structIn)
             if isstruct(structIn) && isfield(structIn,'params')
-                if ~isempty(obj.SpikeUMSStruct)
-                    yon = input(['The structure is not empty, ',...
-                        'do you wish to overwrite? (y/n)'],'s');
-                    if yon == 'y' || yon == 'Y'
-                        obj.SpikeUMSStruct = structIn;
-                    end
-                else
-                    obj.SpikeUMSStruct = structIn;
-                end
-            elseif isempty(structIn)
                 obj.SpikeUMSStruct = structIn;
             else
-                fprintf('The given input is not a valid structure.')
+                fprintf('Deleting the UMS spikes structure...\n')
+                obj.deleteSpikeUMSStruct;
             end
         end
         
@@ -136,7 +127,7 @@ classdef UMSDataLoader < handle
             spksStruct = obj.SpikeUMSStruct;
         end
         
-        function deleteSpikeUMSStrut(obj)
+        function deleteSpikeUMSStruct(obj)
             obj.SpikeUMSStruct = [];
         end
         
@@ -180,7 +171,8 @@ classdef UMSDataLoader < handle
                 if ~exist(sortFileName,'file')
                     spikes = obj.SpikeUMSStruct;
                     spkTms = obj.SpikeTimes;
-                    SPKS1 = struct('spikes',spikes,'spkTms',spkTms);
+                    SPKS1 = struct('spikes',spikes,...
+                        'spkTms',round(obj.SamplingFrequency*spkTms));
                     try
                         save(sortFileName,'SPKS1')
                     catch 
