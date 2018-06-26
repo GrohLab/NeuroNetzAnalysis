@@ -55,6 +55,11 @@ classdef UMSDataLoader < handle
             
             disp('Constructed!')
         end % Constructor
+        
+        function invertSignals(obj)
+            obj.Data{1} = -obj.Data{1};
+        end
+        
         %% Ultra Mega Sort 2000 Pipeline
         function obj = UMS2kPipeline(obj)
             spikesLocal = ss_default_params(obj.SamplingFrequency,...
