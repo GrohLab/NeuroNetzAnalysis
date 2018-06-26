@@ -98,10 +98,6 @@ classdef UMSDataLoader < handle
             
         end
         
-        function invertSignals(obj)
-            obj.Data{1} = -obj.Data{1};
-        end
-        
         function changeDataFromFile(obj,fileName,chanOrder)
             % Loads the channels with the provided numbers
             if nargin == 2
