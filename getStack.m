@@ -69,6 +69,8 @@ end
 toi = sum(timeSpan);
 prevSamples = ceil(timeSpan(1) * fs);
 postSamples = ceil(timeSpan(2) * fs);
+%%%%%%%%%%%%%%%%%%%%%%%%%%% BEWARE OF THE LFP SAMPLING FREQUENCY currently
+%%%%%%%%%%%%%%%%%%%%%%%%%%% set at 1000 Hz
 fsLFP = 1e3;
 fsConv = fsLFP/fs;
 Nt = round(toi*fs) + 1;

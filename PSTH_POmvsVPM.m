@@ -94,6 +94,7 @@ for cf = 1:numel(expFiles)
             writeLogFile(logFile,[fileName, ' unwritable!'])
             disp([fileName,' unwritable!'])
         end
+        %% Stack creation for whisker on and off-set
         % Initialization for the stack building
         cellType = RecDB(baseName,'PhysioNucleus');
         cellType = string(cellType.PhysioNucleus);

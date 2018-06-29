@@ -15,6 +15,8 @@ if binSz >= 1
 end
 
 [Ne, Nt, Na] = size(PSTHstack);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% BEWARE OF THE LFP SAMPLING
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% FREQUENCY
 fsLFP = 1e3;
 %% Cleaning the stack
 % Kicking out everything that contains a true in the channel. No light, no
