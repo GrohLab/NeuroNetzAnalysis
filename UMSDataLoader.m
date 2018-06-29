@@ -140,7 +140,7 @@ classdef UMSDataLoader < handle
         function spksTime = get.SpikeTimes(obj)
             %#ok<*MCSUP>
             if ~isempty(obj.SpikeTimes)
-                spksTime = obj.SpikeTimes;
+                spksTime = round(obj.SamplingFrequency*obj.SpikeTimes);
             else
                 spksTime = [];
                 % disp('No spike times extracted yet');
@@ -282,7 +282,7 @@ classdef UMSDataLoader < handle
                             hold on
                         end
                         if ~isempty(obj.SpikeTimes)
-                            spIx = round(obj.SamplingFrequency*obj.SpikeTimes);
+                            spIx = obj.SpikeTimes;
                             plot(tx(spIx), tempChan(spIx),...
                                 'LineStyle','none','Marker','.')
                         end

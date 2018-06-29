@@ -98,7 +98,7 @@ for cf = 1:numel(expFiles)
         % Initialization for the stack building
         cellType = RecDB(baseName,'PhysioNucleus');
         cellType = string(cellType.PhysioNucleus);
-        timeLapse = [500,1e3]*m;
+        timeLapse = [100,300]*m;
         whiskWf = StepWaveform(Triggers.whisker,fs);
         RaF = whiskWf.Triggers;
         whiskerMovement = Triggers.whisking;
@@ -106,13 +106,13 @@ for cf = 1:numel(expFiles)
         allEvents = struct2cell(Triggers);
         consEvents = allEvents(~ismember(fieldNames,{'whisking','whisker'}));
         binningTime = 10*m;
-        
+        fsLFP = 1e3;
         % Whisker onset
         [PSTHstackW,LFPstackW,WstackW] = getStack(spT, RaF, 'on',...
-            timeLapse, fs, EEG.data, Triggers.whisking, consEvents);
+            timeLapse, fs, EEG.data, Triggers.whisking, consEvents,fsLFP);
         [~,FigIDW,kO] =...
             plotTriggeredEvents(PSTHstackW, LFPstackW, WstackW,...
-            timeLapse, cellType, binningTime, fs);
+            timeLapse, cellType, binningTime, fs,fsLFP);
         savePDF_FIG(FigIDW,'_W',expDir,baseName)
 %         if ~exist(fullfile(expDir,[baseName,'_W.pdf']),'file')
 %             print(FigIDW,fullfile(expDir,[baseName,'_W.pdf']),...
@@ -122,10 +122,10 @@ for cf = 1:numel(expFiles)
         close(FigIDW)
         % Whisker offset
         [PSTHstackNW,LFPstackNW,WstackNW] = getStack(spT, RaF, 'off',...
-            timeLapse, fs, EEG.data, Triggers.whisking, consEvents);
+            timeLapse, fs, EEG.data, Triggers.whisking, consEvents, fsLFP);
         [~,FigIDNW] =...
             plotTriggeredEvents(PSTHstackNW, LFPstackNW, WstackNW,...
-            timeLapse, cellType, binningTime, fs);
+            timeLapse, cellType, binningTime, fs, fsLFP);
         savePDF_FIG(FigIDNW,'_NW',expDir,baseName)
 %         if ~exist(fullfile(expDir,[baseName,'_NW.pdf']),'file')
 %             print(FigIDNW,fullfile(expDir,[baseName,'_NW.pdf']),...

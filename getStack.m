@@ -78,7 +78,7 @@ Nt = prevSamples + postSamples + 1;
 expStack = false(2+Ne,Nt,Na);
 prevSamplesLFP = ceil(timeSpan(1) * fsLFP);
 postSamplesLFP = ceil(timeSpan(2) * fsLFP);
-NtLFP = round(toi*fsLFP) + 1;
+NtLFP = prevSamplesLFP + postSamplesLFP + 1;
 LFPstack = zeros(NtLFP,Na);
 Wstack = LFPstack;
 if isnumeric(spT)
@@ -166,7 +166,11 @@ else
         % the considered segment.
         allIdx = find(onIdx | offIdx);
         initStep = relTdx(onIdx,1) + prev + 1;
-        fnalStep = relTdx(offIdx,2) + prev + 1;
+        if size(relTdx, 2) == 2
+            fnalStep = relTdx(offIdx,2) + prev + 1;
+        else
+            fnalStep = initStep;
+        end
         % Event rising, falling or both into the alignment window as a
         % first condition. 
         stCount = 1;

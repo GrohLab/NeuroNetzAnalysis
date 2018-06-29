@@ -1,5 +1,5 @@
 function [PSTH, figID, kickAlignmentIDx] =...
-    plotTriggeredEvents(PSTHstack, LFPstack, Wstack, timeLapse, cellType, binSz, fs)
+    plotTriggeredEvents(PSTHstack, LFPstack, Wstack, timeLapse, cellType, binSz, fs, fsLFP)
 % PLOTTRIGGEREDEVENTS returns a peri-stimulus triggered histogram given a
 % triggered aligned stack in the form MxNxT, where M is the number of
 % channels to align, N is the number of samples (time) and T is the number
@@ -17,7 +17,7 @@ end
 [Ne, Nt, Na] = size(PSTHstack);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% BEWARE OF THE LFP SAMPLING
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% FREQUENCY
-fsLFP = 1e3;
+% fsLFP = 1e3;
 %% Cleaning the stack
 % Kicking out everything that contains a true in the channel. No light, no
 % puff, no touch. Nothing. Inverted variable: kick means to keep.
@@ -25,7 +25,7 @@ if size(PSTHstack,1) > 2
     kickOutIdx = squeeze(sum(PSTHstack(3:end,:,:),2)) > 0;
     kickAlignmentIDx = sum(kickOutIdx,1) > 0;
 else
-    kickAlignmentIDx = true(1,Na);
+    kickAlignmentIDx = false(1,Na);
 end
 disp(['Found extra events: ',num2str(Ne-2)])
 disp([num2str(sum(kickAlignmentIDx)), ' omitted alignment points.'])
@@ -75,7 +75,11 @@ hold on;ylabel('Frequency [Hz]');box off;xlabel(['Time_{',num2str(binSz*1e3),' m
 yyaxis(ax(2),'right')
 % area(ax(2),-timeLapse(1):binSz:timeLapse(2),(trig/(binEls*sweeps)),...
 %     'EdgeColor','none','FaceAlpha',0.3,'FaceColor',[37, 154, 3]/255)
-area(ax(2),-timeLapse(1):1/fs:timeLapse(2),trig,...
+tx = 0:1/fs:(length(trig)-1)/fs;
+tx = tx - timeLapse(1);
+%area(ax(2),-timeLapse(1):1/fs:timeLapse(2),trig,...
+%    'EdgeColor','none','FaceAlpha',0.3,'FaceColor',[37, 154, 3]/255)
+area(ax(2),tx,trig,...
     'EdgeColor','none','FaceAlpha',0.3,'FaceColor',[37, 154, 3]/255)
 ylabel('Probability of whisking');set(gca,'YColor',[37, 154, 3]/255)
 % AVERAGE LFP
