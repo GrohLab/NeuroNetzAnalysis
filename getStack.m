@@ -1,5 +1,5 @@
 function [expStack, LFPstack, Wstack] =...
-    getStack(spT,alignP,ONOFF,timeSpan,fs,LFP,whiskerMovement,consEvents)
+    getStack(spT,alignP,ONOFF,timeSpan,fs,LFP,whiskerMovement,consEvents,fsLFP)
 % GETSTACK returns a stack of spikes aligned to a certain event ''alignT''
 % considering the events in the cell array ''consEvents''. The alignment
 % can be done with the on-set or the off-set of the triggers using the
@@ -38,7 +38,7 @@ end
 
 %% Considered events arrangement.
 Ne = 0;
-if nargin == 8
+if exist('consEvents','var') && ~isempty(consEvents)
     typ = whos('consEvents');
     switch typ.class
         case 'double'
@@ -71,9 +71,10 @@ prevSamples = ceil(timeSpan(1) * fs);
 postSamples = ceil(timeSpan(2) * fs);
 %%%%%%%%%%%%%%%%%%%%%%%%%%% BEWARE OF THE LFP SAMPLING FREQUENCY currently
 %%%%%%%%%%%%%%%%%%%%%%%%%%% set at 1000 Hz
-fsLFP = 1e3;
+% fsLFP = 1e3;
 fsConv = fsLFP/fs;
-Nt = round(toi*fs) + 1;
+%Nt = round(toi*fs)+1;
+Nt = prevSamples + postSamples + 1;
 expStack = false(2+Ne,Nt,Na);
 prevSamplesLFP = ceil(timeSpan(1) * fsLFP);
 postSamplesLFP = ceil(timeSpan(2) * fsLFP);
@@ -156,7 +157,11 @@ else
         
         % Indexes for encountered rising (onIdx) and falling (offIdx) edges
         onIdx = relTdx(:,1) >= -prev & relTdx(:,1) < post; 
-        offIdx = relTdx(:,2) >= -prev & relTdx(:,2) < post;
+        if size(relTdx, 2) == 2
+            offIdx = relTdx(:,2) >= -prev & relTdx(:,2) < post;
+        else
+            offIdx = onIdx;
+        end
         % Indexes considering the partial or complete step that falls into
         % the considered segment.
         allIdx = find(onIdx | offIdx);
