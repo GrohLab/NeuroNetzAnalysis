@@ -50,18 +50,19 @@ figID(1) = figure('Name',[char(cellType), ' Raster, PSTH and average traces'],..
     'Color',[1,1,1]);
 ax(1) = subplot(5,1,[2,3],'Color','none');
 spksStack = squeeze(PSTHstack(2,:,~kickAlignmentIDx));
-xx = -timeLapse(1):1/fs:timeLapse(2);
+tx = 0:1/fs:(length(trig)-1)/fs;
+tx = tx - timeLapse(1);
 plot(ax(1),[-timeLapse(1),timeLapse(2)],[1,Na-sum(~kickAlignmentIDx)],...
     'LineStyle','none','Marker','none');
 for cl = size(spksStack,2):-1:1
-    xspks = xx(spksStack(:,cl));
+    xspks = tx(spksStack(:,cl));
     for cs = 1:numel(xspks)
         text(xspks(cs),cl,'|','HorizontalAlignment','center')
     end
 end
 ax(1).XColor = 'none';
 ylabel(['Trials (',num2str(sum(~kickAlignmentIDx)),'/',num2str(Na),')']);
-box off;T = xx(round((Nt*timeLapse(1) - timeLapse(2))/sum(timeLapse))+1);
+box off;T = tx(round((Nt*timeLapse(1) - timeLapse(2))/sum(timeLapse))+1);
 % T = xx(find(PSTHstack(1,:,1)==1,1,'first'));set(gca,'XTickLabel',[])
 set(gca,'XTickLabel',[]);hold on;
 plot([T,T],[0,sum(~kickAlignmentIDx)],'Color',[37, 154, 3]/255)
@@ -75,8 +76,7 @@ hold on;ylabel('Frequency [Hz]');box off;xlabel(['Time_{',num2str(binSz*1e3),' m
 yyaxis(ax(2),'right')
 % area(ax(2),-timeLapse(1):binSz:timeLapse(2),(trig/(binEls*sweeps)),...
 %     'EdgeColor','none','FaceAlpha',0.3,'FaceColor',[37, 154, 3]/255)
-tx = 0:1/fs:(length(trig)-1)/fs;
-tx = tx - timeLapse(1);
+
 %area(ax(2),-timeLapse(1):1/fs:timeLapse(2),trig,...
 %    'EdgeColor','none','FaceAlpha',0.3,'FaceColor',[37, 154, 3]/255)
 area(ax(2),tx,trig,...
