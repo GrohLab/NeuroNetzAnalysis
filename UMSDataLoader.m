@@ -31,6 +31,7 @@ classdef UMSDataLoader < handle
         PolyChanOrder (1,:) int16 =...
             [8, 9, 7, 10, 4, 13, 5, 12, 2, 15, 1, 16, 6, 11, 3, 14];
         FileName char;
+        ChannelsID;
     end
     methods
         function obj = UMSDataLoader(filename,chanOrder)
@@ -40,10 +41,10 @@ classdef UMSDataLoader < handle
             % the given data into such format from a file or from the
             % workspace.
             if nargin == 1
-                [data, fs, chanReadOut, fileNameOut] = UMSDataLoader.LoadFromFile(...
+                [data, fs, chanReadOut, fileNameOut, chansID] = UMSDataLoader.LoadFromFile(...
                     filename,[]);
             elseif nargin == 2
-                [data, fs, chanReadOut, fileNameOut] = UMSDataLoader.LoadFromFile(...
+                [data, fs, chanReadOut, fileNameOut, chansID] = UMSDataLoader.LoadFromFile(...
                     filename,chanOrder);
             end
             if ~isempty(data)
@@ -51,6 +52,7 @@ classdef UMSDataLoader < handle
                 obj.Data = data;
                 obj.changeChannelOrder(chanReadOut);
                 obj.SamplingFrequency = fs;
+                obj.ChannelsID = chansID;
             end
             
             disp('Constructed!')
@@ -273,7 +275,8 @@ classdef UMSDataLoader < handle
                     lvl = cumsum(stds*30);
                     for cch = 1:obj.Nch
                         lbls{cch} = [num2str(cch),' (ID ',...
-                            num2str(obj.PolyChanOrder(cch)),')'];
+                            num2str(obj.PolyChanOrder(cch)),...
+                            ' ', obj.ChannelsID(cch),')'];
                         tempChan = obj.Data{1}(:,cch);
                         tempChan = tempChan -...
                             means(cch) + lvl(cch);
@@ -295,12 +298,19 @@ classdef UMSDataLoader < handle
                         ['The number of channels in the data is ',...
                         'different from the order of channels!\nMaybe',...
                         ' change the Chanel Order property using the',...
-                        ' changeChanOrder method.'])
+                        ' changeChanOrder method.\nThe available ',...
+                        'channels are the following:\n'])
+                    for dispCount = 1:length(obj.Nch)
+                        fprintf('%d\n',obj.ChannelsID(dispCount))
+                    end
                 end
             end
         end
     end % methods
+    %% Private methods
     methods (Access = 'private')
+        % This function is a helper function to extract the spikes
+        % structure out of the splitmerge_tool GUI from UMS.
         function getSpikeStructureCls(obj,varargin)
             try
                 h = varargin{end};
@@ -308,14 +318,18 @@ classdef UMSDataLoader < handle
                 obj.SpikeUMSStruct = figdata.spikes;
             catch
                 disp('There was a problem reading the spike structure')
-                disp('I am on debugging process... :( ')
+                disp('Please start an issue process in GitHub...')
+                disp('Sorry :(')
             end
             delete(h)
         end
     end
-    methods (Static)
-        function [data, fs, chanReadOut, fileNameOut] =...
+    %% Static and private methods.
+    methods (Static, Access = 'private')
+        function [data, fs, chanReadOut, fileNameOut, chanTitle] =...
                 LoadFromFile(fileName,channelOrder)
+            % Private static method which reads the channels from the .mat
+            % file created from the .smr or .smrx files with some metadata.
             try
                 chanVars = load(fileName,...
                     'chan*');
@@ -399,6 +413,7 @@ classdef UMSDataLoader < handle
             end
             Nsamples(Nsamples==0) = [];
             Ns = min(Nsamples);
+            chanTitle(chanReadOut==0) = [];
             chanReadOut(chanReadOut==0) = [];
             fileNameOut = fileName;
             data{1} = dataMatrix(1:Ns,chanKeepIdx);
