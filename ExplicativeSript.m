@@ -48,5 +48,5 @@ for ccon = 1:Ncon
         cellType,...                        'POm', 'VPM', or 'other'
         binningTime,...                     Bin size in seconds
         fs,fs);
-    
+    title(Conditions{ccon}.name)
 end
