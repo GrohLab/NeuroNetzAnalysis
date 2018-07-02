@@ -9,8 +9,8 @@ filePath = 'C:\Users\neuro\Documents\MATLAB\Data\';
 importSMR(smrxFileName, filePath, 256);
 %% Use UMS2k for the spike extraction
 matFileName = fullfile(filePath,[baseName,'.mat']);
-load(matFileName)
-readingChannels = 9; % For example channel 9
+load(matFileName, 'chan6') % This line is not nec
+readingChannels = 9; %%%%%%%%%%%%%%%%%%%%%%% Fileted response channel! 
 experimentObject =...
     UMSDataLoader(matFileName, readingChannels);
 disp(experimentObject)
@@ -21,7 +21,7 @@ experimentObject.saveSpikeTimes;
 %% Triggered stack
 analysisFileName =...
     fullfile(filePath,[baseName,'analysis.mat']);
-load(analysisFileName,'Conditions','EEG')
+load(analysisFileName,'Conditions','EEG','Triggers')
 Ncon = numel(Conditions);
 expStack = cell(1,Ncon);
 LFPstack = expStack;
@@ -52,4 +52,8 @@ for ccon = 1:Ncon
         binningTime,...                     Bin size in seconds
         fs,fs);
     title(Conditions{ccon}.name)
+    clearvars aux*
+    [~,auxMech,auxLight] = getStack(...
+        experimentObject.SpikeTimes,...
+        Conditions
 end
