@@ -41,11 +41,11 @@ classdef UMSDataLoader < handle
             % the given data into such format from a file or from the
             % workspace.
             if nargin == 1
-                [data, fs, chanReadOut, fileNameOut, chansID] = UMSDataLoader.LoadFromFile(...
-                    filename,[]);
+                [data, fs, chanReadOut, fileNameOut, chansID] =...
+                    UMSDataLoader.LoadFromFile(filename, []);
             elseif nargin == 2
-                [data, fs, chanReadOut, fileNameOut, chansID] = UMSDataLoader.LoadFromFile(...
-                    filename,chanOrder);
+                [data, fs, chanReadOut, fileNameOut, chansID] =...
+                    UMSDataLoader.LoadFromFile(filename, chanOrder);
             end
             if ~isempty(data)
                 obj.FileName = fileNameOut;
@@ -104,10 +104,10 @@ classdef UMSDataLoader < handle
             % Loads the channels with the provided numbers
             if nargin == 2
                 fprintf('Importing all channels in their original order.\n')
-                [data, fs, chanReadOut, fileNameOut] =...
+                [data, fs, chanReadOut, fileNameOut, channIDs] =...
                     obj.LoadFromFile(fileName,[]);
             elseif nargin == 3
-                [data, fs, chanReadOut, fileNameOut] =...
+                [data, fs, chanReadOut, fileNameOut, channIDs] =...
                     obj.LoadFromFile(fileName,chanOrder); 
             end
             if ~isempty(data)
@@ -115,6 +115,7 @@ classdef UMSDataLoader < handle
                 obj.SamplingFrequency = fs;
                 obj.changeChannelOrder(chanReadOut);
                 obj.FileName = fileNameOut;
+                obj.ChannelsID = channIDs;
                 obj.SpikeTimes = [];
                 obj.SpikeUMSStruct = [];
             end
@@ -126,16 +127,12 @@ classdef UMSDataLoader < handle
                 obj.SpikeUMSStruct = structIn;
             else
                 fprintf('Deleting the UMS spikes structure...\n')
-                obj.deleteSpikeUMSStruct;
+                obj.SpikeUMSStruct = [];
             end
         end
         
         function spksStruct = get.SpikeUMSStruct(obj)
             spksStruct = obj.SpikeUMSStruct;
-        end
-        
-        function deleteSpikeUMSStruct(obj)
-            obj.SpikeUMSStruct = [];
         end
         
         %% GET, SET and SAVE SpikeTimes
