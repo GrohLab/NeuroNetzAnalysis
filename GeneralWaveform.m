@@ -1,5 +1,7 @@
 classdef GeneralWaveform < handle
-    %GENERALWAVEFORM implements a class for the
+    %GENERALWAVEFORM implements a class for the any type of signals. This
+    %class should convert to the discrete or continuous waveform the input
+    %signals.
     %   Detailed explanation goes here
     
     properties (SetAccess = 'protected')
