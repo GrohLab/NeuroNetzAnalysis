@@ -25,6 +25,7 @@ load(analysisFileName,'Conditions','EEG')
 Ncon = numel(Conditions);
 expStack = cell(1,Ncon);
 LFPstack = expStack;
+MechStack = LFPstack;
 timeLapse = [1, 6];       % Time before the trigger, time after the trigger
 cellType = 'other';
 binningTime = 100e-3;    % 10 
@@ -32,7 +33,7 @@ fs = experimentObject.SamplingFrequency;
 
 for ccon = 1:Ncon
     % Create stack
-    [auxExp, auxLFP] = getStack(...      CREATE STACK
+    [auxExp, auxLFP, auxMech] = getStack(...      CREATE STACK
         experimentObject.SpikeTimes,...     Spike times
         Conditions{ccon}.Triggers, 'on',...    Onset of triggers
         timeLapse,...                       -0.5 to 1 second
@@ -40,10 +41,12 @@ for ccon = 1:Ncon
         EEG.data,chan6,[],fs);                          % No extra events
     expStack(ccon) = {auxExp};
     LFPstack(ccon) = {auxLFP};
+    MechStack(ccon) = {auxMech};
     [~,FigIDNW] =...
         plotTriggeredEvents(...             PLOT TRIGGERS
         expStack{ccon},...                  Current condition
-        LFPstack{ccon},[],...               No whiskers
+        LFPstack{ccon},...                  LFP
+        MechStack{ccon},...                 Mechanical pressure
         timeLapse,...                       Time before, time after
         cellType,...                        'POm', 'VPM', or 'other'
         binningTime,...                     Bin size in seconds
