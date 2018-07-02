@@ -7,6 +7,7 @@ classdef GeneralWaveform < handle
         Data = [];
         NSamples
         Time
+        ID
     end
     properties
         Units (1,:) char = 'mV';
