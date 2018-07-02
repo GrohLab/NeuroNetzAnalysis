@@ -36,7 +36,7 @@ for ccon = 1:Ncon
     [auxExp, auxLFP, auxMech] = getStack(...      CREATE STACK
         experimentObject.SpikeTimes,...     Spike times
         Conditions{ccon}.Triggers, 'on',...    Onset of triggers
-        timeLapse,...                       -0.5 to 1 second
+        timeLapse,...                       
         fs,...
         EEG.data,chan6,[],fs);                          % No extra events
     expStack(ccon) = {auxExp};
