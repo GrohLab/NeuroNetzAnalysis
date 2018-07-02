@@ -94,13 +94,16 @@ linkaxes([ax,axLFP],'x')
 end
 
 function plotAverageTrace(ax,timeLapse,y,sigma,signalName,fs)
-txLFP = -timeLapse(1):1/fs:timeLapse(2);
-fill(ax,[txLFP,fliplr(txLFP)],[y'-sigma',fliplr(y'+sigma')],...
-    [0.9,0.9,0.9],'LineStyle','none');hold on
-plot(ax,txLFP,y,'LineWidth',3,'Color',[99, 115, 131]/255)
-line(ax,[0,0],[min(y-sigma),max(y+sigma)],'Color',[37, 154, 3]/255)
-text(-timeLapse(1),mean(y),signalName,'FontWeight','bold',...
-    'HorizontalAlignment','right')
+if ~isempty(y)
+    tx = 0:1/fs:(length(y)-1)/fs;
+    tx = tx - timeLapse(1);
+    fill(ax,[tx,fliplr(tx)],[y'-sigma',fliplr(y'+sigma')],...
+        [0.9,0.9,0.9],'LineStyle','none');hold on
+    plot(ax,tx,y,'LineWidth',3,'Color',[99, 115, 131]/255)
+    line(ax,[0,0],[min(y-sigma),max(y+sigma)],'Color',[37, 154, 3]/255)
+    text(tx(1),mean(y),signalName,'FontWeight','bold',...
+        'HorizontalAlignment','right')
+end
 ax.Color = 'none';
 ax.XColor = 'none';
 ax.YColor = 'none';
