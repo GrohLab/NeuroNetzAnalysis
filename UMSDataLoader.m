@@ -271,9 +271,9 @@ classdef UMSDataLoader < handle
                     lbls = cell(1,obj.Nch);
                     lvl = cumsum(stds*30);
                     for cch = 1:obj.Nch
-                        lbls{cch} = [num2str(cch),' (ID ',...
+                        lbls(cch) = {sprintf([num2str(cch),' (ID ',...
                             num2str(obj.PolyChanOrder(cch)),...
-                            ' ', obj.ChannelsID(cch),')'];
+                            ' ', char(obj.ChannelsID(cch)),')'])};
                         tempChan = obj.Data{1}(:,cch);
                         tempChan = tempChan -...
                             means(cch) + lvl(cch);
@@ -288,7 +288,8 @@ classdef UMSDataLoader < handle
                         end
                     end
                     hold off;box off
-                    set(gca,'YTick',lvl,'YTickLabel',lbls)
+                    set(gca,'YTick',lvl,'YTickLabel',lbls,...
+                        'TickLabelInterpreter','none')
                     xlabel('Time [s]');title('Loaded data')
                 else
                     fprintf(...
