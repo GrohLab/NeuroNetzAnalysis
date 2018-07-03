@@ -56,7 +56,7 @@ for ccon = 1:Ncon
     expStack(ccon) = {auxExp};
     LFPstack(ccon) = {auxLFP};
     MechStack(ccon) = {auxMech};
-    fprintf('Finished creating the stack\n')
+    fprintf('Finished creating the stack\nCreating plot...\n')
     [~,FigIDNW] =...
         plotTriggeredEvents(...             PLOT TRIGGERS
         expStack{ccon},...                  Current condition
@@ -108,5 +108,7 @@ for ccon = 1:Ncon
     plot(tx,meanLight,'LineWidth',0.6,'Color',[0, 138, 230]/255)
     text(tx(end),mean(meanLight),'Light','FontWeight','bold',...
         'HorizontalAlignment','right','Color',[0, 138, 230]/255)
+    % Add the printing fixed options with the file name without latex
+    % interpretation
 end
 
