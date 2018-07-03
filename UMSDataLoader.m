@@ -46,6 +46,8 @@ classdef UMSDataLoader < handle
             elseif nargin == 2
                 [data, fs, chanReadOut, fileNameOut, chansID] =...
                     UMSDataLoader.LoadFromFile(filename, chanOrder);
+            elseif nargin == 0
+                data = [];
             end
             if ~isempty(data)
                 obj.FileName = fileNameOut;
@@ -135,7 +137,7 @@ classdef UMSDataLoader < handle
             spksStruct = obj.SpikeUMSStruct;
         end
         
-        %% GET, SET and SAVE SpikeTimes
+        %% GET and SET SpikeTimes
         function spksTime = get.SpikeTimes(obj)
             %#ok<*MCSUP>
             if ~isempty(obj.SpikeTimes)
@@ -166,6 +168,7 @@ classdef UMSDataLoader < handle
                 spikes.spiketimes(spikes.assigns == lbls(goodSpks,1));
         end
         
+        %% SAVE and LOAD spiketimes
         function saveSpikeTimes(obj)
             [inDir, baseName, ~] = fileparts(obj.FileName);
             sortFileName = [fullfile(inDir,baseName),'sorted.mat'];
@@ -174,7 +177,7 @@ classdef UMSDataLoader < handle
                     spikes = obj.SpikeUMSStruct;
                     spkTms = obj.SpikeTimes;
                     SPKS1 = struct('spikes',spikes,...
-                        'spkTms',round(obj.SamplingFrequency*spkTms));
+                        'spkTms',spkTms);
                     try
                         save(sortFileName,'SPKS1')
                     catch 
@@ -189,6 +192,39 @@ classdef UMSDataLoader < handle
             else
                 return;
             end
+        end
+        
+        function loadSpikeTimes(obj, fileName)
+            if nargin == 2
+                if exist(fileName,'file')
+                    load(fileName,'SPKS1')
+                    if isempty(obj.Data) && exist('SPKS1','var')
+                        [inDir, baseName, fileExt] = fileparts(fileName);
+                        dataBaseName = strsplit(baseName,'sorted');
+                        dataFile = fullfile(inDir,[dataBaseName{1},fileExt]);
+                        obj.changeDataFromFile(dataFile)
+                    end
+                else
+                    fprintf('Wrong file name!\n')
+                end
+            elseif nargin == 1 && ~isempty(obj.FileName) &&...
+                    ~isempty(obj.Data)
+                [inDir,baseName,~] = fileparts(obj.FileName);
+                sortedFile = fullfile(inDir,[baseName,'sorted.mat']);
+                if exist(sortedFile,'file')
+                    load(sortedFile,'SPKS1')
+                else
+                    fprintf('Bad news: the sorted file doesn''t exist\n')
+                    return
+                end
+            else
+                fprintf('This function accepts zero or one input argument.\n')
+                return
+            end
+            fprintf('Loading UMS spikes structure and spike times...\n')
+            obj.SpikeUMSStruct = SPKS1.spikes;
+            obj.SpikeTimes = SPKS1.spkTms/obj.SamplingFrequency;
+            fprintf('Done!\n')
         end
         
         %% Poly channel order modification
