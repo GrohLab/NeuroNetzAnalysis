@@ -77,27 +77,36 @@ for ccon = 1:Ncon
         Triggers.light,...
         [],fs);
     hold on
+    %% Adding the continuous triggered average.
+    % Pressure signal
     fprintf('Adding the TTL mechanical stimulus\n')
     [pressureSign,~] =...
         getTriggeredAverage(MechStack{ccon},false(1,size(MechStack{ccon},2)));
+    % Mechanical action TTL
     [meanMech, ~] = getTriggeredAverage(auxMech,false(1,size(auxMech,2)));
     tx = 0:1/fs:(length(meanMech)-1)/fs;
     tx = tx - timeLapse(1);
     if max(meanMech) > 2*std(meanMech)
+        % If the mechanical TTL signal was active, normalize the amplitude
+        % to the pressure signal.
         m = range(pressureSign)/range(meanMech);
         b = max(pressureSign) - m*max(meanMech);
         meanMech = meanMech*m + b;
     else
+        % If there was no mechanical stimulation, the signal would keep its
+        % original amplitude but kept at the minimum values of the pressure
+        % signal.
         meanMech = (meanMech - mean(meanMech)) + min(pressureSign);
     end
-    
     plot(tx,meanMech,'LineWidth',0.6,'Color',[37, 154, 3]/255)
     text(tx(end),mean(meanMech),'Pressure','FontWeight','bold',...
         'HorizontalAlignment','right','Color',[37, 154, 3]/255)
     fprintf('Adding the TTL laser stimulus\n')
-    [meanLight, ~] = getTriggeredAverage(auxLight,false(1,size(auxLight,2)));
     
+    % Laser TTL
+    [meanLight, ~] = getTriggeredAverage(auxLight,false(1,size(auxLight,2)));
     if max(meanLight) > 2*std(meanLight)
+        % Works in the same way. I might even do a local function for this.
         m = range(pressureSign)/range(meanLight);
         b = max(pressureSign) - m*max(meanLight);
         meanLight = meanLight*m + b;
