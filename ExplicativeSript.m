@@ -49,15 +49,17 @@ fs = experimentObject.SamplingFrequency;
 %% Looping throught the found conditions.
 for ccon = 1:Ncon
     % Create stacks
-    [auxExp, auxCont] = getStack(...      CREATE STACK
+    [auxExp, auxCont] = getStacks(...      CREATE STACK
         experimentObject.SpikeTimes,...     Spike times
         Conditions{ccon}.Triggers, 'on',...    Onset of triggers
         timeLapse,...                       
-        fs,...
-        EEG.data,chan6,[],fs);                          % No extra events
+        fs,fs,[],...   No extra events
+        EEG.data,chan6,Triggers.whisker,Triggers.light);
     expStack(ccon) = {auxExp};
-    LFPstack(ccon) = {auxCont};
-    MechStack(ccon) = {auxMech};
+    LFPstack(ccon) = {squeeze(auxCont(1,:,:))};
+    MechStack(ccon) = {squeeze(auxCont(2,:,:))};
+    auxMech = squeeze(auxCont(3,:,:));
+    auxLight = squeeze(auxCont(4,:,:));
     fprintf('Finished creating the stack\nCreating plot...\n')
     [~,FigIDNW] =...
         plotTriggeredEvents(...             PLOT TRIGGERS
@@ -70,14 +72,6 @@ for ccon = 1:Ncon
         fs,fs);
     fprintf('Plot created!\n')
     title(Conditions{ccon}.name)
-    [~,auxMech,auxLight] = getStack(...
-        experimentObject.SpikeTimes,...
-        Conditions{ccon}.Triggers, 'on',...
-        timeLapse,...
-        fs,...
-        Triggers.whisker,...
-        Triggers.light,...
-        [],fs);
     hold on
     %% Adding the continuous triggered average.
     % Pressure signal
@@ -88,36 +82,17 @@ for ccon = 1:Ncon
     [meanMech, ~] = getTriggeredAverage(auxMech,false(1,size(auxMech,2)));
     tx = 0:1/fs:(length(meanMech)-1)/fs;
     tx = tx - timeLapse(1);
-    if max(meanMech) > 2*std(meanMech)
-        % If the mechanical TTL signal was active, normalize the amplitude
-        % to the pressure signal.
-        m = range(pressureSign)/range(meanMech);
-        b = max(pressureSign) - m*max(meanMech);
-        meanMech = meanMech*m + b;
-    else
-        % If there was no mechanical stimulation, the signal would keep its
-        % original amplitude but kept at the minimum values of the pressure
-        % signal.
-        meanMech = (meanMech - mean(meanMech)) + min(pressureSign);
-    end
+    meanMech = equalizeAmplitudeTo(pressureSign,meanMech);
     plot(tx,meanMech,'LineWidth',0.6,'Color',[37, 154, 3]/255)
-    text(tx(end),mean(meanMech),'Pressure','FontWeight','bold',...
+    text(tx(end),mean(double(meanMech)),'Pressure','FontWeight','bold',...
         'HorizontalAlignment','right','Color',[37, 154, 3]/255)
     fprintf('Adding the TTL laser stimulus\n')
     
     % Laser TTL
     [meanLight, ~] = getTriggeredAverage(auxLight,false(1,size(auxLight,2)));
-    if max(meanLight) > 2*std(meanLight)
-        % Works in the same way. I might even do a local function for this.
-        m = range(pressureSign)/range(meanLight);
-        b = max(pressureSign) - m*max(meanLight);
-        meanLight = meanLight*m + b;
-    else
-        meanLight = (meanLight - mean(meanLight)) + min(pressureSign);
-    end
-    
+    meanLight = equalizeAmplitudeTo(pressureSign, meanLight);
     plot(tx,meanLight,'LineWidth',0.6,'Color',[0, 138, 230]/255)
-    text(tx(end),mean(meanLight),'Light','FontWeight','bold',...
+    text(tx(end),mean(double(meanLight)),'Light','FontWeight','bold',...
         'HorizontalAlignment','right','Color',[0, 138, 230]/255)
     % Add the printing fixed options with the file name without latex
     % interpretation

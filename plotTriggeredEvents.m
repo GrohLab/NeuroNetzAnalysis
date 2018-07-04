@@ -95,6 +95,7 @@ end
 
 function plotAverageTrace(ax,timeLapse,y,sigma,signalName,fs)
 if ~isempty(y)
+    y = double(y);
     tx = 0:1/fs:(length(y)-1)/fs;
     tx = tx - timeLapse(1);
     fill(ax,[tx,fliplr(tx)],[y'-sigma',fliplr(y'+sigma')],...

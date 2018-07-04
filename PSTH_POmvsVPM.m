@@ -116,12 +116,16 @@ for cf = 1:numel(expFiles)
             condTriggers = auxStpWvf.Triggers;
             auxStruct = struct('name',condNames{ccon},...
                 'Triggers',condTriggers,...
-                'delay',0)
-                
+                'delay',0);
+            ConditionsTest(ccon) = {auxStruct};
         end
         binningTime = 10*m;
         fsLFP = 1e3;
-        
+        % Overwritting the conditions test variable with each run. This is
+        % time consuming, so take that into consideration.
+        save(fileName,'ConditionsTest','-append')
+        fprintf('File %s saved!\n',fileName)
+        continue
         % Whisker onset
         [PSTHstackW,contStackW] = getStacks(spT, RaF, 'on',...
             timeLapse, fs,fsLFP,consEvents, EEG.data, Triggers.whisking);
