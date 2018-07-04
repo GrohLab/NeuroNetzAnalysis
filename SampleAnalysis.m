@@ -1,11 +1,10 @@
 %% multiunit recording practice
 % cd 'D:\Dropbox\16 Channel Recording may 2018'
-cd 'F:\Experiments_2018\15_5_2018'
+cd 'F:\Experiments_2018\19_4_2018'
 % clearvars
-load SpikeTimes_all_channels.mat
-load M7_C3_Mech_05mWanalysis.mat Conditions Triggers
-fs = 20661;
-
+load('SpikeTimes_all_channels.mat')
+load('M137_C4_Mech+L6 05mWanalysis.mat','Conditions','Triggers')
+fs = Fs;
 
 %% Initialize the variables
 % This section loads the cluster spike times into the 'Spikes' cell array.
@@ -28,8 +27,8 @@ close all
 
 %%
 %bads=[1 2 3 14 6]  %1 2 3 14 are light artifacts
-bads=[13, 16, 17];
-noresponse=[];
+bads=[3,11,15,16];
+noresponse=[23];
 bads=[bads noresponse];
 goods=1:numel(Spikes);goods=setdiff(goods,bads);
 
@@ -66,7 +65,7 @@ lenSpks = length(Spikes);
 consIdxs = true(1,lenSpks);
 % Some clusters were eliminated after an induvidual inspection of their
 % PSTHs.
-bads = [7, 9, 10, 13, 16, 17];
+% bads = [];
 consIdxs(bads) = false;
 crscor = zeros(lenSpks,lenSpks,3);    % Square matrix with Ncl x Ncl
 for ccl = 1:lenSpks
@@ -117,7 +116,7 @@ end
 % due to their high similarity. The possibilities are that they belong to a
 % same unit as busrting spikes, the cell shifted to another channel or any
 % other reasonable cause.
-mergingPackages = {[2,5,11,14], [4,6,8,12]};
+mergingPackages = {[2, 17, 18], [4, 13], [6, 9, 12]};
 Npg = numel(mergingPackages);
 mSpikes = cell(1,Npg);
 auxSignal = false(1,length(mech));
@@ -132,26 +131,38 @@ for cpg = 1:Npg
 end
 bads = sort(unique(bads));
 
-%% looking at individual
+%% looking at individual conditions and clusters
 
+plotRaster = false; % No raster plot in the figures!!
 close all
 for i=1:numel(Spikes)
     if ~ismember(i,bads)
-        for I=[4] %pick out conditions to look at
+        for I=2 %pick out conditions to look at
             ppms=fs/1000;
             spikes=(Spikes{i})*1000*ppms; %spikes back in samples
             name=Names{i};
             timeBefore=1000*ppms;timeAfter=9000*ppms;
             plotit=1;binsize=100*ppms;
             triggers=Conditions{I}.Triggers;
-            [sp h bins trig_mech trig_light f]=triggeredAnalysisMUA(spikes,ppms,triggers,binsize,timeBefore, timeAfter,Conditions{I}.name,mech,light,plotit);
+            [sp h bins trig_mech trig_light f]=...
+                triggeredAnalysisMUA(spikes,ppms,triggers,binsize,timeBefore, timeAfter,Conditions{I}.name,mech,light,plotit,plotRaster);
             title(['Cluster: ',num2str(i)])
         end
         
     end
 end
 
-
+%% Spikes backup.
+% Elimination of the 'bads' in the 'Spikes' variable.
+% But also making a backup before deleting. 
+% WARNING! If you run this section twice without restoring the backup, you
+% will lose good units!!
+Spikes_BACKUP = Spikes;
+Spikes(bads) = [];
+%% Restore Spikes
+% Use this section to restore the 'bads' labelled units into the 'Spikes'
+% variable
+Spikes = Spikes_BACKUP;
 %% organize real figure
 
 
@@ -245,7 +256,8 @@ colors=cmap(1:n:end,:);
 
 
 %% plot it all
-figure
+figure('Color',[1,1,1])
+yUpLimit = max(cell2mat(cellfun(@(x) (cellfun(@max,x(end),'UniformOutput',false)),YSs)));
 for ii=1:4
     subplot(6,4,[ii, ii+4, ii+8])
     
@@ -258,7 +270,9 @@ for ii=1:4
     % ylabel 'trials/neuron'
     box off
     xlim([min(bins) max(bins)])
+    ylim([0,yUpLimit])
 end
+
 
 
 tits={'mechanical',...

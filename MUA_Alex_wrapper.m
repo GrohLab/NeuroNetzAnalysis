@@ -1,9 +1,9 @@
 %% import data from spike2 into mat
 % fname='1300_1600_3320_whisker.smr'
 
-fname='M7_C3_Mech_05mW'; % EIC Sailaja's analysis
+fname='M137_C4_Mech+L6 05mW'; % EIC Sailaja's analysis
 % fdir='C:\Users\neuro\Documents\MATLAB\16 channel\';
-fdir = 'F:\Experiments_2018\15_5_2018';
+fdir = 'F:\Experiments_2018\19_4_2018';
 %X=importSMR([fname,'.mat'],fdir,0);
 
 %%
@@ -22,8 +22,8 @@ Fs           = head1.SamplingFrequency;
 num_channels =  16;
 trial_dur    = 100;
 
-chanOrder=[8 9 7 10 4 13 5 12 2 15 1 16 6 11 3 14]; % poly design
-% chanOrder=[6 9 7 10 4 13 5 12 2 15 1 16 6 11 3 14]; % linear design
+% chanOrder=[8 9 7 10 4 13 5 12 2 15 1 16 6 11 3 14]; % poly design
+chanOrder=[6 9 7 10 4 13 5 12 2 15 1 16 6 11 3 14]; % linear design
 %chanOrder=fliplr(chanOrder);
 
 Data={};
@@ -59,7 +59,7 @@ disp('imported data into "Data"')
 % 1:4 3:6 7:10 12:15
 % 1:4 3:6 7:10 5:8 9:12
 channelPacks = {1:4 4:7 7:10 10:13 13:16};
-chanPackIdx = 1;
+chanPackIdx = 5;
 data={};
 ch = channelPacks{chanPackIdx}; %  channels for sorting
 for i=1:numel(ch)
@@ -83,7 +83,7 @@ splitmerge_tool(spikes)
 % stand alone outlier tool
 outlier_tool(spikes)
 %% Save
-save([fname,'channe',num2str(chanPackIdx),'.mat'],'spikes')
+save([fname,'channel',num2str(chanPackIdx),'.mat'],'spikes')
 %% collect clusters into cell array sortedData (exlude garbage clusters)
 
 % fdir='C:\Users\alex\Desktop\16chanelanalysis\120213\01_whiskeronly_sorted\';
@@ -112,7 +112,7 @@ end
 % include= [15: 20]; % [3 5 17]
 %% sortedData=sortedData(include,:) % which units ?
 save('SpikeTimes_all_channels.mat','sortedData')
-
+% run till here and then move to RM script
 
 %% raster plot and coincident spike times
 

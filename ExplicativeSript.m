@@ -32,7 +32,7 @@ elseif exist(sortedFile,'file')
 else
     fprintf('The sorted file doesn''t exist... yet\n')
 end
-%%
+%% 
 analysisFileName =...
     fullfile(filePath,[baseName,'analysis.mat']);
 load(analysisFileName,'Conditions','EEG','Triggers')

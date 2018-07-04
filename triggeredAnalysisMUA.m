@@ -1,5 +1,7 @@
-function [sp h bins uptrig_EEG uptrig_light f]=triggeredAnalysisMUA(spikes,ppms,triggers,binsize,timeBefore, timeAfter,str, EEG,light, plotit);
-
+function [sp h bins uptrig_EEG uptrig_light f]=triggeredAnalysisMUA(spikes,ppms,triggers,binsize,timeBefore, timeAfter,str, EEG,light, plotit, plotRaster);
+if ~exist('plotRaster','var')
+    plotRaster = true;
+end
 
 EEG=EEG-min(EEG);EEG=EEG/max(EEG);
 light=light-min(light);light=light/max(light);
@@ -13,35 +15,37 @@ for i=1:numel(triggers)
 end
 
 if plotit
-    f=figure
-    subplot(4,1,1:2)    
+    f=figure;
     
-    %ylim([0 numel(sp)+1])
-    for i=1:numel(sp)
-        
-        plot(sp{i}/ppms,ones(size(sp{i}))*i,'k.')
-%         %ram quick fix to deal with weird raster issue
-%         if ~isempty(sp{i})
-%             r=raster(sp{i}/ppms,i,'k',.9)
-%         end
-        hold on
-        
-        
+    if plotRaster
+        subplot(4,1,1:2)
+        %ylim([0 numel(sp)+1])
+        for i=1:numel(sp)
+            
+            plot(sp{i}/ppms,ones(size(sp{i}))*i,'k.')
+            %         %ram quick fix to deal with weird raster issue
+            %         if ~isempty(sp{i})
+            %             r=raster(sp{i}/ppms,i,'k',.9)
+            %         end
+            hold on
+            
+            
+        end
+        %     try
+        %         set(r,'ShowBaseLine','off');
+        %     catch
+        %     end
+        ylabel('trial')
+        ylim([0 numel(sp)])
+        xlim([-timeBefore/ppms  timeAfter/ppms])
     end
-%     try
-%         set(r,'ShowBaseLine','off');
-%     catch
-%     end
-    ylabel('trial')
-    ylim([0 numel(sp)])
-    xlim([-timeBefore/ppms  timeAfter/ppms])
-    
     
 end
 bins=[-timeBefore:binsize:timeAfter]/ppms;
 h=hist(cell2mat(sp')/ppms,bins)/numel(sp);
-
+if plotRaster && plotit
     subplot(4,1,3:4)
+end
 if plotit
     plot([0 0], [0 numel(sp)+1],'r:','linewidth',3)
     title(str)
