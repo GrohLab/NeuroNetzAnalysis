@@ -41,14 +41,20 @@ Ne = 0;
 if exist('consEvents','var') && ~isempty(consEvents)
     typ = whos('consEvents');
     switch typ.class
-        case 'double'
-            [~, Ne] = size(consEvents);
-            if mod(Ne,2)
-                Ne = Ne/2;
+        case {'double', 'single'}
+            [rws, cols] = size(consEvents);
+            if rws < cols
+                Ne = rws;
+                consEvents = consEvents';
             else
-                fprintf('Omitting the events to consider.\n')
-                Ne = 0;
+                Ne = cols;
             end
+            %if mod(Ne,2)
+            %    Ne = Ne/2;
+            %else
+            %    fprintf('Omitting the events to consider.\n')
+            %    Ne = 0;
+            %end
         case 'cell'
             Ne = length(consEvents);
             consEvents2 = consEvents;
@@ -139,9 +145,16 @@ for cap = 1:Na
         prevSamples, postSamples);
     discreteStack(1,:,cap) = alignPeriod;
     if Ne
+        if isa(consEvents,'cell')
         discreteStack(3:2+Ne,:,cap) =...
             getEventPeriod(alignP, consEvents, ONOFF, cap,...
             prevSamples, postSamples);
+        elseif isnumeric(consEvents)
+            discreteStack(3:2+Ne,:,cap) =...
+            getEventPeriod(alignP, {consEvents}, ONOFF, cap,...
+            prevSamples, postSamples);
+        else
+        end
     end
     
     % Getting the continuous segments 
