@@ -10,4 +10,3 @@ else
     Wmean = [];
     Wstd = [];
 end
-

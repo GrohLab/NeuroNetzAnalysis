@@ -1,5 +1,5 @@
-function [expStack, LFPstack, Wstack] =...
-    getStack(spT,alignP,ONOFF,timeSpan,fs,LFP,whiskerMovement,consEvents,fsLFP)
+function [discreteStack, continuouStack] =...
+    getStacks(spT,alignP,ONOFF,timeSpan,fs,fsLFP,consEvents,varargin)
 % GETSTACK returns a stack of spikes aligned to a certain event ''alignT''
 % considering the events in the cell array ''consEvents''. The alignment
 % can be done with the on-set or the off-set of the triggers using the
@@ -9,7 +9,8 @@ function [expStack, LFPstack, Wstack] =...
 % important and it is given in Hz. The LFP and whisker movement are
 % examples of triggered averages from continuous signals. Finally, the
 % consEvents are 
-
+discreteStack = NaN;
+continuouStack = NaN;
 %% Computing the size of the PSTH stack
 if isa(alignP,'logical')
     alWf = StepWaveform(alignP,fs,'on-off','Align triggers');
@@ -32,7 +33,6 @@ end
 if raf > 2 || raf < 1
     fprintf(['Warning! The alignment matrix is expected to have ',...
         'either only rising or rising and falling edges time indices.\n'])
-    expStack = NaN;
     return;
 end
 
@@ -65,27 +65,46 @@ if exist('consEvents','var') && ~isempty(consEvents)
             fprintf('The events to consider are not in recognized format.\n')
     end
 end
-%% Preallocation of the spike-stack:
-% toi = sum(timeSpan);
+%% Preallocation of the discrete stack:
 prevSamples = ceil(timeSpan(1) * fs);
 postSamples = ceil(timeSpan(2) * fs);
-%%%%%%%%%%%%%%%%%%%%%%%%%%% BEWARE OF THE LFP SAMPLING FREQUENCY currently
-%%%%%%%%%%%%%%%%%%%%%%%%%%% set at 1000 Hz
-% fsLFP = 1e3;
-fsConv = fsLFP/fs;
-%Nt = round(toi*fs)+1;
 Nt = prevSamples + postSamples + 1;
-expStack = false(2+Ne,Nt,Na);
-prevSamplesLFP = ceil(timeSpan(1) * fsLFP);
-postSamplesLFP = ceil(timeSpan(2) * fsLFP);
-NtLFP = prevSamplesLFP + postSamplesLFP + 1;
-LFPstack = zeros(NtLFP,Na);
-Wstack = LFPstack;
+discreteStack = false(2+Ne,Nt,Na);
+% Creation of the logical spike train
 if isnumeric(spT)
     mxS = spT(end) + Nt;
     spTemp = false(1,mxS);
     spTemp(spT) = true;
     spT = spTemp;
+end
+%% Preallocation of the continuous stack:
+if ~exist('fsLFP','var')
+    fsLFP = fs;
+end 
+fsConv = fsLFP/fs;
+% Signal validation
+Ns = numel(varargin);
+if Ns
+    signalCheck = cellfun(@isnumeric,varargin);
+    signalCheck2 = cellfun(@length,varargin);
+    if sum(signalCheck) ~= Ns
+        fprintf('Discarding those inputs which are not numeric...\n')
+        disp(varargin(~signalCheck))
+        varargin(~signalCheck) = [];
+        Ns = Ns - sum(~signalCheck);
+        signalCheck2(~signalCheck) = [];
+    end
+    if std(signalCheck2) ~= 0
+        fprintf('The signals have not the same length...\n')
+        fprintf('Considering the smallest: %d\n',min(signalCheck2))
+        MAX_CONT_SAMP = min(signalCheck2);
+    else
+        MAX_CONT_SAMP = signalCheck2(1);
+    end
+    prevSamplesLFP = ceil(timeSpan(1) * fsLFP);
+    postSamplesLFP = ceil(timeSpan(2) * fsLFP);
+    NtLFP = prevSamplesLFP + postSamplesLFP + 1;
+    continuouStack = single(zeros(Ns,NtLFP,Na));
 end
 %% Cutting the events into the desired segments.
 for cap = 1:Na
@@ -100,36 +119,57 @@ for cap = 1:Na
             (alignP(cap,2)*fsConv)+postSamplesLFP]);
     end
     % The segments should be in the range of the spike train.
+    % Validations for both stacks
     if segmIdxs(1) >= 1 && segmIdxs(2) <= length(spT)
         spSeg = spT(segmIdxs(1):segmIdxs(2));
-        if ~(segmIdxsLFP(1) >= 1 && segmIdxsLFP(2) <= length(LFP)) ||...
-                ~(segmIdxsLFP(1) >= 1 && segmIdxsLFP(2) <= length(whiskerMovement))
-            OUTFLAG = true;
-        else
-            OUTFLAG = false;
+        if Ns
+            if ~(segmIdxsLFP(1) >= 1 && segmIdxsLFP(2) <= MAX_CONT_SAMP)
+                OUTFLAG = true;
+            else
+                OUTFLAG = false;
+            end
         end
     else
         Na = Na - 1;
         continue;
     end
-    expStack(2,:,cap) = spSeg;
+    discreteStack(2,:,cap) = spSeg;
     % Find 'overlapping' periods in time of interest
     alignPeriod = getEventPeriod(alignP, {alignP}, ONOFF, cap,...
         prevSamples, postSamples);
-    expStack(1,:,cap) = alignPeriod;
+    discreteStack(1,:,cap) = alignPeriod;
     if Ne
-        expStack(3:2+Ne,:,cap) =...
+        discreteStack(3:2+Ne,:,cap) =...
             getEventPeriod(alignP, consEvents, ONOFF, cap,...
             prevSamples, postSamples);
     end
-    % Getting the LFP segments taking into account the different sampling
-    % frequencies i.e. LFP-->1 kHz Spikes --> 20 kHz HARD CODE!! BEWARE!!
+    
+    % Getting the continuous segments 
     if ~OUTFLAG
-        if exist('LFP','var') && ~isempty(LFP)
-            LFPstack(:,cap) = LFP(round((segmIdxsLFP(1):segmIdxsLFP(2))));
-        end
-        if exist('whiskerMovement','var') && ~isempty(whiskerMovement)
-            Wstack(:,cap) = whiskerMovement(round((segmIdxsLFP(1):segmIdxsLFP(2))));
+        if Ns
+            try
+                signalSegments =...
+                    cellfun(...
+                    @(x) x(round((segmIdxsLFP(1):segmIdxsLFP(2)))),...
+                    varargin, 'UniformOutput', false);
+            catch ME
+                disp(ME.getReport)
+                fprintf('Very unlikely case: signals with different length\n')
+                fprintf('Worth debugging!\n')
+                continue
+            end
+            transpSign = cellfun(@isrow,signalSegments);
+            if sum(~transpSign)
+                try
+                    signalSegments(~transpSign) =...
+                        {signalSegments{~transpSign}'};
+                catch
+                    auxSegm = cellfun(@transpose,signalSegments(~transpSign),...
+                        'UniformOutput',false);
+                    signalSegments(~transpSign) = auxSegm;
+                end
+            end
+            continuouStack(:,:,cap) = single(cell2mat(signalSegments'));
         end
     else
         disp('What to do in case that the indexes are outside the window?')

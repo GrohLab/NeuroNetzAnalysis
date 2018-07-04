@@ -32,7 +32,8 @@ elseif exist(sortedFile,'file')
 else
     fprintf('The sorted file doesn''t exist... yet\n')
 end
-%% 
+
+%% Initialization for the loop
 analysisFileName =...
     fullfile(filePath,[baseName,'analysis.mat']);
 load(analysisFileName,'Conditions','EEG','Triggers')
@@ -45,16 +46,17 @@ cellType = 'other';
 binningTime = 100e-3;    % 10 
 fs = experimentObject.SamplingFrequency;
 
+%% Looping throught the found conditions.
 for ccon = 1:Ncon
-    % Create stack
-    [auxExp, auxLFP, auxMech] = getStack(...      CREATE STACK
+    % Create stacks
+    [auxExp, auxCont] = getStack(...      CREATE STACK
         experimentObject.SpikeTimes,...     Spike times
         Conditions{ccon}.Triggers, 'on',...    Onset of triggers
         timeLapse,...                       
         fs,...
         EEG.data,chan6,[],fs);                          % No extra events
     expStack(ccon) = {auxExp};
-    LFPstack(ccon) = {auxLFP};
+    LFPstack(ccon) = {auxCont};
     MechStack(ccon) = {auxMech};
     fprintf('Finished creating the stack\nCreating plot...\n')
     [~,FigIDNW] =...
