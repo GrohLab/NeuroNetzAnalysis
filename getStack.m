@@ -66,7 +66,7 @@ if exist('consEvents','var') && ~isempty(consEvents)
     end
 end
 %% Preallocation of the spike-stack:
-toi = sum(timeSpan);
+% toi = sum(timeSpan);
 prevSamples = ceil(timeSpan(1) * fs);
 postSamples = ceil(timeSpan(2) * fs);
 %%%%%%%%%%%%%%%%%%%%%%%%%%% BEWARE OF THE LFP SAMPLING FREQUENCY currently
