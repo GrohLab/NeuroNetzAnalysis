@@ -1,9 +1,9 @@
 %% multiunit recording practice
 % cd 'D:\Dropbox\16 Channel Recording may 2018'
 cd 'F:\Experiments_2018\19_4_2018'
-% clearvars
-load('SpikeTimes_all_channels.mat')
-load('M137_C4_Mech+L6 05mWanalysis.mat','Conditions','Triggers')
+fname = 'M137_C4_Mech+L6 05mW'; 
+load([fname,'_all_channels.mat'])
+load([fname,'analysis.mat'],'Conditions','Triggers')
 fs = Fs;
 
 %% Initialize the variables

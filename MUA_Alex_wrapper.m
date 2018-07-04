@@ -111,7 +111,9 @@ end
 
 % include= [15: 20]; % [3 5 17]
 %% sortedData=sortedData(include,:) % which units ?
-save('SpikeTimes_all_channels.mat','sortedData')
+% Avoid overwritting the sorted spikes for two data files in the same
+% folder
+save([fname,'_all_channels.mat'],'sortedData')
 % run till here and then move to RM script
 
 %% raster plot and coincident spike times

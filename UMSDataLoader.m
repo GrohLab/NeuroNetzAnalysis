@@ -199,6 +199,8 @@ classdef UMSDataLoader < handle
                 if exist(fileName,'file')
                     load(fileName,'SPKS1')
                     if isempty(obj.Data) && exist('SPKS1','var')
+                        % It is recommended that the object is properly
+                        % initialized before calling the importing method.
                         [inDir, baseName, fileExt] = fileparts(fileName);
                         dataBaseName = strsplit(baseName,'sorted');
                         dataFile = fullfile(inDir,[dataBaseName{1},fileExt]);
