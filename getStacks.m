@@ -49,6 +49,7 @@ if exist('consEvents','var') && ~isempty(consEvents)
             else
                 Ne = cols;
             end
+            % Old verification block
             %if mod(Ne,2)
             %    Ne = Ne/2;
             %else
