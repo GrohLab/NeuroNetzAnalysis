@@ -1,5 +1,5 @@
 function [outputArg1,outputArg2] =...
-    plotRasterFromStack(ax, discreteStack, timeLapse, fs, figTitle)
+    plotRasterFromStack(discreteStack, timeLapse, fs, figTitle, ax)
 %UNTITLED6 Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -13,9 +13,8 @@ tx = 0:1/fs:(Nt-1)/fs;
 tx = tx - timeLapse(1);
 AX_FLAG = true;
 if ~exist('ax','var') || isempty(ax)
-    figure('Name',['Raster Plot', figTitle],'Color',[1,1,1])
+    figure('Name',['Raster Plot ', figTitle],'Color',[1,1,1]);
     AX_FLAG = false;
-   
 end
 cmap = colormap(jet(Ne-1));
 FIRST_FLAG = true;
@@ -57,20 +56,5 @@ for cse = 2:Ne
 end
 axis([-timeLapse(1),timeLapse(2),1,Na*(Ne-1)])
 
-return
-
-for cap = size(discreteStack,2):-1:1
-    xspks = tx(discreteStack(:,cap));
-    for cs = 1:numel(xspks)
-        
-    end
-end
-prevSamples = round(timeLapse(1)*fs);
-postSamples = round(timeLapse(2)*fs);
-tx = 0:1/fs:(Nt-1)/fs;
-
-
-text(ax, xspks(cs),cap,'.',...
-            'HorizontalAlignment','center','Color', cmap(cap))
 end
 
