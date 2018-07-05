@@ -8,40 +8,52 @@ function [ax] =...
 % Na is the number of alignment points in this stack
 [Ne, Na] = size(relativeSpikeTimes);
 % Time axis
+idxOffset = timeLapse * fs;
+Nt = sum(idxOffset) + 1;
 tx = 0:1/fs:(Nt-1)/fs;
 tx = tx - timeLapse(1);
-
+if ~exist('figTitle','var')
+    figTitle = [];
+end
+plotTitle = ['Raster Plot ', figTitle];
 AX_FLAG = true;
 if ~exist('ax','var') || isempty(ax)
-    figure('Name',['Raster Plot ', figTitle],'Color',[1,1,1]);
+    figure('Name',plotTitle,'Color',[1,1,1]);
     AX_FLAG = false;
 end
-cmap = colormap(jet(Ne-1));
+cmap = colormap(jet(Ne));
 FIRST_FLAG = true;
-idxOffset = timeLapse(1) * fs;
-for cse = 2:Ne
+yTickLabel = cell(1,Ne);
+for cse = 1:Ne
     % For each spike train
+    yTickLabel(cse) = {['Neuron ',num2str(cse)]};
     for cap = Na:-1:1
         % For each alignment point
-        xspks = tx(relativeSpikeTimes{cse,cap} + idxOffset);
-        lvl = (cse - 2)*Na + cap;
-        if AX_FLAG
-            plot(ax,xspks,lvl*ones(1,numel(xspks)),...
-                'LineStyle','none','Marker','.',...
-                'MarkerFaceColor',cmap(cse-1,:),'MarkerSize',2)
-        else
-            plot(xspks,lvl*ones(1,numel(xspks)),...
-                'LineStyle','none','Marker','.',...
-                'MarkerFaceColor',cmap(cse-1,:),'MarkerSize',2,...
-                'Color',cmap(cse-1,:))
-        end
-        if FIRST_FLAG
-            hold on
-            FIRST_FLAG = false;
+        if ~isempty(relativeSpikeTimes{cse,cap})
+            xspks = tx(relativeSpikeTimes{cse,cap} + idxOffset(1) + 1);
+            lvl = (cse - 1)*Na + cap;
+            if AX_FLAG
+                plot(ax,xspks,lvl*ones(1,numel(xspks)),...
+                    'LineStyle','none','Marker','.',...
+                    'MarkerFaceColor',cmap(cse,:),'MarkerSize',2)
+            else
+                plot(xspks,lvl*ones(1,numel(xspks)),...
+                    'LineStyle','none','Marker','.',...
+                    'MarkerFaceColor',cmap(cse,:),'MarkerSize',2,...
+                    'Color',cmap(cse,:))
+            end
+            if FIRST_FLAG
+                hold on
+                FIRST_FLAG = false;
+            end
         end
     end
 end
-axis([-timeLapse(1),timeLapse(2),1,Na*(Ne-1)])
-ax = gca;
+
+axis([-timeLapse(1),timeLapse(2),1,Na*Ne])
+ax = gca;set(ax,'Box','off','YTick',(0:Ne)*Na + Na/2,'YTickLabel',yTickLabel,...
+    'YTickLabelRotation',90)
+xlabel(ax,'Time [s]')
+title(ax,figTitle,'Interpreter','none')
 end
 
