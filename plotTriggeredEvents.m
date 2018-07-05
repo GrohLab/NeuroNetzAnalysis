@@ -54,6 +54,7 @@ tx = 0:1/fs:(length(trig)-1)/fs;
 tx = tx - timeLapse(1);
 plot(ax(1),[-timeLapse(1),timeLapse(2)],[1,Na-sum(~kickAlignmentIDx)],...
     'LineStyle','none','Marker','none');
+% Plot spikes as text.
 for cl = size(spksStack,2):-1:1
     xspks = tx(spksStack(:,cl));
     for cs = 1:numel(xspks)
