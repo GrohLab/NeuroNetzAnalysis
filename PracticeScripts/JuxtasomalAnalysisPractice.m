@@ -14,4 +14,5 @@ ERASE_kIDX = false;
 [relativeSpikeTimes, tx_raster] = getRasterFromStack(discreteStack, kIdx, timeLapse, fs, ERASE_kIDX);
 
 figure;plot(tx_psth,PSTH(1,:),tx_psth,PSTH(2,:))
-plotRasterFromStack(discreteStack, timeLapse, fs, '130626_p3')
+plotRaster(relativeSpikeTimes, timeLapse, fs, '130626_p3');
+plotRasterAsText(relativeSpikeTimes, timeLapse, fs, '130626_p3')
