@@ -23,8 +23,12 @@ catch ME
     disp(ME.getReport)
     disp('The discrete data couldn''t be loaded')
 end
-%% Running through the *analysis.mat files in Toni's Directory
+%% For Loop body
 for cf = 1:numel(expFiles)
+    %% File managing section
+    % Running through the folders or files in the given path and 'organize'
+    % the files in homonime folders. Then the algorithm saves the results
+    % together with the data file.
     if expFiles(cf).isdir
         analysisFile = dir(fullfile(ToniDir,expFiles(cf).name,'*analysis.mat'));
         analysisFile = fullfile(analysisFile.folder,analysisFile.name);
@@ -105,13 +109,29 @@ for cf = 1:numel(expFiles)
         fieldNames = fieldnames(Triggers);
         allEvents = struct2cell(Triggers);
         consEvents = allEvents(~ismember(fieldNames,{'whisking','whisker'}));
+        condNames = fieldNames(~ismember(fieldNames,{'whisking','whisker'}));
+        ConditionsTest = cell(1,numel(consEvents));
+        for ccon = 1:numel(consEvents)
+            auxStpWvf = StepWaveform(consEvents{ccon},fs,'mV',condNames{ccon});
+            condTriggers = auxStpWvf.Triggers;
+            auxStruct = struct('name',condNames{ccon},...
+                'Triggers',condTriggers,...
+                'delay',0);
+            ConditionsTest(ccon) = {auxStruct};
+        end
         binningTime = 10*m;
         fsLFP = 1e3;
+        % Overwritting the conditions test variable with each run. This is
+        % time consuming, so take that into consideration.
+        save(fileName,'ConditionsTest','-append')
+        fprintf('File %s saved!\n',fileName)
+        continue
         % Whisker onset
-        [PSTHstackW,LFPstackW,WstackW] = getStack(spT, RaF, 'on',...
-            timeLapse, fs, EEG.data, Triggers.whisking, consEvents,fsLFP);
+        [PSTHstackW,contStackW] = getStacks(spT, RaF, 'on',...
+            timeLapse, fs,fsLFP,consEvents, EEG.data, Triggers.whisking);
         [~,FigIDW,kO] =...
-            plotTriggeredEvents(PSTHstackW, LFPstackW, WstackW,...
+            plotTriggeredEvents(PSTHstackW, squeeze(contStackW(1,:,:)),...
+            squeeze(contStackW(2,:,:)),...
             timeLapse, cellType, binningTime, fs,fsLFP);
         savePDF_FIG(FigIDW,'_W',expDir,baseName)
 %         if ~exist(fullfile(expDir,[baseName,'_W.pdf']),'file')
@@ -121,11 +141,12 @@ for cf = 1:numel(expFiles)
 %         end
         close(FigIDW)
         % Whisker offset
-        [PSTHstackNW,LFPstackNW,WstackNW] = getStack(spT, RaF, 'off',...
-            timeLapse, fs, EEG.data, Triggers.whisking, consEvents, fsLFP);
+        [PSTHstackNW,contStackNW] = getStacks(spT, RaF, 'off',...
+            timeLapse, fs,fsLFP,consEvents, EEG.data, Triggers.whisking);
         [~,FigIDNW] =...
-            plotTriggeredEvents(PSTHstackNW, LFPstackNW, WstackNW,...
-            timeLapse, cellType, binningTime, fs, fsLFP);
+            plotTriggeredEvents(PSTHstackNW, squeeze(contStackNW(1,:,:)),...
+            squeeze(contStackNW(2,:,:)),...
+            timeLapse, cellType, binningTime, fs,fsLFP);
         savePDF_FIG(FigIDNW,'_NW',expDir,baseName)
 %         if ~exist(fullfile(expDir,[baseName,'_NW.pdf']),'file')
 %             print(FigIDNW,fullfile(expDir,[baseName,'_NW.pdf']),...

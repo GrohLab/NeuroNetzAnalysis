@@ -54,6 +54,7 @@ tx = 0:1/fs:(length(trig)-1)/fs;
 tx = tx - timeLapse(1);
 plot(ax(1),[-timeLapse(1),timeLapse(2)],[1,Na-sum(~kickAlignmentIDx)],...
     'LineStyle','none','Marker','none');
+% Plot spikes as text.
 for cl = size(spksStack,2):-1:1
     xspks = tx(spksStack(:,cl));
     for cs = 1:numel(xspks)
@@ -95,6 +96,7 @@ end
 
 function plotAverageTrace(ax,timeLapse,y,sigma,signalName,fs)
 if ~isempty(y)
+    y = double(y);
     tx = 0:1/fs:(length(y)-1)/fs;
     tx = tx - timeLapse(1);
     fill(ax,[tx,fliplr(tx)],[y'-sigma',fliplr(y'+sigma')],...

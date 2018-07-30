@@ -98,7 +98,9 @@ for cex = 1:Nex
         end 
         % Conditions variable cannot be created yet. The conditions for the
         % awaken state are way complexer than the anaesthesized mice.
-        Conditions = {}; 
+        
+        Conditions = {};
+        
         save([fullfile(EphysPath,'AnalysisMatFiles',ExpName),'analysis.mat'],...
             'notes','RawResponse','Triggers','filteredResponse','EEG',...
             'spikeFindingData','Conditions')
