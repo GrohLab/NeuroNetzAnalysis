@@ -82,10 +82,7 @@ classdef SpikeWaveform < DiscreteWaveform
                 obj.UMSdata = UMSDataLoader(varargin{:});
                 disp('TODO: Try equalizing the data between objects')
             elseif ~isempty(obj.Data)
-                obj.UMSdata = UMSDataLoader(obj.Data);
-                if ~isempty(obj.SamplingFreq)
-                    obj.UMSdata.SamplingFrequency = obj.SamplingFreq;
-                end
+                obj.UMSdata = UMSDataLoader(obj.Data, obj.SamplingFreq);
             else
                 disp('Data needed to extract spikes')
                 return;
@@ -98,23 +95,11 @@ classdef SpikeWaveform < DiscreteWaveform
                     return
                 end
             end
-            disp('Merged final clusters: ')
-            avCls = unique(obj.UMSdata.SpikeUMSStruct.assigns);
-            for ccl = 1:numel(avCls)
-                fprintf('%d ',avCls(ccl))
-            end
-            fprintf('\n')
-            cls = input('Which cluster is belonging to the desired spikes?','s');
-            cls = str2double(cls);
-            if sum(cls==avCls)
-                obj.UMSdata.getSpikeTimes(cls)
-                obj.Triggers = round(obj.UMSdata.SpikeTimes*...
-                    obj.SamplingFreq);
-                disp('Spikes succesfully extracted')
-            else
-                disp('Such cluster doesn''t exist, please select another')
-                obj.getSpikes_UMS;
-            end
+            
+            obj.UMSdata.getSpikeTimes;
+            obj.Triggers = obj.UMSdata.SpikeTimes;
+            disp('Spikes succesfully extracted')
+            
         end
         
         function h = plot(obj,varargin)
