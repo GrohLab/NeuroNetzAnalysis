@@ -55,8 +55,12 @@ for cf = 1:numel(expFiles)
             if exist('UMSSpikeStruct','var')
                 clearvars UMSSpikeStruct
             end
-            load(fileName,'UMSSpikeStruct')
-            spT = round(UMSSpikeStruct.spiketimes * UMSSpikeStruct.params.Fs);
+            load(fileName,'UMSSpikeStruct') % Removed a 't' to create an error
+            % spT = UMSSpikeStruct.spiketimes; % Indexes
+            UMSObject = UMSDataLoader();
+            UMSObject.changeUMSStructure(UMSSpikeStruct)
+            UMSObject.getSpikeTimes
+            spT = UMSObject.SpikeTimes; % Indexes
             load(fileName,'Triggers','EEG')
             UMS = false;
         catch
