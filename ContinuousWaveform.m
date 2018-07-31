@@ -3,7 +3,7 @@ classdef ContinuousWaveform < GeneralWaveform
     %   Detailed explanation goes here
     
     properties
-        Spectrum = FourierSpectrum();
+        Spectrum FourierSpectrum;
     end
     properties (Dependent)
         TMean
