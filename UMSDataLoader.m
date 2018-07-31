@@ -34,19 +34,36 @@ classdef UMSDataLoader < handle
         ChannelsID;
     end
     methods
-        function obj = UMSDataLoader(filename,chanOrder)
+        function obj = UMSDataLoader(arg1,arg2)
+            % arg1 could be either a filename or a numeric vector .
+            % arg2 could be either the sampling frequency or the channel
+            % number.
             % For UMS2k to process the spike traces, it needs a cell array
             % of Nt (number of trials) which contains a Ns x Nch (number of
             % samples x number of channels) matrix. This object arranges
             % the given data into such format from a file or from the
             % workspace.
-            if nargin == 1
-                [data, fs, chanReadOut, fileNameOut, chansID] =...
-                    UMSDataLoader.LoadFromFile(filename, []);
-            elseif nargin == 2
-                [data, fs, chanReadOut, fileNameOut, chansID] =...
-                    UMSDataLoader.LoadFromFile(filename, chanOrder);
-            elseif nargin == 0
+            if exist('arg1','var') && ischar(arg1)
+                if nargin == 1
+                    [data, fs, chanReadOut, fileNameOut, chansID] =...
+                        UMSDataLoader.LoadFromFile(arg1, []);
+                elseif nargin == 2
+                    [data, fs, chanReadOut, fileNameOut, chansID] =...
+                        UMSDataLoader.LoadFromFile(arg1, arg2);
+                end
+            elseif exist('arg1','var') && isnumeric(arg1)
+                if isrow(arg1)
+                    arg1 = arg1';
+                end
+                data = {arg1};
+                if exist('arg2','var') && isnumeric(arg2)
+                    fs = arg2;
+                end
+                chanReadOut = 1;
+                fileNameOut = 'Data_from_workspace';
+                chansID = 1;
+            end
+            if nargin == 0
                 data = [];
             end
             if ~isempty(data)
@@ -124,6 +141,10 @@ classdef UMSDataLoader < handle
         end
         
         %% SET AND GET SpikeUMSStruct
+        function changeUMSStructure(obj,structIn)
+            obj.SpikeUMSStruct = structIn;
+        end
+        
         function set.SpikeUMSStruct(obj,structIn)
             if isstruct(structIn) && isfield(structIn,'params')
                 obj.SpikeUMSStruct = structIn;
@@ -142,6 +163,7 @@ classdef UMSDataLoader < handle
             %#ok<*MCSUP>
             if ~isempty(obj.SpikeTimes)
                 spksTime = round(obj.SamplingFrequency*obj.SpikeTimes);
+                % The spikes are returned in index.
             else
                 spksTime = [];
                 % disp('No spike times extracted yet');
@@ -169,8 +191,12 @@ classdef UMSDataLoader < handle
         end
         
         %% SAVE and LOAD spiketimes
-        function saveSpikeTimes(obj)
-            [inDir, baseName, ~] = fileparts(obj.FileName);
+        function saveSpikeTimes(obj,currdir)
+            if exist('currdir','var')
+                [inDir,baseName,~] = fileparts(currdir);
+            else
+                [inDir, baseName, ~] = fileparts(obj.FileName);
+            end
             sortFileName = [fullfile(inDir,baseName),'sorted.mat'];
             if ~isempty(obj.SpikeTimes)
                 if ~exist(sortFileName,'file')
