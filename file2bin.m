@@ -18,6 +18,12 @@ if nargin == 2
         switch flEx
             % Depending on the file extension, the function will import and
             % save the binary file in different manners
+            case {'.smr','.smrx'}
+                fprintf('spike2 file format recognized')
+                crrDir = pwd;
+                importSMR([baseName,flEx],flDir,1);
+                cd(crrDir)
+                mat2bin(fullfile(flDir,[baseName,'.mat']),fileOutput)
             case '.mat'
                 fprintf('.mat file recognized')
                 if contains(baseName,'analysis')
@@ -26,12 +32,6 @@ if nargin == 2
                     baseName = baseName{1};
                 end
                 fprintf('Importing %s...\n',[baseName,flEx])
-                load(fullfile(flDir,[baseName,flExt]),'chan*','head*')
-            case {'.smr','.smrx'}
-                fprintf('spike2 file format recognized')
-                crrDir = pwd;
-                importSMR([baseName,flEx],flDir,1);
-                cd(crrDir)
                 
             otherwise
                 fprintf('This input file is not recognized.')
@@ -41,4 +41,29 @@ if nargin == 2
     end
 elseif nargin < 2
     
+end
+
+end
+
+function mat2bin(fileFullPath, fileOutput)
+if ~exist(fileOutput,'file')
+    [foDir,foBaseName,foExt] = fileparts(fileOutput);
+    [fiDir,fiBaseName,~] = fileparts(fileFullPath);
+    dataLoader = UMSDataLoader(fileFullPath);
+    data = dataLoader.getDataMatrix;
+    fs = dataLoader.SamplingFrequency;
+    fsRow = zeros(1,dataLoader.Nch);
+    fsRow(1) = fs;
+    data = [fsRow;data]';
+    try
+    fid_out = fopen(fileOutput,'w');
+    fwrite(fid_out,data,'double')
+    fclose(fid_out);
+    catch
+        disp('There was an error creating/writing the file')
+    end
+else
+    ovwrt = input('The file exists already. Do you wish to overwrite it?','s');
+    if 
+end
 end

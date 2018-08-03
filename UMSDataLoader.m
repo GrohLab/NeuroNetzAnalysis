@@ -81,6 +81,10 @@ classdef UMSDataLoader < handle
             obj.Data{1} = -obj.Data{1};
         end
         
+        function data = getDataMatrix(obj)
+            data = obj.Data{1};
+        end
+        
         %% Ultra Mega Sort 2000 Pipeline
         function obj = UMS2kPipeline(obj)
             spikesLocal = ss_default_params(obj.SamplingFrequency,...
@@ -393,10 +397,8 @@ classdef UMSDataLoader < handle
             % Private static method which reads the channels from the .mat
             % file created from the .smr or .smrx files with some metadata.
             try
-                chanVars = load(fileName,...
-                    'chan*');
-                headVars = load(fileName,...
-                    'head*');
+                chanVars = load(fileName,'chan*');
+                headVars = load(fileName,'head*');
             catch
                 % If the file is not found, the given name is compared
                 % against all the files in the given directory and in case
@@ -429,10 +431,28 @@ classdef UMSDataLoader < handle
                 return
             end % Try to construct or compile the channels together.
             Ns = max(structfun(@numel,chanVars));
+            szs = structfun(@length,chanVars);
+            mu = mean(szs);
+            sig = std(szs);
+            if sig/max(szs) > 0.05
+                signalFlag = szs > mu;
+            else
+                signalFlag = true(1,numel(szs));
+            end
             chanNames = fieldnames(chanVars);
             headNames = fieldnames(headVars);
             chanIDs = arrayfun(@str2double,...
                 cellfun(@(x) x(5:end),chanNames,'UniformOutput',false));
+            if sum(signalFlag) ~= numel(signalFlag)
+                fprintf('Not all channels in file are continuous signals!\n')
+                fprintf('Channel(s) ')
+                for cch = find(~signalFlag)
+                    fprintf('%d ',chanIDs(cch))
+                end
+                fprintf('is (are) not signals.\n')
+            end
+            fprintf('Deleting...\n')
+            chanIDs = chanIDs(signalFlag);
             chanTitle = cell(1,numel(chanIDs));
             if ~exist('channelOrder','var') || isempty(channelOrder)
                 channelOrder = chanIDs;
