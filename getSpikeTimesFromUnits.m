@@ -5,7 +5,11 @@ function [sortedData] = getSpikeTimesFromUnits(rootNames)
 % chanData=matchfiles(fdir,str,exclude); % helper function collects folders
 % sortedData={};
 chanData = dir([rootNames,'_Pack*.mat']);
-chanData = 
+auxData = cell(1,numel(chanData));
+for cf = 1:numel(chanData)
+auxData(cf) = {catfileds(chanData(cf))};
+end
+chanData = auxData;
 for j=1:numel(chanData)
     load(chanData{j,1});
     ktemp=size(sortedData)+1; k=ktemp(1);
