@@ -29,9 +29,9 @@ else
 end
 disp(['Found extra events: ',num2str(Ne-2)])
 disp([num2str(sum(kickAlignmentIDx)), ' omitted alignment points.'])
-[PSTH, trig, sweeps] = getPSTH(PSTHstack, kickAlignmentIDx, binSz, fs);
-[LFPmean, LFPstd] = getTriggeredAverage(LFPstack, kickAlignmentIDx);
-[Wmean, Wstd] = getTriggeredAverage(Wstack, kickAlignmentIDx);
+[PSTH, trig, sweeps] = getPSTH(PSTHstack, timeLapse, kickAlignmentIDx, binSz, fs);
+[LFPmean, LFPstd] = getTriggeredAverage(LFPstack, kickAlignmentIDx, timeLapse);
+[Wmean, Wstd] = getTriggeredAverage(Wstack, kickAlignmentIDx, timeLapse);
 switch cellType
     case 'POm'
         % Black for POm
@@ -70,7 +70,7 @@ plot([T,T],[0,sum(~kickAlignmentIDx)],'Color',[37, 154, 3]/255)
 axis([-timeLapse(1),timeLapse(2),0,sum(~kickAlignmentIDx)+1])
 % PSTH PLOT
 ax(2) = subplot(5,1,4,'Color','none');
-bar(ax(2),-timeLapse(1):binSz:timeLapse(2),PSTH/(binSz*sweeps),1,...
+bar(ax(2),-timeLapse(1):binSz:timeLapse(2),PSTH(1,:)/(binSz*sweeps),1,...
     'EdgeColor','none','FaceColor',colr);
 hold on;ylabel('Frequency [Hz]');box off;xlabel(['Time_{',num2str(binSz*1e3),' ms} [s]'])
 % binEls = round(binSz * fs);
@@ -99,7 +99,7 @@ if ~isempty(y)
     y = double(y);
     tx = 0:1/fs:(length(y)-1)/fs;
     tx = tx - timeLapse(1);
-    fill(ax,[tx,fliplr(tx)],[y'-sigma',fliplr(y'+sigma')],...
+    fill(ax,[tx,fliplr(tx)],[y-sigma,fliplr(y+sigma)],...
         [0.9,0.9,0.9],'LineStyle','none');hold on
     plot(ax,tx,y,'LineWidth',3,'Color',[99, 115, 131]/255)
     line(ax,[0,0],[min(y-sigma),max(y+sigma)],'Color',[37, 154, 3]/255)

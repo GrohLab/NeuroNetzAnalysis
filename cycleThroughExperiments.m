@@ -41,7 +41,7 @@ for cex = 1:Nex
     LFPprobeDepth=ExpDB{{RecDB.AnimalName{cex}}, 'LfpCoord'}(3);
     expDD = discData(cex);
     Nl = round(expDD.LengthInd*(fsLFP/fs));
-    if LFPprobeDepth
+    if LFPprobeDepth || true
         ExpName = RecDB.Properties.RowNames{cex};
         %% Loading the raw response and the filtered response
         try
@@ -100,10 +100,13 @@ for cex = 1:Nex
         % awaken state are way complexer than the anaesthesized mice.
         
         Conditions = {};
-        
-        save([fullfile(EphysPath,'AnalysisMatFiles',ExpName),'analysis.mat'],...
-            'notes','RawResponse','Triggers','filteredResponse','EEG',...
-            'spikeFindingData','Conditions')
+        analysisFile = [fullfile(EphysPath,'AnalysisMatFiles',ExpName,ExpName),'analysis.mat'];
+        if ~exist(analysisFile,'file')
+            fprintf('File %s doesn''t exist\n',analysisFile)
+            save(analysisFile,...
+                'notes','RawResponse','Triggers','filteredResponse','EEG',...
+                'spikeFindingData','Conditions')
+        end
         continue;
         
         %% Whiskers periods loading
