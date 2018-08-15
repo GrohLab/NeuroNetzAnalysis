@@ -88,8 +88,8 @@ save([fname,'channel',num2str(chanPackIdx),'.mat'],'spikes')
 
 % fdir='C:\Users\alex\Desktop\16chanelanalysis\120213\01_whiskeronly_sorted\';
 % cd(fdir);
-str='channel';exclude={};
-chanData=matchfiles(fdir,str,exclude); % helper function collects folders
+str='Pack';exclude={};
+chanData=matchfiles(filePath,str,exclude); % helper function collects folders
 sortedData={};
 
 for j=1:numel(chanData)
