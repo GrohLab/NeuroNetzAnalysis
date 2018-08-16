@@ -91,9 +91,7 @@ for ccl = 1:lenSpks
             rWindIdx = rIdx-round(fs*MxLag):rIdx+round(fs*MxLag);
             auxSignal1 = auxSignal1(rWindIdx);
             auxSignal2 = auxSignal2(rWindIdx);
-            % Cross correlation
-            % [auxCorr, lTx] = xcorr(auxSignal1,auxSignal2,'coeff');
-            % figure;plot(lTx/fs,auxCorr)
+            
             % Distance matrix
             dfMtx = log(distmatrix(Spikes{ccl}',Spikes{xccl}')+1);
             lnIdx = dfMtx < log(16);
