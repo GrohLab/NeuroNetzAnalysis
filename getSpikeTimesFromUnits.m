@@ -22,7 +22,7 @@ end
 chanData = auxData;
 sortedData = {};
 for j=1:numel(chanData)
-    load(chanData{j,1});
+    load(chanData{j});
     ktemp=size(sortedData)+1; k=ktemp(1);
     name=chanData{j}; name=name(end-8:end-4);
     for i=1:length(spikes.labels)
