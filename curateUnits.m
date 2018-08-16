@@ -1,4 +1,4 @@
-function [outputArg1,outputArg2] = curateUnits(rootName, sortedData)
+function [Spikes, crscor] = curateUnits(rootName, sortedData, fs)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
 load([rootName,'_all_channels.mat'],'sortedData')
@@ -32,19 +32,19 @@ for ccl = 1:lenSpks
                 ['Cluster ',num2str(ccl),' against cluster ',num2str(xccl)];
             disp(clstrInfo)
             % Signal reconstruction
-            auxSignal1 = false(1,length(mech));
-            auxSignal2 = false(1,length(mech));
+            % auxSignal1 = false(1,length(mech));
+            % auxSignal2 = false(1,length(mech));
             % Spikes assignment
-            auxSignal1(round(fs*Spikes{ccl})) = true;
-            auxSignal2(round(fs*Spikes{xccl})) = true;
+            % auxSignal1(round(fs*Spikes{ccl})) = true;
+            % auxSignal2(round(fs*Spikes{xccl})) = true;
             % Selecting a subsampled version of the signals given a maximum
             % lag.
-            MxLag = 25; % Seconds
-            rIdx = randi([round(fs*MxLag),length(mech)-round(fs*MxLag)],1);
-            disp(['Random time selected: ',num2str(rIdx/fs),' seconds'])
-            rWindIdx = rIdx-round(fs*MxLag):rIdx+round(fs*MxLag);
-            auxSignal1 = auxSignal1(rWindIdx);
-            auxSignal2 = auxSignal2(rWindIdx);
+            % MxLag = 25; % Seconds
+            % rIdx = randi([round(fs*MxLag),length(mech)-round(fs*MxLag)],1);
+            % disp(['Random time selected: ',num2str(rIdx/fs),' seconds'])
+            % rWindIdx = rIdx-round(fs*MxLag):rIdx+round(fs*MxLag);
+            % auxSignal1 = auxSignal1(rWindIdx);
+            % auxSignal2 = auxSignal2(rWindIdx);
             
             % Distance matrix
             dfMtx = log(distmatrix(Spikes{ccl}',Spikes{xccl}')+1);
