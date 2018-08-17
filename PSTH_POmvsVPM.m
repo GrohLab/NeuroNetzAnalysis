@@ -1,13 +1,13 @@
 %% Initialization
 clearvars
-ToniDir = '.\Database\EphysData\AnalysisMatFiles';
+ToniDir = 'E:\Database\EphysData\AnalysisMatFiles';
 expFiles = dir(fullfile(ToniDir,'*_00*'));
 UMS = false;
 logFile = 'TONI-LOG.txt';
 m = 1e-3;
-fs = 2e4;
+fs = 20e3;
 
-EphysPath = '.\Database\EphysData\';
+EphysPath = 'E:\Database\EphysData\';
 DBPath = getParentDir(EphysPath,1);
 try
     load([DBPath, 'ephys_database.mat'])
