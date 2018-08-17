@@ -18,15 +18,7 @@ classdef StepWaveform < DiscreteWaveform
             obj@DiscreteWaveform(data,samplingFreq, units,title);
             
         end
-%         function set.Triggers(obj,trigs)
-%             confirmation = input('Do you really want to overwrite the trigger times?','s');
-%             if (confirmation == 'y' || confirmation == 'Y') &&...
-%                     (isnumeric(trigs) && ~sum(sum(ceil(trigs) - floor(trigs))))
-%                 obj.Triggers = trigs;
-%             else
-%                 disp('No changes made')
-%             end
-%         end
+
         function  RaF = get.Triggers(obj)
             if isa(obj.Data,'double')
                 ds = diff(obj.Data);
@@ -56,11 +48,11 @@ classdef StepWaveform < DiscreteWaveform
         end
         function disp(obj)
             disp('Step waveform-------')
-%             if ~isempty(obj.Triggers)
-%                 fprintf('Title: %s\n',obj.Title)
-%                 fprintf('Triggers: %d\n',length(obj.Triggers))
-%                 fprintf('Sampling Frequency: %0.3f\n',obj.SamplingFreq/1e3)
-%             end
+            if ~isempty(obj.Triggers)
+                fprintf('Title: %s\n',obj.Title)
+                fprintf('Triggers: %d\n',length(obj.Triggers))
+                fprintf('Sampling Frequency: %0.3f\n',obj.SamplingFreq/1e3)
+            end
         end
     end
     methods (Static)
