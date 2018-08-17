@@ -49,13 +49,6 @@ if exist('consEvents','var') && ~isempty(consEvents)
             else
                 Ne = cols;
             end
-            % Old verification block
-            %if mod(Ne,2)
-            %    Ne = Ne/2;
-            %else
-            %    fprintf('Omitting the events to consider.\n')
-            %    Ne = 0;
-            %end
         case 'cell'
             Ne = length(consEvents);
             consEvents2 = consEvents;
@@ -141,10 +134,11 @@ for cap = 1:Na
         continue;
     end
     discreteStack(2,:,cap) = spSeg;
-    % Find 'overlapping' periods in time of interest
+    % Find 'overlapping' events in time of interest
     alignPeriod = getEventPeriod(alignP, {alignP}, ONOFF, cap,...
         prevSamples, postSamples);
     discreteStack(1,:,cap) = alignPeriod;
+    % If there are continuous events given
     if Ne
         if isa(consEvents,'cell')
         discreteStack(3:2+Ne,:,cap) =...
@@ -157,8 +151,8 @@ for cap = 1:Na
         else
         end
     end
-    
-    % Getting the continuous segments 
+    % Getting the continuous segments if the time window is in range of the
+    % signal domain.
     if ~OUTFLAG
         if Ns
             try
