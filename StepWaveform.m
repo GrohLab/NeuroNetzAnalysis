@@ -51,7 +51,7 @@ classdef StepWaveform < DiscreteWaveform
             if ~isempty(obj.Triggers)
                 fprintf('Title: %s\n',obj.Title)
                 fprintf('Triggers: %d\n',length(obj.Triggers))
-                fprintf('Sampling Frequency: %0.3f\n',obj.SamplingFreq/1e3)
+                fprintf('Sampling Frequency: %0.3f kHz\n',obj.SamplingFreq/1e3)
             end
         end
     end
