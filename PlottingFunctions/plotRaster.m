@@ -1,5 +1,5 @@
 function [ax] =...
-    plotRaster(relativeSpikeTimes, timeLapse, fs, figTitle, ax)
+    plotRaster(relativeSpikeTimes, timeLapse, fs, figTitle, IDe, ax)
 %UNTITLED6 Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -26,7 +26,7 @@ FIRST_FLAG = true;
 yTickLabel = cell(1,Ne);
 for cse = 1:Ne
     % For each spike train
-    yTickLabel(cse) = {['Neuron ',num2str(cse)]};
+    yTickLabel(cse) = IDe(cse);
     for cap = Na:-1:1
         % For each alignment point
         if ~isempty(relativeSpikeTimes{cse,cap})
