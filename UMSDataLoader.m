@@ -303,7 +303,7 @@ classdef UMSDataLoader < handle
         end
         
         function timeOut = get.Time(obj)
-            if ~isempty(obj.Data{1})
+            if ~isempty(obj.Data)
                 timeOut = seconds(0:1/obj.SamplingFrequency:...
                     (obj.Ns-1)/obj.SamplingFrequency);
             else
@@ -325,6 +325,12 @@ classdef UMSDataLoader < handle
             fprintf('Channel order: \n')
             for cch = 1:length(obj.PolyChanOrder)
                 fprintf('Channel %d has ID %d from the file\n',cch,obj.PolyChanOrder(cch))
+            end
+            fprintf('Spike Structure: ')
+            if ~isempty(obj.SpikeUMSStruct)
+                fprintf('1\n')
+            else
+                fprintf('0\n')
             end
         end
         
