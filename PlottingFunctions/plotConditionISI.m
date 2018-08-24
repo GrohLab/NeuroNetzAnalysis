@@ -8,8 +8,8 @@ if iscell(allEvents)
     Ne = numel(allEvents);
 end
 genISI = diff(spT,1,2);
-genISI = genISI/fs;
-lxax = exp(linspace(-7,2,X_AXIS_RESOLUTION));
+genISI = (1e3*genISI)/fs;
+lxax = exp(linspace(-0.7,9,X_AXIS_RESOLUTION));
 invFig = figure('Visible','off');
 h = histogram(log(genISI),log([0,lxax]),...
     'Visible','off','Parent',invFig);
@@ -20,32 +20,39 @@ figure('Name',expName,'Color',[1,1,1]);
 ax(1) = subplot(1,2,1);semilogx(lxax,h_norm,...
     'LineWidth',3,'Color',[0,0,0],'DisplayName','p(\Deltat))');
 title('Histogram ISI')
-xlabel('Time [s]');ylabel('p(\Deltat)');grid('minor')
+xlabel('Time [ms]');ylabel('p(\Deltat)');grid('minor')
 ax(2) = subplot(1,2,2);semilogx(lxax,cumsum(h_norm),...
     'LineWidth',3,'Color',[0,0,0],'DisplayName','p(\Deltat))');
 title('Cumulative histogram ISI')
-xlabel('Time [s]');ylabel('p(\Deltat)');grid('minor');
+xlabel('Time [ms]');ylabel('p(\Deltat)');grid('minor');
 evntIdx = find(cellfun(@sum,allEvents) > 0);
 emptyEvents = sum(cellfun(@sum,allEvents) == 0);
 trueNe = Ne - emptyEvents;
 h_cond = zeros(trueNe,X_AXIS_RESOLUTION);
-clrMap = jet(trueNe);
+clrMap = bone(trueNe);
 for ce = 1:trueNe
     auxSpkLabel = allEvents{evntIdx(ce)}(spT);
-    auxFig = figure('Visible','off');
-    h = histogram(log(genISI(auxSpkLabel(1:end-1))),log([0,lxax]),...
-        'Visible','off','Parent',auxFig);
-    h_cond(ce,:) = h.Values/sum(h.Values);
-    
-    close(auxFig)
-    if ce == 1
-        hold(ax(1),'on')
-        hold(ax(2),'on')
+    if ~strcmp(IDe{evntIdx(ce)},'exclude') && ~strcmp(IDe{evntIdx(ce)},'grooming')
+        auxSpkLabel = allEvents{evntIdx(ce)}(spT);
+        auxFig = figure('Visible','off');
+        h = histogram(log(genISI(auxSpkLabel(1:end-1))),log([0,lxax]),...
+            'Visible','off','Parent',auxFig);
+        h_cond(ce,:) = h.Values/sum(h.Values);
+        
+        close(auxFig)
+        if ce == 1
+            hold(ax(1),'on')
+            hold(ax(2),'on')
+        end
+        semilogx(ax(1),lxax,h_cond(ce,:),'DisplayName',IDe{evntIdx(ce)},...
+            'Color',clrMap(ce,:))
+        semilogx(ax(2),lxax,cumsum(h_cond(ce,:)),'DisplayName',IDe{evntIdx(ce)},...
+            'Color',clrMap(ce,:))
+        
+    else
+        fprintf('Excluding %d spikes due to a less controled environment.\n',...
+            sum(auxSpkLabel))
     end
-    semilogx(ax(1),lxax,h_cond(ce,:),'DisplayName',IDe{evntIdx(ce)},...
-        'Color',clrMap(ce,:))
-    semilogx(ax(2),lxax,cumsum(h_cond(ce,:)),'DisplayName',IDe{evntIdx(ce)},...
-        'Color',clrMap(ce,:))
 end
 
 legend(ax(1),'show')
