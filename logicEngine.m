@@ -1,4 +1,4 @@
-function [tIdx, koIdx] = logicEngine(IDsignal)
+function [tIdx, koIdx] = logicEngine(IDsignal, discreteTraces)
 %LOGICENGINE Translates the user defined conditions to a logical train to
 %remove an event out of the analysis. To add a time consideration is among
 %the next steps. Currently, the function only takes care of the appearence of the
@@ -7,7 +7,8 @@ function [tIdx, koIdx] = logicEngine(IDsignal)
 % Emilio Isaias-Camacho GrohLabs 2018
 
 tIdx = selectTrigger(IDsignal);
-koIdx = kickOutEvents(IDsignal(~tIdx));
+pIdx = checkPossibleCombinations(tIdx,discreteTraces);
+koIdx = kickOutEvents(IDsignal(~tIdx & pIdx));
 koSubs = find(koIdx);
 koSubs(koSubs >= find(tIdx)) = koSubs(koSubs >= find(tIdx)) + 1;
 koIdx = false(numel(IDsignal),1);
@@ -58,4 +59,8 @@ if ~isempty(kickOutIndexes)
 else
     disp('No other event will be considered for further analysis')
 end
+end
+
+function pIdx = checkPossibleCombinations(tIdx, discreteTraces)
+
 end
