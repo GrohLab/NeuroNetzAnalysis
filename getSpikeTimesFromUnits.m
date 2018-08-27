@@ -25,7 +25,7 @@ for j=1:numel(chanData)
     load(chanData{j});
     ktemp=size(sortedData)+1; k=ktemp(1);
     name=chanData{j}; name=name(end-8:end-4);
-    for i=1:length(spikes.labels)
+    for i=1:size(spikes.labels,1)
         indices=find(spikes.assigns==spikes.labels(i,1));
         if ~isempty(indices) && spikes.labels(i,2)~=4
             sortedData{k,1}=(['ch' name '_cl_' num2str(spikes.labels(i,1))]); %channel and cluster
