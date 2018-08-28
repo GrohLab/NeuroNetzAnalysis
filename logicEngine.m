@@ -1,4 +1,4 @@
-function [tIdx, koIdx] = logicEngine(IDsignal, discreteTraces)
+function [tIdx, koIdx] = logicEngine(IDsignal, discreteTraces, fs)
 %LOGICENGINE Translates the user defined conditions to a logical train to
 %remove an event out of the analysis. To add a time consideration is among
 %the next steps. Currently, the function only takes care of the appearence of the
@@ -6,7 +6,23 @@ function [tIdx, koIdx] = logicEngine(IDsignal, discreteTraces)
 %   The function accepts one input argument: the ID of the signals.
 % Emilio Isaias-Camacho GrohLabs 2018
 
-tIdx = selectTrigger(IDsignal);
+TOTAL_EVENTS = numel(IDsignal);
+availableTrig = true(TOTAL_EVENTS,1);
+tp = 0;
+populatedSignals = 1:TOTAL_EVENTS;
+while sum(availableTrig) <= TOTAL_EVENTS && sum(availableTrig) > 0 &&...
+        tp == 0
+    tIdx = selectTrigger(IDsignal(availableTrig));
+    stWf = StepWaveform(discreteTraces(tIdx,:), fs);
+    tp = numel(stWf.Triggers);
+    if ~tp
+        populatedSignals(tIdx) = [];
+        discreteTraces(tIdx,:) = [];
+        IDsignal(tIdx) = [];
+        AVAIL_EVENTS = numel(IDsignal);
+        availableTrig = true(AVAIL_EVENTS,1);
+    end
+end
 pIdx = checkPossibleCombinations(tIdx,discreteTraces);
 koIdx = kickOutEvents(IDsignal(~tIdx & pIdx));
 koSubs = find(koIdx);
@@ -62,5 +78,8 @@ end
 end
 
 function pIdx = checkPossibleCombinations(tIdx, discreteTraces)
-
+disp('Exclusive combinations!')
+pIdx = ~tIdx;
+evntsPerChannel = sum(discreteTraces(:,discreteTraces(tIdx,:)),2);
+pIdx = pIdx & evntsPerChannel;
 end
