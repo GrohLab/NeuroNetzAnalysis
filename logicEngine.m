@@ -13,14 +13,20 @@ populatedSignals = 1:TOTAL_EVENTS;
 while sum(availableTrig) <= TOTAL_EVENTS && sum(availableTrig) > 0 &&...
         tp == 0
     tIdx = selectTrigger(IDsignal(availableTrig));
-    stWf = StepWaveform(discreteTraces(tIdx,:), fs);
-    tp = numel(stWf.Triggers);
-    if ~tp
-        populatedSignals(tIdx) = [];
-        discreteTraces(tIdx,:) = [];
-        IDsignal(tIdx) = [];
-        AVAIL_EVENTS = numel(IDsignal);
-        availableTrig = true(AVAIL_EVENTS,1);
+    if islogical(tIdx)
+        stWf = StepWaveform(discreteTraces(tIdx,:), fs);
+        tp = numel(stWf.Triggers);
+        if ~tp
+            populatedSignals(tIdx) = [];
+            discreteTraces(tIdx,:) = [];
+            IDsignal(tIdx) = [];
+            AVAIL_EVENTS = numel(IDsignal);
+            availableTrig = true(AVAIL_EVENTS,1);
+        end
+    else
+        tIdx = -1;
+        koIdx = -1;
+        return
     end
 end
 pIdx = checkPossibleCombinations(tIdx,discreteTraces);
