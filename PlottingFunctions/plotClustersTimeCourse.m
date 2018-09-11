@@ -1,12 +1,24 @@
 figure;
+load([rootNames,'analysis.mat'],'Conditions','Triggers')
+Spikes={};
+Names={};
+
+for i=1:size(sortedData,1)
+    Spikes{i}=cell2mat(sortedData(i,2));
+    Names{i}=sortedData(i,1);
+end
+
+mech=Triggers.whisker;
+light=Triggers.light;
+lenSpks = length(Spikes);
 tx = 0:1/Fs:(length(mech) - 1)/Fs;
 ax(1) = subplot(4,1,1);plot(tx,light,tx,mech)
 ax(2) = subplot(4,1,2:4);
 Ncl = size(sortedData,1);
-
-
+fs = dataLoader.SamplingFrequency;
 
 lvls = 1;
+bads = [];
 consIdxs = true(1,lenSpks);
 consIdxs(bads) = false;
 lbls = cell(1,sum(consIdxs));

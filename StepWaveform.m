@@ -18,29 +18,27 @@ classdef StepWaveform < DiscreteWaveform
             obj@DiscreteWaveform(data,samplingFreq, units,title);
             
         end
-%         function set.Triggers(obj,trigs)
-%             confirmation = input('Do you really want to overwrite the trigger times?','s');
-%             if (confirmation == 'y' || confirmation == 'Y') &&...
-%                     (isnumeric(trigs) && ~sum(sum(ceil(trigs) - floor(trigs))))
-%                 obj.Triggers = trigs;
-%             else
-%                 disp('No changes made')
-%             end
-%         end
+        
         function  RaF = get.Triggers(obj)
             if isa(obj.Data,'double')
                 ds = diff(obj.Data);
-                rise = false(obj.NSamples,1);    % Rising edge times
-                fall = rise;                    % Falling edge times
-                % Maximum value divided by three
-                rise(2:end) = ds > max(abs(ds))/3;
-                rise = StepWaveform.cleanEdges(rise);
-                fall(1:end-1) = ds < min(ds)/3;
-                fall = StepWaveform.cleanEdges(fall);
-                if sum(rise) ~= sum(fall)
-                    warning('The cardinality of the rising edges is different for the falling edges\n')
+                if sum(ds>0) ~= numel(obj.Data)-1
+                    rise = false(obj.NSamples,1);    % Rising edge times
+                    fall = rise;                    % Falling edge times
+                    % Maximum value divided by three
+                    rise(2:end) = ds > max(abs(ds))/3;
+                    rise = StepWaveform.cleanEdges(rise);
+                    fall(1:end-1) = ds < min(ds)/3;
+                    fall = StepWaveform.cleanEdges(fall);
+                    if sum(rise) ~= sum(fall)
+                        warning('The cardinality of the rising edges is different for the falling edges\n')
+                    else
+                        RaF = [rise,fall];
+                        obj.Triggers = RaF;
+                    end
                 else
-                    RaF = [rise,fall];
+                    disp('The given data are already the triggers')
+                    RaF = obj.Data;
                     obj.Triggers = RaF;
                 end
             elseif isa(obj.Data,'logical')
@@ -56,14 +54,14 @@ classdef StepWaveform < DiscreteWaveform
         end
         function disp(obj)
             disp('Step waveform-------')
-%             if ~isempty(obj.Triggers)
-%                 fprintf('Title: %s\n',obj.Title)
-%                 fprintf('Triggers: %d\n',length(obj.Triggers))
-%                 fprintf('Sampling Frequency: %0.3f\n',obj.SamplingFreq/1e3)
-%             end
+            if ~isempty(obj.Data)
+                fprintf('Title: %s\n',obj.Title)
+                fprintf('Triggers: %d\n',length(obj.Triggers))
+                fprintf('Sampling Frequency: %0.3f kHz\n',obj.SamplingFreq/1e3)
+            end
         end
     end
-    methods (Static)
+    methods (Static, Access = 'private')
         function edgeOut = cleanEdges(edgeIn)
             doubleEdge = edgeIn(1:end-1) + edgeIn(2:end);
             repeatIdx = doubleEdge > 1;

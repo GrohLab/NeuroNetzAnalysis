@@ -34,19 +34,36 @@ classdef UMSDataLoader < handle
         ChannelsID;
     end
     methods
-        function obj = UMSDataLoader(filename,chanOrder)
+        function obj = UMSDataLoader(arg1,arg2)
+            % arg1 could be either a filename or a numeric vector .
+            % arg2 could be either the sampling frequency or the channel
+            % number.
             % For UMS2k to process the spike traces, it needs a cell array
             % of Nt (number of trials) which contains a Ns x Nch (number of
             % samples x number of channels) matrix. This object arranges
             % the given data into such format from a file or from the
             % workspace.
-            if nargin == 1
-                [data, fs, chanReadOut, fileNameOut, chansID] =...
-                    UMSDataLoader.LoadFromFile(filename, []);
-            elseif nargin == 2
-                [data, fs, chanReadOut, fileNameOut, chansID] =...
-                    UMSDataLoader.LoadFromFile(filename, chanOrder);
-            elseif nargin == 0
+            if exist('arg1','var') && ischar(arg1)
+                if nargin == 1
+                    [data, fs, chanReadOut, fileNameOut, chansID] =...
+                        UMSDataLoader.LoadFromFile(arg1, []);
+                elseif nargin == 2
+                    [data, fs, chanReadOut, fileNameOut, chansID] =...
+                        UMSDataLoader.LoadFromFile(arg1, arg2);
+                end
+            elseif exist('arg1','var') && isnumeric(arg1)
+                if isrow(arg1)
+                    arg1 = arg1';
+                end
+                data = {arg1};
+                if exist('arg2','var') && isnumeric(arg2)
+                    fs = arg2;
+                end
+                chanReadOut = 1;
+                fileNameOut = 'Data_from_workspace';
+                chansID = 1;
+            end
+            if nargin == 0
                 data = [];
             end
             if ~isempty(data)
@@ -62,6 +79,10 @@ classdef UMSDataLoader < handle
         
         function invertSignals(obj)
             obj.Data{1} = -obj.Data{1};
+        end
+        
+        function data = getDataMatrix(obj)
+            data = obj.Data{1};
         end
         
         %% Ultra Mega Sort 2000 Pipeline
@@ -124,6 +145,10 @@ classdef UMSDataLoader < handle
         end
         
         %% SET AND GET SpikeUMSStruct
+        function changeUMSStructure(obj,structIn)
+            obj.SpikeUMSStruct = structIn;
+        end
+        
         function set.SpikeUMSStruct(obj,structIn)
             if isstruct(structIn) && isfield(structIn,'params')
                 obj.SpikeUMSStruct = structIn;
@@ -142,6 +167,7 @@ classdef UMSDataLoader < handle
             %#ok<*MCSUP>
             if ~isempty(obj.SpikeTimes)
                 spksTime = round(obj.SamplingFrequency*obj.SpikeTimes);
+                % The spikes are returned in index.
             else
                 spksTime = [];
                 % disp('No spike times extracted yet');
@@ -169,8 +195,12 @@ classdef UMSDataLoader < handle
         end
         
         %% SAVE and LOAD spiketimes
-        function saveSpikeTimes(obj)
-            [inDir, baseName, ~] = fileparts(obj.FileName);
+        function saveSpikeTimes(obj,currdir)
+            if exist('currdir','var')
+                [inDir,baseName,~] = fileparts(currdir);
+            else
+                [inDir, baseName, ~] = fileparts(obj.FileName);
+            end
             sortFileName = [fullfile(inDir,baseName),'sorted.mat'];
             if ~isempty(obj.SpikeTimes)
                 if ~exist(sortFileName,'file')
@@ -273,7 +303,7 @@ classdef UMSDataLoader < handle
         end
         
         function timeOut = get.Time(obj)
-            if ~isempty(obj.Data{1})
+            if ~isempty(obj.Data)
                 timeOut = seconds(0:1/obj.SamplingFrequency:...
                     (obj.Ns-1)/obj.SamplingFrequency);
             else
@@ -295,6 +325,12 @@ classdef UMSDataLoader < handle
             fprintf('Channel order: \n')
             for cch = 1:length(obj.PolyChanOrder)
                 fprintf('Channel %d has ID %d from the file\n',cch,obj.PolyChanOrder(cch))
+            end
+            fprintf('Spike Structure: ')
+            if ~isempty(obj.SpikeUMSStruct)
+                fprintf('1\n')
+            else
+                fprintf('0\n')
             end
         end
         
@@ -367,10 +403,8 @@ classdef UMSDataLoader < handle
             % Private static method which reads the channels from the .mat
             % file created from the .smr or .smrx files with some metadata.
             try
-                chanVars = load(fileName,...
-                    'chan*');
-                headVars = load(fileName,...
-                    'head*');
+                chanVars = load(fileName,'chan*');
+                headVars = load(fileName,'head*');
             catch
                 % If the file is not found, the given name is compared
                 % against all the files in the given directory and in case
@@ -403,10 +437,28 @@ classdef UMSDataLoader < handle
                 return
             end % Try to construct or compile the channels together.
             Ns = max(structfun(@numel,chanVars));
+            szs = structfun(@length,chanVars);
+            mu = mean(szs);
+            sig = std(szs);
+            if sig/max(szs) > 0.05
+                signalFlag = szs > mu;
+            else
+                signalFlag = true(1,numel(szs));
+            end
             chanNames = fieldnames(chanVars);
             headNames = fieldnames(headVars);
             chanIDs = arrayfun(@str2double,...
                 cellfun(@(x) x(5:end),chanNames,'UniformOutput',false));
+            if sum(signalFlag) ~= numel(signalFlag)
+                fprintf('Not all channels in file are continuous signals!\n')
+                fprintf('Channel(s) ')
+                for cch = find(~signalFlag)
+                    fprintf('%d ',chanIDs(cch))
+                end
+                fprintf('is (are) not signals.\n')
+            end
+            fprintf('Deleting...\n')
+            chanIDs = chanIDs(signalFlag);
             chanTitle = cell(1,numel(chanIDs));
             if ~exist('channelOrder','var') || isempty(channelOrder)
                 channelOrder = chanIDs;
