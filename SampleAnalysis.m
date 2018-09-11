@@ -133,8 +133,10 @@ end
 
 %save cross-correlation so that we don't need to redo this constantly
 cd(homedir)
+% SAVE FOR THE 'NORMAL' PIPELINE
 save CrossCoeffData crscor goods bads
-
+% SAVE FOR THE LASER RESPONSE
+save LaserResponse crscor goods bads
 %% Merge similar clusters
 % The marging packages indicate which clusters should be merged together
 % due to their high similarity. The possibilities are that they belong to a
@@ -156,8 +158,10 @@ end
 bads = sort(unique(bads));
 
 %save merging info
+% SAVE FOR 'NORMAL' PIPELINE
 save CrossCoeffData Spikes mergingPackages bads -append
-
+% SAVE FOR LASER RESPONSE
+save LaserResponse Spikes mergingPackage bads -append
 
 %% looking at individual conditions and clusters for good clusters
 
