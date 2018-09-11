@@ -1,7 +1,9 @@
 %% multiunit recording practice
 % cd 'D:\Dropbox\16 Channel Recording may 2018'
-cd 'F:\Experiments_2018\19_4_2018'
-fname = 'M137_C4_Mech+L6 05mW'; 
+clear all
+homedir='F:\Experiments_2018\16 channel\Standard probe\19_4_2018\M137_C5';
+cd(homedir)
+fname = 'M137_C5_Mech_L6 05mW'; 
 load([fname,'_all_channels.mat'])
 load([fname,'analysis.mat'],'Conditions','Triggers')
 fs = Fs;
@@ -25,18 +27,42 @@ light=Triggers.light;
 
 close all
 
-%%
-%bads=[1 2 3 14 6]  %1 2 3 14 are light artifacts
-bads=[3,11,15,16];
-noresponse=[23];
-bads=[bads noresponse];
-goods=1:numel(Spikes);goods=setdiff(goods,bads);
+%% look at inter-spike intervals as another check for pure light-evoke electrical artifacts
+close all
+for i=1:numel(Spikes) % insert cluster numbers here
+    figure
+      isis=[diff(Spikes{i})*1000]; %in ms
+      [hisi isi_bins]=hist(isis,[1:10000]);
+      plot(log10(isi_bins),hisi,'linewidth',2)
+      title(['Cluster: ',num2str(i)])
+end
+        
 
-%goods=([16 7 8 12 13 10 9 11 4 5 ]); % make raster plot so that top plot is most superficial neuron
-%Spikes{5}=sort([Spikes{5} Spikes{6}]);
-%goods=[9 4 11 5 7 8]
+%%
+
+%bads=[1 2 3 14 6]  %1 2 3 14 are light artifacts
+bads=[1,3,9,10,14,27,28,42,45,50,51,23,11];
+noresponse=[41];
+bads=[bads noresponse];
+%bads=[]; %uncomment this to have bads empty
+%assumes that all spike trains are good
+goods=1:numel(Spikes);
+
+%removes bad units 
+ goods=setdiff(goods,bads);
+
+
+%use these two lines to look at hand-defined lasers response
+
+goods=[1,3,9,10,14,27,28,42,45,50,51,23,11] %fill in hand-selected channels here!
+bads=[];
+
 %Spikes=Spikes(goods);
 %Names=Names(goods);
+
+
+
+
 %% looking at collected data
 
 close all
@@ -51,11 +77,7 @@ for I=[1:4]
     title(Conditions{I}.name)
 end
 
-
-subplot(2,1)
-bar(bins,h,1,'k')
-
-
+lenSpks = length(Spikes);
 %% Cross-correlation or relationship between clusters
 % Creating a square matrix containing the cross correlation normalized
 % peaks omitting the 'bads' clusters. The input to the cross correlation
@@ -111,12 +133,16 @@ for ccl = 1:lenSpks
     end
 end
 
+%save cross-correlation so that we don't need to redo this constantly
+cd(homedir)
+save CrossCoeffData crscor goods bads
+
 %% Merge similar clusters
 % The marging packages indicate which clusters should be merged together
 % due to their high similarity. The possibilities are that they belong to a
 % same unit as busrting spikes, the cell shifted to another channel or any
 % other reasonable cause.
-mergingPackages = {[2, 17, 18], [4, 13], [6, 9, 12]};
+mergingPackages = {[1,3,9,10,11,14,27,28,42,45,50,51,23,]};
 Npg = numel(mergingPackages);
 mSpikes = cell(1,Npg);
 auxSignal = false(1,length(mech));
@@ -131,17 +157,21 @@ for cpg = 1:Npg
 end
 bads = sort(unique(bads));
 
-%% looking at individual conditions and clusters
+%save merging info
+save CrossCoeffData Spikes mergingPackages bads -append
 
-plotRaster = false; % No raster plot in the figures!!
-close all
+
+%% looking at individual conditions and clusters for good clusters
+
+plotRaster = true; % No raster plot in the figures!!
+%close all
 for i=1:numel(Spikes)
     if ~ismember(i,bads)
-        for I=2 %pick out conditions to look at
+        for I=4 %pick out conditions to look at
             ppms=fs/1000;
             spikes=(Spikes{i})*1000*ppms; %spikes back in samples
             name=Names{i};
-            timeBefore=1000*ppms;timeAfter=9000*ppms;
+            timeBefore=5000*ppms;timeAfter=8200*ppms;
             plotit=1;binsize=100*ppms;
             triggers=Conditions{I}.Triggers;
             [sp h bins trig_mech trig_light f]=...
@@ -152,6 +182,25 @@ for i=1:numel(Spikes)
     end
 end
 
+
+%% looking at possible artifacts
+
+
+plotRaster = true; % raster plot in the figures!!
+close all
+for i=[] % insert cluster numbers here
+    for I=4 %pick out conditions to look at
+        ppms=fs/1000;
+        spikes=(Spikes{i})*1000*ppms; %spikes back in samples
+        name=Names{i};
+        timeBefore=5000*ppms;timeAfter=8200*ppms;
+        plotit=1;binsize=10*ppms;
+        triggers=Conditions{I}.Triggers;
+        [sp h bins trig_mech trig_light f]=...
+            triggeredAnalysisMUA(spikes,ppms,triggers,binsize,timeBefore, timeAfter,Conditions{I}.name,mech,light,plotit,plotRaster);
+        title(['Cluster: ',num2str(i)])
+    end
+end
 %% Spikes backup.
 % Elimination of the 'bads' in the 'Spikes' variable.
 % But also making a backup before deleting. 
@@ -275,7 +324,7 @@ end
 
 
 
-tits={'mechanical',...
+titles={'mechanical',...
     'mechanical + 1 Hz L6',...
     'mechanical + 10 Hz L6',...
     '10 Hz L6 control'};
@@ -286,7 +335,7 @@ for ii=1:4
     xlim([min(bins) max(bins)])
     xlabel ms
     % ylabel 'pooled spike rate'
-    title(tits{ii})
+    title(titles{ii})
     box off
     ylim([0 200])
 end
@@ -329,7 +378,7 @@ ylim([0 1.5])
 
 %% plot some raw data
 figure
-load M137_C5_Mech_L6_05mW_Triggersanalysis filteredResponse
+load 'M137_C5_Mech_L6 05mWanalysis','filteredResponse'
 
 v=filteredResponse.data;indices=[10000:(1000*ppms*700)]+30*1000*ppms; v=v/max(v);
 time=indices/ppms/1000;

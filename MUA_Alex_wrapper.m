@@ -1,10 +1,10 @@
 %% import data from spike2 into mat
 % fname='1300_1600_3320_whisker.smr'
 
-fname='M137_C4_Mech+L6 05mW'; % EIC Sailaja's analysis
+fname='M16_C2_Mech+L6_4mW.smrx'; % EIC Sailaja's analysis
 % fdir='C:\Users\neuro\Documents\MATLAB\16 channel\';
-fdir = 'F:\Experiments_2018\19_4_2018';
-%X=importSMR([fname,'.mat'],fdir,0);
+fdir = 'F:\Experiments_2018\24_8_2018\M16_C2\';
+X=importSMR([fname,'.smrx'],fdir,0);
 
 %%
 % 
@@ -16,14 +16,16 @@ clc
 cd(fdir)
 load([fname, '.mat'])
 
-num_trials   = 1;
+num_trials   = 1; %we don't worry about this
+
 % Fs           = 20000; The sampling frequency is taken from the file.
 Fs           = head1.SamplingFrequency;
 num_channels =  16;
 trial_dur    = 100;
 
-% chanOrder=[8 9 7 10 4 13 5 12 2 15 1 16 6 11 3 14]; % poly design
-chanOrder=[6 9 7 10 4 13 5 12 2 15 1 16 6 11 3 14]; % linear design
+chanOrder=[8 9 7 10 4 13 5 12 2 15 6 11 3 14 1 16]; % poly design corrected!!!
+%chanOrder=[6 9 7 10 4 13 5 12 2 15 1 16 6 11 3 14]; % linear design
+%chanOrder=[6 11 3 14 1 16 2 15 5 12 4 13 7 10 8 9] %correct linear
 %chanOrder=fliplr(chanOrder);
 
 Data={};
@@ -59,7 +61,7 @@ disp('imported data into "Data"')
 % 1:4 3:6 7:10 12:15
 % 1:4 3:6 7:10 5:8 9:12
 channelPacks = {1:4 4:7 7:10 10:13 13:16};
-chanPackIdx = 5;
+chanPackIdx = 1;
 data={};
 ch = channelPacks{chanPackIdx}; %  channels for sorting
 for i=1:numel(ch)
@@ -83,21 +85,22 @@ splitmerge_tool(spikes)
 % stand alone outlier tool
 outlier_tool(spikes)
 %% Save
-save([fname,'channel',num2str(chanPackIdx),'.mat'],'spikes')
+save([fdir '\' fname,'channel',num2str(chanPackIdx),'.mat'],'spikes')
 %% collect clusters into cell array sortedData (exlude garbage clusters)
 
 % fdir='C:\Users\alex\Desktop\16chanelanalysis\120213\01_whiskeronly_sorted\';
 % cd(fdir);
-str='channel';exclude={};
+str='channel';exclude={'figs'};  
 chanData=matchfiles(fdir,str,exclude); % helper function collects folders
 sortedData={};
+
 
 for j=1:numel(chanData)
     load(chanData{j,1});
     ktemp=size(sortedData)+1; k=ktemp(1);
     name=chanData{j}; name=name(end-8:end-4);
     for i=1:length(spikes.labels)
-        indices=find(spikes.assigns==spikes.labels(i,1));
+        indices=find(spikes.assigns==spikes.labels(i,1));  %% ==spikes.labels(1,i)??
         if ~isempty(indices) && spikes.labels(i,2)~=4;
            
             sortedData{k,1}=(['ch' name '_cl_' num2str(spikes.labels(i,1))]); %channel and cluster
@@ -113,7 +116,7 @@ end
 %% sortedData=sortedData(include,:) % which units ?
 % Avoid overwritting the sorted spikes for two data files in the same
 % folder
-save([fname,'_all_channels.mat'],'sortedData')
+save([fdir '\' fname,'_all_channels.mat'],'Fs')
 % run till here and then move to RM script
 
 %% raster plot and coincident spike times
