@@ -60,7 +60,7 @@ if ~exist(fileOutput,'file')
             fileOutput = fullfile(foDir,[foBaseName,'.bin']);
         end
         fid_out = fopen(fileOutput,'w');
-        fwrite(fid_out,data,'float');
+        fwrite(fid_out,data,'*int16');
         fclose(fid_out);
     catch
         disp('There was an error creating/writing the file')
