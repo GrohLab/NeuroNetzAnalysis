@@ -40,7 +40,7 @@ classdef BurstTrain
     end
     methods (Static)
         function isiEst = isiDesicion(spObj,verbose)
-            lisi = log(diff(spObj.Triggers)/spObj.SamplingFreq);
+            lisi = log(diff(spObj.Spikes)/spObj.SamplingFreq);
             if nargin == 1
                 verbose = true;
             end
