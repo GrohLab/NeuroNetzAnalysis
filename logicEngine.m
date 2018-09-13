@@ -5,14 +5,18 @@ function [tIdx, koIdx] = logicEngine(IDsignal, discreteTraces, fs)
 %considered events in the further analyses.
 %   The function accepts one input argument: the ID of the signals.
 % Emilio Isaias-Camacho GrohLabs 2018
-
+availableSignals = sum(discreteTraces,2) > 0;
+excludeSignal = strcmp(IDsignal,'exclude') | strcmp(IDsignal,'grooming');
 TOTAL_EVENTS = numel(IDsignal);
 availableTrig = true(TOTAL_EVENTS,1);
 tp = 0;
 populatedSignals = 1:TOTAL_EVENTS;
+populatedSignals(~availableSignals | excludeSignal) = [];
+keepSignals = false(TOTAL_EVENTS,1);
+triggerSignal = false(TOTAL_EVENTS,1);
 while sum(availableTrig) <= TOTAL_EVENTS && sum(availableTrig) > 0 &&...
         tp == 0
-    tIdx = selectTrigger(IDsignal(availableTrig));
+    tIdx = selectTrigger(IDsignal(populatedSignals));
     if islogical(tIdx)
         stWf = StepWaveform(discreteTraces(tIdx,:), fs);
         tp = numel(stWf.Triggers);
@@ -31,11 +35,14 @@ while sum(availableTrig) <= TOTAL_EVENTS && sum(availableTrig) > 0 &&...
 end
 pIdx = checkPossibleCombinations(tIdx,discreteTraces);
 koIdx = kickOutEvents(IDsignal(~tIdx & pIdx));
-koSubs = find(koIdx);
-koSubs(koSubs >= find(tIdx)) = koSubs(koSubs >= find(tIdx)) + 1;
-koIdx = false(numel(IDsignal),1);
-koIdx(koSubs) = true;
-
+keepSignals(populatedSignals(koIdx)) = true;
+triggerSignal(populatedSignals(tIdx)) = true;
+% koSubs = find(koIdx);
+% koSubs(koSubs >= find(tIdx)) = koSubs(koSubs >= find(tIdx)) + 1;
+% koIdx = false(numel(IDsignal),1);
+% koIdx(koSubs) = true;
+koIdx = keepSignals;
+tIdx = triggerSignal;
 end
 
 function idx = selectTrigger(IDsignal)
@@ -86,6 +93,7 @@ end
 function pIdx = checkPossibleCombinations(tIdx, discreteTraces)
 disp('Exclusive combinations!')
 pIdx = ~tIdx;
-evntsPerChannel = sum(discreteTraces(:,discreteTraces(tIdx,:)),2);
+% evntsPerChannel = sum(discreteTraces(:,discreteTraces(tIdx,:)),2);
+evntsPerChannel = sum(discreteTraces,2);
 pIdx = pIdx & evntsPerChannel;
 end
