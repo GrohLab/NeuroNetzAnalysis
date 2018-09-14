@@ -43,7 +43,11 @@ for cse = 1:Ne
                     'Color',cmap(cse,:))
             end
             if FIRST_FLAG
-                hold on
+                if AX_FLAG
+                    hold(ax,'on')
+                else
+                    hold on
+                end
                 FIRST_FLAG = false;
             end
         end
@@ -51,9 +55,18 @@ for cse = 1:Ne
 end
 
 axis([-timeLapse(1),timeLapse(2),1,Na*Ne])
-ax = gca;set(ax,'Box','off','YTick',(0:Ne)*Na + Na/2,'YTickLabel',yTickLabel,...
-    'YTickLabelRotation',90)
-xlabel(ax,'Time [s]')
-title(ax,figTitle,'Interpreter','none')
+if AX_FLAG
+    set(ax,'Box','off','YTick',(0:Ne)*Na + Na/2,'YTickLabel',yTickLabel,...
+        'YTickLabelRotation',90)
+    xlabel(ax,'Time [s]')
+    title(ax,figTitle,'Interpreter','none')
+else
+    ax = gca;
+    set(ax,'Box','off','YTick',(0:Ne)*Na + Na/2,'YTickLabel',yTickLabel,...
+        'YTickLabelRotation',90)
+    xlabel('Time [s]')
+    title(figTitle,'Interpreter','none')
+end
+
 end
 

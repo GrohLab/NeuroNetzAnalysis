@@ -15,17 +15,17 @@ tx_PSTH = linspace(-timeLapse(1),timeLapse(2),size(PSTH,2));
 tx_trig = linspace(-timeLapse(1),timeLapse(2),length(trig));
 set(fig,'defaultAxesColorOrder',[0,0,0;0.2,0.2,0.2])
 plot(ax,tx_trig,trig,'DisplayName',trigID,'Color',[37, 154, 3]/255);
-ylabel('Stimulus probability')
-yyaxis('right');
+ylabel(ax,'Stimulus probability')
+yyaxis(ax,'right');
 clrMap = jet(size(PSTH,1)-1);
 bar(ax,tx_PSTH,PSTH(1,:)/(sweeps*binSz),1,...
     'EdgeColor','none','FaceColor',[0.2,0.2,0.2],...
     'FaceAlpha',0.3,'DisplayName','Neuron 1');
-ylabel('Firing rate [Hz]')
-hold on;
+ylabel(ax,'Firing rate [Hz]')
+hold(ax,'on')
 idIdx = find(koIdx)';
 binEl = 20e3 * binSz;
-yyaxis('left')
+yyaxis(ax,'left')
 for cp = idIdx
     if max(PSTH(cp+1,:)) > sweeps
         plot(ax,tx_PSTH,(PSTH(cp+1,:))/(binEl*sweeps),...
@@ -35,4 +35,4 @@ for cp = idIdx
             'Color',clrMap(cp,:),'DisplayName',IDe{cp});
     end
 end
-legend('show')
+legend(ax,'show')
