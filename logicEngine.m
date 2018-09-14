@@ -1,48 +1,39 @@
-function [tIdx, koIdx] = logicEngine(IDsignal, discreteTraces, fs)
+function [tIdx, koIdx, iIdx] = logicEngine(IDsignal, discreteTraces)
 %LOGICENGINE Translates the user defined conditions to a logical train to
-%remove an event out of the analysis. To add a time consideration is among
-%the next steps. Currently, the function only takes care of the appearence of the
-%considered events in the further analyses.
-%   The function accepts one input argument: the ID of the signals.
+%select a trigger from the conditioning variables, remove an event out of ,
+%or to treat a signal as 'irrelevant' for the analysis.
+%   The function accepts one input argument: the ID of the signals, and the
+%   discrete time signal array to verify the occurrance of any of the
+%   conditioning variables across time.
 % Emilio Isaias-Camacho GrohLabs 2018
 availableSignals = sum(discreteTraces,2) > 0;
 excludeSignal = strcmp(IDsignal,'exclude') | strcmp(IDsignal,'grooming');
 TOTAL_EVENTS = numel(IDsignal);
-availableTrig = true(TOTAL_EVENTS,1);
-tp = 0;
 populatedSignals = 1:TOTAL_EVENTS;
 populatedSignals(~availableSignals | excludeSignal) = [];
 keepSignals = false(TOTAL_EVENTS,1);
 triggerSignal = false(TOTAL_EVENTS,1);
-while sum(availableTrig) <= TOTAL_EVENTS && sum(availableTrig) > 0 &&...
-        tp == 0
-    tIdx = selectTrigger(IDsignal(populatedSignals));
-    if islogical(tIdx)
-        stWf = StepWaveform(discreteTraces(tIdx,:), fs);
-        tp = numel(stWf.Triggers);
-        if ~tp
-            populatedSignals(tIdx) = [];
-            discreteTraces(tIdx,:) = [];
-            IDsignal(tIdx) = [];
-            AVAIL_EVENTS = numel(IDsignal);
-            availableTrig = true(AVAIL_EVENTS,1);
-        end
-    else
-        tIdx = -1;
-        koIdx = -1;
-        return
-    end
+ignoreSignal = keepSignals;
+tIdx = selectTrigger(IDsignal(populatedSignals));
+if ~islogical(tIdx)
+    tIdx = -1;
+    koIdx = -1;
+    return
 end
-pIdx = checkPossibleCombinations(tIdx,discreteTraces);
-koIdx = kickOutEvents(IDsignal(~tIdx & pIdx));
-keepSignals(populatedSignals(koIdx)) = true;
+pIdx = checkPossibleCombinations(tIdx,discreteTraces(populatedSignals,:));
+chSig = kickOutEvents(IDsignal(populatedSignals(~tIdx & pIdx)),...
+    populatedSignals(~tIdx & pIdx));
+keepSignals(chSig) = true;
+chSig = holyIgnorance(IDsignal(populatedSignals(keepSignals)),chSig);
+ignoreSignal(chSig) = true;
 triggerSignal(populatedSignals(tIdx)) = true;
-% koSubs = find(koIdx);
-% koSubs(koSubs >= find(tIdx)) = koSubs(koSubs >= find(tIdx)) + 1;
-% koIdx = false(numel(IDsignal),1);
-% koIdx(koSubs) = true;
-koIdx = keepSignals;
-tIdx = triggerSignal;
+if sum(keepSignals & triggerSignal & ignoreSignal)
+    error('Something went really wrong. Debugging process required!')
+else
+    koIdx = keepSignals;
+    tIdx = triggerSignal;
+    iIdx = ignoreSignal;
+end
 end
 
 function idx = selectTrigger(IDsignal)
@@ -63,7 +54,7 @@ else
 end
 end
 
-function koIdx = kickOutEvents(IDsignal)
+function chSig = kickOutEvents(IDsignal,inputSignals)
 koIdx = true(numel(IDsignal),1);
 disp('User prompt: Selection of exclusive signals...')
 [kickOutIndexes,iok] = listdlg(...
@@ -74,19 +65,49 @@ disp('User prompt: Selection of exclusive signals...')
     'OKString','OK',...
     'Name','Selection of discrete signals',...
     'ListSize',[160,15*numel(IDsignal)]);
+% What does this mean?
 if iok
     koIdx(kickOutIndexes) = false;
 else
     
 end
+chSig = inputSignals(koIdx);
 if ~isempty(kickOutIndexes)
-    disp('Thank you. You chose the following signals as interesting:')
+    disp('Thank you. You chose the following signals to be excluded:')
     for cid = kickOutIndexes
         fprintf('%s ',IDsignal{cid})
     end
     fprintf('\n');
 else
-    disp('No other event will be considered for further analysis')
+    disp('All available events will be considered for further analysis')
+end
+end
+
+function chSig = holyIgnorance(IDsignal,signalSub)
+iIdx = false(numel(IDsignal,1));
+disp('User prompt: Selection of ''irrelevant'' signals:')
+[ignoreIndexes, iok] = listdlg(...
+    'PromptString','Select the signals to ignore:',...
+    'ListString',IDsignal,...
+    'SelectionMode','multiple',...
+    'CancelString','None',...
+    'OKString','OK',...
+    'Name','Ignore...',...
+    'ListSize',[160,15*numel(IDsignal)]);
+if iok
+    iIdx(ignoreIndexes) = true;
+else
+end
+chSig = signalSub(iIdx);
+if ~isempty(ignoreIndexes)
+    disp('Thank you. You chose the following signals to be ignored:')
+    for cid = ignoreIndexes
+        fprintf('%s ',IDsignal{cid})
+    end
+    fprintf('\n');
+else
+    disp('All conditioning variables will be taken into consideration')
+    disp('for inclusion or exclusion')
 end
 end
 
