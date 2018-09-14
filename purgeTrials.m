@@ -1,5 +1,5 @@
 function [eIdxArray, excludeIdx, windowArray] =...
-    purgeTrials(discreteStack, timeLapse, tIdx, koIdx, IDs, fs)
+    purgeTrials(discreteStack, timeLapse, tIdx, koIdx, iIdx, IDs, fs)
 %PURGETRIALS Takes the created discrete stack and searches for those trials
 %which are not relevant to the experimenter or which need to be excluded to
 %proceed with the analysis parting from the stack.
@@ -20,21 +20,30 @@ for ctl = 1:sum(koIdx)
     defTL(ctl) = {[num2str(-timeLapse(1)*1e3),', ',num2str(timeLapse(2)*1e3)]};
 end
 
-windowTimes = inputdlg(...
-    IDs(koIdx),...
-    'Delay for the interesting signals',...
-    [1,20],...
-    defTL);
-triggerName = IDs{tIdx};
-IDs(tIdx) = [];
-windowArray = cell2mat(cellfun(@str2num, windowTimes, 'UniformOutput', false));
-indexWindow = (windowArray + timeLapse(1)*1e3)*fs*1e-3 + 1;
-
+if sum(koIdx & ~iIdx)
+    windowTimes = inputdlg(...
+        IDs(koIdx & ~iIdx),...
+        'Delay for the interesting signals',...
+        [1,20],...
+        defTL(1:sum(koIdx & ~iIdx)));
+    triggerName = IDs{tIdx};
+    IDs(tIdx) = [];
+    windowArray = cell2mat(cellfun(@str2num, windowTimes, 'UniformOutput', false));
+    indexWindow = (windowArray + timeLapse(1)*1e3)*fs*1e-3 + 1;
+else
+    warning('This case hasn''t been thought through.')
+    error('Debugging process needed!')
+end
 % Inclusion or exclusion of the signals
-eIdxArray = false(sum(koIdx),Na);
+eIdxArray = false(sum(koIdx & ~iIdx),Na);
 % Event index in the discrete stack
-eventIdxDS = find(koIdx(~tIdx)) + 2;
-excludeIdx = sum(squeeze(sum(discreteStack(~koIdx & ~tIdx,:,:),2)),1) > 0;
+eventIdxDS = find(koIdx(~tIdx) & ~iIdx(~tIdx)) + 2;
+excludeIdx =...
+    sum(squeeze(sum(discreteStack(...
+    [false(2,1);...
+    ~koIdx(~tIdx)],...
+    :,:),2)),1) > 0;
+
 % For every considered event and every alignment point which meets the
 % relaxed criteria we need to verify the windows
 deleteEmptyEvents = false(length(eventIdxDS),1);
