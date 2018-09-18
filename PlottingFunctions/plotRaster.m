@@ -15,13 +15,13 @@ tx = tx - timeLapse(1);
 if ~exist('figTitle','var')
     figTitle = [];
 end
-plotTitle = ['Raster Plot ', figTitle];
+plotTitle = ['Raster Plot ', figTitle, ' ',num2str(Na),' trials'];
 AX_FLAG = true;
 if ~exist('ax','var') || isempty(ax)
     figure('Name',plotTitle,'Color',[1,1,1]);
     AX_FLAG = false;
 end
-cmap = colormap(jet(Ne));
+cmap = colormap(jet(Ne - 1));
 FIRST_FLAG = true;
 yTickLabel = cell(1,Ne);
 for cse = 1:Ne
@@ -59,13 +59,13 @@ if AX_FLAG
     set(ax,'Box','off','YTick',(0:Ne)*Na + Na/2,'YTickLabel',yTickLabel,...
         'YTickLabelRotation',90)
     xlabel(ax,'Time [s]')
-    title(ax,figTitle,'Interpreter','none')
+    title(ax,[figTitle, ' ',num2str(Na),' trials'],'Interpreter','none')
 else
     ax = gca;
     set(ax,'Box','off','YTick',(0:Ne)*Na + Na/2,'YTickLabel',yTickLabel,...
         'YTickLabelRotation',90)
     xlabel('Time [s]')
-    title(figTitle,'Interpreter','none')
+    title([figTitle, ' ',num2str(Na),' trials'],'Interpreter','none')
 end
 
 end
