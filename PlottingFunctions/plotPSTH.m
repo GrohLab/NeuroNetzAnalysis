@@ -1,5 +1,5 @@
 function ax =...
-    plotPSTH(trig, PSTH, sweeps, binSz, timeLapse, expName, IDe, koIdx, tIdx, ax)
+    plotPSTH(trig, PSTH, sweeps, binSz, timeLapse, expName, IDe, koIdx, tIdx, fs, ax)
 %UNTITLED4 Summary of this function goes here
 %   Detailed explanation goes here
 koIdx = koIdx(~tIdx);
@@ -24,8 +24,9 @@ bar(ax,tx_PSTH,PSTH(1,:)/(sweeps*binSz),1,...
 ylabel(ax,'Firing rate [Hz]')
 hold(ax,'on')
 idIdx = find(koIdx)';
-binEl = 20e3 * binSz;
+binEl = fs * binSz;
 yyaxis(ax,'left')
+xlabel(ax,'Time [s]')
 for cp = idIdx
     if max(PSTH(cp+1,:)) > sweeps
         plot(ax,tx_PSTH,(PSTH(cp+1,:))/(binEl*sweeps),...
@@ -35,4 +36,5 @@ for cp = idIdx
             'Color',clrMap(cp,:),'DisplayName',IDe{cp});
     end
 end
+title(ax,[expName,' ',num2str(sweeps),' trials'])
 legend(ax,'show')
