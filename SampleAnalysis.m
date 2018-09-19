@@ -1,12 +1,20 @@
 %% multiunit recording practice
 % cd 'D:\Dropbox\16 Channel Recording may 2018'
-homedir='F:\Experiments_2018\16 channel\Standard probe\19_4_2018\M137_C5';
-clearvars
+% The clearvars command is commented to avoid erasing the information
+% extracted from the smrx file through the UMS_life_script.mlx
+% clearvars
+homedir='F:\Experiments_2018\16 channel\Standard probe\19_4_2018\M137_C4';
 cd(homedir)
-fname = 'M137_C5_Mech_L6 05mW'; 
+fname = 'M137_C4_Mech+L6 05mW'; 
 load([fname,'_all_channels.mat'])
 load([fname,'analysis.mat'],'Conditions','Triggers')
-fs = Fs;
+try
+    fs = Fs;
+catch
+    disp('Fs is not existing...')
+    disp('Defining...')
+    Fs  = fs;
+end
 
 %% Initialize the variables
 % This section loads the cluster spike times into the 'Spikes' cell array.
@@ -38,23 +46,23 @@ for i=1:numel(Spikes) % insert cluster numbers here
 end
         
 
-%%
+%% Possible artifacts (is laser evoking a response or an optoelectric artifact?)
 
 %bads=[1 2 3 14 6]  %1 2 3 14 are light artifacts
-bads=[1,3,9,10,14,27,28,42,45,50,51,23,11];
-noresponse=[41];
+bads=[18,16,14,11,3,2,17];
+noresponse=[];
 bads=[bads noresponse];
 %bads=[]; %uncomment this to have bads empty
 %assumes that all spike trains are good
 goods=1:numel(Spikes);
 
 %removes bad units 
- goods=setdiff(goods,bads);
+goods=setdiff(goods,bads);
 
-
+%% Let us see if the laser evokes a neural response.
 %use these two lines to look at hand-defined lasers response
 
-goods=[1,3,9,10,14,27,28,42,45,50,51,23,11] %fill in hand-selected channels here!
+goods=[1,3,9,10,14,27,28,42,45,50,51,23,11]; %fill in hand-selected channels here!
 bads=[];
 
 %Spikes=Spikes(goods);
@@ -142,7 +150,7 @@ save LaserResponse crscor goods bads
 % due to their high similarity. The possibilities are that they belong to a
 % same unit as busrting spikes, the cell shifted to another channel or any
 % other reasonable cause.
-mergingPackages = {[1,3,9,10,11,14,27,28,42,45,50,51,23,]};
+mergingPackages = {[]};
 Npg = numel(mergingPackages);
 mSpikes = cell(1,Npg);
 auxSignal = false(1,length(mech));
@@ -222,8 +230,8 @@ ppms=fs/1e3;
 spikes=cell2mat(Spikes)*1000*ppms;
 plotit=1;
 binsize=50*ppms;
-timeBefore=1000*ppms;
-timeAfter=5500*ppms;
+timeBefore=2000*ppms;
+timeAfter=8500*ppms;
 H=[];
 conds={};
 count=0;
@@ -339,7 +347,7 @@ for ii=1:4
     % ylabel 'pooled spike rate'
     title(titles{ii})
     box off
-    ylim([0 200])
+    ylim([0 75])
 end
 
 %

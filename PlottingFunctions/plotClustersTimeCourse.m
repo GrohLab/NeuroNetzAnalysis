@@ -1,5 +1,16 @@
 figure;
-load([rootNames,'analysis.mat'],'Conditions','Triggers')
+if ~exist('Conditions','var') || ~exist('Triggers','var')
+    try
+        load([rootNames,'analysis.mat'],'Conditions','Triggers')
+        disp('Loading successful')
+    catch
+        fileNames = dir('*analysis.mat');
+        load([fileNames.name,'analysis.mat'],'Conditions','Triggers')
+        disp('Running without context...')
+        fprintf('File %s loaded',fileNames.name)
+    end
+end
+
 Spikes={};
 Names={};
 
@@ -11,7 +22,13 @@ end
 mech=Triggers.whisker;
 light=Triggers.light;
 lenSpks = length(Spikes);
-tx = 0:1/Fs:(length(mech) - 1)/Fs;
+try
+    tx = 0:1/Fs:(length(mech) - 1)/Fs;
+catch
+    disp('The variable Fs doesn''t exist in the workspace')
+    disp('Displaying indexes instead of time')
+    tx = 1:length(mech);
+end
 ax(1) = subplot(4,1,1);plot(tx,light,tx,mech)
 ax(2) = subplot(4,1,2:4);
 Ncl = size(sortedData,1);
