@@ -1,4 +1,4 @@
-function [sortedData] = getSpikeTimesFromUnits(rootNames)
+function [sortedData] = getSpikeTimesFromUnits(rootNames,fs)
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
 % str='_Pack';
@@ -36,5 +36,5 @@ for j=1:numel(chanData)
     end
 end
 
-save(sortedFile,'sortedData')
+save(sortedFile,'sortedData','fs')
 end
