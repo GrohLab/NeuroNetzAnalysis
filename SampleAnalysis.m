@@ -42,7 +42,8 @@ for i=1:numel(Spikes) % insert cluster numbers here
       isis=[diff(Spikes{i})*1000]; %in ms
       [hisi isi_bins]=hist(isis,[1:10000]);
       plot(log10(isi_bins),hisi,'linewidth',2)
-      title(['Cluster: ',num2str(i)])
+       % title(['Cluster: ',num2str(i)])
+      title(['Cluster ID: ',Names{i},' #',num2str(i)],'Interpreter','none') 
 end
         
 
