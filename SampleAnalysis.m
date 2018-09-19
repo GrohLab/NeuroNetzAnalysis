@@ -1,7 +1,7 @@
 %% multiunit recording practice
 % cd 'D:\Dropbox\16 Channel Recording may 2018'
-clear all
 homedir='F:\Experiments_2018\16 channel\Standard probe\19_4_2018\M137_C5';
+clearvars
 cd(homedir)
 fname = 'M137_C5_Mech_L6 05mW'; 
 load([fname,'_all_channels.mat'])
