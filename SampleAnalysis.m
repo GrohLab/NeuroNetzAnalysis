@@ -27,7 +27,7 @@ Names={};
 
 for i=1:size(sortedData,1)
     Spikes{i}=cell2mat(sortedData(i,2));
-    Names{i}=sortedData(i,1);
+    Names(i)=sortedData(i,1);
 end
 
 mech=Triggers.whisker;
