@@ -3,9 +3,9 @@
 % The clearvars command is commented to avoid erasing the information
 % extracted from the smrx file through the UMS_life_script.mlx
 % clearvars
-homedir='F:\Experiments_2018\16 channel\Standard probe\19_4_2018\M137_C4';
+homedir='E:\16 channel\M16_C2_Mech+L6_4mW';
 cd(homedir)
-fname = 'M137_C4_Mech+L6 05mW'; 
+fname = 'M16_C2_Mech+L6_4mW'; 
 load([fname,'_all_channels.mat'])
 load([fname,'analysis.mat'],'Conditions','Triggers')
 try
