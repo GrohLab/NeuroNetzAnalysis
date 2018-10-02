@@ -24,7 +24,7 @@ pIdx = checkPossibleCombinations(tIdx,discreteTraces(populatedSignals,:));
 chSig = kickOutEvents(IDsignal(populatedSignals(~tIdx & pIdx)),...
     populatedSignals(~tIdx & pIdx));
 keepSignals(chSig) = true;
-chSig = holyIgnorance(IDsignal(populatedSignals(keepSignals)),chSig);
+chSig = holyIgnorance(IDsignal(chSig),chSig);
 ignoreSignal(chSig) = true;
 triggerSignal(populatedSignals(tIdx)) = true;
 if sum(keepSignals & triggerSignal & ignoreSignal)
