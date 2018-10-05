@@ -59,7 +59,7 @@ if exist(pckFile,'file')
             end
             semilogx(axMC,binEdges*1e3,([0,hisi.BinCounts]),'Color',cmap(cmcl,:));
             close(invFig);title(axMC,['ISI for mini-cluster ',num2str(miniCls(cmcl))])
-            xlabel(axMC,'$\frac{\delta}{\delta t} \vec{T}$ [ms]',...
+            xlabel(axMC,'$\log(\frac{\delta}{\delta t} \vec{T})$ [ms]',...
                 'Interpreter','latex','FontSize',13);ylabel(axMC,'Counts')
             subPlAx = [3,4,7,8];
             figure(figMC)
