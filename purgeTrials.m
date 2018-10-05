@@ -4,7 +4,7 @@ function [eIdxArray, excludeIdx, windowArray] =...
 %which are not relevant to the experimenter or which need to be excluded to
 %proceed with the analysis parting from the stack.
 %   
-% Emilio Isaias-Camacho @GrohLAb 2018
+% Emilio Isaias-Camacho @GrohLab 2018
 %% TODO
 % 1.- The delayArray should have the data structure such that a 0 delay is
 % considered as a synchronous stimuli. The combination with this variable
@@ -31,8 +31,11 @@ if sum(koIdx & ~iIdx)
     windowArray = cell2mat(cellfun(@str2num, windowTimes, 'UniformOutput', false));
     indexWindow = (windowArray + timeLapse(1)*1e3)*fs*1e-3 + 1;
 else
-    warning('This case hasn''t been thought through.')
-    error('Debugging process needed!')
+    disp('Either all the signals will be ignored or excluded')
+    eIdxArray = koIdx & ~iIdx;
+    excludeIdx = ~koIdx;
+    windowArray = [1 (sum(timeLapse)*fs + 1)];
+    return
 end
 % Inclusion or exclusion of the signals
 eIdxArray = false(sum(koIdx & ~iIdx),Na);
