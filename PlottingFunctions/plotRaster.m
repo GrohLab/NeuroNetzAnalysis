@@ -21,7 +21,7 @@ if ~exist('ax','var') || isempty(ax)
     figure('Name',plotTitle,'Color',[1,1,1]);
     AX_FLAG = false;
 end
-cmap = colormap(jet(Ne - 1));
+cmap = [0.01,0.01,0.01;jet(Ne - 1)];
 FIRST_FLAG = true;
 yTickLabel = cell(1,Ne);
 for cse = 1:Ne
