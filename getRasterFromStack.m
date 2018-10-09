@@ -44,6 +44,7 @@ for cse = iE
     spIdx = spIdx + 1;
     
 end
+tx = seconds(tx);
 if exist('ERASE_kIDX','var') && ERASE_kIDX
     % If the user chose to erase the kick out alignment trials
     relativeSpikeTimes(:,cellfun(@isempty,relativeSpikeTimes(1,:))) = [];

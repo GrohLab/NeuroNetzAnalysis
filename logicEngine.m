@@ -5,7 +5,7 @@ function [tIdx, koIdx, iIdx] = logicEngine(IDsignal, discreteTraces)
 %   The function accepts one input argument: the ID of the signals, and the
 %   discrete time signal array to verify the occurrance of any of the
 %   conditioning variables across time.
-% Emilio Isaias-Camacho GrohLabs 2018
+% Emilio Isaias-Camacho @ GrohLabs 2018
 availableSignals = sum(discreteTraces,2) > 0;
 excludeSignal = strcmp(IDsignal,'exclude') | strcmp(IDsignal,'grooming');
 TOTAL_EVENTS = numel(IDsignal);
@@ -57,57 +57,65 @@ end
 function chSig = kickOutEvents(IDsignal,inputSignals)
 koIdx = true(numel(IDsignal),1);
 disp('User prompt: Selection of exclusive signals...')
-[kickOutIndexes,iok] = listdlg(...
-    'PromptString','Select the excluding signals:',...
-    'ListString',IDsignal,...
-    'SelectionMode','multiple',...
-    'CancelString','None',...
-    'OKString','OK',...
-    'Name','Selection of discrete signals',...
-    'ListSize',[160,15*numel(IDsignal)]);
-% What does this mean?
-if iok
-    koIdx(kickOutIndexes) = false;
-else
-    
-end
-chSig = inputSignals(koIdx);
-if ~isempty(kickOutIndexes)
-    disp('Thank you. You chose the following signals to be excluded:')
-    for cid = kickOutIndexes
-        fprintf('%s ',IDsignal{cid})
+if ~isempty(inputSignals)
+    [kickOutIndexes,iok] = listdlg(...
+        'PromptString','Select the excluding signals:',...
+        'ListString',IDsignal,...
+        'SelectionMode','multiple',...
+        'CancelString','None',...
+        'OKString','OK',...
+        'Name','Selection of discrete signals',...
+        'ListSize',[160,15*numel(IDsignal)]);
+    if iok
+        koIdx(kickOutIndexes) = false;
+    else
+        
     end
-    fprintf('\n');
+    chSig = inputSignals(koIdx);
+    if ~isempty(kickOutIndexes)
+        disp('Thank you. You chose the following signals to be excluded:')
+        for cid = kickOutIndexes
+            fprintf('%s ',IDsignal{cid})
+        end
+        fprintf('\n');
+    else
+        disp('All available events will be considered for further analysis')
+    end
 else
-    disp('All available events will be considered for further analysis')
+    disp('No available signals to choose from (KOE).')
+    chSig = [];
 end
 end
 
 function chSig = holyIgnorance(IDsignal,signalSub)
 iIdx = false(numel(IDsignal,1));
 disp('User prompt: Selection of ''irrelevant'' signals:')
-[ignoreIndexes, iok] = listdlg(...
-    'PromptString','Select the signals to ignore:',...
-    'ListString',IDsignal,...
-    'SelectionMode','multiple',...
-    'CancelString','None',...
-    'OKString','OK',...
-    'Name','Ignore...',...
-    'ListSize',[160,15*numel(IDsignal)]);
-if iok
-    iIdx(ignoreIndexes) = true;
-else
-end
-chSig = signalSub(iIdx);
-if ~isempty(ignoreIndexes)
-    disp('Thank you. You chose the following signals to be ignored:')
-    for cid = ignoreIndexes
-        fprintf('%s ',IDsignal{cid})
+if ~isempty(signalSub)
+    [ignoreIndexes, iok] = listdlg(...
+        'PromptString','Select the signals to ignore:',...
+        'ListString',IDsignal,...
+        'SelectionMode','multiple',...
+        'CancelString','None',...
+        'OKString','OK',...
+        'Name','Ignore...',...
+        'ListSize',[160,15*numel(IDsignal)]);
+    if iok
+        iIdx(ignoreIndexes) = true;
     end
-    fprintf('\n');
+    chSig = signalSub(iIdx);
+    if ~isempty(ignoreIndexes)
+        disp('Thank you. You chose the following signals to be ignored:')
+        for cid = ignoreIndexes
+            fprintf('%s ',IDsignal{cid})
+        end
+        fprintf('\n');
+    else
+        disp('All conditioning variables will be taken into consideration')
+        disp('for inclusion or exclusion')
+    end
 else
-    disp('All conditioning variables will be taken into consideration')
-    disp('for inclusion or exclusion')
+    disp('No signals left to choose from. (HI)')
+    chSig = [];
 end
 end
 
