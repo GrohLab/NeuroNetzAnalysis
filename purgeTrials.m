@@ -57,7 +57,7 @@ if userFlag
         windowArray =...
             cell2mat(...
             cellfun(@str2num, windowTimes, 'UniformOutput', false));
-        indexWindow = (windowArray + timeLapse(1)*1e3)*fs*1e-3 + 1;
+%         indexWindow = (windowArray + timeLapse(1)*1e3)*fs*1e-3 + 1;
     else
         disp('All the signals will be ignored or excluded')
         %     eIdxArray = koIdx & ~iIdx;
@@ -71,6 +71,8 @@ windowArray =...
     cell2mat(cellfun(@str2num, defTL', 'UniformOutput', false))/2;
 end
 %% Index variables initialization
+% Indices for the 
+indexWindow = (windowArray + timeLapse(1)*1e3)*fs*1e-3 + 1;
 % Inclusion or exclusion of the signals
 eIdxArray = false(sum(koIdx & ~iIdx),Na);
 % Event index in the discrete stack
