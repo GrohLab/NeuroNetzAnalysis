@@ -29,8 +29,8 @@ end
 if auxR < auxC
     alignP = alignP';
 end
-[Na, raf] = size(alignP);
-if raf > 2 || raf < 1
+Na = auxR;
+if auxC > 2 || auxC < 1
     fprintf(['Warning! The alignment matrix is expected to have ',...
         'either only rising or rising and falling edges time indices.\n'])
     return;
@@ -204,6 +204,7 @@ else
         end
         
         % Indexes for encountered rising (onIdx) and falling (offIdx) edges
+        % within the considered segment
         onIdx = relTdx(:,1) >= -prev & relTdx(:,1) < post; 
         if size(relTdx, 2) == 2
             offIdx = relTdx(:,2) >= -prev & relTdx(:,2) < post;
@@ -219,6 +220,12 @@ else
         else
             fnalStep = initStep;
         end
+        % Indices considering the inclusion of the considered window into a
+        % lengthy pulse of the considered event.
+        %
+        % HERE
+        %
+        
         % Event rising, falling or both into the alignment window as a
         % first condition. 
         stCount = 1;
