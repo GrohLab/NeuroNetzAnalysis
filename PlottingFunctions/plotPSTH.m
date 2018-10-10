@@ -36,5 +36,5 @@ for cp = idIdx
             'Color',clrMap(cp,:),'DisplayName',IDe{cp});
     end
 end
-title(ax,[expName,' ',num2str(sweeps),' trials'])
+title(ax,[expName,' ',num2str(sweeps),' trials'],'Interpreter','none')
 legend(ax,'show')
