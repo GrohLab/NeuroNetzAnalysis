@@ -203,17 +203,19 @@ else
             relTdx = evntTdx{ce} - alignTdx(cap,2);
         end
         
-        % Indexes for encountered rising (onIdx) and falling (offIdx) edges
-        % within the considered segment
+        % Indexes for encountered rising _onIdx_, falling _offIdx_ edges,
+        % or a bigger pulse envolving the viewing window _invIdx_.
         onIdx = relTdx(:,1) >= -prev & relTdx(:,1) < post; 
         if size(relTdx, 2) == 2
             offIdx = relTdx(:,2) >= -prev & relTdx(:,2) < post;
+            invIdx = relTdx(:,1) < -prev & relTdx(:,2) > post;
         else
             offIdx = onIdx;
+            invIdx = onIdx;
         end
         % Indexes considering the partial or complete step that falls into
         % the considered segment.
-        allIdx = find(onIdx | offIdx);
+        allIdx = find(onIdx | offIdx | invIdx);
         initStep = relTdx(onIdx,1) + prev + 1;
         if size(relTdx, 2) == 2
             fnalStep = relTdx(offIdx,2) + prev + 1;
