@@ -22,7 +22,11 @@ function [eIdxArray, excludeIdx, windowArray] =...
 %from the argument calling. If this last variable is true, the user will be
 %able to select the windows for each conditioning variable. Otherwise, the
 %function will decide to select half of the viewing window as the
-%conditioning window i.e. half time before, half time after.
+%conditioning window i.e. half time before, half time after. 
+%
+%An additional functionality should be implemented. The ability to load the
+%conditioning windows for the non-excluded variables from the conditioning
+%window. Maybe we can use a very simple bypass for all the functions.
 %
 % Emilio Isaias-Camacho @GrohLab 2018
 
