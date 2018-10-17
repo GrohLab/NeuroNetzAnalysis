@@ -1,7 +1,8 @@
 function [timeLapse, binSz, tIdx, koIdx, iIdx, windowArray] =...
     loadConfigFile(fID)
-%UNTITLED Summary of this function goes here
-%   Detailed explanation goes here
+%LOADCONFIGFILE Simply reads and returns the values of the text file saved
+%for running the stack prototype pipeline. 
+%   More details will be shared soon.
 
 
 end
