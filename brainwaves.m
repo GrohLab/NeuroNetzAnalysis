@@ -192,7 +192,7 @@ for w = 1:5
     if waveflag(w)% == 1
         % Filtering signal by signal of the EEG signal array. (zero
         % shifting filter)
-        [b,a] = butter(2,[(2*cutfreq(2,w))/sampling_frequency...
+        [b,a] = butter(2,[(2*cutfreq(2,w))/sampling_frequency,...
             (2*cutfreq(1,w))/sampling_frequency]);        
         for c=1:m
             aux = filtfilt(b50,a50,EEGsignals(c,:));
