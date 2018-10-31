@@ -26,14 +26,18 @@ classdef FourierSpectrum < handle
                     Nch = Ns;
                     Ns = Ns2;
                 end
+                % Normalizing the amplitude of the signal (the maxima
+                % should be equal to 1 or -1)
+                % Removal of the DC  (0 Hz) component
+                input_signal = input_signal - mean(input_signal);
+                % Amplitude normalization
+                input_signal = input_signal / max(abs(input_signal));
                 % Determination for a sensible padding.
                 N1 = floor(log2(Ns));
                 N2 = nextpow2(Ns);
                 if N1 ~= N2
                     d1 = abs((2^N1) - Ns)/(2^N2 - 2^N1);
                     d2 = abs((2^N2) - Ns)/(2^N2 - 2^N1);
-                    % Removal of the DC  (0 Hz) component
-                    input_signal = input_signal - mean(input_signal);
                     if d1 > d2
                         % Zero padding
                         obj.N = 2.^N2;
