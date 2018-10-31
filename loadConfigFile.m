@@ -6,4 +6,3 @@ function [timeLapse, binSz, tIdx, koIdx, iIdx, windowArray] =...
 
 
 end
-
