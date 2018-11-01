@@ -70,9 +70,21 @@ if userFlag
         % return
     end
 else
+<<<<<<< HEAD
 %% Half viewing window as the conditioning window: 'Automatic windows'
 windowArray =...
     cell2mat(cellfun(@str2num, defTL', 'UniformOutput', false))/2;
+=======
+    disp('Either all the signals will be ignored or excluded')
+    eIdxArray = false(1,Na);
+    excludeIdx =...
+        sum(squeeze(sum(discreteStack(...
+        [false(2,1);...
+        ~koIdx(~tIdx)],...
+        :,:),2)),1) > 0;
+    windowArray = [1 (sum(timeLapse)*fs + 1)];
+    return
+>>>>>>> master
 end
 %% Index variables initialization
 % Indices for the 
