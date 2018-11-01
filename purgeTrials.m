@@ -32,8 +32,12 @@ if sum(koIdx & ~iIdx)
     indexWindow = (windowArray + timeLapse(1)*1e3)*fs*1e-3 + 1;
 else
     disp('Either all the signals will be ignored or excluded')
-    eIdxArray = koIdx & ~iIdx;
-    excludeIdx = ~koIdx;
+    eIdxArray = false(1,Na);
+    excludeIdx =...
+        sum(squeeze(sum(discreteStack(...
+        [false(2,1);...
+        ~koIdx(~tIdx)],...
+        :,:),2)),1) > 0;
     windowArray = [1 (sum(timeLapse)*fs + 1)];
     return
 end
