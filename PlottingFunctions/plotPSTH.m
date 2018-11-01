@@ -26,7 +26,7 @@ hold(ax,'on')
 idIdx = find(koIdx)';
 binEl = fs * binSz;
 yyaxis(ax,'left')
-xlabel(ax,'Time [s]')
+xlabel(ax,sprintf('Time_{%.2f} [s]',binSz))
 for cp = idIdx
     if max(PSTH(cp+1,:)) > sweeps
         plot(ax,tx_PSTH,(PSTH(cp+1,:))/(binEl*sweeps),...
