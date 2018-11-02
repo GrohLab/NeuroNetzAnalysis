@@ -3,7 +3,7 @@ classdef StepWaveform < DiscreteWaveform
     %only the extra necessary properties to produce time stamps for
     %triggering or anyother desired method.
     
-    properties
+    properties (SetAccess = 'private')
         Triggers
     end
     
@@ -16,10 +16,9 @@ classdef StepWaveform < DiscreteWaveform
                 title = 'Step Waveform';
             end
             obj@DiscreteWaveform(data,samplingFreq, units,title);
-            
         end
         
-        function  RaF = get.Triggers(obj)
+        function RaF = get.Triggers(obj)
             if isa(obj.Data,'double')
                 ds = diff(obj.Data);
                 if sum(ds>0) ~= numel(obj.Data)-1
@@ -32,10 +31,14 @@ classdef StepWaveform < DiscreteWaveform
                     fall = StepWaveform.cleanEdges(fall);
                     if sum(rise) ~= sum(fall)
                         warning('The cardinality of the rising edges is different for the falling edges\n')
-                    else
-                        RaF = [rise,fall];
-                        obj.Triggers = RaF;
+                        if numel(fall) < numel(rise)
+                            fall = [fall;length(obj.Data)];
+                        else
+                            rise = [1;rise];
+                        end
                     end
+                    RaF = [rise,fall];
+                    obj.Triggers = RaF;
                 else
                     disp('The given data are already the triggers')
                     RaF = obj.Data;
@@ -63,6 +66,8 @@ classdef StepWaveform < DiscreteWaveform
                 fprintf('Triggers: %d\n',length(obj.Triggers))
                 fprintf('Sampling Frequency: %0.3f kHz\n',obj.SamplingFreq/1e3)
             end
+        end
+        function myfunction(obj,inputArg1)
         end
     end
     methods (Static, Access = 'private')

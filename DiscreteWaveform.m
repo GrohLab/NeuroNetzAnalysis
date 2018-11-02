@@ -2,7 +2,7 @@ classdef (Abstract) DiscreteWaveform < GeneralWaveform
     %DISCRETEWAVEFORM This class would be abstract class to have
     %   Detailed explanation goes here
     
-    properties (Abstract)
+    properties (Abstract, SetAccess = 'private') 
         Triggers 
     end
     
