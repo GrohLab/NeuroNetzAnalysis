@@ -6,8 +6,7 @@ function [eIdxArray, excludeIdx, windowArray] =...
     koIdx,...         conditioning variables index
     iIdx,...          non-affecting variables (don't cares)
     IDs,...           names for all the variables in the experiment
-    fs,...            sampling frequency
-    userFlag...       flag for 'internal usage' -- controlling how are the conditioning windows determined
+    fs...            sampling frequency
     )
 
 %PURGETRIALS Takes the created discrete stack and searches for those trials
@@ -22,7 +21,7 @@ function [eIdxArray, excludeIdx, windowArray] =...
 %from the argument calling. If this last variable is true, the user will be
 %able to select the windows for each conditioning variable. Otherwise, the
 %function will decide to select half of the viewing window as the
-%conditioning window i.e. half time before, half time after. 
+%conditioning window i.e. half time before, half time after.
 %
 %An additional functionality should be implemented. The ability to load the
 %conditioning windows for the non-excluded variables from the conditioning
@@ -44,37 +43,19 @@ end
 % specific window durations. In the other case, when the function is called
 % to create the 'Control conditions', the functions assumes a conditioning
 % window of 50% the size of the 'Viewing window'.
-if ~exist('userFlag','var')
-    userFlag = true;
-end
-
-if userFlag
-    %% User intervention
-    if sum(koIdx & ~iIdx)
-        windowTimes = inputdlg(...
-            IDs(koIdx & ~iIdx),...
-            'Delay for the interesting signals',...
-            [1,20],...
-            defTL(1:sum(koIdx & ~iIdx)));
-        triggerName = IDs{tIdx};
-        IDs(tIdx) = [];
-        windowArray =...
-            cell2mat(...
-            cellfun(@str2num, windowTimes, 'UniformOutput', false));
-%         indexWindow = (windowArray + timeLapse(1)*1e3)*fs*1e-3 + 1;
-    else
-        disp('All the signals will be ignored or excluded')
-        %     eIdxArray = koIdx & ~iIdx;
-        %     excludeIdx = ~koIdx;
-        windowArray = [1 (sum(timeLapse)*fs + 1)];
-        % return
-    end
+if sum(koIdx & ~iIdx)
+    windowTimes = inputdlg(...
+        IDs(koIdx & ~iIdx),...
+        'Delay for the interesting signals',...
+        [1,20],...
+        defTL(1:sum(koIdx & ~iIdx)));
+    triggerName = IDs{tIdx};
+    IDs(tIdx) = [];
+    windowArray =...
+        cell2mat(...
+        cellfun(@str2num, windowTimes, 'UniformOutput', false));
+    %         indexWindow = (windowArray + timeLapse(1)*1e3)*fs*1e-3 + 1;
 else
-<<<<<<< HEAD
-%% Half viewing window as the conditioning window: 'Automatic windows'
-windowArray =...
-    cell2mat(cellfun(@str2num, defTL', 'UniformOutput', false))/2;
-=======
     disp('Either all the signals will be ignored or excluded')
     eIdxArray = false(1,Na);
     excludeIdx =...
@@ -84,10 +65,9 @@ windowArray =...
         :,:),2)),1) > 0;
     windowArray = [1 (sum(timeLapse)*fs + 1)];
     return
->>>>>>> master
 end
 %% Index variables initialization
-% Indices for the 
+% Indices for the
 indexWindow = (windowArray + timeLapse(1)*1e3)*fs*1e-3 + 1;
 % Inclusion or exclusion of the signals
 eIdxArray = false(sum(koIdx & ~iIdx),Na);
