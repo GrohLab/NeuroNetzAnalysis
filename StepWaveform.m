@@ -46,7 +46,11 @@ classdef StepWaveform < DiscreteWaveform
                 rise = find(aux == -1)' + 1;
                 fall = find(aux == 1)';
                 if (~isempty(rise) && isempty(fall)) || (numel(rise) ~= numel(fall))
-                    fall = [fall;length(obj.Data)];
+                    if numel(fall) < numel(rise)
+                        fall = [fall;length(obj.Data)];
+                    else
+                        rise = [1;rise];
+                    end
                 end
                 RaF = [rise,fall];
                 obj.Triggers = RaF;
