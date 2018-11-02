@@ -1,5 +1,5 @@
-function [ax] =...
-    plotRaster(relativeSpikeTimes, timeLapse, fs, figTitle, IDe, ax)
+function [fig] =...
+    plotRaster(relativeSpikeTimes, timeLapse, fs, figTitle, IDe, fig)
 %UNTITLED6 Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -17,8 +17,8 @@ if ~exist('figTitle','var')
 end
 plotTitle = ['Raster Plot ', figTitle, ' ',num2str(Na),' trials'];
 AX_FLAG = true;
-if ~exist('ax','var') || isempty(ax)
-    figure('Name',plotTitle,'Color',[1,1,1]);
+if ~exist('fig','var') || isempty(fig)
+    fig = figure('Name',plotTitle,'Color',[1,1,1]);
     AX_FLAG = false;
 end
 cmap = [0.01,0.01,0.01;jet(Ne - 1)];
@@ -32,37 +32,38 @@ for cse = 1:Ne
         if ~isempty(relativeSpikeTimes{cse,cap})
             xspks = tx(relativeSpikeTimes{cse,cap} + idxOffset(1) + 1);
             lvl = (cse - 1)*Na + cap;
+            if FIRST_FLAG
+                if AX_FLAG
+                    hold on
+                else
+                    hold on
+                end
+                FIRST_FLAG = false;
+            end
             if AX_FLAG
-                plot(ax,xspks,lvl*ones(1,numel(xspks)),...
+                plot(xspks,lvl*ones(1,numel(xspks)),...
                     'LineStyle','none','Marker','.',...
-                    'MarkerFaceColor',cmap(cse,:),'MarkerSize',2)
+                    'MarkerFaceColor',cmap(cse,:),'MarkerSize',2);
             else
                 plot(xspks,lvl*ones(1,numel(xspks)),...
                     'LineStyle','none','Marker','.',...
                     'MarkerFaceColor',cmap(cse,:),'MarkerSize',2,...
                     'Color',cmap(cse,:))
             end
-            if FIRST_FLAG
-                if AX_FLAG
-                    hold(ax,'on')
-                else
-                    hold on
-                end
-                FIRST_FLAG = false;
-            end
+            
         end
     end
 end
 
 axis([-timeLapse(1),timeLapse(2),1,Na*Ne])
 if AX_FLAG
-    set(ax,'Box','off','YTick',(0:Ne)*Na + Na/2,'YTickLabel',yTickLabel,...
+    set(fig,'Box','off','YTick',(0:Ne)*Na + Na/2,'YTickLabel',yTickLabel,...
         'YTickLabelRotation',90)
-    xlabel(ax,'Time [s]')
-    title(ax,[figTitle, ' ',num2str(Na),' trials'],'Interpreter','none')
+    xlabel(fig,'Time [s]')
+    title(fig,[figTitle, ' ',num2str(Na),' trials'],'Interpreter','none')
 else
-    ax = gca;
-    set(ax,'Box','off','YTick',(0:Ne)*Na + Na/2,'YTickLabel',yTickLabel,...
+    fig = gca;
+    set(fig,'Box','off','YTick',(0:Ne)*Na + Na/2,'YTickLabel',yTickLabel,...
         'YTickLabelRotation',90)
     xlabel('Time [s]')
     title([figTitle, ' ',num2str(Na),' trials'],'Interpreter','none')
