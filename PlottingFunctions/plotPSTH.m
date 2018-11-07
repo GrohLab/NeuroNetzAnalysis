@@ -37,4 +37,4 @@ for cp = idIdx
     end
 end
 title(ax,[expName,' ',num2str(sweeps),' trials'],'Interpreter','none')
-legend(ax,'show')
+legend(ax,'show','Location','best')
