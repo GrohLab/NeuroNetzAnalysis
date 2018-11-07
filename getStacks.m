@@ -26,9 +26,9 @@ switch ONOFF
         ONOFF = 'on';
 end
 [auxR,auxC] = size(alignP);
-if auxR < auxC
-    alignP = alignP';
-end
+% if auxR < auxC
+%     alignP = alignP';
+% end
 Na = auxR;
 if auxC > 2 || auxC < 1
     fprintf(['Warning! The alignment matrix is expected to have ',...
@@ -119,19 +119,22 @@ for cap = 1:Na
             (alignP(cap,2)*fsConv)+postSamplesLFP]);
     end
     % The segments should be in the range of the spike train.
-    % Validations for both stacks
+    % Validations for the discrete stack
+    spSeg = false(1,Nt);
     if segmIdxs(1) >= 1 && segmIdxs(2) <= length(spT)
         spSeg = spT(segmIdxs(1):segmIdxs(2));
-        if Ns
-            if ~(segmIdxsLFP(1) >= 1 && segmIdxsLFP(2) <= MAX_CONT_SAMP)
-                OUTFLAG = true;
-            else
-                OUTFLAG = false;
-            end
-        end
+    elseif segmIdxs(1) <= 0
+        fprintf('The viewing window is out of the signal range.\n')
+        fprintf('%d samples required before the signal. Omitting...\n',...
+            segmIdxs(1))
+        segmIdxs(segmIdxs <= 0) = 1;
+        spSeg(Nt - segmIdxs(2) + 1:Nt) = spT(segmIdxs(1):segmIdxs(2));
     else
-        Na = Na - 1;
-        continue;
+        fprintf('The viewing window is out of the signal range.\n')
+        fprintf('%d samples required after the signal. Omitting...\n',...
+            segmIdxs(2))
+        segmIdxs(segmIdxs > length(spT)) = length(spT);
+        spSeg(1:Nt - diff(segmIdxs)) = spT(segmIdxs(1):segmIdxs(2));
     end
     discreteStack(2,:,cap) = spSeg;
     % Find 'overlapping' events in time of interest
@@ -152,35 +155,13 @@ for cap = 1:Na
         end
     end
     % Getting the continuous segments if the time window is in range of the
-    % signal domain.
-    if ~OUTFLAG
-        if Ns
-            try
-                signalSegments =...
-                    cellfun(...
-                    @(x) x(round((segmIdxsLFP(1):segmIdxsLFP(2)))),...
-                    varargin, 'UniformOutput', false);
-            catch ME
-                disp(ME.getReport)
-                fprintf('Very unlikely case: signals with different length\n')
-                fprintf('Worth debugging!\n')
-                continue
-            end
-            transpSign = cellfun(@isrow,signalSegments);
-            if sum(~transpSign)
-                try
-                    signalSegments(~transpSign) =...
-                        {signalSegments{~transpSign}'};
-                catch
-                    auxSegm = cellfun(@transpose,signalSegments(~transpSign),...
-                        'UniformOutput',false);
-                    signalSegments(~transpSign) = auxSegm;
-                end
-            end
-            continuouStack(:,:,cap) = single(cell2mat(signalSegments'));
-        end
-    else
-        disp('What to do in case that the indexes are outside the window?')
+    % signal domain and validation for the continuous stack
+    if Ns
+        % segmIdxsLFP(1) >= 1 && segmIdxsLFP(2) <= MAX_CONT_SAMP
+        
+        % continuouStack(:,:,cap) = single(cell2mat(signalSegments'));
+        continuouStack(:,:,cap) =...
+            getContinuousSignalSegment(varargin, segmIdxsLFP, MAX_CONT_SAMP, NtLFP);
     end
 end
 end
@@ -253,6 +234,46 @@ else
             end
             evntOn(ce,strt:fnal) = true;
         end
+    end
+end
+end
+
+function contSigSeg = getContinuousSignalSegment(signalCell, Idxs, N, Nt)
+contSigSeg = zeros(numel(signalCell),Nt,'single');
+if Idxs(1) >= 1 && Idxs(2) <= N
+    signalSegments = getSignalSegments(signalCell, Idxs);
+    contSigSeg = single(cell2mat(signalSegments'));
+elseif Idxs(1) <= 0
+    Idxs(Idxs <= 0) = 1;
+    signalSegments = getSignalSegments(signalCell, Idxs);
+    contSigSeg(:,Nt - Idxs(2) + 1:Nt) = single(cell2mat(signalSegments'));
+else
+    Idxs(Idxs > N) = N;
+    signalSegments = getSignalSegments(signalCell, Idxs);
+    contSigSeg(:,1:diff(Idxs)+1) = single(cell2mat(signalSegments'));
+end
+end
+
+function sigSeg = getSignalSegments(signalCell,Idxs)
+try
+    sigSeg =...
+        cellfun(...
+        @(x) x(round((Idxs(1):Idxs(2)))),...
+        signalCell, 'UniformOutput', false);
+catch ME
+    disp(ME.getReport)
+    fprintf('Very unlikely case: signals with different length\n')
+    fprintf('Worth debugging!\n')
+end
+transpSign = cellfun(@isrow,sigSeg);
+if sum(~transpSign)
+    try
+        sigSeg(~transpSign) =...
+            {sigSeg{~transpSign}'};
+    catch
+        auxSegm = cellfun(@transpose,sigSeg(~transpSign),...
+            'UniformOutput',false);
+        sigSeg(~transpSign) = auxSegm;
     end
 end
 end
