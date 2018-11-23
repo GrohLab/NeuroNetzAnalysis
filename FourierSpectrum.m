@@ -65,7 +65,7 @@ classdef FourierSpectrum < handle
                 end
                 % Window the padded signal
                 try
-                    win_signal = pad_signal .* hann(obj.N)';
+                    win_signal = pad_signal .* hann(obj.N,'periodic')';
                 catch
                     disp('Not so much memory left! Using single samples')
                     auxWin = hann(obj.N);
@@ -75,8 +75,9 @@ classdef FourierSpectrum < handle
                     end
                 end
                 % Compute the Fourier Transformation of the _input_signal_
-                % together with the frequency axis.
-                obj.FourierTransform = fftshift(fft(win_signal));
+                % together with the frequency axis. The factor of 2
+                % compensates the Hann windowing.
+                obj.FourierTransform = 2 * fftshift(fft(win_signal));
                 obj.Fx = -fs/2:fs/obj.N:fs/2 - fs/obj.N;
             else
                 disp('Not implemented yet')
@@ -86,8 +87,12 @@ classdef FourierSpectrum < handle
         function PSD = get.PowerSpectrum(obj)
             % The power spectrum is computed according to the energy for
             % each bin size $\frac{Fs}{N}$ 
-            PSD = abs((obj.FourierTransform.*conj(obj.FourierTransform))...
-                /obj.N);
+            PSD = (2*obj.FourierTransform.*conj(obj.FourierTransform))...
+                /(obj.N^2);
+        end
+        
+        function posFourier = getHalFourier(obj)
+            
         end
         
         function outSignal = normalizeSum(obj)
@@ -109,7 +114,7 @@ classdef FourierSpectrum < handle
         end
         
         function p = plotFrequency_dB(obj,varargin)
-            p = plot(obj.Fx,20*log10(obj.PowerSpectrum),varargin{:});
+            p = plot(obj.Fx,10*log10(obj.PowerSpectrum),varargin{:});
             ylabel('Power dB');xlabel('Frequency [Hz]')
             title('Power Spectrum')
         end
