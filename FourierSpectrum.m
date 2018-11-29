@@ -10,7 +10,7 @@ classdef FourierSpectrum < handle
         Fs
     end
     
-    methods
+    methods        
         % Class constructor
         function obj = FourierSpectrum(input_signal, fs)
             if isnumeric(input_signal)
@@ -31,7 +31,7 @@ classdef FourierSpectrum < handle
                 % Removal of the DC  (0 Hz) component
                 input_signal = input_signal - mean(input_signal);
                 % Amplitude normalization
-                input_signal = input_signal / max(abs(input_signal));
+                input_signal = input_signal / rms(input_signal);
                 % Determination for a sensible padding.
                 N1 = floor(log2(Ns));
                 N2 = nextpow2(Ns);
@@ -84,17 +84,44 @@ classdef FourierSpectrum < handle
             end
         end
         
+        %% GET functions
         function PSD = get.PowerSpectrum(obj)
             % The power spectrum is computed according to the energy for
             % each bin size $\frac{Fs}{N}$ 
-            PSD = (2*obj.FourierTransform.*conj(obj.FourierTransform))...
-                /(obj.N^2);
+            %PSD = (2*obj.FourierTransform.*conj(obj.FourierTransform))...
+            %    /(obj.N^2);
+            PSD = (1/(obj.Fs*obj.N))*abs(obj.FourierTransform).^2;
         end
         
+        function ph = get.Phase(obj)
+            ph = angle(obj.FourierTransform);
+        end
+        
+        function mg = get.Magnitude(obj)
+            mg = abs(obj.FourierTransform);
+        end
+        
+        %% Half signals
         function posFourier = getHalFourier(obj)
-            
+            posFourier = FourierSpectrum.getRightHalf(...
+                obj.FourierTransform);
+            posFourier(2:end) = 2 * posFourier(2:end);
         end
         
+        function posPower = getHalfPower(obj)
+            posPower = FourierSpectrum.getRightHalf(...
+                obj.PowerSpectrum);
+            posPower(2:end) = 2 * posPower(2:end);
+        end
+        
+        function halPh = getHalPhase(obj)
+            halPh = FourierSpectrum.getRightHalf(obj.Phase);
+        end
+        
+        function halFx = getHalFx(obj)
+            halFx = FourierSpectrum.getRightHalf(obj.Fx);
+        end
+        %% Normalization functions (obsolete)
         function outSignal = normalizeSum(obj)
             outSignal = obj.PowerSpectrum/sum(obj.PowerSpectrum);
         end
@@ -106,7 +133,7 @@ classdef FourierSpectrum < handle
         function outSignal = normalizeDeltaF(obj)
             outSignal = obj.PowerSpectrum/(obj.Fs/obj.N);
         end
-        
+        %% Plotting functions
         function p = plotFrequencyDomain(obj,varargin)
             p = plot(obj.Fx,obj.PowerSpectrum,varargin{:});
             ylabel('Power [\muV^2]');xlabel('Frequency [Hz]')
@@ -115,42 +142,30 @@ classdef FourierSpectrum < handle
         
         function p = plotFrequency_dB(obj,varargin)
             p = plot(obj.Fx,10*log10(obj.PowerSpectrum),varargin{:});
-            ylabel('Power dB');xlabel('Frequency [Hz]')
+            ylabel('dB');xlabel('Frequency [Hz]')
+            title('Power Spectrum')
+        end
+        
+        function p = plotHalfFrequencyDomain(obj,varargin)
+            p = plot(obj.getHalFx,obj.getHalfPower,varargin{:});
+            ylabel('Power [\muV^2]');xlabel('Frequency [Hz]')
+            title('Power Spectrum')
+        end
+        
+        function p = plotHalfFrequency_dB(obj,varargin)
+            p = plot(obj.getHalFx,10*log10(obj.getHalfPower),varargin{:});
+            ylabel('dB');xlabel('Frequency [Hz]')
             title('Power Spectrum')
         end
     end
+    methods (Static, Access = 'private')
+        function halfSignal = getRightHalf(wholeSignal)
+            N = length(wholeSignal);
+            if mod(N,2)
+                halfSignal = wholeSignal(ceil(N/2):end);
+            else
+                halfSignal = wholeSignal((N/2)+1:end);
+            end
+        end
+    end
 end
-
-%% 
-% function obj = FourierSpectrum(cw)
-% if nargin == 1 && isa(cw,'ContinuousWaveform')
-%     obj.Base2 = floor(log2(cw.NSamples));
-%     Lower2Pwr = 2^obj.Base2;
-%     win = blackmanharris(Lower2Pwr)';
-%     temp = cw.Data(1:Lower2Pwr);
-%     temp = win.*temp;
-%     obj.Spectrum = fftshift(fft(temp));
-%     obj.Fx = -cw.SamplingFreq/2:cw.SamplingFreq/Lower2Pwr:...
-%         (cw.SamplingFreq*(Lower2Pwr - 2))/(2*Lower2Pwr);
-% elseif isnumeric(cw)
-%     
-%     obj.Spectrum =
-%     
-% end
-% end
-% function magnitude = get.Magnitude(obj)
-% magnitude = 20*log10(abs(obj.Spectrum));
-% end
-% function angl = get.Angle(obj)
-% angl = unwrap(angle(obj.Spectrum));
-% end
-% function NumberOfSamples = get.Ns(obj)
-% NumberOfSamples = exp(obj.Base2);
-% end
-% function p = plot(obj,varargin)
-% figure;p(1) = subplot(2,1,1);plot(obj.Fx,obj.Magnitude,varargin{:});
-% title('Magnitude');xlabel('Frequency [Hz]');ylabel('dB')
-% p(2) = subplot(2,1,2);plot(obj.Fx,obj.Angle);
-% title('Angle');xlabel('Frequency [Hz]');ylabel('Angle [rad]')
-% linkaxes(p,'x');
-% end
