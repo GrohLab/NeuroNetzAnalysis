@@ -195,7 +195,9 @@ else
             invIdx = onIdx;
         end
         % Indexes considering the partial or complete step that falls into
-        % the considered segment.
+        % the considered segment: _onIdx_ & _offIdx_
+        % Indices considering the inclusion of the considered window into a
+        % lengthy pulse of the considered event: _invIdx_
         allIdx = find(onIdx | offIdx | invIdx);
         initStep = relTdx(onIdx,1) + prev + 1;
         if size(relTdx, 2) == 2
