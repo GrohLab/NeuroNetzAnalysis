@@ -54,6 +54,16 @@ classdef StepWaveform < DiscreteWaveform
                     else
                         rise = [1;rise];
                     end
+                elseif sum((rise - fall) > 0)
+                    if obj.Data(1)
+                        rise = [1;rise];
+                    end
+                    if obj.Data(end)
+                        fall = [fall;length(obj.Data)];
+                    end
+                else
+                    fprintf('Debugging necessary!!\n')
+                    fprintf('No different numbers, no positive ending, What happened?\n')
                 end
                 RaF = [rise,fall];
                 obj.Triggers = RaF;
