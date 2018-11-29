@@ -13,32 +13,24 @@ if nargin == 3
 elseif nargin == 4
     Nw = round(window_duration * sampling_frequency);
 end
-Nzp = 2^ceil(log2(Nw));
+fobj = FourierSpectrum(zeros(1,Nw,'single'),sampling_frequency);
+Nzp = fobj.N;
 NonOverWin = round(Nw * (1-overlap));
-disp(NonOverWin)
 lenImg = round(N/NonOverWin);
-SpectrumImage = zeros((Nzp/2),lenImg);
-
+SpectrumImage = zeros((Nzp/2),lenImg,'single');
 % MagnitudeImage = zeros((Nzp/2),lenImg);
 % AngleImage = MagnitudeImage;
 currentWindow = 1;
-cw = 1;
-tfWin = flattopwin(Nw,'symmetric')';
-% h = waitbar(0,'Computing the Sonogram...');
+h = waitbar(0,'Computing the Sonogram...');
 while currentWindow + Nw <= N
-    sigSeg = signal(currentWindow:currentWindow+Nw-1);
-    winSig = sigSeg .* tfWin;
-    zpSignal = padarray(winSig',(Nzp-Nw)/2)';
-    ftSigSeg = fft(zpSignal);
-    SpectrumImage(:,cw) = ftSigSeg(1:Nzp/2);
-%     MagnitudeImage(:,cw) = 20*log10(abs(halfFt))';
-%     AngleImage(:,cw) = unwrap(angle(halfFt))';
-    
+    sigSeg = csig(currentWindow:currentWindow+Nw-1);
+    fobj = FourierSpectrum(sigSeg,sampling_frequency);
+    SpectrumImage(:,cw) = fobj.getHalFourier;
     currentWindow = currentWindow + NonOverWin;
     cw = cw + 1;
-    % waitbar(currentWindow/N)
+    waitbar(currentWindow/N)
 end
-% close(h)
+close(h)
 tx = 0:NonOverWin/sampling_frequency:(NonOverWin*(lenImg-1))/sampling_frequency;
 fx = 0:sampling_frequency/(Nzp):(sampling_frequency*(Nzp-2))/(2*Nzp);
 sonoStruct = struct('SpectrumImage',SpectrumImage,...
