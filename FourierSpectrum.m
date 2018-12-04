@@ -91,10 +91,13 @@ classdef FourierSpectrum < handle
         %% GET functions
         function PSD = get.PowerSpectrum(obj)
             % The power spectrum is computed according to the energy for
-            % each bin size $\frac{Fs}{N}$ 
-            %PSD = (2*obj.FourierTransform.*conj(obj.FourierTransform))...
-            %    /(obj.N^2);
-            PSD = (1/(obj.Fs*obj.N))*abs(obj.FourierTransform).^2;
+            % each bin size $\frac{1}{Fs*N}$ 
+            try
+                gpuAux = gpuarray(obj.FourierTransform);
+                PSD = (1/(obj.Fs*obj.N))*abs(gpuAux).^2;
+            catch
+                PSD = (1/(obj.Fs*obj.N))*abs(obj.FourierTransform).^2;
+            end
         end
         
         function ph = get.Phase(obj)
