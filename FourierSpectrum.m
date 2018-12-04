@@ -70,8 +70,12 @@ classdef FourierSpectrum < handle
                 catch
                     disp('Not so much memory left! Using single samples')
                     win_signal = zeros(size(pad_signal),'single');
-                    for cs = 1:obj.N
+                    for cs = 1:obj.N-4
+                        % Vectorization of independent samples
                         win_signal(cs) = pad_signal(cs) * auxWin(cs);
+                        win_signal(cs+1) = pad_signal(cs+1) * auxWin(cs+1);
+                        win_signal(cs+2) = pad_signal(cs+2) * auxWin(cs+2);
+                        win_signal(cs+3) = pad_signal(cs+3) * auxWin(cs+3);
                     end
                 end
                 % Compute the Fourier Transformation of the _input_signal_
