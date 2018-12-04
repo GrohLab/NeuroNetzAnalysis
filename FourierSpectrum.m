@@ -64,11 +64,11 @@ classdef FourierSpectrum < handle
                     obj.N = Ns;
                 end
                 % Window the padded signal
+                auxWin = hann(obj.N)';
                 try
-                    win_signal = pad_signal .* hann(obj.N,'periodic')';
+                    win_signal = pad_signal .* auxWin;
                 catch
                     disp('Not so much memory left! Using single samples')
-                    auxWin = hann(obj.N);
                     win_signal = zeros(size(pad_signal),'single');
                     for cs = 1:obj.N
                         win_signal(cs) = pad_signal(cs) * auxWin(cs);
