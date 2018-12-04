@@ -7,6 +7,7 @@ classdef FilesCycler
     
     properties
         Directory char
+        Function function_handler
     end
     properties (SetAccess = 'private')
         FileStructure
