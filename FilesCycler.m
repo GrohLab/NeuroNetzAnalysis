@@ -14,16 +14,40 @@ classdef FilesCycler
     end
     
     methods
-        function obj = untitled3(inputArg1,inputArg2)
-            %UNTITLED3 Construct an instance of this class
+        function obj = FilesCycler(ParentDir,FunctionHandler)
+            %FILESCYCLER Construct an instance of this class
             %   Detailed explanation goes here
-            obj.Property1 = inputArg1 + inputArg2;
+            if exist('ParentDir','var') && exist(ParentDir,'dir')
+                obj.Directory = ParentDir;
+            else
+                fprintf('Invalid directory. Object not created!\n')
+                delete(obj)
+                return
+            end
+            if exist('FunctionHandler','var') && isa(FunctionHandler,'function_handler')
+                obj.Function = FunctionHandler;
+            else
+                fprintf('Invalid function handler. Try setting it up correctly\n')
+            end
         end
         
-        function outputArg = method1(obj,inputArg)
+        function iok = validateFiles(obj,fileIdentifier)
+            fileStruct = obj.FileStructure;
+            
+        end
+        
+        function fileStruct = get.FileStructure(obj)
             %METHOD1 Summary of this method goes here
             %   Detailed explanation goes here
-            outputArg = obj.Property1 + inputArg;
+            currentContents = dir(obj.Directory);
+            for cf = 1:
+            
+        end
+    end
+    
+    methods (Static,Access = 'private')
+        function recursiveAccess(directory,fileID)
+            
         end
     end
 end
