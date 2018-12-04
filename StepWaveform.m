@@ -54,6 +54,22 @@ classdef StepWaveform < DiscreteWaveform
                     else
                         rise = [1;rise];
                     end
+                elseif sum((rise - fall) > 0)
+                    if obj.Data(1)
+                        rise = [1;rise];
+                    end
+                    if obj.Data(end)
+                        fall = [fall;length(obj.Data)];
+                    end
+                elseif isempty(rise) && isempty(fall)
+                    if sum(obj.Data)
+                        % All data is a constant 1. Otherwise, the data
+                        % contains no steps.
+                        rise = 1;fall = obj.NSamples;
+                    else
+                        warning('No steps found in these data!')
+                        fprintf('Returning empty variables...\n')
+                    end
                 end
                 RaF = [rise,fall];
                 obj.Triggers = RaF;

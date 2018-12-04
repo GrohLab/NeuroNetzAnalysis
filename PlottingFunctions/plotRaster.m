@@ -1,5 +1,5 @@
-function [ax] =...
-    plotRaster(relativeSpikeTimes, timeLapse, fs, figTitle, IDe, ax)
+function [fig] =...
+    plotRaster(relativeSpikeTimes, timeLapse, fs, figTitle, IDe, fig)
 %UNTITLED6 Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -17,11 +17,13 @@ if ~exist('figTitle','var')
 end
 plotTitle = ['Raster Plot ', figTitle, ' ',num2str(Na),' trials'];
 AX_FLAG = true;
-if ~exist('ax','var') || isempty(ax)
-    figure('Name',plotTitle,'Color',[1,1,1]);
+if ~exist('fig','var') || isempty(fig)
+    fig = figure();
     AX_FLAG = false;
 end
-cmap = [0.01,0.01,0.01;jet(Ne - 1)];
+ax = get(fig,'Children');
+set(fig,'Name',plotTitle,'Color',[1,1,1])
+cmap = [0.1,0.01,0.01;jet(Ne - 1)];
 FIRST_FLAG = true;
 yTickLabel = cell(1,Ne);
 for cse = 1:Ne
@@ -30,26 +32,25 @@ for cse = 1:Ne
     for cap = Na:-1:1
         % For each alignment point
         if ~isempty(relativeSpikeTimes{cse,cap})
-            xspks = tx(relativeSpikeTimes{cse,cap} + idxOffset(1) + 1);
+            xspks = tx(uint64(relativeSpikeTimes{cse,cap} + idxOffset(1) + 1));
             lvl = (cse - 1)*Na + cap;
-            if AX_FLAG
-                plot(ax,xspks,lvl*ones(1,numel(xspks)),...
-                    'LineStyle','none','Marker','.',...
-                    'MarkerFaceColor',cmap(cse,:),'MarkerSize',2)
-            else
-                plot(xspks,lvl*ones(1,numel(xspks)),...
-                    'LineStyle','none','Marker','.',...
-                    'MarkerFaceColor',cmap(cse,:),'MarkerSize',2,...
-                    'Color',cmap(cse,:))
-            end
             if FIRST_FLAG
-                if AX_FLAG
-                    hold(ax,'on')
-                else
-                    hold on
-                end
+                %if AX_FLAG
+                %    hold on
+                %else
+                %    hold on
+                %end
+                set(ax,'NextPlot','add')
                 FIRST_FLAG = false;
             end
+
+                pl = plot(xspks,lvl*ones(1,numel(xspks)));
+                pl.LineStyle = 'none';
+                pl.Marker = '.';
+                pl.MarkerFaceColor = cmap(cse,:);
+                pl.MarkerEdgeColor = cmap(cse,:);
+                pl.MarkerSize = 4;
+
         end
     end
 end
@@ -61,7 +62,7 @@ if AX_FLAG
     xlabel(ax,'Time [s]')
     title(ax,[figTitle, ' ',num2str(Na),' trials'],'Interpreter','none')
 else
-    ax = gca;
+    fig = gca;
     set(ax,'Box','off','YTick',(0:Ne)*Na + Na/2,'YTickLabel',yTickLabel,...
         'YTickLabelRotation',90)
     xlabel('Time [s]')
