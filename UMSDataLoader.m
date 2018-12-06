@@ -11,10 +11,10 @@ classdef UMSDataLoader < handle
         % Detecting parameters
         DetectMethod char = 'auto';
         Thresh (1,1) double= 3.9;
-        Shadow (1,1) double= 0.9;            % ms, enforced dead region after each spike
-        RefractoryPeriod (1,1) double= 2.5;  % ms, refractory period (for calculation refractory period violations)
+        Shadow (1,1) double= 0.9;             % ms, enforced dead region after each spike
+        RefractoryPeriod (1,1) double= 2.5;   % ms, refractory period (for calculation refractory period violations)
         % Alignment parameters
-        WindowSize (1,1) double = 1.5;       % ms, width of a spike
+        WindowSize (1,1) double = 1.5;        % ms, width of a spike
         CrossTime (1,1) double = 0.6;         % ms, alignment point for peak of waveform
         MaxJitter (1,1) double = 0.6;         % ms, width of window used to detect peak after threshold crossing
         % sorting parameters
