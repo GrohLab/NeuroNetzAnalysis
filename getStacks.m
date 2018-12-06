@@ -104,7 +104,7 @@ if Ns
     prevSamplesLFP = ceil(timeSpan(1) * fsLFP);
     postSamplesLFP = ceil(timeSpan(2) * fsLFP);
     NtLFP = prevSamplesLFP + postSamplesLFP + 1;
-    continuouStack = single(zeros(Ns,NtLFP,Na));
+    continuouStack = zeros(Ns,NtLFP,Na,'single');
 end
 %% Cutting the events into the desired segments.
 for cap = 1:Na
