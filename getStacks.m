@@ -134,7 +134,7 @@ for cap = 1:Na
         fprintf('%d samples required after the signal. Omitting...\n',...
             segmIdxs(2))
         segmIdxs(segmIdxs > length(spT)) = length(spT);
-        spSeg(1:Nt - diff(segmIdxs)) = spT(segmIdxs(1):segmIdxs(2));
+        spSeg(1:diff(segmIdxs)+1) = spT(segmIdxs(1):segmIdxs(2));
     end
     discreteStack(2,:,cap) = spSeg;
     % Find 'overlapping' events in time of interest
