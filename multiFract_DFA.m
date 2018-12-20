@@ -17,7 +17,9 @@ function [profile,...   Auxiliary output
 % Determining the profile as in Kantelhardt et al. 2002
 profile = cumsum(signal - mean(signal));
 % profile = cumsum(profile - mean(profile));
-
+Fq = zeros(length(q),length(scale));
+qbs = cell(size(Fq));
+bs = cell(1,length(scale));
 for s = 1:length(scale)
     nseg(s) = floor(length(profile)/scale(s));
     for v=1:nseg(s)
