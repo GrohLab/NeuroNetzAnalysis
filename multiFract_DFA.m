@@ -35,15 +35,15 @@ for s = 1:length(scale)
     % Correcting the variations for q-order zero.
     Fq(q==0,s)=exp(0.5*mean(log(bs{s}.^2)));
 end
-
+Hq = zeros(1,length(q),'single');
 for cq = 1:length(q)
     [~,ft] = detrend_profile(1,log2(scale),log2(Fq(cq,:)));
     Hq(cq) = ft(1);
-    qrL = log2(scale).*Hq(cq) + ft(2);
+    % qrL = log2(scale).*Hq(cq) + ft(2);
 end
 if length(q)~=1
     tq = (Hq.*q) - 1;                   % Scaling exponent
-    hq = diff(tq)./(q(2)-q(1));         % Singularity strength / Hölder exp.
+    hq = diff(tq)./(q(2)-q(1));         % Singularity strength / H?lder exp.
     Dq =(q(1:end-1).*hq)-tq(1:end-1);   % Dimension of subset characterized by hq
 else
     tq = 1;
