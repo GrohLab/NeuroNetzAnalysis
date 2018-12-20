@@ -23,6 +23,7 @@ m = 1;
 idxs = m:K:(m + round((N-m)/K)*K);
 x_mk = zeros(K,length(idxs));
 n_orm = zeros(K,1);
+L_m = zeros(K,1);
 for m=1:K
     if (m + round((N-m)/K)*K)>N
         idxs = m:K:N;
