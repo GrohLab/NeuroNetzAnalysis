@@ -21,9 +21,9 @@ Fq = zeros(length(q),length(scale));
 qbs = cell(size(Fq));
 bs = cell(1,length(scale));
 for s = 1:length(scale)
-    nseg(s) = floor(length(profile)/scale(s));
-    for v=1:nseg(s)
-        idxs = (((v-1) * scale(s)) + 1):v*scale(s);
+    nseg = floor(length(profile)/scale(s));
+    for v=1:nseg
+        idxs = uint32((((v-1) * round(scale(s))) + 1):v*scale(s));
         [polft,~]=detrend_profile(m,ts(idxs),profile(idxs));
         bs{s}(v) = sqrt(mean((profile(idxs)-polft).^2));
     end
