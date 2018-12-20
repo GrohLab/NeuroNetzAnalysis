@@ -16,7 +16,7 @@ function [Ht,...                Time depending Hurst exponents
 % Determining the profile as in Kantelhardt et al. 2002 (Integrating
 % without the mean).
 
-display('Computing monofractal analysis')
+disp('Computing monofractal analysis')
 %% Monofractal analysis with q = 0
 [profile,~,~,~,~,Fq0] = multiFract_DFA(signal,ts,scale_b,0,m);
 
