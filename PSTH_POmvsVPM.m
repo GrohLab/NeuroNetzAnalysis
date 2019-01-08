@@ -55,7 +55,7 @@ for cf = 1:numel(expFiles)
             if exist('UMSSpikeStruct','var')
                 clearvars UMSSpikeStruct
             end
-            load(fileName,'UMSSpikeStruct') % Removed a 't' to create an error
+            load(fileName,'UMSSpikeStruct') 
             % spT = UMSSpikeStruct.spiketimes; % Indexes
             UMSObject = UMSDataLoader();
             UMSObject.changeUMSStructure(UMSSpikeStruct)
