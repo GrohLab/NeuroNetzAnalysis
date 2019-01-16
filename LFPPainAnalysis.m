@@ -12,6 +12,9 @@ figure('Name','CFA power spectrum','color',[1,1,1]);
 %% Folder processing
 inDirs = dir(directory);
 ccon = 1;
+ovrlp = 0.95; % percentage
+winSz = 5; % seconds
+
 while ccon <= numel(inDirs)
     if inDirs(ccon).name == "." || inDirs(ccon).name == ".." || ...
             ~inDirs(ccon).isdir
@@ -20,8 +23,13 @@ while ccon <= numel(inDirs)
         continue;
     end
     fprintf('Processing %s folder...\n',inDirs(ccon).name)
+    conNames(ccon) = {inDirs(ccon).name};
     lfpStack = [];
     dirFiles = dir(fullfile(inDirs(ccon).folder,inDirs(ccon).name,'*analysis.mat'));
+    sponSpect = [];
+    mecSpect = [];
+    sponITPC = [];
+    mecITPC = [];
     for cf = 1:length(dirFiles)
         %% Loading and a small preprocessing
         load(fullfile(dirFiles(cf).folder,dirFiles(cf).name),...
@@ -29,28 +37,25 @@ while ccon <= numel(inDirs)
         fs = EEG.header.SamplingFrequency;
         desFs = 1e3;
         lfpAux = EEG.data;
-        if ~isa(lfpAux,'double')
-            lfpAux = double(lfpAux);
-        end
-        if iscolumn(lfpAux)
-            lfpAux = lfpAux';
+        if ~isa(lfpAux,'double') && iscolumn(lfpAux)
+            lfpAux = double(lfpAux)';
         end
         %% Resampling the original signal
-        N = length(lfpAux);
-        tx = (0:N-1)*(1/fs);
+        N_orig = length(lfpAux);
+        tx = (0:N_orig-1)*(1/fs);
         desTx = 0:1/desFs:tx(end);
         lfpTS = timeseries(lfpAux,tx);
         lfpTS = lfpTS.resample(desTx);
         lfpAux = squeeze(lfpTS.Data)';
         lfpAux = brainwaves(lfpAux,desFs,{'alpha',1e-2,200});
         lfpAux = iir50NotchFilter(lfpAux,desFs);
-        N = length(lfpAux);
+        N_subsamp = length(lfpAux);
         
         %% Transforming the triggers' time points
         stmSub = [];
         for cc = 1:numel(Conditions)
             trgSub = Conditions{cc}.Triggers;
-            trgSub = round(trgSub .* (fs/desFs));
+            trgSub = round(trgSub .* (fs\desFs));
             
             disp(Conditions{cc}.name)
             if isrow(trgSub)
@@ -61,15 +66,35 @@ while ccon <= numel(inDirs)
                 mecSub = [trgSub, trgSub+ round(5.35*desFs)];
             end
         end
+        
         stmSub = round(stmSub);
         mecSub = round(mecSub);
+        
         %% Get Stacks
         [~,stackAux] =...
-            getStacks(false(1,length(lfpAux)),...
+            getStacks(false(1,N_subsamp),...
             mecSub,'on',[1,6],desFs,desFs,[],lfpAux);
         lfpStack = cat(3,lfpStack,zeros(1,size(stackAux,2),1),stackAux);
+        %% Trying the sonogram once again
+        sonoCorr = (winSz*desFs)/2;
+        stmIdx = StepWaveform.subs2idx(stmSub - sonoCorr,N_subsamp);
+        spnIdx = ~stmIdx;
+        mecIdx = StepWaveform.subs2idx(mecSub - sonoCorr,N_subsamp);
+        sonoStruct = sonogram(lfpAux,desFs,ovrlp,winSz);
+        [auxSpect1,auxITPC1] = getMeanSpectrumFromSegments(spnIdx, sonoStruct, desFs); 
+        [auxSpect2,auxITPC2] = getMeanSpectrumFromSegments(mecIdx, sonoStruct, desFs);
+        sponSpect = [sponSpect;auxSpect1];
+        sponITPC = [sponITPC;auxITPC1];
+        mecSpect = [mecSpect;auxSpect2];
+        mecITPC = [mecITPC;auxITPC2];
+        
     end
+    %% Save results
     lfpConditionsStack(ccon) = {lfpStack};
+    lfpFrequencyStack(ccon,1:2) = {sponSpect,sponITPC};
+    lfpFrequencyStack(ccon,3:4) = {mecSpect,mecITPC};
+    
+    
     ccon = ccon + 1;
 end
 
@@ -86,7 +111,7 @@ for cf = 1:length(dirFiles)
     lfpAux = iir50NotchFilter(lfpAux,fs);
     sonoAux = sonogram(lfpAux,fs,0.9,2.5);
     
-    N = length(lfpAux);
+    N_orig = length(lfpAux);
     stmSub = [];
     for cc = 1:numel(Conditions)
         trgSub = Conditions{cc}.Triggers;
@@ -102,8 +127,8 @@ for cf = 1:length(dirFiles)
     end
     stmSub = round(stmSub);
     mecSub = round(mecSub);
-    stimTrace = false(1,N);
-    mechTrace = false(1,N);
+    stimTrace = false(1,N_orig);
+    mechTrace = false(1,N_orig);
     for ct = 1:size(stmSub)
         stimTrace(stmSub(ct,1):stmSub(ct,2)) = true;
     end
