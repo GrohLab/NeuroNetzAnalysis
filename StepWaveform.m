@@ -96,5 +96,13 @@ classdef StepWaveform < DiscreteWaveform
             end
         end
     end
+    methods (Static, Access = 'public')
+        function logicalTrace = subs2idx(subs,N)
+            logicalTrace = false(1,N);
+            for cmt = 1:size(subs,1)
+                logicalTrace(subs(cmt,1):subs(cmt,2)) = true;
+            end
+        end
+    end
 end
 
