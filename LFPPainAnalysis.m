@@ -10,6 +10,7 @@ mechSub=[];
 figure('Name','CFA power spectrum','color',[1,1,1]);
 % function outputArg1 = processPainLFP(directory)
 %% Folder processing
+directory = 'E:\LFP_Frequency_Analysis\Juxta\';
 inDirs = dir(directory);
 ccon = 1;
 ovrlp = 0.95; % percentage
