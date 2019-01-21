@@ -12,7 +12,7 @@ classdef StackInterface
     end
     
     methods
-        function obj = untitled(inputArg1,inputArg2)
+        function obj = StackInterface(inputArg1,inputArg2)
             %UNTITLED Construct an instance of this class
             %   Detailed explanation goes here
             obj.Property1 = inputArg1 + inputArg2;
