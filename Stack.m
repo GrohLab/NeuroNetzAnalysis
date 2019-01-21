@@ -1,10 +1,12 @@
 classdef Stack
-    %UNTITLED Summary of this class goes here
+    %STACK interface to develop the concrete discrete and continuous
+    %stacks.
     %   Detailed explanation goes here
     
     properties
         Trigger
-        
+        ViewingWindow (1,2)
+        Signals
     end
     
     methods
