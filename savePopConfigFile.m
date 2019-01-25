@@ -1,7 +1,9 @@
 function [iok] =...
     savePopConfigFile(conFiNa, configStruct)
-%UNTITLED2 Summary of this function goes here
-%   Detailed explanation goes here
+%SAVEPOPCONFIGFILE saves the configuration file for a population analysis.
+%   The configuration structure in _configStruct_ is created at the
+%   beguinning of the analysis if there's a new configuration. There should
+%   be a configuration history to easily select a previous configuration.
 if exist(conFiNa,'file')
     warning('The file exists!')
     rwt = questdlg(sprintf('Rewrite? (%s)',conFiNa),'File conflict','Yes',...
