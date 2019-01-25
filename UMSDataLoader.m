@@ -276,7 +276,7 @@ classdef UMSDataLoader < handle
                         ' new order has %d numbers.'], obj.Nch,...
                         length(newChanOrd))
                     yn = input('Would you like to continue?','s');
-                    if yn == 'y' || yn == 'Y'
+                    if yn == 'y' || yn == 'Y' || strcmpi(yn,'yes')
                         obj.PolyChanOrder = newChanOrd;
                         disp(obj)
                     end
