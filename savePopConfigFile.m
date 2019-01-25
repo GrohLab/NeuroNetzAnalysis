@@ -17,14 +17,15 @@ end
 % Write the POPULATION configuration file.
 fID = fopen(conFiNa,'w'); % Overwrite any existing file
 % Create a "header" (only date and time)
-fprintf(fID,'date:\t%s',datetime('now'));
+fprintf(fID,'date:\t%s\n',datetime('now'));
 writeNSignalNames('cellType(s):',fID,configStruct,'CellType')
 % Viewing windows
-fprintf(fID,'viewWind:\t%f\n',configStruct.ViewWindow);
+fprintf(fID,'viewWind:\t%f %f\n',configStruct.ViewWindow(1),...
+    configStruct.ViewWindow(2));
 % Binning time
 fprintf(fID,'binSz:\t%f\n',configStruct.BinSize);
 % Trigger name and considered edge
-fprintf(fID,'t:\t%s\t%d',configStruct.Trigger.Name,...
+fprintf(fID,'t:\t%s %d\n',configStruct.Trigger.Name,...
     configStruct.Trigger.Edge);
 % Exclude signals
 writeNSignalNames('e:',fID,configStruct,'Exclude')
@@ -35,16 +36,17 @@ fprintf(fID,'w:');
 if isempty(configStruct.ConditionWindow)
     fprintf(fID,'\tnone\t%d %d\n',0,0);
 else
-    for cws = 1:length(configStruct.ConditionWindow.Names)
-        fprintf(fID,'\t%s\t%f',configStruct.ConditionWindow.Names{cws},...
-            configStruct.ConditionWindow.ConditionWindow);
+    for cws = 1:length(configStruct.ConditionWindow)
+        fprintf(fID,'\t%s\t%f %f',configStruct.ConditionWindow(cws).Name,...
+            configStruct.ConditionWindow(cws).Window(cws,1),...
+            configStruct.ConditionWindow(cws).Window(cws,2));
     end
     fprintf(fID,'\n');
 end
 iok = fclose(fID);
 if ~iok
     fprintf('File successfully written!\n')
-    fprintf('%s',conFiNa)
+    fprintf('%s\n',conFiNa)
 else
     fprintf('Something went wrong writing the file...\n')
     fprintf('It is possible that it contains no data...\n')
