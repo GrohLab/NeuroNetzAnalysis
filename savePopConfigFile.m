@@ -60,10 +60,3 @@ for cs = 1:length(cStr.(fiNa))
 end
 fprintf(fID,'\n');
 end
-
-
-% fprintf(fID,'cellType(s):');
-% for cct = 1:length(configStruct.CellType)
-%     fprintf(fID,'\t%s',configStruct.CellType{cct});
-% end
-% fprintf(fID,'\n');
