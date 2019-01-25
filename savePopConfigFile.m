@@ -4,7 +4,8 @@ function [iok] =...
 %   Detailed explanation goes here
 if exist(conFiNa,'file')
     warning('The file exists!')
-    rwt = inputdlg(sprintf('Rewrite? (%s)',conFiNa),'File conflict');
+    rwt = questdlg(sprintf('Rewrite? (%s)',conFiNa),'File conflict','Yes',...
+        'No','No');
     if strcmp(rwt,'No')
         iok = 1;
         fprintf('File not written.\n')
