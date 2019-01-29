@@ -57,6 +57,7 @@ classdef UMSDataLoader < handle
                 end
                 data = {arg1};
                 if exist('arg2','var') && isnumeric(arg2)
+                    obj.SamplingFrequency = arg2;
                     fs = arg2;
                 end
                 chanReadOut = 1;
