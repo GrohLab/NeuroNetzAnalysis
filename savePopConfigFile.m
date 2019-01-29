@@ -4,6 +4,7 @@ function [iok] =...
 %   The configuration structure in _configStruct_ is created at the
 %   beguinning of the analysis if there's a new configuration. There should
 %   be a configuration history to easily select a previous configuration.
+%   An important command is uiputfile!
 if exist(conFiNa,'file')
     warning('The file exists!')
     rwt = questdlg(sprintf('Rewrite? (%s)',conFiNa),'File conflict','Yes',...
