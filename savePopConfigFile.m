@@ -39,8 +39,8 @@ if isempty(configStruct.ConditionWindow)
 else
     for cws = 1:length(configStruct.ConditionWindow)
         fprintf(fID,'\t%s\t%f %f',configStruct.ConditionWindow(cws).Name,...
-            configStruct.ConditionWindow(cws).Window(cws,1),...
-            configStruct.ConditionWindow(cws).Window(cws,2));
+            configStruct.ConditionWindow(cws).Window(1),...
+            configStruct.ConditionWindow(cws).Window(2));
     end
     fprintf(fID,'\n');
 end
