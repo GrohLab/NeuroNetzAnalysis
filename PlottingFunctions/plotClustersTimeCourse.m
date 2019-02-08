@@ -10,7 +10,7 @@ if ~exist('Conditions','var') || ~exist('Triggers','var')
         fprintf('File %s loaded',fileNames.name)
     end
 end
-
+%% 
 Spikes={};
 Names={};
 
