@@ -98,9 +98,18 @@ classdef StepWaveform < DiscreteWaveform
     end
     methods (Static, Access = 'public')
         function logicalTrace = subs2idx(subs,N)
-            logicalTrace = false(1,N);
-            for cmt = 1:size(subs,1)
-                logicalTrace(subs(cmt,1):subs(cmt,2)) = true;
+            if size(subs,2) == 2
+                fprintf('Time windows\n')
+                logicalTrace = false(1,N);
+                for cmt = 1:size(subs,1)
+                    logicalTrace(subs(cmt,1):subs(cmt,2)) = true;
+                end
+            else
+                fprintf('Time points (i.e. spikes)\n')
+                logicalTrace = false(size(subs,1),N);
+                for cmt = 1:size(subs,1)
+                    logicalTrace(cmt,subs{cmt}) = true;
+                end
             end
         end
     end
