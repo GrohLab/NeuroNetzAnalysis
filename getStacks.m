@@ -85,6 +85,12 @@ fsConv = fsLFP/fs;
 % Signal validation
 Ns = numel(varargin);
 if Ns
+    if Ns == 1
+        [Nrow, Ncol] = size(varargin{1});
+        if (Nrow ~= 1 && Ncol > Nrow) || (Ncol ~= 1 && Nrow > Ncol)
+            Ns = Nrow * (Nrow < Ncol) + Ncol * (Ncol < Nrow);
+        end
+    end
     signalCheck = cellfun(@isnumeric,varargin);
     signalCheck2 = cellfun(@length,varargin);
     if sum(signalCheck) ~= Ns
@@ -241,7 +247,14 @@ end
 end
 
 function contSigSeg = getContinuousSignalSegment(signalCell, Idxs, N, Nt)
-contSigSeg = zeros(numel(signalCell),Nt,'single');
+Ns = numel(signalCell);
+if Ns == 1
+    [Nrow, Ncol] = size(signalCell{1});
+    if (Nrow ~= 1 && Ncol > Nrow) || (Ncol ~= 1 && Nrow > Ncol)
+        Ns = Nrow * (Nrow < Ncol) + Ncol * (Ncol < Nrow);
+    end
+end
+contSigSeg = zeros(Ns,Nt,'single');
 if Idxs(1) >= 1 && Idxs(2) <= N
     signalSegments = getSignalSegments(signalCell, Idxs);
     contSigSeg = single(cell2mat(signalSegments'));
@@ -257,25 +270,34 @@ end
 end
 
 function sigSeg = getSignalSegments(signalCell,Idxs)
+Ns = numel(signalCell);
+if Ns == 1
+    [Nrow, Ncol] = size(signalCell{1});
+    if (Nrow ~= 1 && Ncol > Nrow) || (Ncol ~= 1 && Nrow > Ncol)
+        Ns = Nrow * (Nrow < Ncol) + Ncol * (Ncol < Nrow);
+    end
+end
 try
     sigSeg =...
         cellfun(...
-        @(x) x(round((Idxs(1):Idxs(2)))),...
+        @(x) x(:,round((Idxs(1):Idxs(2)))),...
         signalCell, 'UniformOutput', false);
 catch ME
     disp(ME.getReport)
     fprintf('Very unlikely case: signals with different length\n')
     fprintf('Worth debugging!\n')
 end
-transpSign = cellfun(@isrow,sigSeg);
-if sum(~transpSign)
-    try
-        sigSeg(~transpSign) =...
-            {sigSeg{~transpSign}'};
-    catch
-        auxSegm = cellfun(@transpose,sigSeg(~transpSign),...
-            'UniformOutput',false);
-        sigSeg(~transpSign) = auxSegm;
+if Ns == 1
+    transpSign = cellfun(@isrow,sigSeg);
+    if sum(~transpSign)
+        try
+            sigSeg(~transpSign) =...
+                {sigSeg{~transpSign}'};
+        catch
+            auxSegm = cellfun(@transpose,sigSeg(~transpSign),...
+                'UniformOutput',false);
+            sigSeg(~transpSign) = auxSegm;
+        end
     end
 end
 end
