@@ -22,7 +22,7 @@ tmSub = round(duration * dFs);
 for c = 1:Nch
     tick(c) = offset;
     plot(timeS(1:tmSub),...
-        scale*EEG(c,1:tmSub)+offset,'b')
+        scale*EEG(c,1:tmSub)+offset,'Color',repmat(0.8,1,3))
     offset = offset-step;
 end
 axis([0, timeS(tmSub),...
