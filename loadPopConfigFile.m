@@ -4,7 +4,7 @@ function [configStruct] = loadPopConfigFile(conFiNa)
 %accepts it.
 %   The output structure contains all the information necessary to perform
 %   a population analysis. The validation of the file ending should be
-%   performed before entering the 
+%   performed before entering the stacking process. 
 if exist(conFiNa,'file')
     fID = fopen(conFiNa,'r');
     while ~feof(fID)
@@ -15,6 +15,11 @@ if exist(conFiNa,'file')
                 dt = strsplit(tsl{2},' ');
                 fprintf('Analysis performed the %s at %s\n',dt{1},dt{2})
             case 'cellType(s):'
+                % Early bug: If the user select a single file, the cell
+                % type will not be saved in the corresponding field and the
+                % loading process won't know which file to process.
+                % However, if the user selects a single file, then the
+                % populationStack is the wrong function to call.
                 Nct = length(tsl);
                 configStruct.CellType = tsl(2:Nct)';
             case 'viewWind:'
