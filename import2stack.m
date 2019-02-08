@@ -1,5 +1,5 @@
 function iOk = import2stack(EphysPath)
-%IMPORT2STACK uses the file system from Anton to create a single
+%IMPORT2STACK uses the file system from Toni to create a single
 %*analysis.mat file.
 %   The function accepts the path to the file system and creates the
 %   non-existent *analysis.mat files. 
