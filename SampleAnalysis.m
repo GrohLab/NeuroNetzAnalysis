@@ -73,7 +73,7 @@ bads=[];
 
 
 %% looking at collected data
-
+fs = Fs;
 close all
 for I=[1:4]
     ppms=fs/1000;
