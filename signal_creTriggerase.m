@@ -95,12 +95,33 @@ end
 contEvents = cat(1,LFP.data,WHI);
 conIDs = {'LFP','Whisking'};
 
-%% Construct stacks
-% Usage of many external functions. 
+%% Construct stacks: Initialization
+%   Preallocation of the discrete stack:
+timeSpan = configStruct.ViewWindow;
+prevSamples = ceil(timeSpan(1) * fs(1));
+postSamples = ceil(timeSpan(2) * fs(1));
+% Total number of samples per trial
+Nt = prevSamples + postSamples + 1;
+% Total number of discrete conditioning variables
+Ne = size(discEvents,1);
+% Total number of trigger points
+Na = size(tSubs,1);
+discreteStack = false(Ne,Nt,Na);
+
+%   Preallocation of the continuous stack:
+prevSamplesC = ceil(timeSpan(1) * fs(2));
+postSamplesC = ceil(timeSpan(2) * fs(2));
+% Number of time points
+NtC = prevSamplesC + postSamplesC + 1;
+% Total number of continuous conditioning variables.
+NeC = size(contEvents,1);
+continuouStack = zeros(NeC,NtC,Na);
+
+%% Construct stacks: cre_Triggerase
+
+for cap = 1:size(tSubs,1)
+    
+end
 
 
-
-
-discreteStack = configStruct;
-continuouStack = analysisFilePath;
 end
