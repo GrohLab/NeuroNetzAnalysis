@@ -106,9 +106,19 @@ classdef StepWaveform < DiscreteWaveform
                 end
             else
                 fprintf('Time points (i.e. spikes)\n')
-                logicalTrace = false(size(subs,1),N);
-                for cmt = 1:size(subs,1)
-                    logicalTrace(cmt,subs{cmt}) = true;
+                [Nr, Nc] = size(subs);
+                logicalTrace = false(Nr * (Nr < Nc) + Nc * (Nc < Nr),...
+                    N);
+                subsClass = class(subs);
+                switch subsClass
+                    case 'cell'
+                        for cmt = 1:size(subs,1)
+                            logicalTrace(cmt,subs{cmt}) = true;
+                        end
+                    case {'single','double'}
+                        logicalTrace(1,subs) = true;
+                    otherwise
+                        fprintf('Case not yet implemented...\n')
                 end
             end
         end
