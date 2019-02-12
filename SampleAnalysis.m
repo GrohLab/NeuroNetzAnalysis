@@ -3,9 +3,10 @@
 % The clearvars command is commented to avoid erasing the information
 % extracted from the smrx file through the UMS_life_script.mlx
 % clearvars
-homedir='E:\16 channel\M16_C2_Mech+L6_4mW';
+% homedir='F:\Experiments_2018\27_12_2018\';
+homedir='E:\Data\';
 cd(homedir)
-fname = 'M16_C2_Mech+L6_4mW'; 
+fname = 'M47_C2_L6Mech+L61mW'; 
 load([fname,'_all_channels.mat'])
 load([fname,'analysis.mat'],'Conditions','Triggers')
 try
@@ -50,7 +51,7 @@ end
 %% Possible artifacts (is laser evoking a response or an optoelectric artifact?)
 
 %bads=[1 2 3 14 6]  %1 2 3 14 are light artifacts
-bads=[18,16,14,11,3,2,17];
+bads=[];
 noresponse=[];
 bads=[bads noresponse];
 %bads=[]; %uncomment this to have bads empty
@@ -63,7 +64,7 @@ goods=setdiff(goods,bads);
 %% Let us see if the laser evokes a neural response.
 %use these two lines to look at hand-defined lasers response
 
-goods=[1,3,9,10,14,27,28,42,45,50,51,23,11]; %fill in hand-selected channels here!
+goods=[]; %fill in hand-selected channels here!
 bads=[];
 
 %Spikes=Spikes(goods);
@@ -178,7 +179,7 @@ plotRaster = true; % No raster plot in the figures!!
 %close all
 for i=1:numel(Spikes)
     if ~ismember(i,bads)
-        for I=4 %pick out conditions to look at
+        for I=3 %pick out conditions to look at
             ppms=fs/1000;
             spikes=(Spikes{i})*1000*ppms; %spikes back in samples
             name=Names{i};
@@ -318,19 +319,27 @@ colors=cmap(1:n:end,:);
 %% plot it all
 figure('Color',[1,1,1])
 yUpLimit = max(cell2mat(cellfun(@(x) (cellfun(@max,x(end),'UniformOutput',false)),YSs)));
+Ncl = numel(SPIKES);
+
 for ii=1:4
-    subplot(6,4,[ii, ii+4, ii+8])
-    
+    auxAx = subplot(6,4,[ii, ii+4, ii+8]);
+    Nt = numel(Conditions{ii}.Triggers);
     for j=1:numel(SPIKESs{ii})
+        
         xs=SPIKESs{ii}{j}/ppms;
         ys=YSs{ii}{j}
         plot(xs,ys,'.','color',colors(j,:),'markersize',10)
         hold on
     end
+    yticks = ((1:Ncl) - 0.5) * Nt;
+    set(auxAx,'YTick',yticks,'YTickLabel',1:Ncl);ylabel(...
+        sprintf('Clusters_{(t = %d)}',Nt))
+    
     % ylabel 'trials/neuron'
     box off
     xlim([min(bins) max(bins)])
     ylim([0,yUpLimit])
+    
 end
 
 
@@ -339,16 +348,26 @@ titles={'mechanical',...
     'mechanical + 1 Hz L6',...
     'mechanical + 10 Hz L6',...
     '10 Hz L6 control'};
+yLimit = max(H(:)) * 1.05;
+load('M47_C2_L6Mech+L61mW.mat','chan21')
+[~,cStack] =...
+    getStacks(false(1,length(chan21)),...
+    Conditions{1}.Triggers,'on',[-min(bins),max(bins)]*1e-3,...
+    fs,fs,[],chan21');
+meanMech = mean(squeeze(cStack),2);
 for ii=1:4
     
-    subplot(6,4,[ii+16 ii+20])
+    auxAx = subplot(6,4,[ii+16 ii+20]);
     bar(bins,H(ii,:),'k')
+    if ~strcmpi(Conditions{ii}.name,'lasercontrol')
+        
+    end
     xlim([min(bins) max(bins)])
     xlabel ms
     % ylabel 'pooled spike rate'
     title(titles{ii})
     box off
-    ylim([0 75])
+    ylim([0 yLimit])
 end
 
 %
@@ -356,6 +375,8 @@ t = 0:1/fs:(length(Trig_mech{1}(1,:))-1)/fs;
 t = 1000*(t - timeBefore/fs);
 subplot(6,4,13)
 plot(t,Trig_mech{1}(1,:),'Color',[255, 128, 0]/255,'linewidth',2)
+hold on;plot(t,...
+    scaleOnLine(meanMech(1:length(t)),0,1),'Color',[255, 51, 0]/255,'linewidth',2)
 set(gca,'Visible','off')
 box off
 xlim([min(bins) max(bins)])
