@@ -46,6 +46,7 @@ classdef StepWaveform < DiscreteWaveform
                 end
             elseif isa(obj.Data,'logical')
                 aux = obj.Data(1:end-1) - obj.Data(2:end);
+                %aux = diff(obj.Data);
                 rise = find(aux == -1)' + 1;
                 fall = find(aux == 1)';
                 if (~isempty(rise) && isempty(fall)) || (numel(rise) ~= numel(fall))
