@@ -137,6 +137,7 @@ tSubsC = round(tSubs .* (fs(2)/fs(1)));
 continuouStack = zeros(NeC,NtC,Na);
 
 %% Construct stacks: cre_Triggerase
+
 for cap = 1:size(tSubs,1)
     onf = configStruct.Trigger.Edge*1 + ~configStruct.Trigger.Edge*2;
     ctSubs = tSubs(cap,onf);
@@ -180,6 +181,6 @@ end
 discreteStack(:,expRng(normSubs),cap) = discEvents(:,expRng(segSubs));
 continuouStack(:,expRng(normSubsC),cap) = contEvents(:,expRng(segSubsC));
 %% Output structures:
-dStruct = struct('Stack',discreteStack,'SignalIDs',sigIDs);
-cStruct = struct('Stack',continuouStack,'SignalIDs',conIDs);
+dStruct = struct('Stack',discreteStack,'SignalIDs',{sigIDs});
+cStruct = struct('Stack',continuouStack,'SignalIDs',{conIDs});
 end
