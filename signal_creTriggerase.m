@@ -55,12 +55,12 @@ if ~isempty(Sig)
     tSubs = twfObj.Triggers;
     dsIdx = structfun(@islogical,Sig);
     Nds = sum(dsIdx);
-    lenFlds = structfun(@length,Sig);
-    discEvents = false(Nds,ceil(mean(lenFlds(dsIdx))));
+    % lenFlds = structfun(@length,Sig);
+    discEvents = false(Nds,Ns);
     cds = 1;
     for cf = 1:numel(sigIDs)
         if islogical(Sig.(sigIDs{cf}))
-            discEvents(cds,:) = Sig.(sigIDs{cf});
+            discEvents(cds,1:length(Sig.(sigIDs{cf}))) = Sig.(sigIDs{cf});
             cds = cds + 1;
         end
     end
@@ -143,43 +143,44 @@ for cap = 1:size(tSubs,1)
     ctSubs = tSubs(cap,onf);
     ctSubsC = tSubsC(cap,onf);
     segSubs = [ctSubs - prevSamples, ctSubs + postSamples];
-    normSubs = segSubs;
+    normSubs = [1,Nt];
     if segSubs(1) < 1
-        printf('The viewing window is out of the signal range.\n')
+        fprintf('The viewing window is out of the signal range.\n')
         fprintf('%d samples required before the signal. Omitting...\n',...
             -segSubs(1))
         segSubs(1) = 1;
-        normSubs = Nt - segSubs(2) + 1:Nt;
+        normSubs(1) = Nt - segSubs(2) + 1;
     elseif segSubs(2) > Ns
         fprintf('The viewing window is out of the signal range.\n')
         fprintf('%d samples required after the signal. Omitting...\n',...
             segSubs(2))
         segSubs(2) = Ns;
-        normSubs = 1:diff(segSubs)+1;
+        normSubs(2) = diff(segSubs)+1;
     end
     if diff(fs) %% Different signal lengths
         segSubsC = [ctSubsC - prevSamplesC, ctSubsC + postSamplesC];
-        normSubsC = segSubsC;
+        normSubsC = [1,NtC];
         if segSubsC(1) < 1
-            printf('The viewing window is out of the signal range.\n')
+            fprintf('The viewing window is out of the signal range.\n')
             fprintf('%d samples required before the signal. Omitting...\n',...
                 -segSubsC(1))
             segSubsC(1) = 1;
-            normSubsC = NtC - segSubsC(2) + 1:NtC;
+            normSubsC(1) = NtC - segSubsC(2) + 1;
         elseif segSubsC(2) > NsC
             fprintf('The viewing window is out of the signal range.\n')
             fprintf('%d samples required after the signal. Omitting...\n',...
                 segSubsC(2))
             segSubsC(2) = NsC;
-            normSubsC = 1:diff(segSubsC)+1;
+            normSubsC(2) = diff(segSubsC)+1;
         end
     else
         segSubsC = segSubs;
         normSubsC = normSubs;
     end
+    discreteStack(:,expRng(normSubs),cap) = discEvents(:,expRng(segSubs));
+    continuouStack(:,expRng(normSubsC),cap) = contEvents(:,expRng(segSubsC));
 end
-discreteStack(:,expRng(normSubs),cap) = discEvents(:,expRng(segSubs));
-continuouStack(:,expRng(normSubsC),cap) = contEvents(:,expRng(segSubsC));
+
 %% Output structures:
 dStruct = struct('Stack',discreteStack,'SignalIDs',{sigIDs});
 cStruct = struct('Stack',continuouStack,'SignalIDs',{conIDs});
