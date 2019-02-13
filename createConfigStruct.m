@@ -36,9 +36,11 @@ if exist(dbTabFilePath,'file')
     % Get the file names from the RecDB or from the single file selector.
     if ~isempty(answ)
         auxCT = cell(numel(answ),1);
+        auxCCT = 1;
         for cct = answ
             fFlag(RecDB.PhysioNucleus == cellTypes(cct)) = true;
-            auxCT(cct) = {cellTypes(cct)};
+            auxCT(auxCCT) = {cellTypes(cct)};
+            auxCCT = auxCCT + 1;
         end
         configStruct.CellTypes = auxCT;
         expNames = RecDB.Properties.RowNames(fFlag);
