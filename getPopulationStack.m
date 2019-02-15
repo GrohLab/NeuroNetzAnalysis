@@ -95,6 +95,45 @@ if numel(Ns) == 1
 else
     fprintf('Haven''t implemented this possibility yet...\n')
 end
+fprintf('Finished building the stacks\n')
+%% Exclusion of the undesired variables
+fprintf('Refining the stacks: excluding and conditioning...\n')
+xIdx = false(numel(dPopStruct(1).SignalIDs),1);
+for cev = 1:numel(configStruct.Exclude)
+    xIdx = xIdx | strcmpi(dPopStruct(1).SignalIDs,configStruct.Exclude{cev});
+end
+excludeIdx =...
+    sum(squeeze(sum(dPopStack(...
+    xIdx,... Variables to exclude
+    :,:),2)),1) > 0;
+%% Conditioning the experimental stacks
+% Number of conditioning variables: Ncv
+Ncv = numel(configStruct.ConditionWindow);
+cvIdx = false(Ncv,Na);
+if Ncv
+    cwCell = squeeze(struct2cell(configStruct.ConditionWindow(:)));
+    cwSubs = cell2mat(cwCell(2,:)');
+    for ccv = 1:Ncv
+        conWin = cwCell{2,ccv};
+        if conWin(1) < conWin(2)
+            % The most expected result of the conditioning windows.
+            cvIdx(ccv,:) = false;
+        elseif conWin(2) < conWin(1)
+            % Interesting play of the times.
+            cvIdx(ccv,:) = true;
+        elseif strcmpi(configStruct.ConditionWindow(ccv).Name,'none')
+            % There's no conditioning variable.
+        else
+            % This is maybe the most useless selection of the conditioning
+            % windows. t_1 = t_2
+            fprintf('t_1 is equal to t_2. Focusing on one sample point in')
+            fprintf(' the whole trial seems absurd and inaccurate.\n')
+            
+        end
+    end
+end
+
+
 
 fprintf('The results are ready.\n')
 end
