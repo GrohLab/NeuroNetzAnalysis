@@ -1,6 +1,7 @@
 function [dPopStruct, cPopStruct] = getPopulationStack(EphysPath)
 %GETPOPULATIONSTACK returns the population stack from all the detected
 %experiments.
+% Emilio Isaías-Camacho @GrohLab 2019
 dPopStruct = struct('Stack',cell(1,1),'SignalIDs',cell(1,1));
 cPopStruct = struct('Stack',cell(1,1),'SignalIDs',cell(1,1));
 %% New configuration or load file
@@ -59,6 +60,7 @@ for cexp = 1:Nexp
     numCSig(cexp) = numel(cPopStruct(cexp).SignalIDs);
     Naps(cexp) = size(dPopStruct(cexp).Stack,3);
 end
+Naps = [0;Naps];
 %% Conditioning the experimental stacks
 Nt = size(dPopStruct(1).Stack,2);
 Ns = unique(numDSig);
@@ -69,12 +71,30 @@ if numel(Ns) == 1
     dPopStack = false(Ns,Nt,Na);
     cPopStack = false(NsC,NtC,Na);
     for cexp = 1:Nexp
-        dPopStack(:,:,Naps(cexp)) = dPopStruct(cexp).Stack;
-        cPopStack(:,:,Naps(cexp)) = cPopStruct(cexp).Stack;
+        stcSubs = sum(Naps(1:cexp)) + 1:sum(Naps(1:cexp+1));
+        % If it is not the first assignment
+        if ~(cexp == 1)
+            % If the sinal ID do not match with the previous
+            if ~(sum(strcmpi(dPopStruct(cexp-1).SignalIDs,...
+                    dPopStruct(cexp).SignalIDs)) == Ns)
+                % Re-order it
+                fprintf('The order of the current signals disagrees with')
+                fprintf(' the previous experiment.\nTrying to re-order it')
+                fprintf('...\n')
+                % If the re-ordering process did not work
+                if false
+                    fprintf('Bad news: Couldn''t re-order it.\n') %#ok<UNRCH>
+                    % Write in log
+                    continue 
+                end
+            end
+        end
+        dPopStack(:,:,stcSubs) = dPopStruct(cexp).Stack;
+        cPopStack(:,:,stcSubs) = cPopStruct(cexp).Stack;
     end
-    
 else
     fprintf('Haven''t implemented this possibility yet...\n')
 end
+
 fprintf('The results are ready.\n')
 end
