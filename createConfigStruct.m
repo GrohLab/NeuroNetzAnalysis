@@ -199,7 +199,7 @@ if exist(dbTabFilePath,'file')
 else
     fprintf('The given file does not exist. ')
     fprintf('Please check the name and the path.\n')
-    fprintf('%s',dbTabFilePath)
+    fprintf('%s\n',dbTabFilePath)
     configStruct = [];
 end
 
