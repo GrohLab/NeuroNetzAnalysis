@@ -11,20 +11,24 @@ answ = questdlg(...
     'New Analysis');
 switch answ
     case 'New Analysis'
+        printf('Please attend to the prompting messages!\n')
         [configStruct, expFileNames] = createConfigStruct(EphysPath);
         if isempty(configStruct)
             fprintf('Woah! Something went wrong while creating the ')
             fprintf('configuration structure!\nPlease, try again later.\n')
             return
         end 
+        fprintf('Good job! Moving on...\n')
     case 'Load previous'
         [fName, fDir] = uigetfile('*.gcf','Select an analysis file',EphysPath);
+        fprintf('Loading the configuration file... ')
         configStruct = loadPopConfigFile(fullfile(fDir,fName));
         if isempty(configStruct)
             fprintf('Woah! Something went wrong while loading the ')
             fprintf('configuration structure!\nPlease, try again later.\n')
             return
         end
+        fprintf('done!\n')
         anMatDir = fullfile(EphysPath,'EphysData','AnalysisMatFiles');
         dbFileName = fullfile(EphysPath,'ephys_database.mat');
         load(dbFileName,'RecDB')
@@ -45,12 +49,14 @@ switch answ
         return
 end
 %% Get experiment stacks
+fprintf('Building the stacks\n')
 Nexp = numel(expFileNames);
 dPopStruct = repmat(dPopStruct,Nexp,1);
 cPopStruct = dPopStruct;
 numDSig = zeros(Nexp,1,'single');
 numCSig = numDSig;
 Naps = numDSig;
+% Cut experiment
 for cexp = 1:Nexp
     fprintf('---------- Experiment Stack -----------\n')
     fprintf('%s\n',expFileNames{cexp})
@@ -61,15 +67,16 @@ for cexp = 1:Nexp
     Naps(cexp) = size(dPopStruct(cexp).Stack,3);
 end
 Naps = [0;Naps];
-%% Conditioning the experimental stacks
 Nt = size(dPopStruct(1).Stack,2);
 Ns = unique(numDSig);
 Na = sum(Naps);
 NtC = size(cPopStruct(1).Stack,2);
 NsC = unique(numCSig);
 if numel(Ns) == 1
+    % Allocate stack memory
     dPopStack = false(Ns,Nt,Na);
-    cPopStack = false(NsC,NtC,Na);
+    cPopStack = zeros(NsC,NtC,Na,'single');
+    % Compile stacks into one population stack
     for cexp = 1:Nexp
         stcSubs = sum(Naps(1:cexp)) + 1:sum(Naps(1:cexp+1));
         % If it is not the first assignment
@@ -84,6 +91,7 @@ if numel(Ns) == 1
                 % If the re-ordering process did not work
                 if false
                     fprintf('Bad news: Couldn''t re-order it.\n') %#ok<UNRCH>
+                    fprintf('Pretending to write information in log file\n')
                     % Write in log
                     continue 
                 end
