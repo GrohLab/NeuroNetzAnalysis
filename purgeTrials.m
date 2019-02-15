@@ -34,6 +34,11 @@ function [eIdxArray, excludeIdx, windowArray] =...
 % complete viewing window.
 Na = size(discreteStack,3);
 defTL = cell(1,sum(koIdx));
+excludeIdx =...
+    sum(squeeze(sum(discreteStack(...
+    [false(2,1);...
+    ~koIdx(~tIdx)],...
+    :,:),2)),1) > 0;
 for ctl = 1:sum(koIdx)
     defTL(ctl) = {[num2str(-timeLapse(1)*1e3),', ',num2str(timeLapse(2)*1e3)]};
 end
@@ -67,17 +72,12 @@ else
     return
 end
 %% Index variables initialization
-% Indices for the
-indexWindow = (windowArray + timeLapse(1)*1e3)*fs*1e-3 + 1;
+% Indices for the time axis of the stack
+indexWindow = (windowArray*1e-3 + timeLapse(1))*fs + 1;
 % Inclusion or exclusion of the signals
 eIdxArray = false(sum(koIdx & ~iIdx),Na);
 % Event index in the discrete stack
 eventIdxDS = find(koIdx(~tIdx) & ~iIdx(~tIdx)) + 2;
-excludeIdx =...
-    sum(squeeze(sum(discreteStack(...
-    [false(2,1);...
-    ~koIdx(~tIdx)],...
-    :,:),2)),1) > 0;
 deleteEmptyEvents = false(length(eventIdxDS),1);
 
 %% Binary labelling of the triggered trials
