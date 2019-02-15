@@ -21,7 +21,7 @@ switch answ
         fprintf('Good job! Moving on...\n')
     case 'Load previous'
         [fName, fDir] = uigetfile('*.gcf','Select an analysis file',EphysPath);
-        fprintf('Loading the configuration file... ')
+        fprintf('Loading the configuration file... \n')
         configStruct = loadPopConfigFile(fullfile(fDir,fName));
         if isempty(configStruct)
             fprintf('Woah! Something went wrong while loading the ')
