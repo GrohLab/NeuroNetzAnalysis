@@ -3,8 +3,7 @@ function [dPopStruct, cPopStruct, conditionStruct, configStruct] =...
 %GETPOPULATIONSTACK returns the population stack from all the detected
 %experiments.
 % Emilio Isaías-Camacho @GrohLab 2019
-dPopStruct = struct('Stack',cell(1,1),'SignalIDs',cell(1,1));
-cPopStruct = struct('Stack',cell(1,1),'SignalIDs',cell(1,1));
+dPopExp = struct('Stack',cell(1,1),'SignalIDs',cell(1,1));
 %% New configuration or load file
 answ = questdlg(...
     'Do you want to start a new analysis or load a previous configuration',...
@@ -52,8 +51,8 @@ end
 %% Get experiment stacks
 fprintf('Building the stacks\n')
 Nexp = numel(expFileNames);
-dPopStruct = repmat(dPopStruct,Nexp,1);
-cPopStruct = dPopStruct;
+dPopExp = repmat(dPopExp,Nexp,1);
+cPopExp = dPopExp;
 numDSig = zeros(Nexp,1,'single');
 numCSig = numDSig;
 Naps = numDSig;
@@ -64,17 +63,17 @@ for cexp = 1:Nexp
     fprintf('%s\n',expFileNames{cexp})
     [dPopStruct(cexp), cPopStruct(cexp), fs(cexp,:)] =...
         signal_creTriggerase(configStruct,expFileNames{cexp});
-    numDSig(cexp) = numel(dPopStruct(cexp).SignalIDs);
-    numCSig(cexp) = numel(cPopStruct(cexp).SignalIDs);
-    Naps(cexp) = size(dPopStruct(cexp).Stack,3);
+    numDSig(cexp) = numel(dPopExp(cexp).SignalIDs);
+    numCSig(cexp) = numel(cPopExp(cexp).SignalIDs);
+    Naps(cexp) = size(dPopExp(cexp).Stack,3);
 end
 fs = mean(fs(:,1));
 fsC = mean(fs(:,2));
 Naps = [0;Naps];
-Nt = size(dPopStruct(1).Stack,2);
+Nt = size(dPopExp(1).Stack,2);
 Ns = unique(numDSig);
 Na = sum(Naps);
-NtC = size(cPopStruct(1).Stack,2);
+NtC = size(cPopExp(1).Stack,2);
 NsC = unique(numCSig);
 if numel(Ns) == 1
     % Allocate stack memory
@@ -86,8 +85,8 @@ if numel(Ns) == 1
         % If it is not the first assignment
         if ~(cexp == 1)
             % If the sinal ID do not match with the previous
-            if ~(sum(strcmpi(dPopStruct(cexp-1).SignalIDs,...
-                    dPopStruct(cexp).SignalIDs)) == Ns)
+            if ~(sum(strcmpi(dPopExp(cexp-1).SignalIDs,...
+                    dPopExp(cexp).SignalIDs)) == Ns)
                 % Re-order it
                 fprintf('The order of the current signals disagrees with')
                 fprintf(' the previous experiment.\nTrying to re-order it')
@@ -101,8 +100,8 @@ if numel(Ns) == 1
                 end
             end
         end
-        dPopStack(:,:,stcSubs) = dPopStruct(cexp).Stack;
-        cPopStack(:,:,stcSubs) = cPopStruct(cexp).Stack;
+        dPopStack(:,:,stcSubs) = dPopExp(cexp).Stack;
+        cPopStack(:,:,stcSubs) = cPopExp(cexp).Stack;
     end
 else
     fprintf('Haven''t implemented this possibility yet...\n')
@@ -110,9 +109,9 @@ end
 fprintf('Finished building the stacks\n')
 %% Exclusion of the undesired variables
 fprintf('Refining the stacks: excluding and conditioning...\n')
-xIdx = false(numel(dPopStruct(1).SignalIDs),1);
+xIdx = false(numel(dPopExp(1).SignalIDs),1);
 for cev = 1:numel(configStruct.Exclude)
-    xIdx = xIdx | strcmpi(dPopStruct(1).SignalIDs,configStruct.Exclude{cev});
+    xIdx = xIdx | strcmpi(dPopExp(1).SignalIDs,configStruct.Exclude{cev});
 end
 excludeIdx =...
     sum(squeeze(sum(dPopStack(...
@@ -128,7 +127,7 @@ if ~strcmpi(configStruct.ConditionWindow(1).Name,'none')
     for ccv = 1:Ncv
         conWin = cwSubs(ccv,:);
         conSubs = (conWin + configStruct.ViewWindow(1))*fs + 1;
-        ccvIdx = strcmpi(dPopStruct(1).SignalIDs,cwCell{1,ccv});
+        ccvIdx = strcmpi(dPopExp(1).SignalIDs,cwCell{1,ccv});
         if conWin(1) < conWin(2)
             % The most expected result of the conditioning windows.
             cvIdx(ccv,:) = squeeze(sum(dPopStack(...
@@ -149,8 +148,8 @@ if ~strcmpi(configStruct.ConditionWindow(1).Name,'none')
     end
 end
 %% Wrapping up the output
-dPopStruct = struct('Stack',dPopStack,'SignalIDs',dPopStruct(1).SignalIDs);
-cPopStruct = struct('Stack',cPopStack,'SignalIDs',cPopStruct(1).SignalIDs);
+dPopStruct = struct('Stack',dPopStack,'SignalIDs',{dPopExp(1).SignalIDs});
+cPopStruct = struct('Stack',cPopStack,'SignalIDs',{cPopExp(1).SignalIDs});
 conditionStruct = struct('ExcludeFlags',excludeIdx,'CVDFlags',cvIdx);
 configStruct.SamplingFrequencies = mean(fs,1);
 fprintf('The results are ready.\n')
