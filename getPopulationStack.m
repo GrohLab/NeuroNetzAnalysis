@@ -11,7 +11,7 @@ answ = questdlg(...
     'New Analysis');
 switch answ
     case 'New Analysis'
-        printf('Please attend to the prompting messages!\n')
+        fprintf('Please attend to the prompting messages!\n')
         [configStruct, expFileNames] = createConfigStruct(EphysPath);
         if isempty(configStruct)
             fprintf('Woah! Something went wrong while creating the ')
