@@ -122,31 +122,36 @@ excludeIdx =...
 % Number of conditioning variables: Ncv
 Ncv = numel(configStruct.ConditionWindow);
 cvIdx = false(Ncv,Na);
-if Ncv
+if ~strcmpi(configStruct.ConditionWindow(1).Name,'none')
     cwCell = squeeze(struct2cell(configStruct.ConditionWindow(:)));
     cwSubs = cell2mat(cwCell(2,:)');
     for ccv = 1:Ncv
-        conWin = cwCell{2,ccv};
+        conWin = cwSubs(ccv,:);
+        conSubs = (conWin + configStruct.ViewWindow(1))*fs + 1;
+        ccvIdx = strcmpi(dPopStruct(1).SignalIDs,cwCell{1,ccv});
         if conWin(1) < conWin(2)
             % The most expected result of the conditioning windows.
-            cvIdx(ccv,:) = false;
+            cvIdx(ccv,:) = squeeze(sum(dPopStack(...
+                ccvIdx,conSubs(1):conSubs(2),:),2)) > 0;
         elseif conWin(2) < conWin(1)
             % Interesting play of the times.
-            cvIdx(ccv,:) = true;
-        elseif strcmpi(configStruct.ConditionWindow(ccv).Name,'none')
+            timeIdx = false(1,Nt);
+            timeIdx([1:conSubs(2),conSubs(1):Nt]) = true;
+            cvIdx(ccv,:) = squeeze(sum(dPopStack(...
+                ccvIdx,timeIdx,:),2)) > 0;
             % There's no conditioning variable.
         else
             % This is maybe the most useless selection of the conditioning
             % windows. t_1 = t_2
             fprintf('t_1 is equal to t_2. Focusing on one sample point in')
             fprintf(' the whole trial seems absurd and inaccurate.\n')
-            
         end
     end
 end
-
-
-
+%% Wrapping up the output
+dPopStruct = struct('Stack',dPopStack,'SignalIDs',dPopStruct(1).SignalIDs);
+cPopStruct = struct('Stack',cPopStack,'SignalIDs',cPopStruct(1).SignalIDs);
+conditionStruct = struct('ExcludeFlags',excludeIdx,'CVDFlags',cvIdx);
 configStruct.SamplingFrequencies = mean(fs,1);
 fprintf('The results are ready.\n')
 end
