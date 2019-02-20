@@ -57,16 +57,19 @@ cPopStruct = dPopStruct;
 numDSig = zeros(Nexp,1,'single');
 numCSig = numDSig;
 Naps = numDSig;
+fs = zeros(Nexp,2,'single');
 % Cut experiment
 for cexp = 1:Nexp
     fprintf('---------- Experiment Stack -----------\n')
     fprintf('%s\n',expFileNames{cexp})
-    [dPopStruct(cexp), cPopStruct(cexp)] =...
+    [dPopStruct(cexp), cPopStruct(cexp), fs(cexp,:)] =...
         signal_creTriggerase(configStruct,expFileNames{cexp});
     numDSig(cexp) = numel(dPopStruct(cexp).SignalIDs);
     numCSig(cexp) = numel(cPopStruct(cexp).SignalIDs);
     Naps(cexp) = size(dPopStruct(cexp).Stack,3);
 end
+fs = mean(fs(:,1));
+fsC = mean(fs(:,2));
 Naps = [0;Naps];
 Nt = size(dPopStruct(1).Stack,2);
 Ns = unique(numDSig);
@@ -144,5 +147,6 @@ end
 
 
 
+configStruct.SamplingFrequencies = mean(fs,1);
 fprintf('The results are ready.\n')
 end
