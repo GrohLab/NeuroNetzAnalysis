@@ -1,4 +1,5 @@
-function [dPopStruct, cPopStruct] = getPopulationStack(EphysPath)
+function [dPopStruct, cPopStruct, conditionStruct, configStruct] =...
+    getPopulationStack(EphysPath)
 %GETPOPULATIONSTACK returns the population stack from all the detected
 %experiments.
 % Emilio Isaías-Camacho @GrohLab 2019
