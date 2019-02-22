@@ -113,10 +113,10 @@ xIdx = false(numel(dPopExp(1).SignalIDs),1);
 for cev = 1:numel(configStruct.Exclude)
     xIdx = xIdx | strcmpi(dPopExp(1).SignalIDs,configStruct.Exclude{cev});
 end
-excludeIdx =...
-    sum(squeeze(sum(dPopStack(...
-    xIdx,... Variables to exclude
-    :,:),2)),1) > 0;
+aux1 = sum(dPopStack(xIdx,:,:),2); % Sum up across time within the excluding variables
+aux1 = squeeze(aux1); % Reshaping the stack into 2 dimensions (excludeVars x trials)
+aux1 = sum(aux1,1); % Summing up across excluding variables
+excludeIdx = aux1 > 0; % Exclude all trial which has a single occurance of any excluding variables
 %% Conditioning the experimental stacks
 % Number of conditioning variables: Ncv
 Ncv = numel(configStruct.ConditionWindow);
