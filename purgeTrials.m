@@ -17,15 +17,7 @@ function [eIdxArray, excludeIdx, windowArray] =...
 %element, _timeLapse_; the three boolean indices for trigger selection,
 %_tIdx_, for variable exclusion, _koIdx_, and for non-affecting variables,
 %_iIdx_, which the further analysis will nor exclude nor actively include;
-%the sampling frequency, _fs_; and the _userFlag_, which can be omitted
-%from the argument calling. If this last variable is true, the user will be
-%able to select the windows for each conditioning variable. Otherwise, the
-%function will decide to select half of the viewing window as the
-%conditioning window i.e. half time before, half time after.
-%
-%An additional functionality should be implemented. The ability to load the
-%conditioning windows for the non-excluded variables from the conditioning
-%window. Maybe we can use a very simple bypass for all the functions.
+%the sampling frequency, _fs_
 %
 % Emilio Isaias-Camacho @GrohLab 2018
 
@@ -76,8 +68,9 @@ end
 indexWindow = (windowArray*1e-3 + timeLapse(1))*fs + 1;
 % Inclusion or exclusion of the signals
 eIdxArray = false(sum(koIdx & ~iIdx),Na);
-% Event index in the discrete stack
-eventIdxDS = find(koIdx(~tIdx) & ~iIdx(~tIdx)) + 2;
+% Event index in the discrete stack which is (k)onsidered and NOT ignored
+% WITHOUT the trigger
+eventIdxDS = find(koIdx(~tIdx) & ~iIdx(~tIdx)) + 2; 
 deleteEmptyEvents = false(length(eventIdxDS),1);
 
 %% Binary labelling of the triggered trials
