@@ -19,7 +19,7 @@ end
 fID = fopen(conFiNa,'w'); % Overwrite any existing file
 % Create a "header" (only date and time)
 fprintf(fID,'date:\t%s\n',datetime('now'));
-writeNSignalNames('cellType(s):',fID,configStruct,'CellType')
+writeNSignalNames('cellType(s):',fID,configStruct,'CellTypes')
 % Viewing windows
 fprintf(fID,'viewWind:\t%f %f\n',configStruct.ViewWindow(1),...
     configStruct.ViewWindow(2));
@@ -38,7 +38,8 @@ if isempty(configStruct.ConditionWindow)
     fprintf(fID,'\tnone\t%d %d\n',0,0);
 else
     for cws = 1:length(configStruct.ConditionWindow)
-        fprintf(fID,'\t%s\t%f %f',configStruct.ConditionWindow(cws).Name,...
+        fprintf(fID,'\t%s\t%f %f',cell2mat(...
+            configStruct.ConditionWindow(cws).Name),...
             configStruct.ConditionWindow(cws).Window(1),...
             configStruct.ConditionWindow(cws).Window(2));
     end
