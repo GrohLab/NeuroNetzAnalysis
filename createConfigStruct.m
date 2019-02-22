@@ -158,20 +158,23 @@ if exist(dbTabFilePath,'file')
     % Include those signals which were not excluded, not ignored, and not
     % being the trigger. Obviously.
     % I am taking the ignVars because it contains the variables without the
-    % trigger, the excluded and, of course, the ignored signals. 
+    % trigger, the excluded and, of course, the ignored signals. The window
+    % selection is only for the conditioning variables and NOT for the
+    % ignoring variables. These are very well named thus ignored.
     if ~isempty(ignVars)
         vwIdx = false(numel(ignVars),1);
         vwIdx(ignSub) = true;
         vwVars = ignVars(~vwIdx);
         dfltVals =repmat(...
             {[num2str(-timeLapse(1)),', ',num2str(timeLapse(2))]},...
-            numel(ignVars),1);
+            numel(vwVars),1);
         vwFlag = false;
         if ~isempty(vwVars)
             fstr = cat(2,vwVars{1},' (-time before, +time after) [ms]:');
-            vwVars(1) = {fstr};
+            dispVars = vwVars;
+            dispVars(1) = {fstr};
             while ~vwFlag
-                windowTimes = inputdlg(vwVars,...
+                windowTimes = inputdlg(dispVars,...
                     'Delay for the interesting signals',...
                     [1,20],...
                     dfltVals(~vwIdx));
@@ -196,12 +199,12 @@ if exist(dbTabFilePath,'file')
         dfltVals = cell2mat(...
             cellfun(@str2num, dfltVals, 'UniformOutput', false));
         if vwFlag
-            dfltVals(~vwIdx,:) = windowArray;
+            dfltVals = windowArray;
         end
         auxStruct = struct('Name','name','Window',[0,0]);
-        auxStruct = repmat(auxStruct,numel(ignVars),1);
-        for cvw = 1:numel(ignVars)
-            auxStruct(cvw).Name = ignVars(cvw);
+        auxStruct = repmat(auxStruct,numel(vwVars),1);
+        for cvw = 1:numel(vwVars)
+            auxStruct(cvw).Name = vwVars(cvw);
             auxStruct(cvw).Window = dfltVals(cvw,:)*1e-3;
         end
         configStruct.ConditionWindow = auxStruct;
