@@ -1,4 +1,5 @@
-function [PSTH, trig, sweeps, timeAxis] = getPSTH(discreteStack, timeLapse, kIdx, binSz, fs)
+function [PSTH, trig, sweeps, timeAxis] =...
+    getPSTH(discreteStack, timeLapse, kIdx, binSz, fs)
 % GETPSTH returns a peri-stimulus triggered histogram given a triggered
 % aligned stack in the form MxNxT, where M is the number of channels to
 % align, N is the number of samples (time) and T is the number of aligning
