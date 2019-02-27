@@ -204,7 +204,7 @@ if exist(dbTabFilePath,'file')
         auxStruct = struct('Name','name','Window',[0,0]);
         auxStruct = repmat(auxStruct,numel(vwVars),1);
         for cvw = 1:numel(vwVars)
-            auxStruct(cvw).Name = vwVars(cvw);
+            auxStruct(cvw).Name = vwVars{cvw};
             auxStruct(cvw).Window = dfltVals(cvw,:)*1e-3;
         end
         configStruct.ConditionWindow = auxStruct;
