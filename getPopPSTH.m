@@ -17,30 +17,47 @@ finishedButton = false;
 % window of interest. De Morgan law: ~a & ~b = ~(a | b)
 cleanIdx = ~(condSt.ExcludeFlags | any(condSt.CVDFlags,1));
 cl_swaps = sum(cleanIdx);
-fprintf('Percentage of ''clean'' trials: %.2f%% (%d/%d)\n',cl_swaps/Nap,...
+fprintf('Percentage of ''clean'' trials: %.2f%% (%d/%d)\n',100*cl_swaps/Nap,...
     cl_swaps, Nap)
 cleanPSTH = sum(dSt.Stack(:,:,cleanIdx),3)./cl_swaps;
 tx = (0:Nts-1) * 1/fs - configStruct.ViewWindow(1);
 binWidth = ceil(configStruct.BinSize * fs);
 Nbin = ceil(Nts/binWidth);
 btx = (0:Nbin-1) * configStruct.BinSize - configStruct.ViewWindow(1);
-% If the user selected 1 conditioning variable, then there are no more
-% possible combinations than the clean trigger and the trigger plus the
-% conditioning variable.
-if Ncv == 1
-    inTrials = ~condSt.ExcludeFlags & condSt.CVDFlags;
-    uniquePSTH = sum(dSt.Stack(:,:,inTrials),3)/sum(inTrials);
-    psthAux = binTime(uniquePSTH(2:Nv,:),configStruct.BinSize,fs);
-elseif Ncv > 1
-    % Otherwise, the function will prompt the user to select a combination
-    % of triggers in a list dialog for a later plotting.
-    
-    while ~finishedButton
-        
+possCombi = sum(2.^(0:Ncv-1)) + 1;
+binCleanPSTH = binTime(cleanPSTH,configStruct.BinSize,fs);
+auxResPSTH = struct('ConditionCombination','None','PSTH',binCleanPSTH);
+auxResPSTH = repmat(auxResPSTH,1,possCombi);
+auxCnt = 2;
+confCell = struct2cell(configStruct.ConditionWindow);
+while ~finishedButton && auxCnt <= possCombi
+    scvFlags = true(1,Ncv);
+    if Ncv > 1
+        [combSubs, iOk] = listdlg('ListString',confCell{1,:},...
+            'PromtString','Select a conditioning variable combination',...
+            'SelectionMode','multiple',...
+            'CancelString','Finish',...
+            'OKString','Create',...
+            'Name','Combination');
+        scvFlags(combSubs) = false;
+        if iOk && sum(~scvFlags)
+            scvFlags = ~scvFlags;
+        else
+            finishedButton = true;
+            continue
+        end
     end
-else
-    % This means no conditioning variable. The PSTH results to be only a 
+    inTrials = ~condSt.ExcludeFlags & any(condSt.CVDFlags(scvFlags,:),1);
+    uniquePSTH = sum(dSt.Stack(:,:,inTrials),3)/sum(inTrials);
+    auxResPSTH(auxCnt).PSTH =...
+        binTime(uniquePSTH,configStruct.BinSize,fs);
+    auxResPSTH(auxCnt).ConditionCombination =...
+        confCell{[true,false],scvFlags};
+    auxCnt = auxCnt + 1;
 end
 
+psthStr = struct('BinSize',configStruct.BinSize,...
+    'TimeAxes',struct('Trigger',tx,'PSTH',btx),...
+    'Trigger',cleanPSTH(1,:));
 end
 
