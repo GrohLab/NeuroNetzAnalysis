@@ -1,4 +1,4 @@
-function [PSTHStruct] = getPopPSTH(dSt,condSt,configStruct)
+function [PSTHStruct] = getPopPSTH(dSt, condSt, configStruct)
 %GETPOPPSTH returns the peri-stimulus triggered histogram for all the
 %experiments collected in the population stack and conditions it according
 %to both the configuration and conditioning structure.
@@ -7,7 +7,7 @@ function [PSTHStruct] = getPopPSTH(dSt,condSt,configStruct)
 %% Initialization
 % Gathering the necessary information to compute the PSTH combinations
 % according to the user selection.
-[~, Nts, Nap] = size(dSt.Stack);
+[Nv, Nts, Nap] = size(dSt.Stack);
 fs = configStruct.SamplingFrequencies(1); 
 Ncv = size(condSt.CVDFlags,1); % Number of conditioning variables
 finishedButton = false;
@@ -21,12 +21,15 @@ fprintf('Percentage of ''clean'' trials: %.2f%% (%d/%d)\n',100*cl_swaps/Nap,...
     cl_swaps, Nap)
 cleanPSTH = sum(dSt.Stack(:,:,cleanIdx),3)./cl_swaps;
 tx = (0:Nts-1) * 1/fs - configStruct.ViewWindow(1);
+%% Possible combinations
+% $sum_{i=0}^{N_{cv}-1}(2^i)+1$
 possCombi = sum(2.^(0:Ncv-1)) + 1;
+%% Computing the conditional PSTHs with user dependent selection.
+confCell = squeeze(struct2cell(configStruct.ConditionWindow));
+Nexp = numel(condSt.ExperimentCuts) - 1;
 auxResPSTH = struct('ConditionCombination','None','PSTH',cleanPSTH);
 auxResPSTH = repmat(auxResPSTH,1,possCombi);
 auxCnt = 2;
-confCell = squeeze(struct2cell(configStruct.ConditionWindow));
-%% Computing the conditional PSTHs with user dependent selection.
 while ~finishedButton && auxCnt <= possCombi
     % While the possible combinations are not exhausted, the loop continues
     % to prompt the user for interesting combinations. A future plan is to
@@ -51,7 +54,17 @@ while ~finishedButton && auxCnt <= possCombi
         end
     end
     inTrials = ~condSt.ExcludeFlags & any(condSt.CVDFlags(scvFlags,:),1);
-    currentPSTH = sum(dSt.Stack(:,:,inTrials),3)/sum(inTrials);
+    % Experiment normalization
+    currentPSTH = zeros(Nv, Nts, 'single');
+    for cexp = 1:Nexp
+        curExp = sum(condSt.ExperimentCuts(1:cexp))+1:...
+            sum(condSt.ExperimentCuts(1:cexp+1));
+        currentPSTH = currentPSTH +...
+            sum(dSt.Stack(:,:,inTrials(curExp)),3)/...
+            sum(inTrials(curExp));
+    end
+    currentPSTH = currentPSTH./Nexp;
+    % currentPSTH = sum(dSt.Stack(:,:,inTrials),3)/sum(inTrials);
     auxResPSTH(auxCnt).PSTH = currentPSTH;
     auxResPSTH(auxCnt).ConditionCombination =...
         {confCell{[true,false],scvFlags}};
