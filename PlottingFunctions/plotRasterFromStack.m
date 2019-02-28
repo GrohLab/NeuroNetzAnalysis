@@ -45,11 +45,6 @@ for cse = 2:Ne
                         'MarkerFaceColor',cmap(cse-1,:),'MarkerSize',2,...
                         'Color',cmap(cse-1,:))
                 end
-%                 for cs = 1:numel(xspks)
-%                     % For each spike
-%                     text(ax, xspks(cs),cap*(cse-1),'.',...
-%                         'HorizontalAlignment','center','Color', cmap(cap))
-%                 end
             end
         end
     end
