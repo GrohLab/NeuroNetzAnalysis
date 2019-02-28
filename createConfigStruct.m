@@ -165,6 +165,7 @@ if exist(dbTabFilePath,'file')
         vwIdx = false(numel(ignVars),1);
         vwIdx(ignSub) = true;
         vwVars = ignVars(~vwIdx);
+        vwIdx = true(1,numel(vwVars));
         dfltVals =repmat(...
             {[num2str(-timeLapse(1)),', ',num2str(timeLapse(2))]},...
             numel(vwVars),1);
@@ -177,7 +178,7 @@ if exist(dbTabFilePath,'file')
                 windowTimes = inputdlg(dispVars,...
                     'Delay for the interesting signals',...
                     [1,20],...
-                    dfltVals(~vwIdx));
+                    dfltVals(vwIdx));
                 windowArray =...
                     cell2mat(...
                     cellfun(@str2num, windowTimes, 'UniformOutput', false));
@@ -204,7 +205,7 @@ if exist(dbTabFilePath,'file')
         auxStruct = struct('Name','name','Window',[0,0]);
         auxStruct = repmat(auxStruct,numel(vwVars),1);
         for cvw = 1:numel(vwVars)
-            auxStruct(cvw).Name = vwVars(cvw);
+            auxStruct(cvw).Name = vwVars{cvw};
             auxStruct(cvw).Window = dfltVals(cvw,:)*1e-3;
         end
         configStruct.ConditionWindow = auxStruct;
