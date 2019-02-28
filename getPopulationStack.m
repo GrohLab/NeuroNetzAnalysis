@@ -150,7 +150,8 @@ end
 %% Wrapping up the output
 dPopStruct = struct('Stack',dPopStack,'SignalIDs',{dPopExp(1).SignalIDs});
 cPopStruct = struct('Stack',cPopStack,'SignalIDs',{cPopExp(1).SignalIDs});
-conditionStruct = struct('ExcludeFlags',excludeIdx,'CVDFlags',cvIdx);
+conditionStruct = struct('ExcludeFlags',excludeIdx,'CVDFlags',cvIdx,...
+    'ExperimentCuts',Naps,'TotalExperiments',Nexp);
 configStruct.SamplingFrequencies = mean(fsExp,1);
 fprintf('The results are ready.\n')
 end
