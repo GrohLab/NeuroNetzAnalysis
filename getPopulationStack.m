@@ -83,7 +83,7 @@ if numel(Ns) == 1
     for cexp = 1:Nexp
         stcSubs = sum(Naps(1:cexp)) + 1:sum(Naps(1:cexp+1));
         % If it is not the first assignment
-        if ~(cexp == 1)
+        if cexp > 1
             % If the sinal ID do not match with the previous
             if ~(sum(strcmpi(dPopExp(cexp-1).SignalIDs,...
                     dPopExp(cexp).SignalIDs)) == Ns)
