@@ -1,5 +1,4 @@
-function [outputArg1,outputArg2] =...
-    plotRasterFromStack(discreteStack, timeLapse, fs, figTitle, ax)
+function plotRasterFromStack(discreteStack, timeLapse, fs, figTitle, ax)
 %UNTITLED6 Summary of this function goes here
 %   Detailed explanation goes here
 
