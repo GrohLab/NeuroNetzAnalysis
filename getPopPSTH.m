@@ -27,7 +27,9 @@ possCombi = sum(2.^(0:Ncv-1)) + 1;
 %% Computing the conditional PSTHs with user dependent selection.
 confCell = squeeze(struct2cell(configStruct.ConditionWindow));
 Nexp = numel(condSt.ExperimentCuts) - 1;
-auxResPSTH = struct('ConditionCombination','None','PSTH',cleanPSTH);
+auxResPSTH = struct('ConditionCombination','None',...
+    'PSTHstack',cleanPSTH,...
+    'TrialsPerExperiment', condSt.ExperimentCuts(2:Nexp+1));
 auxResPSTH = repmat(auxResPSTH,1,possCombi);
 auxCnt = 2;
 while ~finishedButton && auxCnt <= possCombi
@@ -54,18 +56,20 @@ while ~finishedButton && auxCnt <= possCombi
         end
     end
     inTrials = ~condSt.ExcludeFlags & any(condSt.CVDFlags(scvFlags,:),1);
-    % Experiment normalization
-    currentPSTH = zeros(Nv, Nts, 'single');
+    % Single experiment PSTH
+    currentPSTH = zeros(Nv, Nts, Nexp, 'single');
     for cexp = 1:Nexp
         curExp = sum(condSt.ExperimentCuts(1:cexp))+1:...
             sum(condSt.ExperimentCuts(1:cexp+1));
-        currentPSTH = currentPSTH +...
-            sum(dSt.Stack(:,:,inTrials(curExp)),3)/...
+        currentPSTH(:,:,cexp) = sum(dSt.Stack(:,:,inTrials(curExp)),3)/...
+            sum(inTrials(curExp));
+        auxResPSTH(auxCnt).TrialsPerExperiment(cexp) =...
             sum(inTrials(curExp));
     end
-    currentPSTH = currentPSTH./Nexp;
     % currentPSTH = sum(dSt.Stack(:,:,inTrials),3)/sum(inTrials);
-    auxResPSTH(auxCnt).PSTH = currentPSTH;
+    % The population stack can be performed easily outside the function.
+    
+    auxResPSTH(auxCnt).PSTHstack = currentPSTH;
     auxResPSTH(auxCnt).ConditionCombination =...
         {confCell{[true,false],scvFlags}};
     auxCnt = auxCnt + 1;
