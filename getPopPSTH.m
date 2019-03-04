@@ -19,7 +19,7 @@ cleanIdx = ~(condSt.ExcludeFlags | any(condSt.CVDFlags,1));
 cl_swaps = sum(cleanIdx);
 fprintf('Percentage of ''clean'' trials: %.2f%% (%d/%d)\n',100*cl_swaps/Nap,...
     cl_swaps, Nap)
-cleanPSTH = sum(dSt.Stack(:,:,cleanIdx),3)./cl_swaps;
+% cleanPSTH = sum(dSt.Stack(:,:,cleanIdx),3)./cl_swaps;
 tx = (0:Nts-1) * 1/fs - configStruct.ViewWindow(1);
 %% Possible combinations
 % $sum_{i=0}^{N_{cv}-1}(2^i)+1$
@@ -27,11 +27,23 @@ possCombi = sum(2.^(0:Ncv-1)) + 1;
 %% Computing the conditional PSTHs with user dependent selection.
 confCell = squeeze(struct2cell(configStruct.ConditionWindow));
 Nexp = numel(condSt.ExperimentCuts) - 1;
+currentPSTH = zeros(Nv, Nts, Nexp, 'single');
 auxResPSTH = struct('ConditionCombination','None',...
-    'PSTHstack',cleanPSTH,...
+    'PSTHstack',currentPSTH,...
     'TrialsPerExperiment', condSt.ExperimentCuts(2:Nexp+1));
 auxResPSTH = repmat(auxResPSTH,1,possCombi);
-auxCnt = 2;
+auxCnt = 1;
+% Clean PSTH stack
+for cexp = 1:Nexp
+        curExp = sum(condSt.ExperimentCuts(1:cexp))+1:...
+            sum(condSt.ExperimentCuts(1:cexp+1));
+        currentPSTH(:,:,cexp) = sum(dSt.Stack(:,:,curExp(cleanIdx(curExp))),3)/...
+            sum(cleanIdx(curExp));
+        auxResPSTH(auxCnt).TrialsPerExperiment(cexp) =...
+            sum(cleanIdx(curExp));
+end
+auxResPSTH(auxCnt).PSTHstack = currentPSTH;
+auxCnt = auxCnt + 1;
 while ~finishedButton && auxCnt <= possCombi
     % While the possible combinations are not exhausted, the loop continues
     % to prompt the user for interesting combinations. A future plan is to
@@ -61,14 +73,13 @@ while ~finishedButton && auxCnt <= possCombi
     for cexp = 1:Nexp
         curExp = sum(condSt.ExperimentCuts(1:cexp))+1:...
             sum(condSt.ExperimentCuts(1:cexp+1));
-        currentPSTH(:,:,cexp) = sum(dSt.Stack(:,:,inTrials(curExp)),3)/...
-            sum(inTrials(curExp));
+        currentPSTH(:,:,cexp) = sum(dSt.Stack(:,:,curExp(inTrials(curExp))),3);%/...
+            % sum(inTrials(curExp));
         auxResPSTH(auxCnt).TrialsPerExperiment(cexp) =...
             sum(inTrials(curExp));
     end
     % currentPSTH = sum(dSt.Stack(:,:,inTrials),3)/sum(inTrials);
     % The population stack can be performed easily outside the function.
-    
     auxResPSTH(auxCnt).PSTHstack = currentPSTH;
     auxResPSTH(auxCnt).ConditionCombination =...
         {confCell{[true,false],scvFlags}};
@@ -91,7 +102,8 @@ end
 PSTHStruct = struct('BinSize',configStruct.BinSize,...
     'TimeAxis',tx,...
     'Trigger',configStruct.Trigger.Name,...
-    'PSTHs',auxResPSTH);
+    'PSTHs',auxResPSTH,...
+    'SignalIDs',{dSt.SignalIDs});
 end
 
 % binWidth = ceil(configStruct.BinSize * fs);
