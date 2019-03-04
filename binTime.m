@@ -1,4 +1,4 @@
-function [binnedSignal] = binTime(signal,binSz,fs)
+function [binnedSignal, binWidth] = binTime(signal,binSz,fs)
 %BINTIME returns a binned signal using the bin size and the sampling
 %frequency as input arguments. It reshapes the signal into packages of
 %elements fitting into the specified bins and sums the values 'in-one-go'.
