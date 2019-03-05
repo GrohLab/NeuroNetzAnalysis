@@ -56,33 +56,70 @@ else
 end
 
 %% Plotting procedure
-ax = gobjects(Ncc,1);
 [Nv, Ns, Nx] = size(PSTHStruct.PSTHs(1).PSTHstack);
+ax = gobjects(Ncc,Nx);
 fs = 1/mean(diff(ttx));
-cmap = jet(Ncc);
+cmap = winter(Ncc-1);
+cmap = [0.1,0.1,0.1;cmap];
 fig.Visible = 'on';
-for csp = 1:Ncc
-    ax(csp) = subplot(Nrow,Ncol,csp,fig.Children);
-    hold(ax(csp),'on')
-    for cexp = Nx:-1:1
+% ofst = (0:Nx-1) * 1.2;
+Nb = numel(btx);
+for ccc = 1:Ncc
+    % Computing the necessary counters and subscripts to manage the
+    % multiple subplots in the graphs.
+    ccol = mod(ccc-1,Ncol)+1;
+    for cexp = 1:Nx
+        crow = ((ccc - ccol)/Ncol);
+        crowFig = (crow*(Nx)) + cexp;
+        sIdx = sub2ind([Nrow*(Nx),Ncol],crowFig,ccol);
+        ax(ccc,cexp) = subplot(Nrow*(Nx),Ncol,sIdx);
+        ax(ccc,cexp).Box = 'off';
+        ax(ccc,cexp).XAxis.Visible = 'off';
+        ax(ccc,cexp).Parent = fig;
+        hold(ax(ccc,cexp),'on')
         % Binning the signals using the _binsize_ variable
         [bPSTH, binWidth] =...
-            binTime(PSTHStruct.PSTHs(csp).PSTHstack(2:Nv,:,cexp),binsize,fs);
+            binTime(PSTHStruct.PSTHs(ccc).PSTHstack(2:Nv,:,cexp),binsize,fs);
+        
         % Removing those variables which didn't occure at all
         emptyFlag = sum(bPSTH,1) == 0;
         bPSTH = bPSTH(:,~emptyFlag);
         nNv = size(bPSTH,2);
         lbs = PSTHStruct.SignalIDs([false,~emptyFlag]);
         cSubs = find([false,~emptyFlag]);
-        for cv = 1:nNv
-            bar(ax(csp),btx,(cexp+1)*bPSTH(:,cv),'EdgeColor','none',...
-                'FaceAlpha',0.3,'FaceColor',cmap(cSubs(cv),:),...
-                'DisplayName',lbs{cv},'BaseValue',cexp)
+        % Normalization values
+        tpe = PSTHStruct.PSTHs(ccc).TrialsPerExperiment(cexp);
+        for cvar = 1:nNv
+            % bln = repmat(ofst(cexp),1,Nb);
+            if any(strcmpi(lbs{cvar},{'spikes','neuron','unit'}))
+                yyaxis(ax(ccc,cexp),'right');
+                tmx = [btx(Nb), btx(1), btx]';
+                y = [0;0;...ofst(cexp)+flip(bPSTH(:,cvar)./tpe)];
+                    flip(bPSTH(:,cvar)./tpe)];
+                pts = [tmx,y];
+                psh = polyshape(pts,'Simplify',false);
+                plot(ax(ccc,cexp),psh,...
+                    'EdgeColor','none','FaceColor',cmap(2,:),...
+                    'DisplayName',lbs{cvar})
+%                 patch(ax(ccc,cexp),...
+%                     [btx(Nb), btx(1), btx],...
+%                     [repmat(ofst(cexp),1,2),...
+%                     ofst(cexp)+flip(bPSTH(:,cvar)./tpe)'],cmap(cvar,:))
+            else
+                % area(ax(ccc,cexp),[btx',btx'],[bln',ofst(cexp)+(bPSTH(:,cvar)./tpe)],...
+                bar(ax(ccc,cexp),btx,bPSTH(:,cvar)./tpe,...
+                    'EdgeColor','none','FaceAlpha',0.3,...
+                    'FaceColor',cmap(cSubs(cvar),:),...
+                    'DisplayName',lbs{cvar});%,'BaseValue',ofst(cexp),...
+                %'ShowBaseLine','off')
+            end
         end
-        plot(ax(csp),ttx,PSTHStruct.PSTHs(csp).PSTHstack(1,:,cexp),...
-            'Color',cmap(1,:),'DisplayName',PSTHStruct.Trigger)
-        legend show
+        plot(ax(ccc,cexp),ttx,...
+            PSTHStruct.PSTHs(ccc).PSTHstack(1,:,cexp)./tpe,... ofst(cexp)+PSTHStruct.PSTHs(ccc).PSTHstack(1,:,cexp)./tpe,...
+            'Color',cmap(1,:),'DisplayName',PSTHStruct.Trigger,...
+            'LineStyle','-')
     end
+    ax(ccc,cexp).XAxis.Visible = 'on';
 end
 end
 
