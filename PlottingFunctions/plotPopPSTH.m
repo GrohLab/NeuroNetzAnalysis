@@ -73,6 +73,7 @@ for ccc = 1:Ncc
         crowFig = (crow*(Nx)) + cexp;
         sIdx = sub2ind([Nrow*(Nx),Ncol],crowFig,ccol);
         ax(ccc,cexp) = subplot(Nrow*(Nx),Ncol,sIdx);
+        % Setting important axis properties to force a 'clean' display
         ax(ccc,cexp).Box = 'off';
         ax(ccc,cexp).XAxis.Visible = 'off';
         ax(ccc,cexp).Parent = fig;
@@ -80,14 +81,13 @@ for ccc = 1:Ncc
         % Binning the signals using the _binsize_ variable
         [bPSTH, binWidth] =...
             binTime(PSTHStruct.PSTHs(ccc).PSTHstack(2:Nv,:,cexp),binsize,fs);
-        
         % Removing those variables which didn't occure at all
         emptyFlag = sum(bPSTH,1) == 0;
         bPSTH = bPSTH(:,~emptyFlag);
         nNv = size(bPSTH,2);
         lbs = PSTHStruct.SignalIDs([false,~emptyFlag]);
         cSubs = find([false,~emptyFlag]);
-        % Normalization values
+        % Normalization value
         tpe = PSTHStruct.PSTHs(ccc).TrialsPerExperiment(cexp);
         for cvar = 1:nNv
             % bln = repmat(ofst(cexp),1,Nb);
