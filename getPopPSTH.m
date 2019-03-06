@@ -37,8 +37,7 @@ auxCnt = 1;
 for cexp = 1:Nexp
         curExp = sum(condSt.ExperimentCuts(1:cexp))+1:...
             sum(condSt.ExperimentCuts(1:cexp+1));
-        currentPSTH(:,:,cexp) = sum(dSt.Stack(:,:,curExp(cleanIdx(curExp))),3)/...
-            sum(cleanIdx(curExp));
+        currentPSTH(:,:,cexp) = sum(dSt.Stack(:,:,curExp(cleanIdx(curExp))),3);
         auxResPSTH(auxCnt).TrialsPerExperiment(cexp) =...
             sum(cleanIdx(curExp));
 end
