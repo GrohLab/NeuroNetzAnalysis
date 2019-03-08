@@ -76,27 +76,35 @@ btx = ttx(1):binsize:ttx(end);
 [Nv, Ns, Nx] = size(PSTHStruct.PSTHs(1).PSTHstack);
 ax = gobjects(Ncc,1);
 fs = 1/mean(diff(ttx));
-cmap = winter(Nv-2);
+cmap = jet(Nv-2);
 % Gray, olive green and blue shades
-cmap = [0.1,0.1,0.1;1/3, 0.502, 0;cmap];
+cmap = [1/3, 0.502, 0;0,0,0;cmap];
 fig.Visible = 'on';
 % ofst = (0:Nx-1) * 1.2;
 Nb = numel(btx);
 for ccc = 1:Ncc
     % Computing the necessary counters and subscripts to manage the
     % multiple subplots in the graphs.
-    auxPSTH = zeros(Nv-1,Ns,'single');
-    trigsig = zeros(1,Ns,'single');
+    auxPSTH = zeros(Nv, Ns, 'single');
     ax(ccc) = subplot(Nrow,Ncol,ccc);
     ax(ccc).Box = 'off';
     ax(ccc).Parent = fig;
-    for cexp = 1:Nx
-            auxPSTH = auxPSTH + PSTHStruct.PSTHs(ccc).PSTHstack(2:Nv,:,cexp)./...
-                PSTHStruct.PSTHs(ccc).TrialsPerExperiment(cexp);
-            trigsig = trigsig + PSTHStruct.PSTHs(ccc).PSTHstack(1,:,cexp)./...
-                PSTHStruct.PSTHs(ccc).TrialsPerExperiment(cexp);
+    ax(ccc).NextPlot = 'add';
+    % Condition name
+    condNames = PSTHStruct.PSTHs(ccc).ConditionCombination;
+    condtitle = condNames{1};
+    cv = 2;
+    while cv <= numel(condNames)
+        condtitle = cat(2,condtitle,' + ',condNames{cv});
+        cv = cv + 1;
     end
-    bPSTH = binTime(auxPSTH, binsize, fs);
+    for cexp = 1:Nx
+        if PSTHStruct.PSTHs(ccc).TrialsPerExperiment(cexp)
+            auxPSTH = auxPSTH + PSTHStruct.PSTHs(ccc).PSTHstack(:,:,cexp)./...
+                PSTHStruct.PSTHs(ccc).TrialsPerExperiment(cexp);
+        end
+    end
+    bPSTH = binTime(auxPSTH(2:Nv,:), binsize, fs);
     % Removing those variables which didn't occure at all
     emptyFlag = sum(bPSTH,1) == 0;
     bPSTH = bPSTH(:,~emptyFlag);
@@ -106,32 +114,39 @@ for ccc = 1:Ncc
     for cvar = 1:nNv
         if any(strcmpi(lbs{cvar},{'spikes','neuron','unit'}))
             yyaxis(ax(ccc),'right');
-            tmx = [btx(Nb), btx(1), btx]';
-            y = [0;0;...ofst(cexp)+flip(bPSTH(:,cvar)./tpe)];
-                flip(bPSTH(:,cvar)./Nx)];
-            pts = [tmx,y];
-            psh = polyshape(pts,'Simplify',false);
-            plot(ax(ccc),psh,...
-                'EdgeColor','none','FaceColor',cmap(2,:),...
-                'DisplayName',lbs{cvar});
-            ax(ccc).YAxis(2).Limits = [0,max(y,[],'omitnan')];
-            yyaxis(ax(ccc),'left');
+                bar(ax(ccc),btx,bPSTH(:,cvar)./binsize,...
+                    'EdgeColor','none','FaceColor',cmap(2,:),...
+                    'FaceAlpha',0.3,'DisplayName',lbs{cvar},'BarWidth',1);
+                ax(ccc).YAxis(2).Limits =...
+                    [0,max(bPSTH(:,cvar),[],'omitnan')/binsize];
+                yyaxis(ax(ccc),'left');
         else
-            % area(ax(ccc,cexp),[btx',btx'],[bln',ofst(cexp)+(bPSTH(:,cvar)./tpe)],...
             bar(ax(ccc),btx,bPSTH(:,cvar)./Nx,...
                 'EdgeColor','none','FaceAlpha',0.3,...
                 'FaceColor',cmap(cSubs(cvar),:),...
-                'DisplayName',lbs{cvar});%,'BaseValue',ofst(cexp),...
-            %'ShowBaseLine','off')
+                'DisplayName',lbs{cvar});
         end
     end
-    plot(ax(ccc),ttx, trigsig./Nx,...
-        'Color',cmap(1,:),'DisplayName',PSTHStruct.Trigger,...
-        'LineStyle','-');
-    ax(ccc).Title.String = PSTHStruct.PSTHs(ccc).ConditionCombination;
+    plot(ax(ccc),ttx, auxPSTH(1,:)./Nx, 'Color',cmap(1,:),...
+                'DisplayName',PSTHStruct.Trigger,'LineStyle','-');
+    ax(ccc).Title.String = condtitle;
+    
+    Nt = sum(PSTHStruct.PSTHs(ccc).TrialsPerExperiment);
+    ax(ccc).YAxis(1).Color = [0,0,0];
+    try
+        ax(ccc).YAxis(2).Color = [0.3,0.3,0.3];
+    catch
+        fprintf('This experiment is apparently empty.\n')
+    end
+    ax(ccc).YAxis(1).TickLabels = [];
+    ax(ccc).YAxis(1).TickValues = [];
+    ax(ccc).YAxis(1).Label.String = sprintf('%d_{%d}',Nx,Nt);
+    ax(ccc).YAxis(1).Label.Rotation = 0;
+
 end
 fig_out = fig;
 end
+
 
 function fig_out = plotMiddle(PSTHStruct, binsize, fig)
 Ncc = length(PSTHStruct.PSTHs);
@@ -146,8 +161,8 @@ btx = ttx(1):binsize:ttx(end);
 [Nv, Ns, Nx] = size(PSTHStruct.PSTHs(1).PSTHstack);
 Nx_g = Nx + 1;
 fs = 1/mean(diff(ttx));
-cmap = winter(Nv-2);
-% Green, black and winter shades
+cmap = jet(Nv-2);
+% Green, black and jet shades
 cmap = [1/3, 0.502, 0;0,0,0;cmap];
 for ccc = 1:Ncc
     % Computing the necessary counters and subscripts to manage the
@@ -159,10 +174,11 @@ for ccc = 1:Ncc
     auxPSTH = zeros(Nv,Ns,'single');
     ax = gobjects(Nx_g,1);
     Nt = sum(PSTHStruct.PSTHs(ccc).TrialsPerExperiment);
+    % Creating the title per condition
     condNames = PSTHStruct.PSTHs(ccc).ConditionCombination;
     condtitle = condNames{1};
     cv = 2;
-    while cv < numel(condNames)
+    while cv <= numel(condNames)
         condtitle = cat(2,condtitle,' + ',condNames{cv});
         cv = cv + 1;
     end
@@ -174,8 +190,11 @@ for ccc = 1:Ncc
         % experiments are over, the overal PSTH is computed and displayed
         % using the catch sections.
         try
-            auxPSTH = auxPSTH + PSTHStruct.PSTHs(ccc).PSTHstack(:,:,cexp)./...
-                PSTHStruct.PSTHs(ccc).TrialsPerExperiment(cexp);
+            if logical(PSTHStruct.PSTHs(ccc).TrialsPerExperiment(cexp))
+                auxPSTH = auxPSTH +...
+                    PSTHStruct.PSTHs(ccc).PSTHstack(:,:,cexp)./...
+                    PSTHStruct.PSTHs(ccc).TrialsPerExperiment(cexp);
+            end
             [bPSTH, binWidth] =...
                 binTime(PSTHStruct.PSTHs(ccc).PSTHstack(2:Nv,:,cexp),...
                 binsize,fs);
@@ -242,7 +261,7 @@ for ccc = 1:Ncc
     
     figs(ccc).Visible = 'on';
 end
-fig_out = fig;
+fig_out = figs;
 end
 
 function fig_out = plotCrowded(PSTHStruct, binsize, fig)
@@ -268,7 +287,7 @@ btx = ttx(1):binsize:ttx(end);
 [Nv, Ns, Nx] = size(PSTHStruct.PSTHs(1).PSTHstack);
 ax = gobjects(Ncc,Nx+1);
 fs = 1/mean(diff(ttx));
-cmap = winter(Nv-2);
+cmap = jet(Nv-2);
 % Gray, olive green and blue shades
 cmap = [0.1,0.1,0.1;1/3, 0.502, 0;cmap];
 fig.Visible = 'on';
