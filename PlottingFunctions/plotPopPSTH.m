@@ -25,8 +25,8 @@ if isstruct(PSTHStruct) && isfield(PSTHStruct,'TimeAxis')
     addOptional(p,'Figure',defaultFig,@(x)isa(x,figchk));
     % Plotting style
     defaultStyle = 'simple';
-    validStyles = {'simple','crowded'};
-    checkStyle = @(x) validatestring(x,validStyles);
+    validStyles = {'simple','middle','crowded'};
+    checkStyle = @(x) any(validatestring(x,validStyles));
     addOptional(p,'PlotStyle',defaultStyle,checkStyle);
     % Actual validation
     p.parse(PSTHStruct, varargin{:})
