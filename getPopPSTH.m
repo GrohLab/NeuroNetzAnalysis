@@ -66,7 +66,8 @@ while ~finishedButton && auxCnt <= possCombi
             continue
         end
     end
-    inTrials = ~condSt.ExcludeFlags & any(condSt.CVDFlags(scvFlags,:),1);
+    inTrials = ~(condSt.ExcludeFlags | any(condSt.CVDFlags(~scvFlags,:),1)) &...
+        sum(condSt.CVDFlags(scvFlags,:),1) == sum(scvFlags);
     % Single experiment PSTH
     currentPSTH = zeros(Nv, Nts, Nexp, 'single');
     for cexp = 1:Nexp
