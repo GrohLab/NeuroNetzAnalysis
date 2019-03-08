@@ -104,6 +104,3 @@ PSTHStruct = struct('BinSize',configStruct.BinSize,...
     'PSTHs',auxResPSTH,...
     'SignalIDs',{dSt.SignalIDs});
 end
-
-% binWidth = ceil(configStruct.BinSize * fs);
-% Nbin = ceil(Nts/binWidth);
