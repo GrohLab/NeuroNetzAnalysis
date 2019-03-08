@@ -125,14 +125,12 @@ if exist(dbTabFilePath,'file')
         'OKString','OK',...
         'Name','Selection of exclude signals',...
         'ListSize',[160,15*numel(exclVars)],'InitialValue',1);
-    if iok
-        % Exclude and grooming should ALWAYS be excluded.
-        configStruct.Exclude = cat(1,...
-            exclVars(exclSub),{'exclude';'grooming'});
-    else
+    if ~iok
         fprintf('No signal will be excluded from the experiment.\n')
         configStruct.Exclude = [];
     end
+    configStruct.Exclude = cat(1,...
+            exclVars(exclSub),{'exclude';'grooming'});
     %% Ignore selection
     eIdx = false(numel(exclVars),1);
     eIdx(exclSub) = true;
