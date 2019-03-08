@@ -151,7 +151,6 @@ end
 fig_out = fig;
 end
 
-
 function fig_out = plotMiddle(PSTHStruct, binsize, fig)
 Ncc = length(PSTHStruct.PSTHs);
 if Ncc == 1
@@ -274,7 +273,9 @@ for ccc = 1:Ncc
 end
 fig_out = figs;
 end
-
+% The plotCrowded function has probably no much use. It contains several
+% bugs that might get fixed as I develop the plotPopPSTH function and
+% encapsulate several plotting routines into smaller functions.
 function fig_out = plotCrowded(PSTHStruct, binsize, fig)
 % Number of (user-defined) conditions combinations
 Ncc = length(PSTHStruct.PSTHs);
