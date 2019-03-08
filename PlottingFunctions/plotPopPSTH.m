@@ -45,6 +45,8 @@ plotStyle = p.Results.PlotStyle;
 switch plotStyle
     case 'simple'
         fig_out = plotSimple(PSTHStruct, binsize, fig);
+    case 'middle'
+        fig_out = plotMiddle(PSTHStruct, binsize, fig);
     case 'crowded'
         fig_out = plotCrowded(PSTHStruct, binsize, fig);
 end
@@ -127,6 +129,118 @@ for ccc = 1:Ncc
         'Color',cmap(1,:),'DisplayName',PSTHStruct.Trigger,...
         'LineStyle','-');
     ax(ccc).Title.String = PSTHStruct.PSTHs(ccc).ConditionCombination;
+end
+fig_out = fig;
+end
+
+function fig_out = plotMiddle(PSTHStruct, binsize, fig)
+Ncc = length(PSTHStruct.PSTHs);
+if Ncc == 1
+    figs = fig;
+else
+    figs = gobjects(Ncc,1);
+    figs(1) = fig;
+end
+ttx = PSTHStruct.TimeAxis;
+btx = ttx(1):binsize:ttx(end);
+[Nv, Ns, Nx] = size(PSTHStruct.PSTHs(1).PSTHstack);
+Nx_g = Nx + 1;
+fs = 1/mean(diff(ttx));
+cmap = winter(Nv-2);
+% Green, black and winter shades
+cmap = [1/3, 0.502, 0;0,0,0;cmap];
+for ccc = 1:Ncc
+    % Computing the necessary counters and subscripts to manage the
+    % multiple subplots in the graphs.
+    if ~(figs(ccc).isvalid && isa(figs(ccc),'matlab.ui.Figure'))
+        figs(ccc) = figure('Name','Population PSTH',...
+            'Color',[1,1,1],'Visible','off');
+    end
+    auxPSTH = zeros(Nv,Ns,'single');
+    ax = gobjects(Nx_g,1);
+    Nt = sum(PSTHStruct.PSTHs(ccc).TrialsPerExperiment);
+    condNames = PSTHStruct.PSTHs(ccc).ConditionCombination;
+    condtitle = condNames{1};
+    cv = 2;
+    while cv < numel(condNames)
+        condtitle = cat(2,condtitle,' + ',condNames{cv});
+        cv = cv + 1;
+    end
+    for cexp = 1:Nx_g
+        ax(cexp) = subplot(Nx_g,1,cexp,'Parent',figs(ccc),'Box','off');
+        % Setting important axis properties to force a 'clean' display
+        hold(ax(cexp),'on')
+        % Binning the signals using the _binsize_ variable. When the
+        % experiments are over, the overal PSTH is computed and displayed
+        % using the catch sections.
+        try
+            auxPSTH = auxPSTH + PSTHStruct.PSTHs(ccc).PSTHstack(:,:,cexp)./...
+                PSTHStruct.PSTHs(ccc).TrialsPerExperiment(cexp);
+            [bPSTH, binWidth] =...
+                binTime(PSTHStruct.PSTHs(ccc).PSTHstack(2:Nv,:,cexp),...
+                binsize,fs);
+        catch
+            bPSTH = binTime(auxPSTH(2:Nv,:), binsize, fs);
+        end
+        % Removing those variables which didn't occure at all
+        emptyFlag = sum(bPSTH,1) == 0;
+        bPSTH = bPSTH(:,~emptyFlag);
+        nNv = size(bPSTH,2);
+        lbs = PSTHStruct.SignalIDs([false,~emptyFlag]);
+        cSubs = find([false,~emptyFlag]);
+        % Normalization value (For each experiment and overall in the catch
+        % section
+        try
+            tpe = PSTHStruct.PSTHs(ccc).TrialsPerExperiment(cexp);
+        catch
+            tpe = Nx;
+        end
+        for cvar = 1:nNv
+            % bln = repmat(ofst(cexp),1,Nb);
+            if any(strcmpi(lbs{cvar},{'spikes','neuron','unit'}))
+                yyaxis(ax(cexp),'right');
+                bar(ax(cexp),btx,bPSTH(:,cvar)./binsize,...
+                    'EdgeColor','none','FaceColor',cmap(2,:),...
+                    'FaceAlpha',0.3,'DisplayName',lbs{cvar},'BarWidth',1);
+                ax(cexp).YAxis(2).Limits =...
+                    [0,max(bPSTH(:,cvar),[],'omitnan')/binsize];
+                yyaxis(ax(cexp),'left');
+            else                
+                bar(ax(cexp),btx,bPSTH(:,cvar)./tpe,...
+                    'EdgeColor','none','FaceAlpha',0.3,...
+                    'FaceColor',cmap(cSubs(cvar),:),...
+                    'DisplayName',lbs{cvar},'BarWidth',1);
+            end
+        end
+        % Display of the unbinned trigger for each experiment and overall
+        % in the catch section.
+        try
+            plot(ax(cexp),ttx,...
+                PSTHStruct.PSTHs(ccc).PSTHstack(1,:,cexp)./tpe,...
+                'Color',cmap(1,:),'DisplayName',PSTHStruct.Trigger,...
+                'LineStyle','-');
+        catch
+            plot(ax(cexp),ttx, auxPSTH(1,:)./tpe, 'Color',cmap(1,:),...
+                'DisplayName',PSTHStruct.Trigger,'LineStyle','-');
+        end
+        ax(cexp).XAxis.Visible = 'off';
+        ax(cexp).YAxis(1).Color = [0,0,0];
+        try
+            ax(cexp).YAxis(2).Color = [0.3,0.3,0.3];
+        catch
+            fprintf('This experiment is apparently empty.\n')
+        end
+        ax(cexp).YAxis(1).TickLabels = [];
+        ax(cexp).YAxis(1).TickValues = [];
+        ax(cexp).YAxis(1).Label.String = sprintf('%s_{%d}',num2str(cexp),...
+            tpe);
+        ax(cexp).YAxis(1).Label.Rotation = 0;
+    end
+    ax(1).Title.String = condtitle;
+    ax(Nx_g).YAxis(1).Label.String = sprintf('P_{%d}',Nt);
+    ax(Nx_g).XAxis.Visible = 'on';
+    
+    figs(ccc).Visible = 'on';
 end
 fig_out = fig;
 end
