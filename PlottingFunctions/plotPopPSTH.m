@@ -80,8 +80,6 @@ cmap = jet(Nv-2);
 % Gray, olive green and blue shades
 cmap = [1/3, 0.502, 0;0,0,0;cmap];
 fig.Visible = 'on';
-% ofst = (0:Nx-1) * 1.2;
-Nb = numel(btx);
 for ccc = 1:Ncc
     % Computing the necessary counters and subscripts to manage the
     % multiple subplots in the graphs.
@@ -98,10 +96,13 @@ for ccc = 1:Ncc
         condtitle = cat(2,condtitle,' + ',condNames{cv});
         cv = cv + 1;
     end
+    tpe = Nx;
     for cexp = 1:Nx
         if PSTHStruct.PSTHs(ccc).TrialsPerExperiment(cexp)
             auxPSTH = auxPSTH + PSTHStruct.PSTHs(ccc).PSTHstack(:,:,cexp)./...
                 PSTHStruct.PSTHs(ccc).TrialsPerExperiment(cexp);
+        else
+            tpe = tpe - 1;
         end
     end
     bPSTH = binTime(auxPSTH(2:Nv,:), binsize, fs);
@@ -114,20 +115,21 @@ for ccc = 1:Ncc
     for cvar = 1:nNv
         if any(strcmpi(lbs{cvar},{'spikes','neuron','unit'}))
             yyaxis(ax(ccc),'right');
-                bar(ax(ccc),btx,bPSTH(:,cvar)./binsize,...
-                    'EdgeColor','none','FaceColor',cmap(2,:),...
-                    'FaceAlpha',0.3,'DisplayName',lbs{cvar},'BarWidth',1);
-                ax(ccc).YAxis(2).Limits =...
-                    [0,max(bPSTH(:,cvar),[],'omitnan')/binsize];
-                yyaxis(ax(ccc),'left');
+            bar(ax(ccc),btx,bPSTH(:,cvar)./binsize,...
+                'EdgeColor','none','FaceColor',cmap(2,:),...
+                'FaceAlpha',0.3,'DisplayName',lbs{cvar},'BarWidth',1);
+            ax(ccc).YAxis(2).Limits =...
+                [0,max(bPSTH(:,cvar),[],'omitnan')/binsize];
+            ax(ccc).YAxis(2).Label.String = 'Hz';
+            yyaxis(ax(ccc),'left');
         else
-            bar(ax(ccc),btx,bPSTH(:,cvar)./Nx,...
+            bar(ax(ccc),btx,bPSTH(:,cvar)./tpe,...
                 'EdgeColor','none','FaceAlpha',0.3,...
                 'FaceColor',cmap(cSubs(cvar),:),...
                 'DisplayName',lbs{cvar});
         end
     end
-    plot(ax(ccc),ttx, auxPSTH(1,:)./Nx, 'Color',cmap(1,:),...
+    plot(ax(ccc),ttx, auxPSTH(1,:)./tpe, 'Color',cmap(1,:),...
                 'DisplayName',PSTHStruct.Trigger,'LineStyle','-');
     ax(ccc).Title.String = condtitle;
     
@@ -140,9 +142,11 @@ for ccc = 1:Ncc
     end
     ax(ccc).YAxis(1).TickLabels = [];
     ax(ccc).YAxis(1).TickValues = [];
-    ax(ccc).YAxis(1).Label.String = sprintf('%d_{%d}',Nx,Nt);
-    ax(ccc).YAxis(1).Label.Rotation = 0;
-
+    ax(ccc).YAxis(1).Label.String = sprintf('Experiments: %d/_{trials: %d}',...
+        tpe,Nt);
+    xlabel(ax(ccc),sprintf('Time_{%.2f ms} [s]',binsize*1e3))
+    legend(ax(ccc),'show','Location','best')
+    linkaxes(ax,'x')
 end
 fig_out = fig;
 end
@@ -182,6 +186,7 @@ for ccc = 1:Ncc
         condtitle = cat(2,condtitle,' + ',condNames{cv});
         cv = cv + 1;
     end
+    Nxt = Nx;
     for cexp = 1:Nx_g
         ax(cexp) = subplot(Nx_g,1,cexp,'Parent',figs(ccc),'Box','off');
         % Setting important axis properties to force a 'clean' display
@@ -189,11 +194,14 @@ for ccc = 1:Ncc
         % Binning the signals using the _binsize_ variable. When the
         % experiments are over, the overal PSTH is computed and displayed
         % using the catch sections.
+        
         try
             if logical(PSTHStruct.PSTHs(ccc).TrialsPerExperiment(cexp))
                 auxPSTH = auxPSTH +...
                     PSTHStruct.PSTHs(ccc).PSTHstack(:,:,cexp)./...
                     PSTHStruct.PSTHs(ccc).TrialsPerExperiment(cexp);
+            else
+                Nxt = Nxt - 1;
             end
             [bPSTH, binWidth] =...
                 binTime(PSTHStruct.PSTHs(ccc).PSTHstack(2:Nv,:,cexp),...
@@ -212,7 +220,7 @@ for ccc = 1:Ncc
         try
             tpe = PSTHStruct.PSTHs(ccc).TrialsPerExperiment(cexp);
         catch
-            tpe = Nx;
+            tpe = Nxt;
         end
         for cvar = 1:nNv
             % bln = repmat(ofst(cexp),1,Nb);
@@ -223,6 +231,7 @@ for ccc = 1:Ncc
                     'FaceAlpha',0.3,'DisplayName',lbs{cvar},'BarWidth',1);
                 ax(cexp).YAxis(2).Limits =...
                     [0,max(bPSTH(:,cvar),[],'omitnan')/binsize];
+                ax(cexp).YAxis(2).Label.String = 'Hz';
                 yyaxis(ax(cexp),'left');
             else                
                 bar(ax(cexp),btx,bPSTH(:,cvar)./tpe,...
@@ -258,7 +267,9 @@ for ccc = 1:Ncc
     ax(1).Title.String = condtitle;
     ax(Nx_g).YAxis(1).Label.String = sprintf('P_{%d}',Nt);
     ax(Nx_g).XAxis.Visible = 'on';
-    
+    legend(ax(Nx_g),'show','Location','bestoutside')
+    xlabel(ax(Nx_g),sprintf('Time_{%.2f ms} [s]',binsize))
+    linkaxes(ax,'x')
     figs(ccc).Visible = 'on';
 end
 fig_out = figs;
