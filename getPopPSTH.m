@@ -91,7 +91,7 @@ cres = possCombi;
 emptyFlag = true;
 while cres > 1 && emptyFlag
     emptyFlag = sum(strcmpi(auxResPSTH(cres).ConditionCombination,...
-        'none'));
+        'Control'));
     try
         auxResPSTH(cres*emptyFlag) = [];
         cres = cres - 1;
