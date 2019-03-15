@@ -3,10 +3,10 @@
 % The clearvars command is commented to avoid erasing the information
 % extracted from the smrx file through the UMS_life_script.mlx
 % clearvars
-% homedir='F:\Experiments_2018\27_12_2018\';
-homedir='E:\Data\';
+homedir='F:\Experiments_2019\12_3_2019\M59_C2\C2B';
+% homedir='E:\Data\';
 cd(homedir)
-fname = 'M47_C2_L6Mech+L61mW'; 
+fname = 'M59_C2_HL +Terminal sti_2mW'; 
 load([fname,'_all_channels.mat'])
 load([fname,'analysis.mat'],'Conditions','Triggers')
 try
@@ -51,7 +51,7 @@ end
 %% Possible artifacts (is laser evoking a response or an optoelectric artifact?)
 
 %bads=[1 2 3 14 6]  %1 2 3 14 are light artifacts
-bads=[];
+bads=[20,17,14,11];
 noresponse=[];
 bads=[bads noresponse];
 %bads=[]; %uncomment this to have bads empty
@@ -64,8 +64,8 @@ goods=setdiff(goods,bads);
 %% Let us see if the laser evokes a neural response.
 %use these two lines to look at hand-defined lasers response
 
-goods=[]; %fill in hand-selected channels here!
-bads=[];
+%goods=[]; %fill in hand-selected channels here!
+%bads=[];
 
 %Spikes=Spikes(goods);
 %Names=Names(goods);
@@ -145,14 +145,14 @@ end
 cd(homedir)
 % SAVE FOR THE 'NORMAL' PIPELINE
 save CrossCoeffData crscor goods bads
-% SAVE FOR THE LASER RESPONSE
-save LaserResponse crscor goods bads
+%SAVE FOR THE LASER RESPONSE
+% save LaserResponse crscor goods bads
 %% Merge similar clusters
 % The marging packages indicate which clusters should be merged together
 % due to their high similarity. The possibilities are that they belong to a
 % same unit as busrting spikes, the cell shifted to another channel or any
 % other reasonable cause.
-mergingPackages = {[]};
+mergingPackages = {[13,18,4],[8,9],[1,6,16],[5,12]};
 Npg = numel(mergingPackages);
 mSpikes = cell(1,Npg);
 auxSignal = false(1,length(mech));
@@ -168,10 +168,10 @@ end
 bads = sort(unique(bads));
 
 %save merging info
-% SAVE FOR 'NORMAL' PIPELINE
+%SAVE FOR 'NORMAL' PIPELINE
 save CrossCoeffData Spikes mergingPackages bads -append
 % SAVE FOR LASER RESPONSE
-save LaserResponse Spikes mergingPackage bads -append
+%save LaserResponse Spikes mergingPackage bads -append
 
 %% looking at individual conditions and clusters for good clusters
 
@@ -253,7 +253,10 @@ for I=1:4
     H(count,:)=h;
 end
 t=[-timeBefore:timeAfter]/ppms;
-%
+%% MORE BADS?
+bads = [bads, 5,13];
+bads = unique(bads);
+
 %% get individual responses by condition
 
 Sp={};
@@ -318,19 +321,19 @@ colors=cmap(1:n:end,:);
 
 %% plot it all
 figure('Color',[1,1,1])
-yUpLimit = max(cell2mat(cellfun(@(x) (cellfun(@max,x(end),'UniformOutput',false)),YSs)));
+% yUpLimit = max(cell2mat(cellfun(@(x) (cellfun(@max,x(end),'UniformOutput',false)),YSs)));
 Ncl = numel(SPIKES);
 
 for ii=1:4
     auxAx = subplot(6,4,[ii, ii+4, ii+8]);
     Nt = numel(Conditions{ii}.Triggers);
-    for j=1:numel(SPIKESs{ii})
-        
+    for j=1:numel(SPIKESs{ii})        
         xs=SPIKESs{ii}{j}/ppms;
-        ys=YSs{ii}{j}
+        ys=YSs{ii}{j};
         plot(xs,ys,'.','color',colors(j,:),'markersize',10)
         hold on
     end
+    yUpLimit = max(YSs{ii}{end});
     yticks = ((1:Ncl) - 0.5) * Nt;
     set(auxAx,'YTick',yticks,'YTickLabel',1:Ncl);ylabel(...
         sprintf('Clusters_{(t = %d)}',Nt))
@@ -349,7 +352,7 @@ titles={'mechanical',...
     'mechanical + 10 Hz L6',...
     '10 Hz L6 control'};
 yLimit = max(H(:)) * 1.05;
-load('M47_C2_L6Mech+L61mW.mat','chan21')
+load(fname,'chan21')
 [~,cStack] =...
     getStacks(false(1,length(chan21)),...
     Conditions{1}.Triggers,'on',[-min(bins),max(bins)]*1e-3,...
@@ -385,6 +388,8 @@ ylabel Stimulus
 
 subplot(6,4,14)
 plot(t,Trig_mech{2}(1,:),'Color',[255, 128, 0]/255,'linewidth',2);
+hold on;plot(t,...
+    scaleOnLine(meanMech(1:length(t)),0,1),'Color',[255, 51, 0]/255,'linewidth',2)
 hold on
 plot(t,Trig_light{2}(1,:),'Color', [0, 64, 255]/255','linewidth',1);
 set(gca,'Visible','off')
@@ -394,6 +399,8 @@ ylim([0 1.5])
 
 subplot(6,4,15)
 plot(t,Trig_mech{3}(1,:),'Color',[255, 128, 0]/255,'linewidth',2);
+hold on;plot(t,...
+    scaleOnLine(meanMech(1:length(t)),0,1),'Color',[255, 51, 0]/255,'linewidth',2)
 hold on
 plot(t,Trig_light{3}(1,:),'Color', [0, 64, 255]/255','linewidth',1);
 set(gca,'Visible','off')
