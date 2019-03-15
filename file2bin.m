@@ -25,22 +25,21 @@ if exist(fileInput,'file')
         % save the binary file in different manners
         case {'.smr','.smrx'}
             fprintf('spike2 file format recognized\n')
-            crrDir = cd;
-            importSMR([baseName,flEx],flDir,1);
-            cd(crrDir)
+            fID = fopen(fullfile(flDir,[baseName,flEx]),'r');
+            SONXimport(fID,'bin');
         case '.mat'
             fprintf('.mat file recognized\n')
             if contains(baseName,'analysis')
                 fprintf('The analysis file is not meant to be imported\n')
                 baseName = strsplit(baseName,'analysis');
                 baseName = baseName{1};
+                mat2bin(fullfile(flDir,[baseName,'.mat']),fileOutput)
             end
             fprintf('Importing %s...\n',[baseName,flEx])
         otherwise
             fprintf('This input file is not recognized.')
             return
     end
-    mat2bin(fullfile(flDir,[baseName,'.mat']),fileOutput)
 else
     fprintf('The input file was not found')
 end
