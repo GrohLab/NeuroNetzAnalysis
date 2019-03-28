@@ -149,6 +149,7 @@ try
     LFP = load(fullfile(EphysPath, 'LFP', [ExpName, '.mat']),LFP_L5);
     LFP = struct2array(LFP);
 catch
+    fprintf(1,'No LFP found for this experiment...\n')
     LFP = [];
 end
 try
@@ -156,6 +157,7 @@ try
         'WhiskerAngle');
     whisker = struct2array(whisker);
 catch
+    fprintf(1,'No whisker found for this experiment...\n')
     whisker = [];
 end
 end
