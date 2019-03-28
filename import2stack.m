@@ -33,7 +33,10 @@ else
                     mkdir(getParentDir(anaFile,1))
                 end
                 %% Continuous signals
-                LFPprobeDepth = ExpDB{{RecDB.AnimalName{cf}}, 'LfpCoord'}(3); %#ok<IDISVAR,USENS>
+                LFPprobeDepth = ExpDB{{RecDB.AnimalName{cf}}, 'LfpCoord'}(3);  %#ok<IDISVAR,USENS>
+                if LFPprobeDepth == 0
+                    LFPprobeDepth = 1600;
+                end
                 [LFP, whisker] = loadLFPAndWhisker(LFPprobeDepth,expName,EphysPath);
                 load(fullfile(EphysPath,searchDirs{1},[expName,'.mat']),'fR','rR')
                 lightSignal = getStimPeriods(expDD,fs,fs,'l');
