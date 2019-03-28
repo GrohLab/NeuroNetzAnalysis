@@ -59,9 +59,14 @@ else
                     'grooming',groomingSignal,'exclude',excludeSignal);
                 notes = RecDB.PhysioNucleus(cf);
                 Conditions = {};
+                %% Finding spikes with Ultra-Mega-Sort Two Thousand
+                UMSObject = UMSDataLoader(filteredResponse.data',fs);
+                UMSObject.UMS2kPipeline;
+                UMSSpikeStruct = UMSObject.SpikeUMSStruct;
+                %% Saving the final file
                 save(anaFile,...
                     'notes','RawResponse','Triggers','filteredResponse','EEG',...
-                    'spikeFindingData','Conditions')
+                    'spikeFindingData','Conditions','UMSSpikeStruct')
             else
                 fprintf('%s Analysis file exists. Skipping experiment...\n',...
                     expName)
