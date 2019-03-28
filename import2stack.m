@@ -146,13 +146,13 @@ LFPchIdx = LFPsort(find(LFPdepth < 900, 1));
 % Loading only the L5 LFP from the 16 channels file
 LFP_L5 = sprintf('LFPch%d',LFPchIdx);
 try
-    LFP = load([EphysPath, 'LFP\', ExpName, '.mat'],LFP_L5);
+    LFP = load(fullfile(EphysPath, 'LFP', [ExpName, '.mat']),LFP_L5);
     LFP = struct2array(LFP);
 catch
     LFP = [];
 end
 try
-    whisker = load([EphysPath, 'Whisker\', ExpName, '.mat'],...
+    whisker = load(fullfile(EphysPath, 'Whisker', [ExpName, '.mat']),...
         'WhiskerAngle');
     whisker = struct2array(whisker);
 catch
