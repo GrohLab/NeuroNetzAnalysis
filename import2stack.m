@@ -36,7 +36,7 @@ else
                 LFPprobeDepth = ExpDB{{RecDB.AnimalName{cf}}, 'LfpCoord'}(3); %#ok<IDISVAR,USENS>
                 [LFP, whisker] = loadLFPAndWhisker(LFPprobeDepth,expName,EphysPath);
                 load(fullfile(EphysPath,searchDirs{1},[expName,'.mat']),'fR','rR')
-                lightSignal = geEphystStimPeriods(expDD,fs,fs,'l');
+                lightSignal = getStimPeriods(expDD,fs,fs,'l');
                 puffSignal = getStimPeriods(expDD,fs,fs,'p');
                 touchSignal = getStimPeriods(expDD,fs,fs,'t');
                 whiskingSignal = getStimPeriods(expDD,fs,fs,'w');
@@ -59,7 +59,7 @@ else
                     'grooming',groomingSignal,'exclude',excludeSignal);
                 notes = RecDB.PhysioNucleus(cf);
                 Conditions = {};
-                save(analysisFile,...
+                save(anaFile,...
                     'notes','RawResponse','Triggers','filteredResponse','EEG',...
                     'spikeFindingData','Conditions')
             else
