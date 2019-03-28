@@ -1,8 +1,19 @@
-function fhand = plotEEGchannels(EEG, labels, duration, fs, scale)
-fhand = figure('Name','EEG');hold on
+function [fhand, EEGp] = plotEEGchannels(EEG, labels, duration, fs, scale, fig)
+% fhand = figure('Name','EEG');hold on
+if ~exist('fig','var')
+    fig = figure('Name','EEG');
+end
+ax = fig.Children;
+if isempty(ax)
+    ax = axes('Parent',fig,'NextPlot','add');
+    step = 5*std(EEG(:));
+else
+    step = mean(diff(ax.YTick));
+end
+
 title('EEG channels')
 [Nch, Ns] = size(EEG);
-step = 5*std(EEG(:));
+
 offset = step * Nch;
 if fs > 1e9
     fprintf('Attempting a downsample of the signals only for displaying')
@@ -18,11 +29,12 @@ else
 end
 timeS = (0:Ns-1) * dt;
 tick = zeros(1,Nch,'single');
+EEGp = gobjects(1,Nch);
 tmSub = round(duration * dFs);
 for c = 1:Nch
     tick(c) = offset;
-    plot(timeS(1:tmSub),...
-        scale*EEG(c,1:tmSub)+offset,'Color',repmat(0.8,1,3))
+    EEGp(c) = plot(ax,timeS(1:tmSub),...
+        scale*EEG(c,1:tmSub)+offset,'Color',repmat(0.8,1,3));
     offset = offset-step;
 end
 axis([0, timeS(tmSub),...
@@ -31,5 +43,6 @@ ylabel('Channels')
 xlabel('Time [s]')
 labels(strcmp(labels,'A1'))=[];
 labels(strcmp(labels,'A2'))=[];
-set(gca,'YTick',sort(tick),'YTickLabel',labels(Nch:-1:1))
+set(ax,'YTick',sort(tick),'YTickLabel',labels(Nch:-1:1))
+fhand = fig;
 end
