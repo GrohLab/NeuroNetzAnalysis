@@ -93,19 +93,27 @@ if Ns
     end
     signalCheck = cellfun(@isnumeric,varargin);
     signalCheck2 = cellfun(@length,varargin);
-    if sum(signalCheck) ~= Ns
+    signalCheck3 = cellfun(@iscell, varargin);
+    if any(signalCheck3)
+        varargin = varargin{1};
+        Ns = numel(varargin);
+        MAX_CONT_SAMP = min(cellfun(@length,varargin));
+    end
+    if sum(signalCheck) ~= Ns && ~any(signalCheck3)
         fprintf('Discarding those inputs which are not numeric...\n')
         disp(varargin(~signalCheck))
         varargin(~signalCheck) = [];
         Ns = Ns - sum(~signalCheck);
         signalCheck2(~signalCheck) = [];
     end
-    if std(signalCheck2) ~= 0
-        fprintf('The signals have not the same length...\n')
-        fprintf('Considering the smallest: %d\n',min(signalCheck2))
-        MAX_CONT_SAMP = min(signalCheck2);
-    else
-        MAX_CONT_SAMP = signalCheck2(1);
+    if any(signalCheck)
+        if std(signalCheck2) ~= 0
+            fprintf('The signals have not the same length...\n')
+            fprintf('Considering the smallest: %d\n',min(signalCheck2))
+            MAX_CONT_SAMP = min(signalCheck2);
+        else
+            MAX_CONT_SAMP = signalCheck2(1);
+        end
     end
     prevSamplesLFP = ceil(timeSpan(1) * fsLFP);
     postSamplesLFP = ceil(timeSpan(2) * fsLFP);
@@ -170,6 +178,7 @@ for cap = 1:Na
             getContinuousSignalSegment(varargin, segmIdxsLFP, MAX_CONT_SAMP, NtLFP);
     end
 end
+fprintf(1,'Stacks constructed!\n')
 end
 
 % Aligning the events according to the considered time point. The inputs
@@ -253,19 +262,26 @@ if Ns == 1
     if (Nrow ~= 1 && Ncol > Nrow) || (Ncol ~= 1 && Nrow > Ncol)
         Ns = Nrow * (Nrow < Ncol) + Ncol * (Ncol < Nrow);
     end
+else
+    
 end
 contSigSeg = zeros(Ns,Nt,'single');
 if Idxs(1) >= 1 && Idxs(2) <= N
     signalSegments = getSignalSegments(signalCell, Idxs);
-    contSigSeg = single(cell2mat(signalSegments'));
+    contSigSeg = single(reshape(cell2mat(signalSegments),...
+        Ns, Nt));
 elseif Idxs(1) <= 0
     Idxs(Idxs <= 0) = 1;
     signalSegments = getSignalSegments(signalCell, Idxs);
-    contSigSeg(:,Nt - Idxs(2) + 1:Nt) = single(cell2mat(signalSegments'));
+    contSigSeg(:,Nt - Idxs(2) + 1:Nt) =...
+        single(reshape(cell2mat(signalSegments),...
+        Ns, Nt));
 else
     Idxs(Idxs > N) = N;
     signalSegments = getSignalSegments(signalCell, Idxs);
-    contSigSeg(:,1:diff(Idxs)+1) = single(cell2mat(signalSegments'));
+    contSigSeg(:,1:diff(Idxs)+1) =...
+        single(reshape(cell2mat(signalSegments),...
+        Ns, Nt));
 end
 end
 
@@ -276,6 +292,8 @@ if Ns == 1
     if (Nrow ~= 1 && Ncol > Nrow) || (Ncol ~= 1 && Nrow > Ncol)
         Ns = Nrow * (Nrow < Ncol) + Ncol * (Ncol < Nrow);
     end
+else
+    
 end
 try
     sigSeg =...
