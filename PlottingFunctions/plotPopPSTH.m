@@ -3,7 +3,7 @@ function fig_out = plotPopPSTH(PSTHStruct, varargin)
 %and plots all PSTHs of all experiments together with a population PSTH at
 %the bottom of the figure. It can plot the PSTH structure in a given axis
 %or create a new figure to plot this results.
-%   Emilio Isaías-Camacho @ GrohLab 2019
+%   Emilio Isa??as-Camacho @ GrohLab 2019
 
 %% Input validation
 if isstruct(PSTHStruct) && isfield(PSTHStruct,'TimeAxis')
@@ -11,8 +11,8 @@ if isstruct(PSTHStruct) && isfield(PSTHStruct,'TimeAxis')
     % Bin size validation
     defaultBin = PSTHStruct.BinSize;
     small_limit = mean(diff(PSTHStruct.TimeAxis));
-    attributes = {'scalar','>',small_limit,...
-        '<=', sum(abs([PSTHStruct.TimeAxis(1),PSTHStruct.TimeAxis(end)]))*0.1};
+    attributes = {'scalar','>',small_limit};%,...
+        ...'<=', sum(abs([PSTHStruct.TimeAxis(1),PSTHStruct.TimeAxis(end)]))*0.1};
     addOptional(p,'BinSize', defaultBin, @(x)validateattributes(x,...
         {'numeric'},attributes));
     % Structure validation
