@@ -2,8 +2,13 @@ function [dPopStruct, cPopStruct, conditionStruct, configStruct] =...
     getPopulationStack(EphysPath)
 %GETPOPULATIONSTACK returns the population stack from all the detected
 %experiments.
-% Emilio Isaías-Camacho @GrohLab 2019
+% Emilio Isa??as-Camacho @GrohLab 2019
+%% Initializing output variables
 dPopExp = struct('Stack',cell(1,1),'SignalIDs',cell(1,1));
+dPopStruct = [];
+cPopStruct = [];
+conditionStruct = [];
+configStruct = [];
 %% New configuration or load file
 answ = questdlg(...
     'Do you want to start a new analysis or load a previous configuration',...
