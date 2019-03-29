@@ -174,8 +174,14 @@ for cap = 1:size(tSubs,1)
             normSubsC(2) = diff(segSubsC)+1;
         end
     else
-        segSubsC = segSubs;
-        normSubsC = normSubs;
+        if segSubsC(1) > NsC || segSubsC(2) > Nsc
+            fprintf(1,'There might be a problem with setting the sampling')
+            fprintf(1,' frequency for the continuous signals.\n')
+            fprintf(1,'The exceeding samples are %d...\n',(segSubsC(1)-NsC))
+        else
+            segSubsC = segSubs;
+            normSubsC = normSubs;
+        end
     end
     discreteStack(:,expRng(normSubs),cap) = discEvents(:,expRng(segSubs));
     continuouStack(:,expRng(normSubsC),cap) = contEvents(:,expRng(segSubsC));
