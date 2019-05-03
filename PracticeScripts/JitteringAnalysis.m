@@ -31,7 +31,7 @@ switch fileExt
         return
 end
 %% Loading the variables to extract all triggers
-% Loading the triggers (light/laser and piezo pulses)
+% Loading the file into a structure
 varsInFile = load(fullfile(filePath,fileName));
 fNames = fieldnames(varsInFile);
 chanIdx = startsWith(fNames,'chan');
@@ -43,9 +43,37 @@ for chead = 1:nnz(headIdx)
     newField = erase(varsInFile.(fNames{headSub(chead)}).title,' ');
     data.(newField) = varsInFile.(strrep(fNames{headSub(chead)},'head','chan'));
 end
+fs = mean(fsArray);
+fprintf(1,'Sampling frequency: %.2f\n',fs)
+% Prompting for the triggers (light/laser and piezo pulses)
+IDsignal = fieldnames(data);
+idx = false(numel(fieldnames(data)),1);
+[triggerIdx,iok] = listdlg(...
+    'PromptString','Select all trigger signals:',...
+    'ListString',IDsignal,...
+    'SelectionMode','multiple',...
+    'CancelString','Cancel',...
+    'OKString','OK',...
+    'Name','Triggers',...
+    'ListSize',[160,15*numel(IDsignal)]);
+if ~iok
+    disp('You can always checking the file in Spike2. See you next time!')
+    clearvars
+    return
+end
+% Extracting the timepoints of the step functions
+Triggers = cell(1,numel(triggerIdx));
+tSub = 1;
+for cts = triggerIdx
+    auxWf = StepWaveform(data.(IDsignal{cts}),fs,'Volts',IDsignal{cts});
+    auxArray = auxWf.Triggers;
+    Triggers(tSub) = {auxArray};
+    tSub = tSub + 1;
+end
+Triggers = cell2struct(Triggers,IDsignal{triggerIdx},1);
 %%
 timeLapse = [50*m,150*m]; % Time window surrounding the trigger [time before, time after] in seconds
-fs = 20*k; % Sampling frequency normally 20 kHz
+
 
 % Creation of the discrete and the continuous stacks:
 %                                        First spikeing times  trigger  timeW     FS  FSt  N spiking times          continuous data. 
