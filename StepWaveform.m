@@ -29,18 +29,35 @@ classdef StepWaveform < DiscreteWaveform
                     rise = StepWaveform.cleanEdges(rise);
                     fall(1:end-1) = ds < min(ds)/3;
                     fall = StepWaveform.cleanEdges(fall);
+                    % !!!!NON-FUNCTIONAL CODE!!!! NEEDS FURTHER
+                    % IMPLEMENTATIONS!
                     if sum(rise) ~= sum(fall)
-                        warning('The cardinality of the rising edges is different for the falling edges\n')
-                        if numel(fall) < numel(rise)
-                            fall = [fall;length(obj.Data)];
+                        warning('The cardinality of the rising edges is different for the falling edges')
+                        if abs(sum(rise) - sum(fall)) == 1
+                            fprintf(1,'Trying to correct...\n')
+                            r = find(rise);
+                            f = find(fall);
+                            dm = distmatrix(r,f);
+                            if numel(r) < numel(f)
+                                [val,Sub] = min(dm,[],1);
+                            else
+                                [val,Sub] = min(dm,[],2);
+                            end
+                            miss = diff(Sub);
                         else
-                            rise = [1;rise];
                         end
+                        
                     end
-                    RaF = [rise,fall];
+                    try
+                        RaF = [rise, fall];
+                    catch
+                        warning('Unable to correct the difference in cardinality...')
+                        warning('Returning a cell array!')
+                        RaF = {rise,fall};
+                    end
                     obj.Triggers = RaF;
                 else
-                    disp('The given data are already the triggers')
+                    disp('The given data are probably the triggers already!')
                     RaF = obj.Data;
                     obj.Triggers = RaF;
                 end
