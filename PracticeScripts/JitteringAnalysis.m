@@ -2,11 +2,13 @@
 % Prefixes
 k = 1e3; % Kilo
 m = 1e-3; % milli 
-
+zs = @(x)mean(x)/std(x);
+addFst = @(x,y)cat(find(size(x)~=1),y,x);
+addLst = @(x,y)cat(find(size(x)~=1),x,y);
 %% Select data file
 defaultPath = 'E:\Data\Jittering'; % Path where you would like to open a windows explorer window to select your data file
 [fileName, filePath] =...
-    uigetfile({'*.smr';'*.smrx';'*.mat'},'Select a data file',defaultPath);
+    uigetfile({'*.mat';'*.smr';'*.smrx'},'Select a data file',defaultPath);
 if fileName == 0
     fprintf(1,'Cancel button pressed. See you next time!\n')
     return
@@ -44,7 +46,7 @@ for chead = 1:nnz(headIdx)
     data.(newField) = varsInFile.(strrep(fNames{headSub(chead)},'head','chan'));
 end
 fs = mean(fsArray);
-fprintf(1,'Sampling frequency: %.2f\n',fs)
+fprintf(1,'Sampling frequency: %.2f Hz\n',fs)
 % Prompting for the triggers (light/laser and piezo pulses)
 IDsignal = fieldnames(data);
 idx = false(numel(fieldnames(data)),1);
@@ -62,18 +64,45 @@ if ~iok
     return
 end
 % Extracting the timepoints of the step functions
-Triggers = cell(1,numel(triggerIdx));
+cellTriggers = cell(1,numel(triggerIdx));
 tSub = 1;
 for cts = triggerIdx
     auxWf = StepWaveform(data.(IDsignal{cts}),fs,'Volts',IDsignal{cts});
     auxArray = auxWf.Triggers;
-    Triggers(tSub) = {auxArray};
+    if isempty(auxArray)
+        % If the triggers are empty, the loop jumps to the next selected
+        % trigger.
+        cellTriggers(tSub) = [];
+        fprintf(1,'%s skipped!\n',IDsignal{cts})
+        triggerIdx(tSub) = [];
+        continue
+    end
+    cellTriggers(tSub) = {auxArray};
     tSub = tSub + 1;
 end
-Triggers = cell2struct(Triggers,IDsignal{triggerIdx},1);
+IdxTriggers = cell2struct(cellTriggers,IDsignal(triggerIdx),2);
+
+%% Condition search and construction
+% We know that the piezo stimulation is going upwards and downwards, and
+% the laser has delays with respect to the piezo onset and sometimes
+% frequency stimulus.
+
+% Piezo: Up and down and first pulse of a pulse train
+upIdx = IdxTriggers.piezo(:,1).*data.piezo > 0;
+upSub = find(upIdx);
+upFst = StepWaveform.firstOfTrain(upSub/fs);
+dwIdx = IdxTriggers.piezo(:,2).*data.piezo < 0;
+dwSub = find(dwIdx);
+dwFst = StepWaveform.firstOfTrain(dwSub/fs);
+if isfield(IdxTriggers,'laser')
+    lsSub = find(IdxTriggers.laser(:,1));
+    lsFst = StepWaveform.firstOfTrain(lsSub/fs);
+end
+
+
+
 %%
 timeLapse = [50*m,150*m]; % Time window surrounding the trigger [time before, time after] in seconds
-
 
 % Creation of the discrete and the continuous stacks:
 %                                        First spikeing times  trigger  timeW     FS  FSt  N spiking times          continuous data. 
