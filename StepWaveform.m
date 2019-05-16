@@ -126,6 +126,7 @@ classdef StepWaveform < DiscreteWaveform
             end
         end
     end
+    %% Static methods
     methods (Static, Access = 'private')
         function edgeOut = cleanEdges(edgeIn)
             doubleEdge = edgeIn(1:end-1) + edgeIn(2:end);
@@ -136,7 +137,9 @@ classdef StepWaveform < DiscreteWaveform
             end
         end
     end
+    
     methods (Static, Access = 'public')
+        % Recreate the signal with logic values.
         function logicalTrace = subs2idx(subs,N)
             if size(subs,2) == 2
                 fprintf('Time windows\n')
@@ -162,6 +165,26 @@ classdef StepWaveform < DiscreteWaveform
                 end
             end
         end
+        
+        % Get the first true value of a logic pulse
+        function frstSpks = firstOfTrain(spkTimes)
+            % OUTPUTS a logical index for the edges which are the first in
+            % time for the step pulse train.
+            Ipi = diff(spkTimes);
+            Pks = Ipi < mean(Ipi);
+            Sps = StepWaveform.addFst(~Pks,true);
+            frstSpks = StepWaveform.addLst(Sps(1:end-1) & Pks,false);
+        end
+        
+        %% Auxiliary functions
+        function new_array = addFst(array,element)
+            new_array = cat(find(size(array)~=1), element, array);
+        end
+        
+        function new_array = addLst(array,element)
+            new_array = cat(find(size(array)~=1), array, element);
+        end
     end
+    
 end
 
