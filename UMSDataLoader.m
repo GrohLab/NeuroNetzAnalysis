@@ -167,7 +167,17 @@ classdef UMSDataLoader < handle
         function spksTime = get.SpikeTimes(obj)
             %#ok<*MCSUP>
             if ~isempty(obj.SpikeTimes)
-                spksTime = round(obj.SamplingFrequency*obj.SpikeTimes);
+                if isa(obj.SpikeTimes,'cell')
+                    spksTime = cell(1,numel(obj.SpikeTimes));
+                    for ccl = 1:numel(obj.SpikeTimes)
+                        spksTime(ccl) = {round(obj.SamplingFrequency *...
+                            obj.SpikeTimes{ccl})};
+                    end
+                elseif isa(obj.SpikeTimes,'double')
+                    spksTime = round(obj.SamplingFrequency * obj.SpikeTimes);
+                else
+                    spksTime = [];
+                end
                 % The spikes are returned in index.
             else
                 spksTime = [];
@@ -190,9 +200,18 @@ classdef UMSDataLoader < handle
             % unit.
             lbls = obj.SpikeUMSStruct.labels;
             goodSpks = lbls(:,2) == 2 | lbls(:,2) ~= 4;
-            
-            obj.SpikeTimes =...
-                spikes.spiketimes(spikes.assigns == lbls(goodSpks,1));
+            if sum(goodSpks) == 1
+                obj.SpikeTimes = ...
+                    spikes.spiketimes(spikes.assigns == lbls(goodSpks,1));
+            else
+                Ncls = 1;
+                obj.SpikeTimes = cell(1,sum(goodSpks));
+                for ccl = find(goodSpks')
+                    obj.SpikeTimes(Ncls) =...
+                        {spikes.spiketimes(spikes.assigns == lbls(ccl,1))};
+                    Ncls = Ncls + 1;
+                end
+            end
         end
         
         %% SAVE and LOAD spiketimes
@@ -356,11 +375,19 @@ classdef UMSDataLoader < handle
                         if cch == 1
                             hold on
                         end
-                        if ~isempty(obj.SpikeTimes)
-                            spIx = obj.SpikeTimes;
-                            plot(tx(spIx), tempChan(spIx),...
-                                'LineStyle','none','Marker','.')
-                        end
+%                         if ~isempty(obj.SpikeTimes)
+                            if isa(obj.SpikeTimes,'double')
+                                spIx = obj.SpikeTimes;
+                                plot(tx(spIx), tempChan(spIx),...
+                                    'LineStyle','none','Marker','.')
+                            elseif isa(obj.SpikeTimes,'cell')
+                                for ccl = 1:numel(obj.SpikeTimes)
+                                    cSpTms = obj.SpikeTimes{ccl};
+                                    plot(tx(cSpTms),tempChan(cSpTms),...
+                                        'LineStyle','none','Marker','.')
+                                end
+                            end
+%                         end
                     end
                     hold off;box off
                     set(gca,'YTick',lvl,'YTickLabel',lbls,...

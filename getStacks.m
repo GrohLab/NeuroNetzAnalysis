@@ -115,11 +115,15 @@ if Ns
             MAX_CONT_SAMP = signalCheck2(1);
         end
     end
-    prevSamplesLFP = ceil(timeSpan(1) * fsLFP);
-    postSamplesLFP = ceil(timeSpan(2) * fsLFP);
-    NtLFP = prevSamplesLFP + postSamplesLFP + 1;
-    continuouStack = zeros(Ns,NtLFP,Na,'single');
+%     prevSamplesLFP = ceil(timeSpan(1) * fsLFP);
+%     postSamplesLFP = ceil(timeSpan(2) * fsLFP);
+%     NtLFP = prevSamplesLFP + postSamplesLFP + 1;
+%     continuouStack = zeros(Ns,NtLFP,Na,'single');
 end
+prevSamplesLFP = ceil(timeSpan(1) * fsLFP);
+postSamplesLFP = ceil(timeSpan(2) * fsLFP);
+NtLFP = prevSamplesLFP + postSamplesLFP + 1;
+continuouStack = zeros(Ns,NtLFP,Na,'single');
 %% Cutting the events into the desired segments.
 for cap = 1:Na
     % Considering the rising or the falling edge of the step function.

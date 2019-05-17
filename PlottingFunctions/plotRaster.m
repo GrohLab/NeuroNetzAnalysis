@@ -21,7 +21,7 @@ if ~exist('fig','var') || isempty(fig)
     fig = figure();
     AX_FLAG = false;
 end
-ax = get(fig,'Children');
+ax = axes(fig);
 set(fig,'Name',plotTitle,'Color',[1,1,1])
 cmap = [0.1,0.01,0.01;jet(Ne - 1)];
 FIRST_FLAG = true;

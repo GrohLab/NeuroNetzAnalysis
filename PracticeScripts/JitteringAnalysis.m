@@ -1,10 +1,11 @@
 %% Constant values
 % Prefixes
 k = 1e3; % Kilo
-m = 1e-3; % milli 
+m = 1e-3; % milli
 zs = @(x)mean(x)/std(x);
 addFst = @(x,y)cat(find(size(x)~=1),y,x);
 addLst = @(x,y)cat(find(size(x)~=1),x,y);
+uninterestingVals = @(x)~(isempty(x) || isnan(x) || isinf(x) || x == 0);
 %% Select data file
 defaultPath = 'E:\Data\Jittering'; % Path where you would like to open a windows explorer window to select your data file
 [fileName, filePath] =...
@@ -23,7 +24,7 @@ switch fileExt
             SONXimport(fopen(fullfile(filePath,fileName)))
             fprintf(1,'Done!\n')
         else
-           fprintf(1,'No need to import, a mat file exists already\n') 
+            fprintf(1,'No need to import, a mat file exists already\n')
         end
         fileName = strrep(fileName,fileExt,'.mat');
     case '.mat'
@@ -47,10 +48,11 @@ for chead = 1:nnz(headIdx)
 end
 fs = mean(fsArray);
 fprintf(1,'Sampling frequency: %.2f Hz\n',fs)
-% Prompting for the triggers (light/laser and piezo pulses)
+
 IDsignal = fieldnames(data);
+% Prompting for the triggers (light/laser and piezo pulses)
 idx = false(numel(fieldnames(data)),1);
-[triggerIdx,iok] = listdlg(...
+[triggerIdx, iok] = listdlg(...
     'PromptString','Select all trigger signals:',...
     'ListString',IDsignal,...
     'SelectionMode','multiple',...
@@ -63,6 +65,24 @@ if ~iok
     clearvars
     return
 end
+idx(triggerIdx) = true;
+
+% Prompting for the signal(s)
+[signalIdx, iok] = listdlg(...
+    'PromptString','Select all signals:',...
+    'ListString',IDsignal(~idx),...
+    'SelectionMode','multiple',...
+    'CancelString','Cancel',...
+    'OKString','OK',...
+    'Name','Triggers',...
+    'ListSize',[160,15*numel(IDsignal(~idx))]);
+if ~iok
+    disp('You can always checking the file in Spike2. See you next time!')
+    clearvars
+    return
+end
+
+
 % Extracting the timepoints of the step functions
 cellTriggers = cell(1,numel(triggerIdx));
 tSub = 1;
@@ -74,6 +94,7 @@ for cts = triggerIdx
         % trigger.
         cellTriggers(tSub) = [];
         fprintf(1,'%s skipped!\n',IDsignal{cts})
+        idx(cts) = false;
         triggerIdx(tSub) = [];
         continue
     end
@@ -88,24 +109,50 @@ IdxTriggers = cell2struct(cellTriggers,IDsignal(triggerIdx),2);
 % frequency stimulus.
 
 % Piezo: Up and down and first pulse of a pulse train
+% condFig = figure('Visible','off','Color',[1,1,1]);
+
 upIdx = IdxTriggers.piezo(:,1).*data.piezo > 0;
 upSub = find(upIdx);
 upFst = StepWaveform.firstOfTrain(upSub/fs);
 dwIdx = IdxTriggers.piezo(:,2).*data.piezo < 0;
 dwSub = find(dwIdx);
 dwFst = StepWaveform.firstOfTrain(dwSub/fs);
+
+Conditions = struct('name','piezoUp','Triggers',upSub(upFst));
+Conditions(2).name = 'piezoDw';
+Conditions(2).Triggers = dwSub(dwFst);
+Conditions(3).name = 'piezoUpandDw';
+Conditions(3).Triggers = union(upSub(upFst),dwSub(dwFst));
+
 if isfield(IdxTriggers,'laser')
+    %     axes(condFig,'NextPlot','add');
     lsSub = find(IdxTriggers.laser(:,1));
     lsFst = StepWaveform.firstOfTrain(lsSub/fs);
+    Conditions(4).name = 'laser'; Conditions(4).Triggers = lsSub(lsFst);
 end
-
-
+disp('Breakpoint')
+%% Spike finding
 
 %%
-timeLapse = [50*m,150*m]; % Time window surrounding the trigger [time before, time after] in seconds
+timeLapse = [1000*m, 5500*m]; % Time window surrounding the trigger [time before, time after] in seconds
 
+for ccond = 1:numel(Conditions)
+    [discreteStack, contStack] = getStacks(spS,upSub(upFst),...
+        'on',timeLapse,fs,fs);
+    
+    [Ne, Nt, Na] = size(discreteStack);
+    kIdx = false(1,Na);
+    binSz = 10*m; % milliseconds or seconds
+    ERASE_kIDX = false;
+    [PSTH, trig, sweeps, tx_psth] = getPSTH(discreteStack, timeLapse, kIdx, binSz, fs);
+    [relativeSpikeTimes, tx_raster] = getRasterFromStack(discreteStack, kIdx, false, timeLapse, fs, ERASE_kIDX);
+    
+    
+    plotRaster(relativeSpikeTimes, timeLapse, fs, 'Up control',{'Neuron 5'});
+end
 % Creation of the discrete and the continuous stacks:
-%                                        First spikeing times  trigger  timeW     FS  FSt  N spiking times          continuous data. 
+%                                        First spikeing times  trigger  timeW     FS  FSt  N spiking times          continuous data.
+%%
 [discreteStack, contStack] = getStacks(spikeFindingData.spikes,upT,'on',timeLapse,fs,fs,spikeFindingData2.spikes,EEG.data);
 %                                                               indx                   cell of indexes | INDX,  signal1, signal2,...
 [Ne, Nt, Na] = size(discreteStack);
