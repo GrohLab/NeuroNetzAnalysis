@@ -130,8 +130,11 @@ if isfield(IdxTriggers,'laser')
     lsFst = StepWaveform.firstOfTrain(lsSub/fs);
     Conditions(4).name = 'laser'; Conditions(4).Triggers = lsSub(lsFst);
 end
-disp('Breakpoint')
+
 %% Spike finding
+spikeFindObj = UMSDataLoader(data.Spikes,fs);
+spikeFindObj.UMS2kPipeline;
+spStr = spikeFindObj.SpikeUMSStruct;
 
 %%
 timeLapse = [1000*m, 5500*m]; % Time window surrounding the trigger [time before, time after] in seconds
