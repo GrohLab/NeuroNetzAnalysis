@@ -163,29 +163,10 @@ classdef UMSDataLoader < handle
             spksStruct = obj.SpikeUMSStruct;
         end
         
-        %% GET and SET SpikeTimes
-        function spksTime = get.SpikeTimes(obj)
-            %#ok<*MCSUP>
-            if ~isempty(obj.SpikeTimes)
-                if isa(obj.SpikeTimes,'cell')
-                    spksTime = cell(1,numel(obj.SpikeTimes));
-                    for ccl = 1:numel(obj.SpikeTimes)
-                        spksTime(ccl) = {round(obj.SamplingFrequency *...
-                            obj.SpikeTimes{ccl})};
-                    end
-                elseif isa(obj.SpikeTimes,'double')
-                    spksTime = round(obj.SamplingFrequency * obj.SpikeTimes);
-                else
-                    spksTime = [];
-                end
-                % The spikes are returned in index.
-            else
-                spksTime = [];
-                % disp('No spike times extracted yet');
-            end
-        end % get SpikeTimes
+        %% GET SpikeTimes
         
-        function getSpikeTimes(obj)
+        function spkTms = get.SpikeTimes(obj)
+            spkTms = [];
             if ~isempty(obj.SpikeUMSStruct) &&...
                     isfield(obj.SpikeUMSStruct,'assigns')
                 spikes = obj.SpikeUMSStruct;
@@ -201,17 +182,19 @@ classdef UMSDataLoader < handle
             lbls = obj.SpikeUMSStruct.labels;
             goodSpks = lbls(:,2) == 2 | lbls(:,2) ~= 4;
             if sum(goodSpks) == 1
-                obj.SpikeTimes = ...
-                    spikes.spiketimes(spikes.assigns == lbls(goodSpks,1));
-            else
+                spkTms = spikes.spiketimes(spikes.assigns == lbls(goodSpks,1));
+            elseif sum(goodSpks) > 1
                 Ncls = 1;
-                obj.SpikeTimes = cell(1,sum(goodSpks));
+                spkTms = cell(1,sum(goodSpks));
                 for ccl = find(goodSpks')
-                    obj.SpikeTimes(Ncls) =...
+                    spkTms(Ncls) =...
                         {spikes.spiketimes(spikes.assigns == lbls(ccl,1))};
                     Ncls = Ncls + 1;
                 end
+            else
+                warning('All clusters were labeled as ''garbage''')
             end
+            obj.SpikeTimes = spkTms;
         end
         
         %% SAVE and LOAD spiketimes
@@ -324,8 +307,7 @@ classdef UMSDataLoader < handle
         
         function timeOut = get.Time(obj)
             if ~isempty(obj.Data)
-                timeOut = seconds(0:1/obj.SamplingFrequency:...
-                    (obj.Ns-1)/obj.SamplingFrequency);
+                timeOut = (0:obj.Ns-1)/obj.SamplingFrequency;
             else
                 timeOut = 0;
             end
@@ -376,14 +358,16 @@ classdef UMSDataLoader < handle
                             hold on
                         end
 %                         if ~isempty(obj.SpikeTimes)
-                            if isa(obj.SpikeTimes,'double')
-                                spIx = obj.SpikeTimes;
-                                plot(tx(spIx), tempChan(spIx),...
+                            if isnumeric(obj.SpikeTimes)
+                                spTms = obj.SpikeTimes;
+                                plot(spTms, tempChan(...
+                                    round(spTms*obj.SamplingFrequency)),...
                                     'LineStyle','none','Marker','.')
                             elseif isa(obj.SpikeTimes,'cell')
                                 for ccl = 1:numel(obj.SpikeTimes)
                                     cSpTms = obj.SpikeTimes{ccl};
-                                    plot(tx(cSpTms),tempChan(cSpTms),...
+                                    plot(cSpTms,tempChan(...
+                                        round(cSpTms*obj.SamplingFrequency)),...
                                         'LineStyle','none','Marker','.')
                                 end
                             end
