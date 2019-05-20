@@ -134,8 +134,7 @@ end
 %% Spike finding
 spikeFindObj = UMSDataLoader(data.Spikes,fs);
 spikeFindObj.UMS2kPipeline;
-spStr = spikeFindObj.SpikeUMSStruct;
-
+spkTms = spikeFindObj.SpikeTimes;
 %%
 timeLapse = [1000*m, 5500*m]; % Time window surrounding the trigger [time before, time after] in seconds
 
