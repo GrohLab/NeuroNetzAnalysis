@@ -167,11 +167,14 @@ classdef StepWaveform < DiscreteWaveform
         end
         
         % Get the first true value of a logic pulse
-        function frstSpks = firstOfTrain(spkTimes)
+        function frstSpks = firstOfTrain(spkTimes, minIpi)
             % OUTPUTS a logical index for the edges which are the first in
             % time for the step pulse train.
             Ipi = diff(spkTimes);
-            Pks = Ipi < mean(Ipi);
+            if ~exist('minIpi','var')
+                minIpi = mean(Ipi);
+            end
+            Pks = Ipi < minIpi;
             Sps = StepWaveform.addFst(~Pks,true);
             frstSpks = StepWaveform.addLst(Sps(1:end-1) & Pks,false);
         end
