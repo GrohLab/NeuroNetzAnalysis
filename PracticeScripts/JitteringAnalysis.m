@@ -118,17 +118,24 @@ dwIdx = IdxTriggers.piezo(:,2).*data.piezo < 0;
 dwSub = find(dwIdx);
 dwFst = StepWaveform.firstOfTrain(dwSub/fs);
 
-Conditions = struct('name','piezoUp','Triggers',upSub(upFst));
-Conditions(2).name = 'piezoDw';
+Conditions = struct('name','piezoTrainUp','Triggers',upSub(upFst));
+Conditions(2).name = 'piezoTrainDw';
 Conditions(2).Triggers = dwSub(dwFst);
-Conditions(3).name = 'piezoUpandDw';
+Conditions(3).name = 'piezoTrainUpandDw';
 Conditions(3).Triggers = union(upSub(upFst),dwSub(dwFst));
+Conditions(4).name = 'piezoAllUp';Conditions(4).Triggers = upSub;
+Conditions(5).name = 'piezoAllDw';Conditions(5).Triggers = dwSub;
+Conditions(6).name = 'piezoAll';Conditions(6).Triggers = union(upSub,dwSub);
 
 if isfield(IdxTriggers,'laser')
+    disp('Development...')
     %     axes(condFig,'NextPlot','add');
     lsSub = find(IdxTriggers.laser(:,1));
     lsFst = StepWaveform.firstOfTrain(lsSub/fs);
-    Conditions(4).name = 'laser'; Conditions(4).Triggers = lsSub(lsFst);
+    Conditions(7).name = 'laserTrain'; Conditions(7).Triggers = lsSub(lsFst);
+    Conditions(8).name = 'laserAll'; Conditions(8).Triggers = lsSub;
+    for ccond = numel(Conditions)
+    end
 end
 
 %% Spike finding
