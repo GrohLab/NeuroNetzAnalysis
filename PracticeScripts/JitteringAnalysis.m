@@ -46,7 +46,7 @@ for chead = 1:nnz(headIdx)
     newField = erase(varsInFile.(fNames{headSub(chead)}).title,' ');
     data.(newField) = varsInFile.(strrep(fNames{headSub(chead)},'head','chan'));
 end
-fs = mean(fsArray);
+fs = mode(fsArray);
 fprintf(1,'Sampling frequency: %.2f Hz\n',fs)
 
 IDsignal = fieldnames(data);
@@ -101,6 +101,7 @@ for cts = triggerIdx
     cellTriggers(tSub) = {auxArray};
     tSub = tSub + 1;
 end
+
 IdxTriggers = cell2struct(cellTriggers,IDsignal(triggerIdx),2);
 
 %% Condition search and construction
@@ -131,10 +132,12 @@ if isfield(IdxTriggers,'laser')
     disp('Development...')
     %     axes(condFig,'NextPlot','add');
     lsSub = find(IdxTriggers.laser(:,1));
-    lsFst = StepWaveform.firstOfTrain(lsSub/fs);
+    lsFst = StepWaveform.firstOfTrain(lsSub/fs, 5 - 1e-3);
     Conditions(7).name = 'laserTrain'; Conditions(7).Triggers = lsSub(lsFst);
     Conditions(8).name = 'laserAll'; Conditions(8).Triggers = lsSub;
+    timeDelay = abs(lsSub - Conditions(3).Triggers)/fs;
     for ccond = numel(Conditions)
+        
     end
 end
 
@@ -142,8 +145,13 @@ end
 spikeFindObj = UMSDataLoader(data.Spikes,fs);
 spikeFindObj.UMS2kPipeline;
 spkTms = spikeFindObj.SpikeTimes;
+UMSSpikeStruct = spikeFindObj.SpikeUMSStruct;
+spikeFindingData = struct('thresh',[],...
+    'minISI',UMSSpikeStruct.params.shadow,'spikes',spkTms,'ppms',fs/k,...
+    'timestamp',[]);
 %%
-timeLapse = [1000*m, 5500*m]; % Time window surrounding the trigger [time before, time after] in seconds
+% Time window surrounding the trigger [time before, time after] in seconds
+timeLapse = [1000*m, 5500*m];
 
 for ccond = 1:numel(Conditions)
     [discreteStack, contStack] = getStacks(spS,upSub(upFst),...
