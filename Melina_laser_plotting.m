@@ -12,6 +12,8 @@ laserTrials = 3;
 % Saving plots? if this is 'false' the figures will NOT be saved. If it is
 % 'true', the figures will be saved.
 saveFlag = false;
+m = 1e-3;
+k = 1e3;
 
 %% Loading the recording
 read_Intan_RHD2000_file
@@ -24,34 +26,32 @@ if cols < rows
      rows = cols;
      cols = aux;
 end
-filteredSignals = zeros(rows, cols, 'single');
+dataCell = cell(rows,1);
 for cch = 1:min(size(amplifier_data))
     fprintf(1,'Dealing with channel %d\n', cch)
-    filteredSignals(cch,:) = iir50NotchFilter(amplifier_data(cch,:),fs);
-    filteredSignals(cch,:) = iirSpikeFilter(filteredSignals(cch,:),fs)';
+    dataCell(cch) = {iir50NotchFilter(amplifier_data(cch,:),fs)};
+    dataCell(cch) = {iirSpikeFilter(dataCell{cch},fs)};
 end
-
-[Nch, Ns] = size(filteredSignals);
+laserSignal = board_dig_in_data(4,:);
+clearvars -except laser* fs timeLapse saveFlag cols rows m k dataCell
+Nch = rows;
 fprintf(1,'Finished loading data\n')
 %% Getting the condition trigger
-dataCell = cell(32,1);
-for ch = 1:32
-    dataCell(ch) = {filteredSignals(ch,:)};
-end
 % These variables detect the rising and falling edges of the digital input
 % pulse (laser).
-stObj = StepWaveform(board_dig_in_data(4,:),fs,'On/Off','Laser');
+stObj = StepWaveform(laserSignal,fs,'On/Off','Laser');
+clearvars laserSignal
 % The lt variable contains a logical array size 2(on/off) x
 % total_number_of_samples indicating the beginning and end of a pulse with
 % a true value.
 lt = stObj.Triggers;
+stObj.delete;clearvars stObj;
 % This contains the sample number at which the pulse rose. If you want to
 % change for pulse fall, write as follows: ltOn = find(lt(:,2));
 ltOn = find(lt(:,1));
-
+clearvars lt
 [~,cSt] =...
-    getStacks(false(1,length(amplifier_data(1,:))),...
-    ltOn,'on',timeLapse * 1e-3,fs,fs,[],dataCell);
+    getStacks(false(1,cols), ltOn, 'on', timeLapse * m, fs ,fs ,[],dataCell);
 fprintf(1,'Got the condition triggers\n')
 
 %% Plotting the continuous stack 
