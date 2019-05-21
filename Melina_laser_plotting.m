@@ -45,7 +45,6 @@ clearvars laserSignal
 % total_number_of_samples indicating the beginning and end of a pulse with
 % a true value.
 lt = stObj.Triggers;
-stObj.delete;clearvars stObj;
 % This contains the sample number at which the pulse rose. If you want to
 % change for pulse fall, write as follows: ltOn = find(lt(:,2));
 ltOn = find(lt(:,1));
