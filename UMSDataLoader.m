@@ -180,15 +180,17 @@ classdef UMSDataLoader < handle
             % 2.- the cluste is not garbage; or 3.- the cluster is a good
             % unit.
             lbls = obj.SpikeUMSStruct.labels;
-            goodSpks = lbls(:,2) == 2 | lbls(:,2) ~= 4;
-            if sum(goodSpks) == 1
-                spkTms = spikes.spiketimes(spikes.assigns == lbls(goodSpks,1));
-            elseif sum(goodSpks) > 1
+            % goodSpks = lbls(:,2) == 2 | lbls(:,2) ~= 4;
+            goodID = UMSDataLoader.getClustersID(obj.SpikeUMSStruct,'clType',...
+                'good');
+            if numel(goodID) == 1
+                spkTms = spikes.spiketimes(spikes.assigns == goodID);
+            elseif numel(goodID) > 1
                 Ncls = 1;
-                spkTms = cell(1,sum(goodSpks));
-                for ccl = find(goodSpks')
+                spkTms = cell(1,numel(goodID));
+                for ccl = 1:numel(goodID)
                     spkTms(Ncls) =...
-                        {spikes.spiketimes(spikes.assigns == lbls(ccl,1))};
+                        {spikes.spiketimes(spikes.assigns == goodID(ccl))};
                     Ncls = Ncls + 1;
                 end
             else
@@ -210,7 +212,7 @@ classdef UMSDataLoader < handle
                     spikes = obj.SpikeUMSStruct;
                     spkTms = obj.SpikeTimes;
                     SPKS1 = struct('spikes',spikes,...
-                        'spkTms',spkTms);
+                        'spkTms',spkTms); %#ok<*NASGU>
                     try
                         save(sortFileName,'SPKS1')
                     catch 
@@ -271,7 +273,7 @@ classdef UMSDataLoader < handle
             % The channel order will change if the Data property is empty,
             % if the user agrees to change the order even if the number of
             % channels
-            if ~isempty(obj.Data)
+            if ~isempty(obj.Data) %#ok<*MCSUP>
                 if obj.Nch == length(newChanOrd)
                     obj.PolyChanOrder = newChanOrd;
                 else
@@ -357,21 +359,31 @@ classdef UMSDataLoader < handle
                         if cch == 1
                             hold on
                         end
-%                         if ~isempty(obj.SpikeTimes)
-                            if isnumeric(obj.SpikeTimes)
-                                spTms = obj.SpikeTimes;
-                                plot(spTms, tempChan(...
-                                    round(spTms*obj.SamplingFrequency)),...
-                                    'LineStyle','none','Marker','.')
-                            elseif isa(obj.SpikeTimes,'cell')
-                                for ccl = 1:numel(obj.SpikeTimes)
-                                    cSpTms = obj.SpikeTimes{ccl};
-                                    plot(cSpTms,tempChan(...
-                                        round(cSpTms*obj.SamplingFrequency)),...
-                                        'LineStyle','none','Marker','.')
-                                end
+                        NTcl = obj.SpikeUMSStruct.labels(:,1);
+                        cmap = jet(numel(NTcl));
+                        clID = UMSDataLoader.getClustersID(...
+                            obj.SpikeUMSStruct,'clType','good');
+                        [~,clSub] = intersect(NTcl,clID);
+                        if isnumeric(obj.SpikeTimes)
+                            spTms = obj.SpikeTimes;
+                            plot(spTms, tempChan(...
+                                round(spTms*obj.SamplingFrequency)),...
+                                'LineStyle','none','Marker','^',...
+                                'DisplayName',sprintf('Unique cluster: %d',...
+                                clID),...
+                                'Color',cmap(clSub,:))
+                        elseif isa(obj.SpikeTimes,'cell')
+                            for ccl = 1:numel(obj.SpikeTimes)
+                                cSpTms = obj.SpikeTimes{ccl};
+                                plot(cSpTms,tempChan(...
+                                    round(cSpTms*obj.SamplingFrequency)),...
+                                    'LineStyle','none','Marker','^',...
+                                    'DisplayName',sprintf('Cluster %d',...
+                                    clID(ccl)),...
+                                    'Color',cmap(clSub(ccl),:))
                             end
-%                         end
+                        end
+                        legend('show','Location','best')
                     end
                     hold off;box off
                     set(gca,'YTick',lvl,'YTickLabel',lbls,...
@@ -389,6 +401,65 @@ classdef UMSDataLoader < handle
                     end
                 end
             end
+        end
+        
+        % Plot the 'good-unit' waveforms
+        function p = plotWaveforms(obj,clType)
+            if isempty(obj.SpikeUMSStruct) || ~isfield(obj.SpikeUMSStruct,'labels')
+                fprintf(1,'The UMS structure is empty!\n')
+                fprintf(1,'Seems like the UMS pipeline has not been run\n')
+                fprintf(1,'Type:\n')
+                fprintf(1,'obj.UMS2kPipeline\n')
+                fprintf(1,'to run the UMS2000 pipeline\n')
+                return;
+            end
+            if exist('clType','var')
+                clType = lower(clType);
+            else
+                clType = 'all';
+            end
+            try
+                clID = UMSDataLoader.getClustersID(...
+                    obj.SpikeUMSStruct,'clType',clType);
+            catch ME
+                fprintf(1,'It is likely that either the UMS2000 pipeline')
+                fprintf(1,' or that the cluster type was not correct\n')
+                fprintf(1,'Input given: %s\t',clType)
+                fprintf(1,'Valid inputs:\n''good'',\n''mua'',\n')
+                fprintf(1,'''unsorted'',\n''garbage''\n')
+                disp(ME)
+                return
+            end
+            Ncl = numel(clID);
+            Nr = floor(sqrt(Ncl));
+            Nc = ceil(Ncl/Nr);
+            fs = obj.SamplingFrequency;
+            Nsamp = size(obj.SpikeUMSStruct.waveforms,2);
+            tx = (0:Nsamp-1)/fs;
+            waveformFig = figure('Name',sprintf('%s clusters',clType),...
+                'Visible','off','Color',[1,1,1]);
+            ax = gobjects(1,Ncl);
+            p = ax;
+            
+            NTcl = obj.SpikeUMSStruct.labels(:,1);
+            cmap = jet(numel(NTcl));
+            [~,clSub] = intersect(NTcl,clID);
+
+            for cwf = 1:Ncl
+                ax(cwf) = subplot(Nr,Nc,cwf,'Parent',waveformFig);
+                clIdx = obj.SpikeUMSStruct.assigns == clID(cwf);
+                cclWaveforms = obj.SpikeUMSStruct.waveforms(clIdx,:);
+                plot(ax(cwf),tx,cclWaveforms,'LineWidth',0.2,...
+                    'Color',[0.5,0.5,0.51]);
+                ax(cwf).NextPlot = 'add';
+                p(cwf) = plot(ax(cwf),tx,mean(cclWaveforms,1),...
+                    'LineWidth',3,'Color', cmap(clSub(cwf),:),...
+                    'DisplayName',sprintf('Cluster %d',clID(cwf)));
+                title(ax(cwf),sprintf('Cluster %d',clID(cwf)));
+                xlabel(ax(cwf),'Time [s]')
+                ylabel(ax(cwf),'Amplitude [V]')
+            end
+            waveformFig.Visible = 'on';
         end
     end % methods
     %% Private methods
@@ -519,6 +590,48 @@ classdef UMSDataLoader < handle
             data{1} = dataMatrix(1:Ns,chanKeepIdx);
         end
     end % Static methods
+    %% Static and public methods
+    methods (Static, Access = 'public')
+        function outID = getClustersID(spkUMSstr, varargin)
+            % Parsing inputs
+            outID = [];
+            p = inputParser;
+            p.CaseSensitive = true;
+            p.KeepUnmatched = true;
+            defaultTypes = 'all';
+            validTypes = {'good','mua','unsorted','garbage','all'};
+            checkTypes = @(x) any(validatestring(x,validTypes));
+            
+            validStruct = @(x) isstruct(x) && isfield(x,'labels');
+            
+            addRequired(p,'spkUMSstr',validStruct)
+            addOptional(p,'clType',defaultTypes,checkTypes)
+            try
+                parse(p,spkUMSstr,varargin{:});
+            catch EM
+                fprintf(1,'There was something wrong with the inputs...\n')
+                disp(EM)
+                return
+            end
+            spkUMSstr = p.Results.spkUMSstr;
+            clType = p.Results.clType;
+            p.delete;
+            clearvars p
+            clID = spkUMSstr.labels(:,1);
+            switch clType
+                case 'all'
+                    outID = clID(spkUMSstr.labels(:,2) ~= 4);
+                case 'good'
+                    outID = clID(spkUMSstr.labels(:,2) == 2);
+                case 'mua'
+                    outID = clID(spkUMSstr.labels(:,2) == 3);
+                case 'unsorted'
+                    outID = clID(spkUMSstr.labels(:,2) == 1);
+                case 'garbage'
+                    outID = clID(spkUMSstr.labels(:,2) == 4);
+            end
+        end
+    end
 end % classdef
 
 
