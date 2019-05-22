@@ -46,6 +46,7 @@ for chead = 1:nnz(headIdx)
     newField = erase(varsInFile.(fNames{headSub(chead)}).title,' ');
     data.(newField) = varsInFile.(strrep(fNames{headSub(chead)},'head','chan'));
 end
+Ns = mode(structfun(@length,data));
 fs = mode(fsArray);
 fprintf(1,'Sampling frequency: %.2f Hz\n',fs)
 
@@ -135,9 +136,18 @@ if isfield(IdxTriggers,'laser')
     lsFst = StepWaveform.firstOfTrain(lsSub/fs, 5 - 1e-3);
     Conditions(7).name = 'laserTrain'; Conditions(7).Triggers = lsSub(lsFst);
     Conditions(8).name = 'laserAll'; Conditions(8).Triggers = lsSub;
+    if isempty(Conditions(7).Triggers)
+        Conditions(7) = [];
+    end
     timeDelay = abs(lsSub - Conditions(3).Triggers)/fs;
-    for ccond = numel(Conditions)
-        
+    delays = uniquetol(timeDelay,0.01);
+    Nc = numel(Conditions);
+    for ccond = numel(Conditions)+1:numel(Conditions)+numel(delays)
+        Conditions(ccond).name = sprintf('laserDelay_%d_ms',...
+            floor(k*delays(ccond-...
+            Nc)));
+        Conditions(ccond).Triggers = lsSub(ismembertol(timeDelay,...
+            delays(ccond - Nc),0.01));
     end
 end
 
@@ -151,7 +161,10 @@ spikeFindingData = struct('thresh',[],...
     'timestamp',[]);
 %%
 % Time window surrounding the trigger [time before, time after] in seconds
-timeLapse = [1000*m, 5500*m];
+timeLapse = [1000, 5500]*m;
+
+%[~,cSt] =...
+%    getStacks(false(1,cols), ltOn, 'on', timeLapse * m, fs ,fs ,[],dataCell);
 
 for ccond = 1:numel(Conditions)
     [discreteStack, contStack] = getStacks(spS,upSub(upFst),...
