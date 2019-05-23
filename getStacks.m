@@ -55,9 +55,18 @@ if exist('consEvents','var') && ~isempty(consEvents)
             evntTrain = cellfun(@islogical,consEvents);
             % Converting the logical event trains into indices
             for ce = 1:Ne
-                if evntTrain(ce)
-                    stWv = StepWaveform(consEvents{ce},fs);
-                    consEvents2{ce} = stWv.Triggers;
+                if ~isempty(consEvents2{ce})
+                    if evntTrain(ce)
+                        stWv = StepWaveform(consEvents{ce},fs);
+                        consEvents2{ce} = stWv.Triggers;
+                    else
+                        fprintf(1,'Transforming the considered event %d to',ce)
+                        fprintf(1,' logical\n');
+                        aux = abs(consEvents2{ce});
+                        consEvents2{ce} = aux > mean(aux);
+                    end
+                else
+                    consEvents2(ce) = [];
                 end
             end
             consEvents = consEvents2;
@@ -97,7 +106,22 @@ if Ns
     if any(signalCheck3)
         varargin = varargin{1};
         Ns = numel(varargin);
+        lngths = cellfun(@length,varargin);
+        lnthCheck = std(lngths);
+        if lnthCheck > 1
+            outlier = zscore(lngths).^2 > 0.5;
+            fprintf(1,'Warning! One of the considered continuous signals')
+            fprintf(1,' length deviates considerably from the rest.\n')
+            fprintf(1,'This signal(s) is (are) going to be deleted!\n')
+            varargin(outlier) = [];
+            Ns = Ns - sum(outlier);
+        end
         MAX_CONT_SAMP = min(cellfun(@length,varargin));
+        RoC = cellfun(@isrow,varargin);
+        if ~any(RoC)
+            varargin(~RoC) = cellfun(@transpose,varargin(~RoC),...
+                'UniformOutput',false);
+        end
     end
     if sum(signalCheck) ~= Ns && ~any(signalCheck3)
         fprintf('Discarding those inputs which are not numeric...\n')
@@ -296,9 +320,8 @@ if Ns == 1
     if (Nrow ~= 1 && Ncol > Nrow) || (Ncol ~= 1 && Nrow > Ncol)
         Ns = Nrow * (Nrow < Ncol) + Ncol * (Ncol < Nrow);
     end
-else
-    
 end
+
 try
     sigSeg =...
         cellfun(...
