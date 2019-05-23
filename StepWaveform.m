@@ -142,13 +142,11 @@ classdef StepWaveform < DiscreteWaveform
         % Recreate the signal with logic values.
         function logicalTrace = subs2idx(subs,N)
             if size(subs,2) == 2
-                fprintf('Time windows\n')
                 logicalTrace = false(1,N);
                 for cmt = 1:size(subs,1)
                     logicalTrace(subs(cmt,1):subs(cmt,2)) = true;
                 end
             else
-                fprintf('Time points (i.e. spikes)\n')
                 [Nr, Nc] = size(subs);
                 logicalTrace = false(Nr * (Nr < Nc) + Nc * (Nc < Nr),...
                     N);
@@ -164,6 +162,21 @@ classdef StepWaveform < DiscreteWaveform
                         fprintf('Case not yet implemented...\n')
                 end
             end
+        end
+        
+        % Get a semi-logic trigger signal
+        function semiLogicSignal = SCBrownMotion(RaF)
+            [R,C] = size(RaF);
+            if ~any([R == 2,C == 2])
+                disp('What kind of rising and falling edges were given?')
+                semiLogicSignal = RaF;
+                return
+            end
+            
+            if R > C
+                RaF = RaF';
+            end
+            semiLogicSignal = cumsum(RaF(1,:) - RaF(2,:));
         end
         
         % Get the first true value of a logic pulse
