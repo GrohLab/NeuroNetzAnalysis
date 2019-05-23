@@ -80,11 +80,15 @@ postSamples = ceil(timeSpan(2) * fs);
 Nt = prevSamples + postSamples + 1;
 discreteStack = false(2+Ne,Nt,Na);
 % Creation of the logical spike train
-if isnumeric(spT)
+if isnumeric(spT) && ~sum(round(spT) - spT)
     mxS = spT(end) + Nt;
     spTemp = false(1,mxS);
     spTemp(spT) = true;
     spT = spTemp;
+elseif ~sum(round(spT) - spT) && ~islogical(spT)
+    spT = round(spT * fs);
+    mxS = spT(end) + Nt;
+    spT = StepWaveform.subs2idx(spT,mxS);
 end
 %% Preallocation of the continuous stack:
 if ~exist('fsLFP','var')
@@ -303,13 +307,13 @@ elseif Idxs(1) <= 0
     signalSegments = getSignalSegments(signalCell, Idxs);
     contSigSeg(:,Nt - Idxs(2) + 1:Nt) =...
         single(reshape(cell2mat(signalSegments),...
-        Ns, Nt));
+        Ns, length(Nt - Idxs(2) + 1:Nt)));
 else
     Idxs(Idxs > N) = N;
     signalSegments = getSignalSegments(signalCell, Idxs);
     contSigSeg(:,1:diff(Idxs)+1) =...
         single(reshape(cell2mat(signalSegments),...
-        Ns, Nt));
+        Ns, length(1:diff(Idxs)+1)));
 end
 end
 
