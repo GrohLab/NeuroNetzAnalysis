@@ -23,7 +23,8 @@ bar(ax,tx_PSTH,PSTH(1,:)/(sweeps*binSz),1,...
     'FaceAlpha',0.3,'DisplayName','Neuron 1');
 ylabel(ax,'Firing rate [Hz]')
 hold(ax,'on')
-idIdx = find(koIdx)';
+idIdx = find(koIdx);
+idIdx = reshape(idIdx,1,numel(idIdx));
 binEl = fs * binSz;
 yyaxis(ax,'left')
 xlabel(ax,sprintf('Time_{%.2f} [s]',binSz))
