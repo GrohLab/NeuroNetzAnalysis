@@ -6,6 +6,8 @@ zs = @(x)mean(x)/std(x);
 addFst = @(x,y)cat(find(size(x)~=1),y,x);
 addLst = @(x,y)cat(find(size(x)~=1),x,y);
 uninterestingVals = @(x)~(isempty(x) || isnan(x) || isinf(x) || x == 0);
+printFig = @(x,fname) set(x,'RendererMode','manual','Renderer','painters',...
+        'PaperOrientation','landscape','Name',fname);
 %% Select data file
 defaultPath = 'E:\Data\Jittering'; % Path where you would like to open a windows explorer window to select your data file
 [fileName, filePath] =...
@@ -76,7 +78,7 @@ idx(triggerIdx) = true;
     'CancelString','Cancel',...
     'OKString','OK',...
     'Name','Triggers',...
-    'ListSize',[160,15*numel(IDsignal(~idx))]);
+    'ListSize',[160,15*numel(IDsignal)]);
 if ~iok
     disp('You can always checking the file in Spike2. See you next time!')
     clearvars
@@ -144,7 +146,11 @@ if isfield(IdxTriggers,'laser')
     if isempty(Conditions(7).Triggers)
         Conditions(7) = [];
     end
-    timeDelay = abs(lsSub - Conditions(3).Triggers)/fs;
+    if isempty(lsFst) || ~sum(lsFst)
+        timeDelay = abs(lsSub - Conditions(3).Triggers)/fs;
+    else
+        timeDelay = abs(lsSub(lsFst) - Conditions(3).Triggers)/fs;
+    end
     delays = uniquetol(timeDelay,0.01);
     Nc = numel(Conditions);
     for ccond = numel(Conditions)+1:numel(Conditions)+numel(delays)
@@ -178,45 +184,50 @@ timeLapse = [2.5, 5.5];
 
 timeLapse = repmat(timeLapse,numel(Conditions),1);
 timeLapse(4:6,:) = repmat([250,350]*m,3,1);
-binSz = 1*m; % milliseconds or seconds
+binSz = 50*m; % milliseconds or seconds
+binSz = repmat(binSz,numel(Conditions),1);
+binSz(4:6,:) = repmat(0.5*m,3,1);
 %[~,cSt] =...
 %    getStacks(false(1,cols), ltOn, 'on', timeLapse * m, fs ,fs ,[],dataCell);
 ERASE_kIDX = false;
-IDe = [repmat('Unit ',numel(spT),1),num2str((1:numel(spT))')];
+clID = UMSDataLoader.getClustersID(UMSSpikeStruct,'good');
+IDe = IDsignal(...
+    ~cellfun(@strcmpi,IDsignal,repmat({'Spikes'},numel(IDsignal),1)));
+IDe = [cell([repmat('Cluster ',numel(clID),1),num2str(clID)]);IDe];
+consideredSignalsIdx = false(size(IDe));
+OVW = false; % Overwrite figure flag
 for ccon = 1:numel(Conditions)
     cn = 1;
     othNeu = setdiff(1:numel(spT),cn);
-    [dSck, cSck] = getStacks(spT{cn},Conditions(ccon).Triggers,...
-        'on',timeLapse(ccon,:),fs,fs, spT(othNeu),...
+    [dSck, cSck] = getStacks(...
+        spT{cn},... Main neuron
+        Conditions(ccon).Triggers, 'on',... Triggers, onset
+        timeLapse(ccon,:), fs, fs,... Time lapse, and sampling frequencies
+        spT(othNeu),... Other discrete events in the 
         struct2cell(ContinuousData));
     Na = size(dSck,3);
     kIdx = false(1,Na);
     
-    [PSTH, trig, sweeps, tx_psth] =...
-        getPSTH(dSck, timeLapse(ccon,:), kIdx, binSz, fs);
-    [relativeSpikeTimes, tx_raster] =...
+    [PSTH, trig, sweeps] =...
+        getPSTH(dSck, timeLapse(ccon,:), kIdx, binSz(ccon), fs);
+    [relativeSpikeTimes] =...
         getRasterFromStack(dSck, kIdx, false, timeLapse(ccon,:),...
         fs, ERASE_kIDX);
-    expName = erase(filePath,getParentDir(filePath,1));
-    plotPSTH(trig, PSTH, sweeps, binSz, timeLapse(ccon,:), expName,...
-        IDe);
-    plotRaster(relativeSpikeTimes, timeLapse, fs,...
-        Conditions(ccon).name,erase(filePath,getParentDir(filePath,1)));
-    
+    expName = [erase(erase(filePath,getParentDir(filePath,1)),filesep),...
+        erase(fileName,'.mat')];
+    psthFig = plotEasyPSTH(trig, PSTH, sweeps, binSz(ccon),...
+        timeLapse(ccon,:), fs);
+    set(psthFig.Children.Title,'String',[expName,' ',Conditions(ccon).name])
+    printFig(psthFig,sprintf('PSTH for %s',expName))
+    psthFigName = fullfile(filePath,[expName,'_PSTH_',Conditions(ccon).name,'.pdf']);
+    if ~exist(psthFigName,'file') || OVW 
+        print(psthFig,psthFigName,'-dpdf','-bestfit')
+    end
+    rastFig = plotRaster(relativeSpikeTimes, timeLapse(ccon,:), fs,...
+        [expName,' ',Conditions(ccon).name],IDe);
+    printFig(rastFig,sprintf('Raster for %s',expName))
+    rastFigName = fullfile(filePath,[expName,'_Raster_',Conditions(ccon).name,'.pdf']);
+    if ~exist(rastFigName,'file') || OVW 
+        print(rastFig, rastFigName,'-dpdf','-bestfit')
+    end
 end
-% Creation of the discrete and the continuous stacks:
-%                                        First spikeing times  trigger  timeW     FS  FSt  N spiking times          continuous data.
-%%
-[discreteStack, contStack] = getStacks(spikeFindingData.spikes,upT,'on',timeLapse,fs,fs,spikeFindingData2.spikes,EEG.data);
-%                                                               indx                   cell of indexes | INDX,  signal1, signal2,...
-[Ne, Nt, Na] = size(discreteStack);
-kIdx = false(1,Na);
-binSz = 10; % milliseconds or seconds
-ERASE_kIDX = false;
-[PSTH, trig, sweeps, tx_psth] = getPSTH(discreteStack, timeLapse, kIdx, binSz, fs);
-[triggeredAverageSignals, signalVariation, tx_tav] = getTriggeredAverage(contStack, kIdx, timeLapse);
-[relativeSpikeTimes, tx_raster] = getRasterFromStack(discreteStack, kIdx, timeLapse, fs, ERASE_kIDX);
-
-figure;plot(tx_psth,PSTH(1,:),tx_psth,PSTH(2,:))
-plotRaster(relativeSpikeTimes, timeLapse, fs, '130626_p3');
-plotRasterAsText(relativeSpikeTimes, timeLapse, fs, '130626_p3')
