@@ -71,7 +71,7 @@ idx(triggerIdx) = true;
 % Prompting for the signal(s)
 [signalIdx, iok] = listdlg(...
     'PromptString','Select all signals:',...
-    'ListString',IDsignal(~idx),...
+    'ListString',IDsignal,...
     'SelectionMode','multiple',...
     'CancelString','Cancel',...
     'OKString','OK',...
@@ -82,7 +82,11 @@ if ~iok
     clearvars
     return
 end
-
+IDcontinuous = IDsignal;
+IDcontinuous = IDcontinuous(signalIdx);
+for ccd = 1:numel(IDcontinuous)
+    ContinuousData.(IDcontinuous{ccd}) = data.(IDcontinuous{ccd});
+end
 
 % Extracting the timepoints of the step functions
 cellTriggers = cell(1,numel(triggerIdx));
@@ -99,6 +103,7 @@ for cts = triggerIdx
         triggerIdx(tSub) = [];
         continue
     end
+    Triggers.(IDsignal{cts}) = StepWaveform.SCBrownMotion(auxArray);
     cellTriggers(tSub) = {auxArray};
     tSub = tSub + 1;
 end
@@ -159,26 +164,45 @@ UMSSpikeStruct = spikeFindObj.SpikeUMSStruct;
 spikeFindingData = struct('thresh',[],...
     'minISI',UMSSpikeStruct.params.shadow,'spikes',spkTms,'ppms',fs/k,...
     'timestamp',[]);
+if iscell(spkTms)
+    spT = cell(1,numel(spkTms));
+    for cn = 1:numel(spkTms)
+        spT(cn) = {StepWaveform.subs2idx(round(spkTms{cn}*fs),Ns)};
+    end
+else
+    spT = {StepWaveform.subs2idx(round(spkTms*fs), Ns)};
+end
 %%
 % Time window surrounding the trigger [time before, time after] in seconds
-timeLapse = [1000, 5500]*m;
+timeLapse = [2.5, 5.5];
 
+timeLapse = repmat(timeLapse,numel(Conditions),1);
+timeLapse(4:6,:) = repmat([250,350]*m,3,1);
+binSz = 1*m; % milliseconds or seconds
 %[~,cSt] =...
 %    getStacks(false(1,cols), ltOn, 'on', timeLapse * m, fs ,fs ,[],dataCell);
-
-for ccond = 1:numel(Conditions)
-    [discreteStack, contStack] = getStacks(spS,upSub(upFst),...
-        'on',timeLapse,fs,fs);
-    
-    [Ne, Nt, Na] = size(discreteStack);
+ERASE_kIDX = false;
+IDe = [repmat('Unit ',numel(spT),1),num2str((1:numel(spT))')];
+for ccon = 1:numel(Conditions)
+    cn = 1;
+    othNeu = setdiff(1:numel(spT),cn);
+    [dSck, cSck] = getStacks(spT{cn},Conditions(ccon).Triggers,...
+        'on',timeLapse(ccon,:),fs,fs, spT(othNeu),...
+        struct2cell(ContinuousData));
+    Na = size(dSck,3);
     kIdx = false(1,Na);
-    binSz = 10*m; % milliseconds or seconds
-    ERASE_kIDX = false;
-    [PSTH, trig, sweeps, tx_psth] = getPSTH(discreteStack, timeLapse, kIdx, binSz, fs);
-    [relativeSpikeTimes, tx_raster] = getRasterFromStack(discreteStack, kIdx, false, timeLapse, fs, ERASE_kIDX);
     
+    [PSTH, trig, sweeps, tx_psth] =...
+        getPSTH(dSck, timeLapse(ccon,:), kIdx, binSz, fs);
+    [relativeSpikeTimes, tx_raster] =...
+        getRasterFromStack(dSck, kIdx, false, timeLapse(ccon,:),...
+        fs, ERASE_kIDX);
+    expName = erase(filePath,getParentDir(filePath,1));
+    plotPSTH(trig, PSTH, sweeps, binSz, timeLapse(ccon,:), expName,...
+        IDe);
+    plotRaster(relativeSpikeTimes, timeLapse, fs,...
+        Conditions(ccon).name,erase(filePath,getParentDir(filePath,1)));
     
-    plotRaster(relativeSpikeTimes, timeLapse, fs, 'Up control',{'Neuron 5'});
 end
 % Creation of the discrete and the continuous stacks:
 %                                        First spikeing times  trigger  timeW     FS  FSt  N spiking times          continuous data.
