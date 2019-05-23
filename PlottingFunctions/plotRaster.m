@@ -55,14 +55,14 @@ for cse = 1:Ne
     end
 end
 
-axis([-timeLapse(1),timeLapse(2),1,Na*Ne])
+axis([-timeLapse(1),timeLapse(2),0.95,Na*Ne])
 if AX_FLAG
     set(ax,'Box','off','YTick',(0:Ne)*Na + Na/2,'YTickLabel',yTickLabel,...
         'YTickLabelRotation',90)
     xlabel(ax,'Time [s]')
     title(ax,[figTitle, ' ',num2str(Na),' trials'],'Interpreter','none')
 else
-    fig = gca;
+    fig = gcf;
     set(ax,'Box','off','YTick',(0:Ne)*Na + Na/2,'YTickLabel',yTickLabel,...
         'YTickLabelRotation',90)
     xlabel('Time [s]')
