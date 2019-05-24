@@ -24,9 +24,10 @@ binEl = fs * binSz;
 for cp = 1:size(PSTH,1)-1
     if max(PSTH(cp+1,:)) > sweeps
         plot(ax,tx_PSTH,(PSTH(cp+1,:))/(binEl*sweeps),...
-            'Color',clrMap(cp,:));
+            'Color',clrMap(cp,:),'LineWidth',0.5);
     else
-        plot(ax,tx_PSTH,PSTH(cp+1,:)./(binSz*sweeps),...
-            'Color',clrMap(cp,:));
+        bar(ax,tx_PSTH,PSTH(cp+1,:)./(binSz*sweeps),...
+            'EdgeColor','none','FaceColor',clrMap(cp,:),...
+            'FaceAlpha',0.4);
     end
 end
