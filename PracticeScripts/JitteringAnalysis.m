@@ -193,16 +193,20 @@ else
     varsInFile = load(fullfile(filePath,fileName));
     UMSSpikeStruct = varsInFile.UMSSpikeStruct;
     Triggers = varsInFile.Triggers;
-    
-    if iscell(spkTms)
-        spT = cell(1,numel(spkTms));
-        for cn = 1:numel(spkTms)
-            spT(cn) = {StepWaveform.subs2idx(round(spkTms{cn}*fs),Ns)};
-        end
-    else
-        spT = {StepWaveform.subs2idx(round(spkTms*fs), Ns)};
-    end
+    UMSobj = UMSDataLoader();
+    UMSobj.changeUMSStructure(UMSSpikeStruct);
+    spkTms = UMSobj.SpikeTimes;
 end
+
+if iscell(spkTms)
+    spT = cell(1,numel(spkTms));
+    for cn = 1:numel(spkTms)
+        spT(cn) = {StepWaveform.subs2idx(round(spkTms{cn}*fs),Ns)};
+    end
+else
+    spT = {StepWaveform.subs2idx(round(spkTms*fs), Ns)};
+end
+
 %%
 % Time window surrounding the trigger [time before, time after] in seconds
 timeLapse = [2.5, 5.5];
