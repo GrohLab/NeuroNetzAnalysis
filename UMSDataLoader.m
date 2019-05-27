@@ -148,6 +148,7 @@ classdef UMSDataLoader < handle
         %% SET AND GET SpikeUMSStruct
         function changeUMSStructure(obj,structIn)
             obj.SpikeUMSStruct = structIn;
+            obj.SamplingFrequency = structIn.params.Fs;
         end
         
         function set.SpikeUMSStruct(obj,structIn)
