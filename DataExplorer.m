@@ -6,19 +6,21 @@ classdef DataExplorer < handle
     
     This is the first version constructed from prototypes.
     
-    Emilio Isa?as-Camacho @ GrohLab 2019
+    Emilio Isaias-Camacho @ GrohLab 2019
     %}   
     
-    properties
-        Property1
+    properties (Access = 'private')
+        configStruct struct
     end
     
     methods
         function obj = DataExplorer(inputArg1,inputArg2)
-            %UNTITLED Construct an instance of this class
+           %UNTITLED Construct an instance of this class
             %   Detailed explanation goes here
             obj.Property1 = inputArg1 + inputArg2;
         end
+        
+        
         
         function outputArg = method1(obj,inputArg)
             %METHOD1 Summary of this method goes here
