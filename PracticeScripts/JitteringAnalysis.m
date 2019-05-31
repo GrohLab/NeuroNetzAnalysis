@@ -10,7 +10,8 @@ uninterestingVals = @(x)~(isempty(x) || isnan(x) || isinf(x) || x == 0);
 printFig = @(x,fname) set(x,'RendererMode','manual','Renderer','painters',...
     'PaperOrientation','landscape','Name',fname);
 %% Select data file
-defaultPath = 'E:\Data\Jittering'; % Path where you would like to open a windows explorer window to select your data file
+% defaultPath = 'E:\Data\Jittering'; % Path where you would like to open a windows explorer window to select your data file
+defaultPath = 'C:\Users\jefe_\Documents\SampleData';
 [fileName, filePath] =...
     uigetfile({'*analysis.mat';'*.mat';'*.smr';'*.smrx'},...
     'Select a data file',defaultPath);
@@ -46,7 +47,7 @@ if ~anaFlag
     [~,~,fExt] = fileparts(fileName);
     afn = fullfile(filePath,[erase(fileName,fExt),'_analysis.mat']);
 end
-
+%% Extracting the information from the selected file
 if ~anaFlag
     %% Loading the variables to extract all triggers
     % Loading the file into a structure
@@ -118,7 +119,15 @@ if ~anaFlag
             triggerIdx(tSub) = [];
             continue
         end
-        Triggers.(IDsignal{cts}) = StepWaveform.SCBrownMotion(auxArray);
+        if strcmpi(IDsignal{cts},'piezo')
+            Triggers.(sprintf('%s%s',IDsignal{cts},'Up')) =...
+                StepWaveform.SCBrownMotion(auxArray) > 0;
+            Triggers.(sprintf('%s%s',IDsignal{cts},'Dw')) =...
+                StepWaveform.SCBrownMotion(auxArray) < 0;
+        else
+            Triggers.(IDsignal{cts}) =...
+                StepWaveform.SCBrownMotion(auxArray) ~= 0;
+        end
         cellTriggers(tSub) = {auxArray};
         tSub = tSub + 1;
     end
@@ -153,25 +162,57 @@ if ~anaFlag
         disp('Development...')
         %     axes(condFig,'NextPlot','add');
         lsSub = find(IdxTriggers.laser(:,1));
+        lsIpi = diff(lsSub/fs);
         lsFst = StepWaveform.firstOfTrain(lsSub/fs, 5 - 1e-3);
-        Conditions(7).name = 'laserTrain'; Conditions(7).Triggers = lsSub(lsFst);
-        Conditions(8).name = 'laserAll'; Conditions(8).Triggers = lsSub;
-        if isempty(Conditions(7).Triggers)
-            Conditions(7) = [];
-        end
-        if isempty(lsFst) || ~sum(lsFst)
-            timeDelay = abs(lsSub - Conditions(3).Triggers)/fs;
-        else
-            timeDelay = abs(lsSub(lsFst) - Conditions(3).Triggers)/fs;
+        
+        lsIpi = lsIpi(~lsFst(1:end-1));
+        freqCond = round(uniquetol(1./lsIpi,0.01));
+        freqCond = freqCond(freqCond > 0);
+        fprintf(1,'Frequency stimulation:\n')
+        disp(freqCond)
+        % Conditions(7).name = 'laserTrain';
+        % Conditions(7).Triggers = lsSub(lsFst);
+        % Conditions(7).Triggers = Conditions(3).Triggers;
+        % Conditions(8).name = 'laserAll'; Conditions(8).Triggers = lsSub;
+        %if isempty(Conditions(7).Triggers)
+        %    Conditions(7) = [];
+        %end
+        try
+            if isempty(lsFst) || ~sum(lsFst)
+                timeDelay = abs(lsSub - Conditions(3).Triggers)/fs;
+            else
+                timeDelay = abs(lsSub(lsFst) - Conditions(3).Triggers)/fs;
+            end
+        catch TDE
+            fprintf(1,'Seems that a pulse was truncated...\n')
+            fprintf(1,'----Please pay attention when you finish recording!\n')
+            if isempty(lsFst) || ~sum(lsFst)
+                maxPulses = min(numel(lsSub),numel(Conditions(3).Triggers));
+                timeDelay = abs(lsSub(1:maxPulses) -...
+                    Conditions(3).Triggers(1:maxPulses))/fs;
+            else
+                maxPulses = min(sum(lsFst),numel(Conditions(3).Triggers));
+                dm = distmatrix(lsSub(lsFst)/fs,Conditions(3).Triggers/fs);
+                srtDelay = sort(dm(:),'ascend');
+                timeDelay = srtDelay(1:maxPulses);
+            end
         end
         delays = uniquetol(timeDelay,0.01);
+        if std(delays.*1e3) < 1
+            delays = mean(delays);
+        end
         Nc = numel(Conditions);
-        for ccond = numel(Conditions)+1:numel(Conditions)+numel(delays)
-            Conditions(ccond).name = sprintf('laserDelay_%d_ms',...
-                floor(k*delays(ccond-...
-                Nc)));
-            Conditions(ccond).Triggers = lsSub(ismembertol(timeDelay,...
-                delays(ccond - Nc),0.01));
+        Ndel = numel(delays);
+        Nfre = numel(freqCond);
+        for ccond = Nc+1:Nc*(Ndel*Nfre+1)
+            subFreq = ceil(((ccond/Nc)-1)*(1/Ndel));
+            subDel = ceil(((ccond/Nc)-1)*(1/Nfre));
+            subCond = mod(ccond-1,Nc)+1;
+            Conditions(ccond).name = cat(2,Conditions(1,mod(ccond,Nc)).name,...
+                sprintf('+laser(%d ms & %d Hz)',round(k*delays(subDel)),...
+                freqCond(subFreq)));
+            % TODO: Find the relevant laser + piezo combination!
+            Conditions(ccond).Triggers = Conditions(subCond).Triggers;
         end
     end
     
