@@ -397,8 +397,12 @@ classdef UMSDataLoader < handle
                         ' change the Chanel Order property using the',...
                         ' changeChanOrder method.\nThe available ',...
                         'channels are the following:\n'])
-                    for dispCount = 1:length(obj.Nch)
-                        fprintf('%d\n',obj.ChannelsID(dispCount))
+                    for dispCount = 1:obj.Nch
+                        if iscell(obj.ChannelsID)
+                            fprintf('%s\n',obj.ChannelsID{dispCount})
+                        else
+                            fprintf('%d\n',obj.ChannelsID(dispCount))
+                        end
                     end
                 end
             end
