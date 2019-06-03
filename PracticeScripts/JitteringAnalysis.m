@@ -10,8 +10,8 @@ uninterestingVals = @(x)~(isempty(x) || isnan(x) || isinf(x) || x == 0);
 printFig = @(x,fname) set(x,'RendererMode','manual','Renderer','painters',...
     'PaperOrientation','landscape','Name',fname);
 %% Select data file
-% defaultPath = 'E:\Data\Jittering'; % Path where you would like to open a windows explorer window to select your data file
-defaultPath = 'C:\Users\jefe_\Documents\SampleData';
+defaultPath = 'E:\Data\Jittering'; % Path where you would like to open a windows explorer window to select your data file
+% defaultPath = 'C:\Users\jefe_\Documents\SampleData';
 [fileName, filePath] =...
     uigetfile({'*analysis.mat';'*.mat';'*.smr';'*.smrx'},...
     'Select a data file',defaultPath);
@@ -159,8 +159,6 @@ if ~anaFlag
     Conditions(6).name = 'piezoAll';Conditions(6).Triggers = union(upSub,dwSub);
     
     if isfield(IdxTriggers,'laser')
-        disp('Development...')
-        %     axes(condFig,'NextPlot','add');
         lsSub = find(IdxTriggers.laser(:,1));
         lsIpi = diff(lsSub/fs);
         lsFst = StepWaveform.firstOfTrain(lsSub/fs, 5 - 1e-3);
@@ -170,13 +168,6 @@ if ~anaFlag
         freqCond = freqCond(freqCond > 0);
         fprintf(1,'Frequency stimulation:\n')
         disp(freqCond)
-        % Conditions(7).name = 'laserTrain';
-        % Conditions(7).Triggers = lsSub(lsFst);
-        % Conditions(7).Triggers = Conditions(3).Triggers;
-        % Conditions(8).name = 'laserAll'; Conditions(8).Triggers = lsSub;
-        %if isempty(Conditions(7).Triggers)
-        %    Conditions(7) = [];
-        %end
         try
             if isempty(lsFst) || ~sum(lsFst)
                 timeDelay = abs(lsSub - Conditions(3).Triggers)/fs;
@@ -208,11 +199,13 @@ if ~anaFlag
             subFreq = ceil(((ccond/Nc)-1)*(1/Ndel));
             subDel = ceil(((ccond/Nc)-1)*(1/Nfre));
             subCond = mod(ccond-1,Nc)+1;
-            Conditions(ccond).name = cat(2,Conditions(1,mod(ccond,Nc)).name,...
+            Conditions(ccond).name = cat(2,Conditions(subCond).name,...
                 sprintf('+laser(%d ms & %d Hz)',round(k*delays(subDel)),...
                 freqCond(subFreq)));
             % TODO: Find the relevant laser + piezo combination!
-            Conditions(ccond).Triggers = Conditions(subCond).Triggers;
+            dm = log(distmatrix(lsSub/fs,Conditions(subCond).Triggers/fs));
+            [y,x] = find(ismembertol(dm,min(dm(:)),0.001));
+            Conditions(ccond).Triggers = Conditions(subCond).Triggers(x);
         end
     end
     
@@ -227,13 +220,26 @@ if ~anaFlag
     %% Save *analysis.mat file
     
     Head = struct('FileInfo',fullfile(filePath,fileName),...
-        'IDs',IDsignal,'tSub',triggerIdx,'sSub',signalIdx);
-    save(afn,'Triggers','Conditions','UMSSpikeStruct','Head')
+        'IDs',{IDsignal},'tSub',triggerIdx,'sSub',signalIdx,'Samples',Ns,...
+        'SamplingFrequency',fs);
+    save(afn,'Triggers','ContinuousData','Conditions','UMSSpikeStruct','Head')
     
 else
     varsInFile = load(fullfile(filePath,fileName));
-    UMSSpikeStruct = varsInFile.UMSSpikeStruct;
+    
+    Ns = varsInFile.Head.Samples;
+    fs = varsInFile.Head.SamplingFrequency;
+    IDsignal = varsInFile.Head.IDs;
+    triggerIdx = varsInFile.Head.tSub;
+    signalIdx = varsInFile.Head.sSub;
+    
     Triggers = varsInFile.Triggers;
+    Conditions = varsInFile.Conditions;
+    ContinuousData = varsInFile.ContinuousData;
+    UMSSpikeStruct = varsInFile.UMSSpikeStruct;
+    
+    clearvars varsInFile
+    
     UMSobj = UMSDataLoader();
     UMSobj.changeUMSStructure(UMSSpikeStruct);
     spkTms = UMSobj.SpikeTimes;
@@ -250,13 +256,13 @@ end
 
 %%
 % Time window surrounding the trigger [time before, time after] in seconds
-timeLapse = [2.5, 5.5];
+timeLapse = repmat([1.5 , 5.5],3,1);
+timeLapse = [timeLapse; repmat([250,350]*m,3,1)];
+timeLapse = repmat(timeLapse,numel(Conditions)/6,1);
+binSz = ones(3,1)*50*m; % milliseconds or seconds
+binSz = [binSz; repmat(0.1*m,3,1)];
+binSz = repmat(binSz,numel(Conditions)/6,1);
 
-timeLapse = repmat(timeLapse,numel(Conditions),1);
-timeLapse(4:6,:) = repmat([250,350]*m,3,1);
-binSz = 50*m; % milliseconds or seconds
-binSz = repmat(binSz,numel(Conditions),1);
-binSz(4:6,:) = repmat(0.5*m,3,1);
 %[~,cSt] =...
 %    getStacks(false(1,cols), ltOn, 'on', timeLapse * m, fs ,fs ,[],dataCell);
 ERASE_kIDX = false;
@@ -269,6 +275,7 @@ ntSub = triggerIdx + subOffst;
 nsSub = signalIdx + subOffst;
 consideredSignalsIdx = false(size(IDe));
 OVW = false; % Overwrite figure flag
+%%
 for ccon = 1:numel(Conditions)
     cn = 1;
     othNeu = setdiff(1:numel(spT),cn);
