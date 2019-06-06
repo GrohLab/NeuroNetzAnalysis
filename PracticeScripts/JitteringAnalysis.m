@@ -304,12 +304,15 @@ for ccon = 1:numel(Conditions)
         timeLapse(ccon,:), fs, fs,... Time lapse, and sampling frequencies
         consEvnts,... Other discrete events in the experiment.
         struct2cell(ContinuousData)); % Continuous data
+    [Ne,~,Na] = size(dSck);
+    
     kIdx = false(1,Na);
+    interestingEvents = true(1,Ne-2);
     
     [PSTH, trig, sweeps] =...
         getPSTH(dSck, timeLapse(ccon,:), kIdx, binSz(ccon), fs);
     [relativeSpikeTimes] =...
-        getRasterFromStack(dSck, kIdx, false, timeLapse(ccon,:),...
+        getRasterFromStack(dSck, kIdx, interestingEvents, timeLapse(ccon,:),...
         fs, ERASE_kIDX);
     expName = [erase(erase(filePath,getParentDir(filePath,1)),filesep),...
         erase(fileName,'.mat')];
