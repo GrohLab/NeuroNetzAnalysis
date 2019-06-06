@@ -166,8 +166,15 @@ if ~anaFlag
         lsIpi = lsIpi(~lsFst(1:end-1));
         freqCond = round(uniquetol(1./lsIpi,0.01));
         freqCond = freqCond(freqCond > 0);
-        fprintf(1,'Frequency stimulation:\n')
-        disp(freqCond)
+        fprintf(1,'Frequency stimulation:')
+        if isempty(freqCond)
+            freqCond = 0;
+        else
+        for cdl = 1:numel(freqCond)
+            fprintf(1,' %.2f',freqCond(cdl))
+        end
+        fprintf(1,'\n')
+        end
         try
             if isempty(lsFst) || ~sum(lsFst)
                 timeDelay = abs(lsSub - Conditions(3).Triggers)/fs;
@@ -192,6 +199,11 @@ if ~anaFlag
         if std(delays.*1e3) < 1
             delays = mean(delays);
         end
+        fprintf(1,'Delays found:')
+        for cdl = 1:numel(delays)
+            fprintf(1,' %.2f',delays(cdl))
+        end
+        fprintf(1,'\n')
         Nc = numel(Conditions);
         Ndel = numel(delays);
         Nfre = numel(freqCond);
@@ -244,7 +256,7 @@ else
     UMSobj.changeUMSStructure(UMSSpikeStruct);
     spkTms = UMSobj.SpikeTimes;
 end
-
+%%
 if iscell(spkTms)
     spT = cell(1,numel(spkTms));
     for cn = 1:numel(spkTms)
