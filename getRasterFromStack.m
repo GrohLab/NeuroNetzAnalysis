@@ -16,7 +16,8 @@ iE = find(koIdx);
 if isempty(iE)
     iE = 2;
 else
-    iE = [2, 2 + iE'];
+    iE = reshape(iE,1,numel(iE));
+    iE = [2, 2 + iE];
 end
 % Time axis
 spIdx = 1;
