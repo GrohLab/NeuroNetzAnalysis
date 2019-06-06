@@ -283,6 +283,8 @@ subOffst = numel(clID) - 1;
 IDe = IDsignal(...
     ~cellfun(@strcmpi,IDsignal,repmat({'Spikes'},numel(IDsignal),1)));
 IDe = [num2cell([repmat('Cluster ',numel(clID),1),num2str(clID)],2);IDe];
+rID = [num2cell([repmat('Cluster ',numel(clID),1),num2str(clID)],2);...
+    fieldnames(Triggers)];
 ntSub = triggerIdx + subOffst;
 nsSub = signalIdx + subOffst;
 consideredSignalsIdx = false(size(IDe));
@@ -323,7 +325,7 @@ for ccon = 1:numel(Conditions)
         print(psthFig,psthFigName,'-dpdf','-bestfit')
     end
     rastFig = plotRaster(relativeSpikeTimes, timeLapse(ccon,:), fs,...
-        [expName,' ',Conditions(ccon).name],IDe);
+        [expName,' ',Conditions(ccon).name],rID);
     printFig(rastFig,sprintf('Raster for %s',expName))
     rastFigName = fullfile(filePath,[expName,'_Raster_',Conditions(ccon).name,'.pdf']);
     if ~exist(rastFigName,'file') || OVW
