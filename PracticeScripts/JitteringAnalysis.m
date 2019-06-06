@@ -258,12 +258,12 @@ else
 end
 %%
 if iscell(spkTms)
-    spT = cell(1,numel(spkTms));
+    spT = cell(numel(spkTms),1);
     for cn = 1:numel(spkTms)
-        spT(cn) = {StepWaveform.subs2idx(round(spkTms{cn}*fs),Ns)};
+        spT(cn) = {StepWaveform.subs2idx(round(spkTms{cn}*fs)',Ns)};
     end
 else
-    spT = {StepWaveform.subs2idx(round(spkTms*fs), Ns)};
+    spT = {StepWaveform.subs2idx(round(spkTms*fs)', Ns)};
 end
 
 %%
@@ -272,7 +272,7 @@ timeLapse = repmat([1.5 , 5.5],3,1);
 timeLapse = [timeLapse; repmat([250,350]*m,3,1)];
 timeLapse = repmat(timeLapse,numel(Conditions)/6,1);
 binSz = ones(3,1)*50*m; % milliseconds or seconds
-binSz = [binSz; repmat(0.1*m,3,1)];
+binSz = [binSz; repmat(1*m,3,1)];
 binSz = repmat(binSz,numel(Conditions)/6,1);
 
 %[~,cSt] =...
