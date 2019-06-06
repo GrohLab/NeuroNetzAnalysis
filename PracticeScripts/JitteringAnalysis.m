@@ -274,6 +274,13 @@ IDe = [num2cell([repmat('Cluster ',numel(clID),1),num2str(clID)],2);IDe];
 ntSub = triggerIdx + subOffst;
 nsSub = signalIdx + subOffst;
 consideredSignalsIdx = false(size(IDe));
+
+othNeu = setdiff(1:numel(spT),1);
+if isempty(spT(othNeu))
+    consEvnts = struct2cell(Triggers);
+else
+    consEvnts = cat(1,spT(othNeu),struct2cell(Triggers));
+end
 OVW = false; % Overwrite figure flag
 %%
 for ccon = 1:numel(Conditions)
