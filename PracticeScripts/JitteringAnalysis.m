@@ -298,15 +298,12 @@ end
 OVW = false; % Overwrite figure flag
 %%
 for ccon = 1:numel(Conditions)
-    cn = 1;
-    othNeu = setdiff(1:numel(spT),cn);
     [dSck, cSck] = getStacks(...
-        spT{cn},... Main neuron
+        spT{1},... Main neuron
         Conditions(ccon).Triggers, 'on',... Triggers, onset
         timeLapse(ccon,:), fs, fs,... Time lapse, and sampling frequencies
-        spT(othNeu),... Other discrete events in the
-        struct2cell(ContinuousData));
-    Na = size(dSck,3);
+        consEvnts,... Other discrete events in the experiment.
+        struct2cell(ContinuousData)); % Continuous data
     kIdx = false(1,Na);
     
     [PSTH, trig, sweeps] =...
