@@ -142,21 +142,18 @@ if ~anaFlag
     % Piezo: Up and down and first pulse of a pulse train
     % condFig = figure('Visible','off','Color',[1,1,1]);
     
-    upIdx = IdxTriggers.piezo(:,1).*data.piezo > 0;
-    upSub = find(upIdx);
-    upFst = StepWaveform.firstOfTrain(upSub/fs);
-    dwIdx = IdxTriggers.piezo(:,2).*data.piezo < 0;
-    dwSub = find(dwIdx);
-    dwFst = StepWaveform.firstOfTrain(dwSub/fs);
-    
-    Conditions = struct('name','piezoTrainUp','Triggers',upSub(upFst));
-    Conditions(2).name = 'piezoTrainDw';
-    Conditions(2).Triggers = dwSub(dwFst);
-    Conditions(3).name = 'piezoTrainUpandDw';
-    Conditions(3).Triggers = union(upSub(upFst),dwSub(dwFst));
-    Conditions(4).name = 'piezoAllUp';Conditions(4).Triggers = upSub;
-    Conditions(5).name = 'piezoAllDw';Conditions(5).Triggers = dwSub;
-    Conditions(6).name = 'piezoAll';Conditions(6).Triggers = union(upSub,dwSub);
+    upIdx = IdxTriggers.piezo .* repmat(data.piezo,1,2) > 0;
+    dwIdx = IdxTriggers.piezo .* repmat(data.piezo,1,2) < 0;
+    pzIdx = upIdx | flip(dwIdx,2);
+    pzSub = [find(pzIdx(:,1)),find(pzIdx(:,2))];
+    pzFst = StepWaveform.firstOfTrain(pzSub(:,1)/fs);
+
+    upSub = [find(upIdx(:,1)),find(upIdx(:,2))];
+    upFst = StepWaveform.firstOfTrain(upSub(:,1)/fs);
+    dwSub = [find(dwIdx(:,1)), find(dwIdx(:,2))];
+    dwFst = StepWaveform.firstOfTrain(dwSub(:,1)/fs);
+   
+    Conditions = struct('name','Piezo','Triggers',union(upSub,dwSub,'rows'));
     
     if isfield(IdxTriggers,'laser')
         lsSub = find(IdxTriggers.laser(:,1));
@@ -269,49 +266,84 @@ end
 %%
 % Time window surrounding the trigger [time before, time after] and bin
 % size for the PSTH. Both quantities in seconds.
-timeLapse = [0, 50*m];
-binSz = 50*m; 
+timeLapse = [350, 350]*m;
+binSz = 10*m;
 
-%[~,cSt] =...
-%    getStacks(false(1,cols), ltOn, 'on', timeLapse * m, fs ,fs ,[],dataCell);
 ERASE_kIDX = false;
 clID = UMSDataLoader.getClustersID(UMSSpikeStruct,'good');
 subOffst = numel(clID) - 1;
 IDe = IDsignal(...
     ~cellfun(@strcmpi,IDsignal,repmat({'Spikes'},numel(IDsignal),1)));
-IDe = [num2cell([repmat('Cluster ',numel(clID),1),num2str(clID)],2);IDe];
-rID = [num2cell([repmat('Cluster ',numel(clID),1),num2str(clID)],2);...
-    fieldnames(Triggers)];
+rID = num2cell([repmat('Cluster ',numel(clID),1),num2str(clID)],2);
+
+
 ntSub = triggerIdx + subOffst;
 nsSub = signalIdx + subOffst;
 consideredSignalsIdx = false(size(IDe));
 
 othNeu = setdiff(1:numel(spT),1);
-if isempty(spT(othNeu))
-    consEvnts = struct2cell(Triggers);
-else
-    consEvnts = cat(1,spT(othNeu),struct2cell(Triggers));
+consEvnts = [];
+if isfield(Triggers,'laser')
+    consEvnts = {Triggers.laser};
+end
+if ~isempty(spT(othNeu))
+    consEvnts = cat(1,spT(othNeu),consEvnts);
 end
 OVW = false; % Overwrite figure flag
+
+expName = [erase(erase(filePath,getParentDir(filePath,1)),filesep),'->',...
+        erase(fileName,'.mat')];
+
+tIdx = strcmp(fieldnames(Triggers),{'piezo'});
+trigSubs = pzSub;
+if contains(fileName,'long')
+    trigSubs = pzSub(pzFst,:);
+else
+    disp('Frequency analysis needs to be discussed')
+    return
+end
+[dStack, cStack] = getStacks(spT{1},trigSubs,'on',timeLapse,fs,fs,...
+    consEvnts,struct2cell(ContinuousData));
+
+[Ne,~,Na] = size(dStack);
+
+kIdx = false(1, Na);
+interestingEvents = true(1,Ne-2);
 %%
+eID = fieldnames(Triggers);
+eIDx = purgeTrials(dStack,timeLapse,tIdx,~tIdx,...
+    false(size(tIdx)),eID,fs);
+[PSTH, trig, sweeps] =...
+    getPSTH(dStack, timeLapse, ~eIDx, binSz, fs);
+plotPSTH(trig, PSTH, sweeps, binSz, timeLapse, expName, eID, ~tIdx,...
+    tIdx, fs);
+
+[relativeSpikeTimes] =...
+    getRasterFromStack(dStack, ~eIDx, interestingEvents, timeLapse,...
+    fs, ERASE_kIDX);
+plotRaster(relativeSpikeTimes,timeLapse,fs,['Raster for ',expName],[rID;eID(~tIdx)]);
+    
+%%
+
+
 for ccon = 1:numel(Conditions)
-    [dSck, cSck] = getStacks(...
+    [dStack, cSck] = getStacks(...
         spT{1},... Main neuron
         Conditions(ccon).Triggers, 'on',... Triggers, onset
         timeLapse(ccon,:), fs, fs,... Time lapse, and sampling frequencies
         consEvnts,... Other discrete events in the experiment.
         struct2cell(ContinuousData)); % Continuous data
-    [Ne,~,Na] = size(dSck);
     
-    kIdx = false(1,Na);
-    interestingEvents = true(1,Ne-2);
+    
+    
+    
     
     [PSTH, trig, sweeps] =...
-        getPSTH(dSck, timeLapse(ccon,:), kIdx, binSz(ccon), fs);
+        getPSTH(dStack, timeLapse(ccon,:), kIdx, binSz(ccon), fs);
     [relativeSpikeTimes] =...
-        getRasterFromStack(dSck, kIdx, interestingEvents, timeLapse(ccon,:),...
+        getRasterFromStack(dStack, kIdx, interestingEvents, timeLapse(ccon,:),...
         fs, ERASE_kIDX);
-    expName = [erase(erase(filePath,getParentDir(filePath,1)),filesep),...
+    expName = [erase(erase(filePath,getParentDir(filePath,1)),filesep),'->',...
         erase(fileName,'.mat')];
     psthFig = plotEasyPSTH(trig, PSTH, sweeps, binSz(ccon),...
         timeLapse(ccon,:), fs);
