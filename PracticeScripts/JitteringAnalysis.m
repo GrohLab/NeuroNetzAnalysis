@@ -6,6 +6,8 @@ m = 1e-3; % milli
 zs = @(x)mean(x)/std(x);
 addFst = @(x,y)cat(find(size(x)~=1),y,x);
 addLst = @(x,y)cat(find(size(x)~=1),x,y);
+fstCell = @(x) x{1};
+invalidCharacters = {'+','-'};
 uninterestingVals = @(x)~(isempty(x) || isnan(x) || isinf(x) || x == 0);
 printFig = @(x,fname) set(x,'RendererMode','manual','Renderer','painters',...
     'PaperOrientation','landscape','Name',fname);
@@ -59,7 +61,12 @@ if ~anaFlag
     fsArray = zeros(1,nnz(headIdx));
     for chead = 1:nnz(headIdx)
         fsArray(chead) = 1e6/(varsInFile.(fNames{headSub(chead)}).sampleinterval);
-        newField = erase(varsInFile.(fNames{headSub(chead)}).title,' ');
+        newField = erase(varsInFile.(fNames{headSub(chead)}).title,{' '});
+        if contains(newField,invalidCharacters)
+            newFieldProposal = strrep(newField,invalidCharacters,{'NVS'});
+            wrongName = strfind(newFieldProposal,'NVS');
+            newField = newFieldProposal{~cellfun(@isempty,wrongName)};
+        end
         data.(newField) = varsInFile.(strrep(fNames{headSub(chead)},'head','chan'));
     end
     Ns = mode(structfun(@length,data));
@@ -119,15 +126,8 @@ if ~anaFlag
             triggerIdx(tSub) = [];
             continue
         end
-        if strcmpi(IDsignal{cts},'piezo')
-            Triggers.(sprintf('%s%s',IDsignal{cts},'Up')) =...
-                StepWaveform.SCBrownMotion(auxArray) > 0;
-            Triggers.(sprintf('%s%s',IDsignal{cts},'Dw')) =...
-                StepWaveform.SCBrownMotion(auxArray) < 0;
-        else
-            Triggers.(IDsignal{cts}) =...
-                StepWaveform.SCBrownMotion(auxArray) ~= 0;
-        end
+        Triggers.(IDsignal{cts}) =...
+            StepWaveform.SCBrownMotion(auxArray) ~= 0;
         cellTriggers(tSub) = {auxArray};
         tSub = tSub + 1;
     end
@@ -170,10 +170,10 @@ if ~anaFlag
         if isempty(freqCond)
             freqCond = 0;
         else
-        for cdl = 1:numel(freqCond)
-            fprintf(1,' %.2f',freqCond(cdl))
-        end
-        fprintf(1,'\n')
+            for cdl = 1:numel(freqCond)
+                fprintf(1,' %.2f',freqCond(cdl))
+            end
+            fprintf(1,'\n')
         end
         try
             if isempty(lsFst) || ~sum(lsFst)
@@ -267,13 +267,10 @@ else
 end
 
 %%
-% Time window surrounding the trigger [time before, time after] in seconds
-timeLapse = repmat([1.5 , 5.5],3,1);
-timeLapse = [timeLapse; repmat([250,350]*m,3,1)];
-timeLapse = repmat(timeLapse,numel(Conditions)/6,1);
-binSz = ones(3,1)*50*m; % milliseconds or seconds
-binSz = [binSz; repmat(1*m,3,1)];
-binSz = repmat(binSz,numel(Conditions)/6,1);
+% Time window surrounding the trigger [time before, time after] and bin
+% size for the PSTH. Both quantities in seconds.
+timeLapse = [0, 50*m];
+binSz = 50*m; 
 
 %[~,cSt] =...
 %    getStacks(false(1,cols), ltOn, 'on', timeLapse * m, fs ,fs ,[],dataCell);
