@@ -31,10 +31,10 @@ else
     dFs = fs;
     dt = 1/fs;
 end
-timeS = (0:Ns-1) * dt + timeOffset;
+timeS = (0:Ns-1) * dt;
 tick = zeros(1,Nch,'single');
 EEGp = gobjects(1,Nch);
-tmSub = round(duration * dFs);
+tmSub = round(duration * dFs) - round(timeOffset * dFs);
 for c = 1:Nch
     tick(c) = offset;
     EEGp(c) = plot(ax,timeS(1:tmSub),...
