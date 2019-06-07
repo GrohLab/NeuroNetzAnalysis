@@ -65,7 +65,7 @@ else
 end
 %% Index variables initialization
 % Indices for the time axis of the stack
-indexWindow = (windowArray*1e-3 + timeLapse(1))*fs + 1;
+indexWindow = round((windowArray*1e-3 + timeLapse(1))*fs + 1);
 % Inclusion or exclusion of the signals
 eIdxArray = false(sum(koIdx & ~iIdx),Na);
 % Event index in the discrete stack which is (k)onsidered and NOT ignored
