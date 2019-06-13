@@ -166,31 +166,31 @@ if ~anaFlag
         fprintf(1,'Frequency stimulation:')
         if isempty(freqCond)
             freqCond = 0;
+            fprintf(' None')
         else
             for cdl = 1:numel(freqCond)
                 fprintf(1,' %.2f',freqCond(cdl))
             end
-            fprintf(1,'\n')
         end
+        fprintf(1,'\n')
         try
             if isempty(lsFst) || ~sum(lsFst)
-                timeDelay = abs(lsSub - Conditions(3).Triggers)/fs;
+                timeDelay = abs(lsSub - Conditions.Triggers)/fs;
             else
-                timeDelay = abs(lsSub(lsFst) - Conditions(3).Triggers)/fs;
+                timeDelay = abs(lsSub(lsFst) - Conditions.Triggers)/fs;
             end
         catch TDE
             fprintf(1,'Seems that a pulse was truncated...\n')
             fprintf(1,'----Please pay attention when you finish recording!\n')
             if isempty(lsFst) || ~sum(lsFst)
-                maxPulses = min(numel(lsSub),numel(Conditions(3).Triggers));
-                timeDelay = abs(lsSub(1:maxPulses) -...
-                    Conditions(3).Triggers(1:maxPulses))/fs;
+                maxPulses = min(numel(lsSub),size(Conditions.Triggers,1));
+                dm = distmatrix(lsSub/fs,Conditions.Triggers(:,1)/fs);
             else
-                maxPulses = min(sum(lsFst),numel(Conditions(3).Triggers));
-                dm = distmatrix(lsSub(lsFst)/fs,Conditions(3).Triggers/fs);
-                srtDelay = sort(dm(:),'ascend');
-                timeDelay = srtDelay(1:maxPulses);
+                maxPulses = min(sum(lsFst),size(Conditions.Triggers,1));
+                dm = distmatrix(lsSub(lsFst)/fs,Conditions.Triggers(:,1)/fs);
             end
+            srtDelay = sort(dm(:),'ascend');
+            timeDelay = srtDelay(1:maxPulses);
         end
         delays = uniquetol(timeDelay,0.01);
         if std(delays.*1e3) < 1
@@ -198,24 +198,14 @@ if ~anaFlag
         end
         fprintf(1,'Delays found:')
         for cdl = 1:numel(delays)
-            fprintf(1,' %.2f',delays(cdl))
+            fprintf(1,' %.1f',delays(cdl)*1e3)
         end
-        fprintf(1,'\n')
-        Nc = numel(Conditions);
+        fprintf(1,' ms\n')
         Ndel = numel(delays);
         Nfre = numel(freqCond);
-        for ccond = Nc+1:Nc*(Ndel*Nfre+1)
-            subFreq = ceil(((ccond/Nc)-1)*(1/Ndel));
-            subDel = ceil(((ccond/Nc)-1)*(1/Nfre));
-            subCond = mod(ccond-1,Nc)+1;
-            Conditions(ccond).name = cat(2,Conditions(subCond).name,...
-                sprintf('+laser(%d ms & %d Hz)',round(k*delays(subDel)),...
-                freqCond(subFreq)));
-            % TODO: Find the relevant laser + piezo combination!
-            dm = log(distmatrix(lsSub/fs,Conditions(subCond).Triggers/fs));
-            [y,x] = find(ismembertol(dm,min(dm(:)),0.001));
-            Conditions(ccond).Triggers = Conditions(subCond).Triggers(x);
-        end
+        
+        
+        
     end
     
     %% Spike finding
@@ -281,12 +271,13 @@ ntSub = triggerIdx + subOffst;
 nsSub = signalIdx + subOffst;
 consideredSignalsIdx = false(size(IDe));
 
+consEvnts = struct2cell(Triggers);
+consEvnts(tIdx) = [];
+eID = fieldnames(Triggers);
+tIdx = strcmp(eID,{'piezo'});
 othNeu = setdiff(1:numel(spT),1);
-consEvnts = [];
-if isfield(Triggers,'laser')
-    consEvnts = {Triggers.laser};
-end
-if ~isempty(spT(othNeu))
+
+if ~(isempty(spT(othNeu)) || isempty(consEvnts))
     consEvnts = cat(1,spT(othNeu),consEvnts);
 end
 OVW = false; % Overwrite figure flag
@@ -294,13 +285,11 @@ OVW = false; % Overwrite figure flag
 expName = [erase(erase(filePath,getParentDir(filePath,1)),filesep),'->',...
         erase(fileName,'.mat')];
 
-tIdx = strcmp(fieldnames(Triggers),{'piezo'});
 trigSubs = pzSub;
 if contains(fileName,'long')
     trigSubs = pzSub(pzFst,:);
 else
-    disp('Frequency analysis needs to be discussed')
-    return
+    disp('Not long experiment...')
 end
 [dStack, cStack] = getStacks(spT{1},trigSubs,'on',timeLapse,fs,fs,...
     consEvnts,struct2cell(ContinuousData));
@@ -310,13 +299,19 @@ end
 kIdx = false(1, Na);
 interestingEvents = true(1,Ne-2);
 %%
-eID = fieldnames(Triggers);
 eIDx = purgeTrials(dStack,timeLapse,tIdx,~tIdx,...
     false(size(tIdx)),eID,fs);
+if ~sum(eIDx)
+    eIDx = true(Na,1);
+end
 [PSTH, trig, sweeps] =...
     getPSTH(dStack, timeLapse, ~eIDx, binSz, fs);
-plotPSTH(trig, PSTH, sweeps, binSz, timeLapse, expName, eID, ~tIdx,...
-    tIdx, fs);
+koIdx = true(size(PSTH,1),1);
+koIdx(tIdx) = false;
+prID = rID;
+prID(1) = [];
+plotPSTH(trig, PSTH, sweeps, binSz, timeLapse, expName, [prID;eID(~tIdx)], koIdx,...
+    padarray(tIdx,size(koIdx,1)-size(tIdx,1),'post'), fs);
 
 [relativeSpikeTimes] =...
     getRasterFromStack(dStack, ~eIDx, interestingEvents, timeLapse,...
@@ -325,7 +320,11 @@ plotRaster(relativeSpikeTimes,timeLapse,fs,['Raster for ',expName],[rID;eID(~tId
     
 %%
 
-
+if anaFlag
+    endName = erase(fileName,'analysis.mat');
+else
+    endName = erase(fileName,'.mat');
+end
 for ccon = 1:numel(Conditions)
     [dStack, cSck] = getStacks(...
         spT{1},... Main neuron
@@ -344,7 +343,8 @@ for ccon = 1:numel(Conditions)
         getRasterFromStack(dStack, kIdx, interestingEvents, timeLapse(ccon,:),...
         fs, ERASE_kIDX);
     expName = [erase(erase(filePath,getParentDir(filePath,1)),filesep),'->',...
-        erase(fileName,'.mat')];
+        endName];
+
     psthFig = plotEasyPSTH(trig, PSTH, sweeps, binSz(ccon),...
         timeLapse(ccon,:), fs);
     set(psthFig.Children.Title,'String',[expName,' ',Conditions(ccon).name])
