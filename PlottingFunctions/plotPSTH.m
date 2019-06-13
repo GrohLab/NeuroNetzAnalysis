@@ -30,9 +30,11 @@ yyaxis(ax,'left')
 xlabel(ax,sprintf('Time_{%.2f} [s]',binSz))
 for cp = idIdx
     if max(PSTH(cp+1,:)) > sweeps
+        yyaxis(ax,'left')
         plot(ax,tx_PSTH,(PSTH(cp+1,:))/(binEl*sweeps),...
             'Color',clrMap(cp,:),'DisplayName',IDe{cp});
     else
+        yyaxis(ax,'right')
         plot(ax,tx_PSTH,PSTH(cp+1,:)./(binSz*sweeps),...
             'Color',clrMap(cp,:),'DisplayName',IDe{cp});
     end
