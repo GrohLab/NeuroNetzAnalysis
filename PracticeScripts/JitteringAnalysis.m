@@ -167,14 +167,15 @@ if ~anaFlag
         if isempty(freqCond)
             freqCond = 0;
             fprintf(' None')
-        else
+        else   
             for cdl = 1:numel(freqCond)
                 fprintf(1,' %.2f',freqCond(cdl))
             end
         end
         fprintf(1,'\n')
         try
-            if isempty(lsFst) || ~sum(lsFst)
+            %if isempty(lsFst) || ~sum(lsFst)
+            if ~any(freqCond)
                 timeDelay = abs(lsSub - Conditions.Triggers)/fs;
             else
                 timeDelay = abs(lsSub(lsFst) - Conditions.Triggers)/fs;
@@ -189,7 +190,8 @@ if ~anaFlag
                 maxPulses = min(sum(lsFst),size(Conditions.Triggers,1));
                 dm = distmatrix(lsSub(lsFst)/fs,Conditions.Triggers(:,1)/fs);
             end
-            srtDelay = sort(dm(:),'ascend');
+            [srtDelay, whr] = sort(dm(:),'ascend');
+            [lghtSub, piezSub] = ind2sub(size(dm),whr(1:maxPulses));
             timeDelay = srtDelay(1:maxPulses);
         end
         delays = uniquetol(timeDelay,0.01);
