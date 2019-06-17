@@ -172,28 +172,20 @@ if ~anaFlag
                 fprintf(1,' %.2f',freqCond(cdl))
             end
         end
-        fprintf(1,'\n')
-        try
-            %if isempty(lsFst) || ~sum(lsFst)
-            if ~any(freqCond)
-                timeDelay = abs(lsSub - Conditions.Triggers)/fs;
-            else
-                timeDelay = abs(lsSub(lsFst) - Conditions.Triggers)/fs;
-            end
-        catch TDE
-            fprintf(1,'Seems that a pulse was truncated...\n')
-            fprintf(1,'----Please pay attention when you finish recording!\n')
-            if isempty(lsFst) || ~sum(lsFst)
-                maxPulses = min(numel(lsSub),size(Conditions.Triggers,1));
-                dm = distmatrix(lsSub/fs,Conditions.Triggers(:,1)/fs);
-            else
-                maxPulses = min(sum(lsFst),size(Conditions.Triggers,1));
-                dm = distmatrix(lsSub(lsFst)/fs,Conditions.Triggers(:,1)/fs);
-            end
-            [srtDelay, whr] = sort(dm(:),'ascend');
-            [lghtSub, piezSub] = ind2sub(size(dm),whr(1:maxPulses));
-            timeDelay = srtDelay(1:maxPulses);
+        fprintf(1,' Hz\n')
+        
+        % Searching for delays in the data with respect to the piezo
+        if ~any(freqCond)
+            maxPulses = min(numel(lsSub),size(Conditions.Triggers,1));
+            dm = distmatrix(lsSub/fs,Conditions.Triggers(:,1)/fs);
+        else
+            maxPulses = min(sum(lsFst),size(Conditions.Triggers,1));
+            dm = distmatrix(lsSub(lsFst)/fs,Conditions.Triggers(:,1)/fs);
         end
+        [srtDelay, whr] = sort(dm(:),'ascend');
+        [lghtSub, piezSub] = ind2sub(size(dm),whr(1:maxPulses));
+        timeDelay = srtDelay(1:maxPulses);
+        
         delays = uniquetol(timeDelay,0.01);
         if std(delays.*1e3) < 1
             delays = mean(delays);
