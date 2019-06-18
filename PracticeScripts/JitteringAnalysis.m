@@ -150,53 +150,65 @@ if ~anaFlag
 
     upSub = [find(upIdx(:,1)),find(upIdx(:,2))];
     upFst = StepWaveform.firstOfTrain(upSub(:,1)/fs);
-    dwSub = [find(dwIdx(:,1)), find(dwIdx(:,2))];
-    dwFst = StepWaveform.firstOfTrain(dwSub(:,1)/fs);
+    dwSub = [find(dwIdx(:,2)), find(dwIdx(:,1))];
+    dwFst = StepWaveform.firstOfTrain(dwSub(:,2)/fs);
    
     Conditions = struct('name','Piezo','Triggers',union(upSub,dwSub,'rows'));
     
     if isfield(IdxTriggers,'laser')
+        % Searching for frequency stimulation
         lsSub = find(IdxTriggers.laser(:,1));
         lsIpi = diff(lsSub/fs);
         lsFst = StepWaveform.firstOfTrain(lsSub/fs, 5 - 1e-3);
         
         lsIpi = lsIpi(~lsFst(1:end-1));
-        freqCond = round(uniquetol(1./lsIpi,0.01));
-        freqCond = freqCond(freqCond > 0);
+        pulsFreq = 1./diff(lsSub./fs);
+        freqCond = round(uniquetol(pulsFreq,0.1/max(pulsFreq)));
+        freqCond = unique(freqCond(freqCond > 0));
         fprintf(1,'Frequency stimulation:')
+        
         if isempty(freqCond)
             freqCond = 0;
             fprintf(' None')
         else   
-            for cdl = 1:numel(freqCond)
+            Nfre = numel(freqCond);
+            lsIdx = false(length(lsSub)-1,Nfre);
+            pulsFreq = 1./diff(lsSub./fs);
+            for cdl = 1:Nfre
                 fprintf(1,' %.2f',freqCond(cdl))
+                lsIdx(:,cdl) = lsFst(1:end-1) &...
+                    ismembertol(pulsFreq, freqCond(cdl), 0.1/max(pulsFreq));
             end
         end
         fprintf(1,' Hz\n')
+        if numel(freqCond) > 1
+            lsSub = lsSub(lsFst);
+            lsdSub = find(IdxTriggers.laser(:,2));
+            lsLst = flip(StepWaveform.firstOfTrain(flip(lsdSub)/fs, 5-1e-3));
+            lsdSub = lsdSub(lsLst);
+        end
+        
         
         % Searching for delays in the data with respect to the piezo
-        if ~any(freqCond)
-            maxPulses = min(numel(lsSub),size(Conditions.Triggers,1));
-            dm = distmatrix(lsSub/fs,Conditions.Triggers(:,1)/fs);
-        else
-            maxPulses = min(sum(lsFst),size(Conditions.Triggers,1));
-            dm = distmatrix(lsSub(lsFst)/fs,Conditions.Triggers(:,1)/fs);
-        end
+        
+        maxPulses = min(numel(lsSub),size(Conditions.Triggers,1));
+        dm = distmatrix(lsSub/fs,Conditions.Triggers(:,1)/fs);
         [srtDelay, whr] = sort(dm(:),'ascend');
         [lghtSub, piezSub] = ind2sub(size(dm),whr(1:maxPulses));
         timeDelay = srtDelay(1:maxPulses);
-        
-        delays = uniquetol(timeDelay,0.01);
+        delays = uniquetol(timeDelay,0.01/max(timeDelay));
         if std(delays.*1e3) < 1
             delays = mean(delays);
         end
+        Ndel = numel(delays);
         fprintf(1,'Delays found:')
-        for cdl = 1:numel(delays)
+        lsDel = false(length(lsSub),Ndel);
+        for cdl = 1:Ndel
             fprintf(1,' %.1f',delays(cdl)*1e3)
+            lsDel(:,cdl) = ismembertol(timeDelay,...
+                delays(cdl),0.1/max(pulsFreq));
         end
         fprintf(1,' ms\n')
-        Ndel = numel(delays);
-        Nfre = numel(freqCond);
         
         
         
