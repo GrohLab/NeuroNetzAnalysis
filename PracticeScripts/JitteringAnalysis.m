@@ -167,26 +167,26 @@ if ~anaFlag
         freqCond = unique(freqCond(freqCond > 0));
         fprintf(1,'Frequency stimulation:')
         
-        if isempty(freqCond)
+        if isempty(freqCond) || numel(freqCond) == 1
             freqCond = 0;
             fprintf(' None')
-        else   
+        elseif numel(freqCond) > 1
             Nfre = numel(freqCond);
-            lsIdx = false(length(lsSub)-1,Nfre);
             pulsFreq = 1./diff(lsSub./fs);
-            for cdl = 1:Nfre
-                fprintf(1,' %.2f',freqCond(cdl))
-                lsIdx(:,cdl) = lsFst(1:end-1) &...
-                    ismembertol(pulsFreq, freqCond(cdl), 0.1/max(pulsFreq));
-            end
-        end
-        fprintf(1,' Hz\n')
-        if numel(freqCond) > 1
-            lsSub = lsSub(lsFst);
+            lsuSub = lsSub(lsFst);
             lsdSub = find(IdxTriggers.laser(:,2));
             lsLst = flip(StepWaveform.firstOfTrain(flip(lsdSub)/fs, 5-1e-3));
             lsdSub = lsdSub(lsLst);
+            lsCon = [lsuSub,lsdSub];
+            lsIdx = false(size(lsCon,1),Nfre);
+            
+            for cdl = 1:Nfre
+                fprintf(1,' %.2f',freqCond(cdl))
+                
+            end
         end
+        fprintf(1,' Hz\n')
+        
         
         
         % Searching for delays in the data with respect to the piezo
