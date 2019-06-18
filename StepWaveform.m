@@ -183,7 +183,7 @@ classdef StepWaveform < DiscreteWaveform
         function frstSpks = firstOfTrain(spkTimes, minIpi)
             % OUTPUTS a logical index for the edges which are the first in
             % time for the step pulse train.
-            Ipi = diff(spkTimes);
+            Ipi = abs(diff(spkTimes));
             if ~exist('minIpi','var')
                 minIpi = mean(Ipi);
             end
