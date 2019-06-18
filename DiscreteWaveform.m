@@ -4,6 +4,9 @@ classdef (Abstract) DiscreteWaveform < GeneralWaveform
     
     properties (Abstract, SetAccess = 'private') 
         Triggers 
+        FirstInTrain
+        Count
+        Delta
     end
     
     methods
