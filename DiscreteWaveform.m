@@ -6,7 +6,7 @@ classdef (Abstract) DiscreteWaveform < GeneralWaveform
         Triggers 
     end
     
-    properties (Dependent, SetAccess = 'private')
+    properties (SetAccess = 'private')
         FirstOfTrain
         LastOfTrain
         Count
@@ -15,7 +15,7 @@ classdef (Abstract) DiscreteWaveform < GeneralWaveform
     end
     
     properties (Access = 'public')
-        MinIEI = [];
+        MinIEI (1,1) = [];
     end
     
     methods
