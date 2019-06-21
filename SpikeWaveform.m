@@ -95,11 +95,9 @@ classdef SpikeWaveform < DiscreteWaveform
                     return
                 end
             end
-            
             obj.UMSdata.getSpikeTimes;
             obj.Triggers = obj.UMSdata.SpikeTimes;
             disp('Spikes succesfully extracted')
-            
         end
         
         function h = plot(obj,varargin)
