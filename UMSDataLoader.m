@@ -200,6 +200,11 @@ classdef UMSDataLoader < handle
             obj.SpikeTimes = spkTms;
         end
         
+        function spkSubs = getSpikeSubscripts(obj)
+            spkTms = obj.SpikeTimes;
+            spkSubs = round(spkTms.*obj.SamplingFrequency);
+        end
+        
         %% SAVE and LOAD spiketimes
         function saveSpikeTimes(obj,currdir)
             if exist('currdir','var')
