@@ -15,6 +15,10 @@ classdef GeneralWaveform < handle
         Units (1,:) char = 'mV';
         Title (1,:) char = '';
     end
+    properties (Constant = true)
+        k = 1e3;
+        m = 1e-3;
+    end
     methods
         function obj = GeneralWaveform(data, samplingFreq, units, title)
             %GENERALWAVEFORM Construct an instance of this class. It takes
