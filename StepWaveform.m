@@ -5,6 +5,8 @@ classdef StepWaveform < DiscreteWaveform
     
     properties (SetAccess = 'private')
         Triggers
+        % Reminder: Size and validator functions not supported for
+        % properties defined as abstract in superclasses
     end
     
     methods
@@ -115,7 +117,7 @@ classdef StepWaveform < DiscreteWaveform
                 obj.Triggers = RaF;
             end % isa double/logical ?
         end 
-        
+
         % Display object information
         function disp(obj)
             disp('Step waveform-------')
