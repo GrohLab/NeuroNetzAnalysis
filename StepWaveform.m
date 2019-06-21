@@ -19,10 +19,27 @@ classdef StepWaveform < DiscreteWaveform
                 title = 'Step Waveform';
             end
             obj@DiscreteWaveform(data,samplingFreq, units,title);
+            obj.Triggers = computeTriggers(obj);
         end
         
         % Rising and falling edges
         function RaF = get.Triggers(obj)
+            RaF = obj.Triggers;
+        end 
+
+        % Display object information
+        function disp(obj)
+            disp('Step waveform-------')
+            if ~isempty(obj.Data)
+                fprintf('Title: %s\n',obj.Title)
+                fprintf('Triggers: %d\n',length(obj.Triggers))
+                fprintf('Sampling Frequency: %0.3f kHz\n',obj.SamplingFreq/1e3)
+            end
+        end
+    end
+    %% Private Methods
+    methods (Access = 'private')
+        function RaF = computeTriggers(obj)
             % Checking the data type
             if isa(obj.Data,'double')
                 % Real valued signal
@@ -114,20 +131,10 @@ classdef StepWaveform < DiscreteWaveform
                     end
                 end
                 RaF = [rise,fall];
-                obj.Triggers = RaF;
             end % isa double/logical ?
-        end 
-
-        % Display object information
-        function disp(obj)
-            disp('Step waveform-------')
-            if ~isempty(obj.Data)
-                fprintf('Title: %s\n',obj.Title)
-                fprintf('Triggers: %d\n',length(obj.Triggers))
-                fprintf('Sampling Frequency: %0.3f kHz\n',obj.SamplingFreq/1e3)
-            end
         end
     end
+    
     %% Static methods
     methods (Static, Access = 'private')
         function edgeOut = cleanEdges(edgeIn)
@@ -138,8 +145,17 @@ classdef StepWaveform < DiscreteWaveform
                 edgeOut(repeatIdx) = false;
             end
         end
+        
+        function new_array = addFst(array,element)
+            new_array = cat(find(size(array)~=1), element, array);
+        end
+        
+        function new_array = addLst(array,element)
+            new_array = cat(find(size(array)~=1), array, element);
+        end
     end
     
+    %% Static public methods
     methods (Static, Access = 'public')
         % Recreate the signal with logic values.
         function logicalTrace = subs2idx(subs,N)
@@ -174,7 +190,6 @@ classdef StepWaveform < DiscreteWaveform
                 semiLogicSignal = RaF;
                 return
             end
-            
             if R > C
                 RaF = RaF';
             end
@@ -192,17 +207,7 @@ classdef StepWaveform < DiscreteWaveform
             Pks = Ipi < minIpi;
             Sps = StepWaveform.addFst(~Pks,true);
             frstSpks = StepWaveform.addLst(Sps(1:end-1) & Pks,false);
-        end
-        
-        %% Auxiliary functions
-        function new_array = addFst(array,element)
-            new_array = cat(find(size(array)~=1), element, array);
-        end
-        
-        function new_array = addLst(array,element)
-            new_array = cat(find(size(array)~=1), array, element);
-        end
+        end 
     end
-    
 end
 
