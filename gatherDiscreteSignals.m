@@ -24,6 +24,7 @@ else
         disp('It is not possible to determine the real length of the signals')
         sLen = ceil(max(cellfun(@max,allEvents(~bulls)))/fs) + 1;
     end
+    [rws,cls] = cellfun(@size,allEvents);
     disp('No logical train given')
 end
 discreteTraces = false(Ne,sLen);

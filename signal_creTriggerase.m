@@ -34,8 +34,8 @@ if ~isempty(UMS)
     fs = UMS.params.Fs;
     spikeLoader = UMSDataLoader();
     spikeLoader.changeUMSStructure(UMS)
-    spikeLoader.getSpikeTimes
-    spSubs = spikeLoader.SpikeTimes;
+    %spikeLoader.getSpikeTimes
+    spSubs = spikeLoader.getSpikeSubscripts;
 else
     UMS = load(analysisFilePath,'spikeFindingData');
     UMS = UMS.spikeFindingData;

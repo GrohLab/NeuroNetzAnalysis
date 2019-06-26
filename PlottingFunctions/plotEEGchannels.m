@@ -1,7 +1,11 @@
-function [fhand, EEGp] = plotEEGchannels(EEG, labels, duration, fs, scale, fig)
+function [fhand, EEGp] = plotEEGchannels(EEG, labels, duration, fs, scale,...
+    timeOffset, fig)
 % fhand = figure('Name','EEG');hold on
 if ~exist('fig','var')
     fig = figure('Name','EEG');
+end
+if ~exist('timeOffset','var')
+    timeOffset = 0;
 end
 ax = fig.Children;
 if isempty(ax)
@@ -27,7 +31,7 @@ else
     dFs = fs;
     dt = 1/fs;
 end
-timeS = (0:Ns-1) * dt;
+timeS = ((0:Ns-1) * dt) - timeOffset;
 tick = zeros(1,Nch,'single');
 EEGp = gobjects(1,Nch);
 tmSub = round(duration * dFs);
@@ -37,7 +41,7 @@ for c = 1:Nch
         scale*EEG(c,1:tmSub)+offset,'Color',repmat(0.8,1,3));
     offset = offset-step;
 end
-axis([0, timeS(tmSub),...
+axis([timeS(1), timeS(tmSub),...
     tick(Nch)-2*step, tick(1)+2*step])
 ylabel('Channels')
 xlabel('Time [s]')

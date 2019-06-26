@@ -55,9 +55,18 @@ if exist('consEvents','var') && ~isempty(consEvents)
             evntTrain = cellfun(@islogical,consEvents);
             % Converting the logical event trains into indices
             for ce = 1:Ne
-                if evntTrain(ce)
-                    stWv = StepWaveform(consEvents{ce},fs);
-                    consEvents2{ce} = stWv.Triggers;
+                if ~isempty(consEvents2{ce})
+                    if evntTrain(ce)
+                        stWv = StepWaveform(consEvents{ce},fs);
+                        consEvents2{ce} = stWv.Triggers;
+                    else
+                        fprintf(1,'Transforming the considered event %d to',ce)
+                        fprintf(1,' logical\n');
+                        aux = abs(consEvents2{ce});
+                        consEvents2{ce} = aux > mean(aux);
+                    end
+                else
+                    consEvents2(ce) = [];
                 end
             end
             consEvents = consEvents2;
@@ -71,11 +80,15 @@ postSamples = ceil(timeSpan(2) * fs);
 Nt = prevSamples + postSamples + 1;
 discreteStack = false(2+Ne,Nt,Na);
 % Creation of the logical spike train
-if isnumeric(spT)
+if isnumeric(spT) && ~sum(round(spT) - spT)
     mxS = spT(end) + Nt;
     spTemp = false(1,mxS);
     spTemp(spT) = true;
     spT = spTemp;
+elseif ~sum(round(spT) - spT) && ~islogical(spT)
+    spT = round(spT * fs);
+    mxS = spT(end) + Nt;
+    spT = StepWaveform.subs2idx(spT,mxS);
 end
 %% Preallocation of the continuous stack:
 if ~exist('fsLFP','var')
@@ -97,7 +110,22 @@ if Ns
     if any(signalCheck3)
         varargin = varargin{1};
         Ns = numel(varargin);
+        lngths = cellfun(@length,varargin);
+        lnthCheck = std(lngths);
+        if lnthCheck > 1
+            outlier = zscore(lngths).^2 > 0.5;
+            fprintf(1,'Warning! One of the considered continuous signals')
+            fprintf(1,' length deviates considerably from the rest.\n')
+            fprintf(1,'This signal(s) is (are) going to be deleted!\n')
+            varargin(outlier) = [];
+            Ns = Ns - sum(outlier);
+        end
         MAX_CONT_SAMP = min(cellfun(@length,varargin));
+        RoC = cellfun(@isrow,varargin);
+        if ~any(RoC)
+            varargin(~RoC) = cellfun(@transpose,varargin(~RoC),...
+                'UniformOutput',false);
+        end
     end
     if sum(signalCheck) ~= Ns && ~any(signalCheck3)
         fprintf('Discarding those inputs which are not numeric...\n')
@@ -115,11 +143,15 @@ if Ns
             MAX_CONT_SAMP = signalCheck2(1);
         end
     end
-    prevSamplesLFP = ceil(timeSpan(1) * fsLFP);
-    postSamplesLFP = ceil(timeSpan(2) * fsLFP);
-    NtLFP = prevSamplesLFP + postSamplesLFP + 1;
-    continuouStack = zeros(Ns,NtLFP,Na,'single');
+%     prevSamplesLFP = ceil(timeSpan(1) * fsLFP);
+%     postSamplesLFP = ceil(timeSpan(2) * fsLFP);
+%     NtLFP = prevSamplesLFP + postSamplesLFP + 1;
+%     continuouStack = zeros(Ns,NtLFP,Na,'single');
 end
+prevSamplesLFP = ceil(timeSpan(1) * fsLFP);
+postSamplesLFP = ceil(timeSpan(2) * fsLFP);
+NtLFP = prevSamplesLFP + postSamplesLFP + 1;
+continuouStack = zeros(Ns,NtLFP,Na,'single');
 %% Cutting the events into the desired segments.
 for cap = 1:Na
     % Considering the rising or the falling edge of the step function.
@@ -275,13 +307,13 @@ elseif Idxs(1) <= 0
     signalSegments = getSignalSegments(signalCell, Idxs);
     contSigSeg(:,Nt - Idxs(2) + 1:Nt) =...
         single(reshape(cell2mat(signalSegments),...
-        Ns, Nt));
+        Ns, length(Nt - Idxs(2) + 1:Nt)));
 else
     Idxs(Idxs > N) = N;
     signalSegments = getSignalSegments(signalCell, Idxs);
     contSigSeg(:,1:diff(Idxs)+1) =...
         single(reshape(cell2mat(signalSegments),...
-        Ns, Nt));
+        Ns, length(1:diff(Idxs)+1)));
 end
 end
 
@@ -292,9 +324,8 @@ if Ns == 1
     if (Nrow ~= 1 && Ncol > Nrow) || (Ncol ~= 1 && Nrow > Ncol)
         Ns = Nrow * (Nrow < Ncol) + Ncol * (Ncol < Nrow);
     end
-else
-    
 end
+
 try
     sigSeg =...
         cellfun(...
