@@ -33,8 +33,9 @@ if exist(fileInput,'file')
                 fprintf('The analysis file is not meant to be imported\n')
                 baseName = strsplit(baseName,'analysis');
                 baseName = baseName{1};
-                mat2bin(fullfile(flDir,[baseName,'.mat']),fileOutput)
+                
             end
+            mat2bin(fullfile(flDir,[baseName,'.mat']),fileOutput)
             fprintf('Importing %s...\n',[baseName,flEx])
         otherwise
             fprintf('This input file is not recognized.')
