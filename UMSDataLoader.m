@@ -263,6 +263,7 @@ classdef UMSDataLoader < handle
         %% Poly channel order modification
         function changeChannelOrder(obj,newChanOrd)
             obj.PolyChanOrder = newChanOrd;
+            obj.ChannelsID = newChanOrd;
         end
         
         function set.PolyChanOrder(obj,newChanOrd)
