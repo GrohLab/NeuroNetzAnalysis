@@ -74,5 +74,4 @@ else
     fname = fullfile(pathToData, filename);
     save(fname, 'sortedData', 'fs');
 end
-
 end
