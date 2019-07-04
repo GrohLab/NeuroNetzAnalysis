@@ -13,7 +13,7 @@ classdef GeneralWaveform < handle
     end
     properties
         Units (1,:) char = 'mV';
-        Title (1,:) char = '';
+        Title (1,:) char = 'Step_Function';
     end
     properties (Constant = true)
         k = 1e3;
@@ -78,7 +78,7 @@ classdef GeneralWaveform < handle
         function h = plot(obj,varargin)
             %PLOT opens a new figure and plots the waveform with its
             %correct time and units.
-            figure();h = plot(obj.Time,obj.Data,varargin{:});
+            h = plot(obj.Time,obj.Data,'DisplayName',obj.Title,varargin{:});
             ylabel(obj.Units);xlabel('Time (s)');title(obj.Title);
         end
         
