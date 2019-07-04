@@ -37,8 +37,7 @@ classdef GeneralWaveform < handle
                 end
                 obj.SamplingFreq = samplingFreq;
                 obj.NSamples = length(data);
-                obj.Time = seconds(...
-                    0:1/obj.SamplingFreq:(obj.NSamples-1)/obj.SamplingFreq);
+                obj.Time = (0:(obj.NSamples-1)) .* (1/obj.SamplingFreq);
                 if nargin >= 3
                     if ischar(units)
                         obj.Units = units;
