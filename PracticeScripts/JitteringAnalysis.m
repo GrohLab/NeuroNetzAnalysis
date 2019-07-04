@@ -179,15 +179,11 @@ if ~anaFlag
             lsdSub = lsdSub(lsLst);
             lsCon = [lsuSub,lsdSub];
             lsIdx = false(size(lsCon,1),Nfre);
-            
             for cdl = 1:Nfre
                 fprintf(1,' %.2f',freqCond(cdl))
-                
             end
         end
         fprintf(1,' Hz\n')
-        
-        
         
         % Searching for delays in the data with respect to the piezo
         
@@ -196,17 +192,22 @@ if ~anaFlag
         [srtDelay, whr] = sort(dm(:),'ascend');
         [lghtSub, piezSub] = ind2sub(size(dm),whr(1:maxPulses));
         timeDelay = srtDelay(1:maxPulses);
-        delays = uniquetol(timeDelay,0.01/max(timeDelay));
+        delays = 10.^uniquetol(log10(timeDelay),0.01/log10(max(abs(timeDelay))));
         if std(delays.*1e3) < 1
             delays = mean(delays);
         end
         Ndel = numel(delays);
         fprintf(1,'Delays found:')
         lsDel = false(length(lsSub),Ndel);
+        Ncond = numel(Conditions);
         for cdl = 1:Ndel
             fprintf(1,' %.1f',delays(cdl)*1e3)
-            lsDel(:,cdl) = ismembertol(timeDelay,...
-                delays(cdl),0.1/max(pulsFreq));
+            lsDel(:,cdl) = ismembertol(log10(timeDelay),log10(delays(cdl)),...
+                0.01/log10(max(abs(delays))));
+            Conditions(Ncond + cdl).Triggers =...
+                Conditions(1).Triggers(sort(piezSub(lsDel(:,cdl))),1);
+            Conditions(Ncond + cdl).name = sprintf('Delay %0.3f s',...
+                delays(cdl));
         end
         fprintf(1,' ms\n')
         
