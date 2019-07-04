@@ -45,7 +45,8 @@ classdef StepWaveform < DiscreteWaveform
                 % Real valued signal
                 ds = diff(obj.Data);
                 if sum(ds>0) ~= numel(obj.Data)-1
-                    zs2 = (mean(obj.Data)/std(obj.Data))^2;
+                    data = obj.Data - mean(obj.Data);
+                    zs2 = (mean(data)/std(obj.Data))^2;
                     fprintf(1,'The square z-score of the signal is %.2f\n',zs2)
                     if zs2 < 0.9
                         rise = false(obj.NSamples,1);    % Rising edge times
