@@ -26,6 +26,20 @@ classdef (Abstract) DiscreteWaveform < GeneralWaveform
         end 
         function h = plot(obj,varargin)
             h = plot@GeneralWaveform(obj,varargin{:});
+            ax = get(h,'Parent');
+            set(ax,'NextPlot','add');
+            TG = obj.Triggers;
+            tUp = find(TG(:,1));
+            tDn = find(TG(:,2));
+            spkOpls = diff([tUp,tDn],1,2);
+            ttx = tUp / obj.SamplingFreq;
+            plot(ax,ttx,obj.Data(obj.Triggers(:,1)),...
+                'LineStyle','none','Marker','.');
+            if sum(spkOpls) > numel(spkOpls)
+                ttd = tDn / obj.SamplingFreq;
+                plot(ax,ttd,obj.Data(obj.Triggers(:,2)),...
+                    'LineStyle','none', 'Marker','.');
+            end            
         end
         
         % Get the first event of a train
