@@ -20,12 +20,20 @@ try
 catch LE
     disp( LE.message)
     fsString = inputdlg('Please provide a sampling frequency:');
-    fs = str2double(fsString{1});
-    if isnan(fs)
-        fprintf('I''m sorry... you should put in ONLY NUMBERS :)\nStart again\n')
-        fprintf('No output file written\n')
+    try
+        fs = str2double(fsString{1});
+        if isnan(fs)
+            fprintf('I''m sorry... you should put in ONLY NUMBERS :)\nStart again\n')
+            fprintf('No output file written\n')
+            return
+        end
+    catch 
+        fprintf(1,'Cancel button pressed. ')
+        fprintf(1,'Transforming the files might help you get the sampling ')
+        fprintf(1,'frequency.\n');
         return
     end
+    
 end
 
 % Do you want to remove Noise Data?
