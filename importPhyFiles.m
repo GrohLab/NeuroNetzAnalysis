@@ -15,7 +15,8 @@ if ~exist('outputName','var')
 end
 % Input sampling frequency (not written in the phy files from KiloSort)
 try
-    load(fullfile( pathToData, 'sampling_frequency.mat'),'fs')
+    load(fullfile( pathToData, [outputName, '_sampling_frequency.mat']),...
+        'fs')
 catch LE
     disp( LE.message)
     fsString = inputdlg('Please provide a sampling frequency:');
