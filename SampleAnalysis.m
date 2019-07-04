@@ -3,10 +3,10 @@
 % The clearvars command is commented to avoid erasing the information
 % extracted from the smrx file through the UMS_life_script.mlx
 % clearvars
-homedir='F:\Experiments_2019\12_3_2019\M59_C2\C2B';
+homedir='C:\Users\NeuroNetz\Documents\Data\Alex\M73_original2_noManual_input';
 % homedir='E:\Data\';
 cd(homedir)
-fname = 'M59_C2_HL +Terminal sti_2mW'; 
+fname = 'M73_C3_Mech'; 
 load([fname,'_all_channels.mat'])
 load([fname,'analysis.mat'],'Conditions','Triggers')
 try
@@ -76,6 +76,9 @@ goods=setdiff(goods,bads);
 %% looking at collected data
 fs = Fs;
 close all
+if any(cellfun(@iscolumn,Spikes))
+    Spikes = cellfun(@transpose,Spikes,'UniformOutput',false);
+end
 for I=[1:4]
     ppms=fs/1000;
     spikes=cell2mat(Spikes)*1000*ppms; %spikes back in samples
@@ -174,12 +177,12 @@ save CrossCoeffData Spikes mergingPackages bads -append
 %save LaserResponse Spikes mergingPackage bads -append
 
 %% looking at individual conditions and clusters for good clusters
-
+%
 plotRaster = true; % No raster plot in the figures!!
-%close all
+close all
 for i=1:numel(Spikes)
     if ~ismember(i,bads)
-        for I=3 %pick out conditions to look at
+        for I=1 %pick out conditions to look at
             ppms=fs/1000;
             spikes=(Spikes{i})*1000*ppms; %spikes back in samples
             name=Names{i};
@@ -188,7 +191,7 @@ for i=1:numel(Spikes)
             triggers=Conditions{I}.Triggers;
             [sp h bins trig_mech trig_light f]=...
                 triggeredAnalysisMUA(spikes,ppms,triggers,binsize,timeBefore, timeAfter,Conditions{I}.name,mech,light,plotit,plotRaster);
-            title(['Cluster: ',num2str(i)])
+            title(['Cluser ID: ', Names{i}, ', #: ',num2str(i)])
         end
         
     end
@@ -200,8 +203,8 @@ end
 
 plotRaster = true; % raster plot in the figures!!
 close all
-for i=[] % insert cluster numbers here
-    for I=4 %pick out conditions to look at
+for i=[2] % insert cluster numbers here
+    for I=1 %pick out conditions to look at
         ppms=fs/1000;
         spikes=(Spikes{i})*1000*ppms; %spikes back in samples
         name=Names{i};

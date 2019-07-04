@@ -11,13 +11,14 @@ if ~exist('Conditions','var') || ~exist('Triggers','var')
     end
 end
 %% 
-Spikes={};
-Names={};
+% Spikes={};
+% Names={};
+% 
+% for i=1:size(sortedData,1)
+%     Spikes{i}=cell2mat(sortedData(i,2));
+%     Names{i}=sortedData(i,1);
+% end
 
-for i=1:size(sortedData,1)
-    Spikes{i}=cell2mat(sortedData(i,2));
-    Names{i}=sortedData(i,1);
-end
 
 mech=Triggers.whisker;
 light=Triggers.light;
@@ -29,13 +30,14 @@ catch
     disp('Displaying indexes instead of time')
     tx = 1:length(mech);
 end
+%%
 ax(1) = subplot(4,1,1);plot(tx,light,tx,mech)
 ax(2) = subplot(4,1,2:4);
 Ncl = size(sortedData,1);
-fs = dataLoader.SamplingFrequency;
-
+% fs = dataLoader.SamplingFrequency;
+fs = Fs;
 lvls = 1;
-bads = [];
+%bads = [];
 consIdxs = true(1,lenSpks);
 consIdxs(bads) = false;
 lbls = cell(1,sum(consIdxs));
