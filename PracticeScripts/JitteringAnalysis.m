@@ -9,6 +9,7 @@ addLst = @(x,y)cat(find(size(x)~=1),x,y);
 fstCell = @(x) x{1};
 invalidCharacters = {'+','-'};
 uninterestingVals = @(x)~(isempty(x) || isnan(x) || isinf(x) || x == 0);
+findUnpairedPulse = @(x) cat(1,false,reshape(diff(sort(x)) == 0,numel(x)-1,1));
 printFig = @(x,fname) set(x,'RendererMode','manual','Renderer','painters',...
     'PaperOrientation','landscape','Name',fname);
 %% Select data file
@@ -193,6 +194,7 @@ if ~anaFlag
         [lghtSub, piezSub] = ind2sub(size(dm),whr(1:maxPulses));
         timeDelay = srtDelay(1:maxPulses);
         delays = 10.^uniquetol(log10(timeDelay),0.01/log10(max(abs(timeDelay))));
+        delays(delays > 1) = [];
         if std(delays.*1e3) < 1
             delays = mean(delays);
         end
@@ -203,16 +205,22 @@ if ~anaFlag
         for cdl = 1:Ndel
             fprintf(1,' %.1f',delays(cdl)*1e3)
             lsDel(:,cdl) = ismembertol(log10(timeDelay),log10(delays(cdl)),...
-                0.01/log10(max(abs(delays))));
-            Conditions(Ncond + cdl).Triggers =...
-                Conditions(1).Triggers(sort(piezSub(lsDel(:,cdl))),1);
+                abs(0.01/log10(max(delays))));
             Conditions(Ncond + cdl).name = sprintf('Delay %0.3f s',...
                 delays(cdl));
+            Conditions(Ncond + cdl).Triggers =...
+                Conditions(1).Triggers(sort(piezSub(lsDel(:,cdl))),1); 
         end
         fprintf(1,' ms\n')
-        
-        
-        
+        [~,lghtSub] = min(dm,[],2,'omitnan');
+        [~,piezSub] = min(dm,[],1,'omitnan');
+        piezSub = piezSub';
+        loneLaser = findUnpairedPulse(lghtSub);
+        lonePiezo = reshape(diff(sort(piezSub)) == 0,numel(piezSub)-1,1);
+        Conditions(Ncond + cdl + 1).name = 'Laser Control';
+        Conditions(Ncond + cdl + 1).Triggers = lsOn(find(loneLaser));
+        Conditions(Ncond + cdl + 2).name = 'Puff Control';
+        Conditions(Ncond + cdl + 2).Triggers = find(loneLaser);
     end
     
     %% Spike finding
