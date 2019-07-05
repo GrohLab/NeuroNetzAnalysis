@@ -220,7 +220,7 @@ if ~anaFlag
         Conditions(Ncond + cdl + 1).name = 'Laser Control';
         Conditions(Ncond + cdl + 1).Triggers = lsOn(find(loneLaser));
         Conditions(Ncond + cdl + 2).name = 'Puff Control';
-        Conditions(Ncond + cdl + 2).Triggers = find(loneLaser);
+        Conditions(Ncond + cdl + 2).Triggers = pzUp(find(lonePiezo));
     end
     
     %% Spike finding
