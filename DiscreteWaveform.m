@@ -35,7 +35,7 @@ classdef (Abstract) DiscreteWaveform < GeneralWaveform
             ttx = tUp / obj.SamplingFreq;
             plot(ax,ttx,obj.Data(obj.Triggers(:,1)),...
                 'LineStyle','none','Marker','.');
-            if sum(spkOpls) > numel(spkOpls)
+            if sum(abs(spkOpls)) > numel(spkOpls)
                 ttd = tDn / obj.SamplingFreq;
                 plot(ax,ttd,obj.Data(obj.Triggers(:,2)),...
                     'LineStyle','none', 'Marker','.');
