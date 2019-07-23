@@ -76,7 +76,7 @@ goods=setdiff(goods,bads);
 %% looking at collected data
 fs = Fs;
 close all
-if any(cellfun(@iscolumn,Spikes))
+if any(cellfun(@iscolumn,Spikes) & ~cellfun(@isscalar,Spikes))
     Spikes = cellfun(@transpose,Spikes,'UniformOutput',false);
 end
 for I=[1:4]
@@ -84,7 +84,7 @@ for I=[1:4]
     spikes=cell2mat(Spikes)*1000*ppms; %spikes back in samples
     name=Names{I};
     timeBefore=500*ppms;timeAfter=6500*ppms;
-    plotit=1;binsize=200;
+    plotit=1;binsize=2.5*ppms;
     triggers=Conditions{I}.Triggers;
     [sp h bins trig_mech trig_light f]=triggeredAnalysisMUA(spikes,ppms,triggers,binsize,timeBefore, timeAfter,Conditions{I}.name,mech,light,plotit);
     title(Conditions{I}.name)
@@ -182,7 +182,7 @@ plotRaster = true; % No raster plot in the figures!!
 close all
 for i=1:numel(Spikes)
     if ~ismember(i,bads)
-        for I=1 %pick out conditions to look at
+        for I=2 %pick out conditions to look at
             ppms=fs/1000;
             spikes=(Spikes{i})*1000*ppms; %spikes back in samples
             name=Names{i};
@@ -203,7 +203,7 @@ end
 
 plotRaster = true; % raster plot in the figures!!
 close all
-for i=[2] % insert cluster numbers here
+for i=1:numel(Spikes) % insert cluster numbers here
     for I=1 %pick out conditions to look at
         ppms=fs/1000;
         spikes=(Spikes{i})*1000*ppms; %spikes back in samples
@@ -241,7 +241,7 @@ H=[];
 conds={};
 count=0;
 Trig_mech={};Trig_light={};
-for I=1:4
+for I=1:numel(Conditions)   
     count=count+1;
     %spikes back in samples
     name=Names{I};
@@ -267,7 +267,7 @@ Sp={};
 count=0;
 plotit=1;
 
-for I=1:4  %by condition
+for I=1:numel(Conditions)  %by condition
     count=count+1;
     triggers=Conditions{I}.Triggers;
     SPIKES={};
@@ -320,15 +320,15 @@ colormap jet;
 cmap=colormap;
 n=floor(size(cmap,1)/numel(SPIKESs{1}));
 colors=cmap(1:n:end,:);
-
+colors = jet(numel(SPIKESs{1}));
 
 %% plot it all
 figure('Color',[1,1,1])
 % yUpLimit = max(cell2mat(cellfun(@(x) (cellfun(@max,x(end),'UniformOutput',false)),YSs)));
 Ncl = numel(SPIKES);
-
-for ii=1:4
-    auxAx = subplot(6,4,[ii, ii+4, ii+8]);
+Ncon = numel(Conditions);
+for ii=1:Ncon
+    auxAx = subplot(6,Ncon,[ii, ii+Ncon, ii+(2*Ncon)]);
     Nt = numel(Conditions{ii}.Triggers);
     for j=1:numel(SPIKESs{ii})        
         xs=SPIKESs{ii}{j}/ppms;
@@ -336,7 +336,8 @@ for ii=1:4
         plot(xs,ys,'.','color',colors(j,:),'markersize',10)
         hold on
     end
-    yUpLimit = max(YSs{ii}{end});
+    lstWV = find(~cellfun(@isempty,YSs{ii}),1,'last');
+    yUpLimit = max(YSs{ii}{lstWV});
     yticks = ((1:Ncl) - 0.5) * Nt;
     set(auxAx,'YTick',yticks,'YTickLabel',1:Ncl);ylabel(...
         sprintf('Clusters_{(t = %d)}',Nt))
@@ -348,22 +349,16 @@ for ii=1:4
     
 end
 
-
-
-titles={'mechanical',...
-    'mechanical + 1 Hz L6',...
-    'mechanical + 10 Hz L6',...
-    '10 Hz L6 control'};
 yLimit = max(H(:)) * 1.05;
-load(fname,'chan21')
-[~,cStack] =...
-    getStacks(false(1,length(chan21)),...
-    Conditions{1}.Triggers,'on',[-min(bins),max(bins)]*1e-3,...
-    fs,fs,[],chan21');
-meanMech = mean(squeeze(cStack),2);
-for ii=1:4
+%load(fname,'chan21')
+%[~,cStack] =...
+%     getStacks(false(1,length(chan21)),...
+%     Conditions{1}.Triggers,'on',[-min(bins),max(bins)]*1e-3,...
+%     fs,fs,[],chan21');
+% meanMech = mean(squeeze(cStack),2);
+for ii=1:Ncon
     
-    auxAx = subplot(6,4,[ii+16 ii+20]);
+    auxAx = subplot(6,Ncon,[ii+(4*Ncon), ii+(5*Ncon)]);
     bar(bins,H(ii,:),'k')
     if ~strcmpi(Conditions{ii}.name,'lasercontrol')
         
@@ -371,7 +366,7 @@ for ii=1:4
     xlim([min(bins) max(bins)])
     xlabel ms
     % ylabel 'pooled spike rate'
-    title(titles{ii})
+    title(Conditions{ii}.name)
     box off
     ylim([0 yLimit])
 end
@@ -379,7 +374,7 @@ end
 %
 t = 0:1/fs:(length(Trig_mech{1}(1,:))-1)/fs;
 t = 1000*(t - timeBefore/fs);
-subplot(6,4,13)
+subplot(6,Ncon,4*Ncon - 3)
 plot(t,Trig_mech{1}(1,:),'Color',[255, 128, 0]/255,'linewidth',2)
 hold on;plot(t,...
     scaleOnLine(meanMech(1:length(t)),0,1),'Color',[255, 51, 0]/255,'linewidth',2)
@@ -389,7 +384,7 @@ xlim([min(bins) max(bins)])
 ylim([0 1.5])
 ylabel Stimulus
 
-subplot(6,4,14)
+subplot(6,Ncon,4*Ncon - 2 )
 plot(t,Trig_mech{2}(1,:),'Color',[255, 128, 0]/255,'linewidth',2);
 hold on;plot(t,...
     scaleOnLine(meanMech(1:length(t)),0,1),'Color',[255, 51, 0]/255,'linewidth',2)
@@ -400,7 +395,7 @@ box off
 xlim([min(bins) max(bins)])
 ylim([0 1.5])
 
-subplot(6,4,15)
+subplot(6,Ncon,4*Ncon - 1)
 plot(t,Trig_mech{3}(1,:),'Color',[255, 128, 0]/255,'linewidth',2);
 hold on;plot(t,...
     scaleOnLine(meanMech(1:length(t)),0,1),'Color',[255, 51, 0]/255,'linewidth',2)
@@ -411,7 +406,7 @@ box off
 xlim([min(bins) max(bins)])
 ylim([0 1.5])
 
-subplot(6,4,16)
+subplot(6,Ncon,Ncon*4)
 plot(t,Trig_light{4}(1,:),'Color', [0, 64, 255]/255','linewidth',1);
 set(gca,'Visible','off')
 box off
