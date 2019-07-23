@@ -26,6 +26,10 @@ classdef StepWaveform < DiscreteWaveform
         function RaF = get.Triggers(obj)
             RaF = obj.Triggers;
         end 
+        
+        function subRaF = subTriggers(obj)
+            subRaF = [find(obj.Triggers(:,1)),find(obj.Triggers(:,2))];
+        end
 
         % Display object information
         function disp(obj)
