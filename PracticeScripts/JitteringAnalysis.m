@@ -188,7 +188,7 @@ if ~anaFlag
         
         % Searching for delays in the data with respect to the piezo
         
-        maxPulses = min(numel(lsSub),size(Conditions.Triggers,1));
+        maxPulses = min(length(lsSub),size(Conditions.Triggers,1));
         dm = distmatrix(lsSub/fs,Conditions.Triggers(:,1)/fs);
         [srtDelay, whr] = sort(dm(:),'ascend');
         [lghtSub, piezSub] = ind2sub(size(dm),whr(1:maxPulses));
@@ -209,7 +209,7 @@ if ~anaFlag
             Conditions(Ncond + cdl).name = sprintf('Delay %0.3f s',...
                 delays(cdl));
             Conditions(Ncond + cdl).Triggers =...
-                Conditions(1).Triggers(sort(piezSub(lsDel(:,cdl))),1); 
+                Conditions(1).Triggers(sort(piezSub(lsDel(:,cdl))),:); 
         end
         fprintf(1,' ms\n')
         [~,lghtSub] = min(dm,[],2,'omitnan');
