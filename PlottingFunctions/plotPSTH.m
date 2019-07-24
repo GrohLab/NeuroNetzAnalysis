@@ -2,7 +2,7 @@ function ax =...
     plotPSTH(trig, PSTH, sweeps, binSz, timeLapse, expName, IDe, koIdx, tIdx, fs, ax)
 %UNTITLED4 Summary of this function goes here
 %   Detailed explanation goes here
-koIdx = koIdx(~tIdx);
+koIdx(tIdx) = false;
 trigID = IDe{tIdx};
 IDe(tIdx) = [];
 if ~exist('ax','var') || isempty(ax)
@@ -20,14 +20,14 @@ yyaxis(ax,'right');
 clrMap = jet(size(PSTH,1)-1);
 bar(ax,tx_PSTH,PSTH(1,:)/(sweeps*binSz),1,...
     'EdgeColor','none','FaceColor',[0.2,0.2,0.2],...
-    'FaceAlpha',0.3,'DisplayName','Neuron 1');
+    'FaceAlpha',0.3,'DisplayName',IDe{1});
 ylabel(ax,'Firing rate [Hz]')
 hold(ax,'on')
 idIdx = find(koIdx);
 idIdx = reshape(idIdx,1,numel(idIdx));
 binEl = fs * binSz;
 yyaxis(ax,'left')
-xlabel(ax,sprintf('Time_{%.2f} [s]',binSz))
+xlabel(ax,sprintf('Time_{%.3f} [s]',binSz))
 for cp = idIdx
     if max(PSTH(cp+1,:)) > sweeps
         yyaxis(ax,'left')
@@ -35,9 +35,13 @@ for cp = idIdx
             'Color',clrMap(cp,:),'DisplayName',IDe{cp});
     else
         yyaxis(ax,'right')
-        plot(ax,tx_PSTH,PSTH(cp+1,:)./(binSz*sweeps),...
-            'Color',clrMap(cp,:),'DisplayName',IDe{cp});
+        bar(ax,tx_PSTH,PSTH(cp+1,:)./(binSz*sweeps),...
+            'EdgeColor','none',...
+            'FaceColor',clrMap(cp,:),'DisplayName',IDe{cp},...
+            'FaceAlpha',0.2);
     end
 end
 title(ax,[expName,' ',num2str(sweeps),' trials'],'Interpreter','none')
+yyaxis('left')
+axis(ax,[-timeLapse(1),timeLapse(2),0,1.1])
 legend(ax,'show','Location','best')
