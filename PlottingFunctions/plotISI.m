@@ -46,6 +46,24 @@ end
 FRpu = zeros(Nu,3);
 for cu = 1:Nu
     lisi = log10(diff(spkSubs{cu}./fs));
+    if any(isinf(lisi)) 
+        fprintf(1,'Cluster %d ',cu);
+        if IDflag
+            fprintf(1,'(%s)',ID{cu})
+        end
+        fprintf(1,' has repeated time points.\n')
+        fprintf(1,'These time points will not be considered.\n')
+        lisi(isinf(lisi)) = [];
+    end
+    if isempty(lisi)
+        fprintf(1,'Cluster %d ',cu);
+        if IDflag
+            fprintf(1,'(%s)',ID{cu})
+        end
+        fprintf(1,' has one time point.\n')
+        fprintf(1,'Skipping...\n')
+        continue
+    end
     FRpu(cu,:) = [1/(10^mean(lisi,'omitnan')),...
         1/(10^median(lisi,'omitnan')),...
         1/(10^mode(lisi))];
