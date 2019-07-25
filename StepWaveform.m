@@ -29,6 +29,12 @@ classdef StepWaveform < DiscreteWaveform
         
         function subRaF = subTriggers(obj)
             subRaF = [find(obj.Triggers(:,1)),find(obj.Triggers(:,2))];
+            invertedFlags = diff(subRaF,1,2) < 0;
+            if any(invertedFlags)
+                fprintf(1,'%d Downwards pulses detected!\n',...
+                    sum(invertedFlags))
+                subRaF(invertedFlags,:) = flip(subRaF(invertedFlags,:),2);
+            end
         end
 
         % Display object information
