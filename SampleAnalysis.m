@@ -3,10 +3,10 @@
 % The clearvars command is commented to avoid erasing the information
 % extracted from the smrx file through the UMS_life_script.mlx
 % clearvars
-homedir='C:\Users\NeuroNetz\Documents\Data\Alex\M73_original2_noManual_input';
+homedir='D:\Data2\M116C1';
 % homedir='E:\Data\';
 cd(homedir)
-fname = 'M73_C3_Mech'; 
+fname = 'M116C1_CFA_VPL_L6BroadStim3.5mW+MechStim'; 
 load([fname,'_all_channels.mat'])
 load([fname,'analysis.mat'],'Conditions','Triggers')
 try
@@ -51,7 +51,7 @@ end
 %% Possible artifacts (is laser evoking a response or an optoelectric artifact?)
 
 %bads=[1 2 3 14 6]  %1 2 3 14 are light artifacts
-bads=[20,17,14,11];
+bads=[];
 noresponse=[];
 bads=[bads noresponse];
 %bads=[]; %uncomment this to have bads empty

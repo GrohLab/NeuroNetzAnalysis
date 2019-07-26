@@ -125,7 +125,7 @@ pmFlag(pSub) = false;
 Conditions(NpairCond+2).name = 'Mech Control';
 Conditions(NpairCond+2).Triggers = mSub(pmFlag,:);
 
-Triggers = struct('whisker',mech,'light',laser);
+Triggers = struct('whisker',mech,'laser',laser);
 [~,expName,~]=fileparts(binFile(1).name);
 save(fullfile(expFolder,[expName,'analysis.mat']),'Conditions','Triggers')
 end
