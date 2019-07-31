@@ -68,23 +68,25 @@ for cu = 1:Nu
         1/(10^median(lisi,'omitnan')),...
         1/(10^mode(lisi))];
     figure('Visible','off','Color',[1,1,1]);
-    hisi = histogram(lisi,linspace(log10(mintd),3,100),...
-        'Normalization','probability');
+    hisi = histogram(lisi,linspace(log10(mintd),3,100));
     cts = hisi.BinCounts;
     bns = (hisi.BinEdges(1:end-1) + hisi.BinEdges(2:end))/2;
-    plot(bns,cts./sum(cts),'LineWidth',1)
+    plot(bns,cts./sum(cts),'LineWidth',1);
     fig(cu) = gcf;
     ax = fig(cu).Children;
-    ax.XTickLabel = 10.^cellfun(@str2double,ax.XTickLabel);
-    xlabel(ax,'Time [s]'); ylabel(ax,'ISI Probability');
+    ax.XTickLabel = 10.^cellfun(@str2double,ax.XTickLabel) * 1e3;
+    xlabel(ax,'Time [ms]'); ylabel(ax,'ISI Probability');
     if IDflag
         title(ax,['Unit #',num2str(cu),' (',ID{cu},')']);
     else
         title(ax,['Unit #',num2str(cu)]);
     end
     grid(ax,'on')
+    Ncts = cts/sum(cts);
+    yyaxis('right');plot(bns,cumsum(Ncts),'LineStyle','--')
+    ylabel('Cumulative fraction');ax = fig(cu).Children;
+    ax.YAxis(2).Limits = [0, 1];
+    ax.YAxis(2).Color = [0.1,0.1,0.1];
     fig(cu).Visible = 'on';
 end
-
 end
-

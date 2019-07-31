@@ -1,9 +1,8 @@
-function [Conditions, Triggers] = getPainStimuli(expFolder)
-% GETPAINSTIMULI searches specifically for the stimulation conditions for
-% the CFA/Saline mechanical pressure and laser on the somatosensory cortex
-% of the hindlimb. The existing conditions are mechanical pressure plus 1
-% Hz laser, mechanical pressure plus 10 Hz laser, mechanical control and
-% laser control. 
+function [Conditions, Triggers] = getDelayProtocol(expFolder)
+% GETDELAYPROTOCOL searches specifically for the stimulation conditions for
+% the jittering project. The delays can vary and the whisker stimulation
+% should always have a control pulse, as well as the cortex excitation
+% using laser pulses.
 checkSignal = @(x,y) contains(x,y,'IgnoreCase',true);
 Conditions = struct('name',{},'Triggers',{});
 Triggers = struct();
@@ -36,27 +35,27 @@ headers = cellfun(@strrep,fields(chanFlag),...
     repmat({'chan'},numel(chanSubs),1),...
     repmat({'head'},numel(chanSubs),1),'UniformOutput',false);
 titles = cell(numel(headers),1);
-mechFlag = false(numel(titles),1);
-laserFlag = mechFlag;
+whiskFlag = false(numel(titles),1);
+laserFlag = whiskFlag;
 for chead = 1:numel(headers)
     titles{chead} = stimSig.(headers{chead}).title;
-    mechFlag(chead) = checkSignal(titles{chead},'mech');
+    whiskFlag(chead) = checkSignal(titles{chead},'mech');
     laserFlag(chead) = checkSignal(titles{chead},'laser');
 end
 %% Possible user interaction
-mechSubs = find(mechFlag);
-while sum(mechFlag) > 1
-    mSub = listdlg('ListString',titles(mechFlag),...
+whiskSubs = find(whiskFlag);
+while sum(whiskFlag) > 1
+    mSub = listdlg('ListString',titles(whiskFlag),...
         'PromptString','Select the mechanical TTL',...
         'SelectionMode','single');
     if ~isempty(mSub)
-        mechFlag = false(size(mechFlag));
-        mechFlag(mechSubs(mSub)) = true;
+        whiskFlag = false(size(whiskFlag));
+        whiskFlag(whiskSubs(mSub)) = true;
     else
         fprintf(1,'Please select one of the displayed signals!\n')
     end
 end
-mech = stimSig.(fields{chanSubs(mechFlag)});
+mech = stimSig.(fields{chanSubs(whiskFlag)});
 
 laserSubs = find(laserFlag);
 while sum(laserFlag) > 1
@@ -72,9 +71,9 @@ while sum(laserFlag) > 1
 end
 laser = stimSig.(fields{chanSubs(laserFlag)});
 %% Subscript processing
-mObj = StepWaveform(mech,fs,'on/off','Mechanical TTL');
+wObj = StepWaveform(mech,fs,'on/off','Mechanical TTL');
 lObj = StepWaveform(laser,fs,'on/off','Laser TTL');
-mSub = mObj.subTriggers;
+mSub = wObj.subTriggers;
 lSub = lObj.subTriggers;
 
 lsIpi = diff(lSub(:,1)/fs);
