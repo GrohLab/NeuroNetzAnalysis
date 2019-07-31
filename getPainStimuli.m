@@ -1,5 +1,9 @@
 function [Conditions, Triggers] = getPainStimuli(expFolder)
-
+% GETPAINSTIMULI searches specifically for the stimulation conditions for
+% the CFA/Saline mechanical pressure and laser on the somatosensory cortex
+% of the hindlimb. The existing conditions are mechanical pressure plus 1
+% Hz laser, mechanical pressure plus 10 Hz laser, mechanical control and
+% laser control. 
 checkSignal = @(x,y) contains(x,y,'IgnoreCase',true);
 Conditions = struct('name',{},'Triggers',{});
 Triggers = struct();
