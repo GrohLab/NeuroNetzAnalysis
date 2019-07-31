@@ -2,10 +2,32 @@ function [Conditions, Triggers] = getDelayProtocol(expFolder)
 % GETDELAYPROTOCOL searches specifically for the stimulation conditions for
 % the jittering project. The delays can vary and the whisker stimulation
 % should always have a control pulse, as well as the cortex excitation
-% using laser pulses.
+% using laser pulses. WARNING! No frequency stimulation should be given to
+% this function.
+
+%% Gathering the information about the experiment
+
 checkSignal = @(x,y) contains(x,y,'IgnoreCase',true);
+findUnpairedPulse = @(x) cat(1,false,reshape(diff(sort(x)) == 0,numel(x)-1,1));
 Conditions = struct('name',{},'Triggers',{});
 Triggers = struct();
+
+binFile = dir(fullfile(expFolder,'*.smrx'));
+[~,expName,~] = fileparts(binFile(1).name);
+if isempty(binFile)
+    warning('There is no experiment in this folder...\n')
+    return
+end
+if exist(fullfile(expFolder,[expName,'analysis.mat']),'file')
+    answ = questdlg(...
+        'The analysis file for this experiment exists already. Would you like to overwrite it?',...
+        'Overwrite?','Yes','No','No');
+    if strcmp(answ,'No')
+        fprintf(1,'No file created. Have a nice day!\n')
+        return
+    end
+end
+
 csFile = dir(fullfile(expFolder,'*_CondSig.mat'));
 if ~isempty(csFile)
     stimSig = load(fullfile(csFile.folder,csFile.name),'chan*','head*');
@@ -22,11 +44,7 @@ else
     return
 end
 
-binFile = dir(fullfile(expFolder,'*.smrx'));
-if isempty(binFile)
-    warning('There is no experiment in this folder...\n')
-    return
-end
+
 
 fields = fieldnames(stimSig);
 chanFlag = cellfun(@contains,fields,repmat({'chan'},numel(fields),1));
@@ -39,23 +57,24 @@ whiskFlag = false(numel(titles),1);
 laserFlag = whiskFlag;
 for chead = 1:numel(headers)
     titles{chead} = stimSig.(headers{chead}).title;
-    whiskFlag(chead) = checkSignal(titles{chead},'mech');
+    whiskFlag(chead) = checkSignal(titles{chead},'piezo') |...
+        checkSignal(titles{chead},'puff');
     laserFlag(chead) = checkSignal(titles{chead},'laser');
 end
-%% Possible user interaction
+%% Possible user interaction and correct assignment of the signals
 whiskSubs = find(whiskFlag);
 while sum(whiskFlag) > 1
-    mSub = listdlg('ListString',titles(whiskFlag),...
+    wSub = listdlg('ListString',titles(whiskFlag),...
         'PromptString','Select the mechanical TTL',...
         'SelectionMode','single');
-    if ~isempty(mSub)
+    if ~isempty(wSub)
         whiskFlag = false(size(whiskFlag));
-        whiskFlag(whiskSubs(mSub)) = true;
+        whiskFlag(whiskSubs(wSub)) = true;
     else
         fprintf(1,'Please select one of the displayed signals!\n')
     end
 end
-mech = stimSig.(fields{chanSubs(whiskFlag)});
+whisk = stimSig.(fields{chanSubs(whiskFlag)});
 
 laserSubs = find(laserFlag);
 while sum(laserFlag) > 1
@@ -70,66 +89,47 @@ while sum(laserFlag) > 1
     end
 end
 laser = stimSig.(fields{chanSubs(laserFlag)});
-%% Subscript processing
-wObj = StepWaveform(mech,fs,'on/off','Mechanical TTL');
+Triggers = struct('whisker',whisk,'laser',laser);
+%% Subscript processing and stimukus finding
+wObj = StepWaveform(whisk,fs,'on/off','Mechanical TTL');
 lObj = StepWaveform(laser,fs,'on/off','Laser TTL');
-mSub = wObj.subTriggers;
+wSub = wObj.subTriggers;
 lSub = lObj.subTriggers;
 
-lsIpi = diff(lSub(:,1)/fs);
-lsFst = StepWaveform.firstOfTrain(lSub(:,1)/fs, 5 - 1e-3);
-lsIpi = lsIpi(~lsFst(1:end-1));
-pulsFreq = 1./diff(lSub(:,1)./fs);
-freqCond = round(uniquetol(pulsFreq,0.1/max(pulsFreq)));
-freqCond = unique(freqCond(freqCond > 0));
-fprintf(1,'Frequency stimulation:')
-
-if isempty(freqCond) || numel(freqCond) == 1
-    freqCond = 0;
-    fprintf(' None')
-elseif numel(freqCond) > 1
-    Nfre = numel(freqCond);
-    lsuSub = lSub(lsFst,1);
-    lsdSub = lSub(:,2);
-    lsLst = flip(StepWaveform.firstOfTrain(flip(lsdSub)/fs, 5-1e-3));
-    lsdSub = lsdSub(lsLst);
-    lsCon = [lsuSub,lsdSub];
-    lsIdx = false(size(lsCon,1),Nfre);
-    pulseFreqTrain = pulsFreq(lsFst);
-    NT = 0;
-    for cdl = 1:Nfre
-        fprintf(1,' %.2f',freqCond(cdl))
-        lsIdx(:,cdl) = ismembertol(pulseFreqTrain,freqCond(cdl),...
-            0.01*max(pulseFreqTrain));
-        Conditions(cdl).name = sprintf('%.2f Hz',freqCond(cdl));
-        isd = distmatrix(lsCon(lsIdx(:,cdl),1),mSub(:,1));
-        [pSub, ~] = find(isd < fs*0.0005);
-        plSub = lsCon(lsIdx(:,cdl),:);
-        Conditions(cdl).Triggers = plSub(pSub,:);
-        NT = NT + size(plSub(pSub,:),1);
-    end
+maxPulses = min(size(lSub,1),size(wSub,1));
+dm = distmatrix(lSub(:,1)/fs,wSub(:,1)/fs);
+[srtDelay, whr] = sort(dm(:),'ascend');
+[~, piezSub] = ind2sub(size(dm),whr(1:maxPulses));
+timeDelay = srtDelay(1:maxPulses);
+delays = 10.^uniquetol(log10(timeDelay),0.01/log10(max(abs(timeDelay))));
+delays(delays > 1) = [];
+if std(delays.*1e3) < 1
+    delays = mean(delays);
 end
-fprintf(1,' Hz\n')
-growingSubs = zeros(NT,2);
-k = 0;
-for cpc = 1:numel(Conditions)
-    csz = size(Conditions(cpc).Triggers,1);
-    growingSubs(k+1:k+csz,:) = Conditions(cpc).Triggers;
-    k = csz;
+Ndel = numel(delays);
+fprintf(1,'Delays found:')
+lsDel = false(size(lSub,1),Ndel);
+Ncond = numel(Conditions);
+for cdl = 1:Ndel
+    fprintf(1,' %.1f',delays(cdl)*1e3)
+    lsDel(:,cdl) = ismembertol(log10(timeDelay),log10(delays(cdl)),...
+        abs(0.01/log10(max(delays))));
+    Conditions(Ncond + cdl).name = sprintf('Delay %0.3f s',...
+        delays(cdl));
+    Conditions(Ncond + cdl).Triggers =...
+        wSub(sort(piezSub(lsDel(:,cdl))),:);
 end
-NpairCond = numel(Conditions);
-Conditions(NpairCond+1).name = 'Laser Control';
-Conditions(NpairCond+1).Triggers = setdiff( lsCon, growingSubs,'rows');
+fprintf(1,' ms\n')
+[~,lghtSub] = min(dm,[],2,'omitnan');
+[~,piezSub] = min(dm,[],1,'omitnan');
+piezSub = piezSub';
+loneLaser = findUnpairedPulse(lghtSub);
+lonePiezo = [reshape(diff(sort(piezSub)) == 0,numel(piezSub)-1,1);false];
+Conditions(Ncond + cdl + 1).name = 'Laser Control';
+Conditions(Ncond + cdl + 1).Triggers = lSub(loneLaser,:);
+Conditions(Ncond + cdl + 2).name = 'WhiskerStim Control';
+Conditions(Ncond + cdl + 2).Triggers = wSub(lonePiezo,:);
 
-isd = distmatrix(mSub(:,1), sort(growingSubs(:,1)));
-[pSub, ~] = find(isd < fs*0.0005);
-pmFlag = true(size(mSub,1),1);
-pmFlag(pSub) = false;
-Conditions(NpairCond+2).name = 'Mech Control';
-Conditions(NpairCond+2).Triggers = mSub(pmFlag,:);
-
-Triggers = struct('whisker',mech,'laser',laser);
-[~,expName,~]=fileparts(binFile(1).name);
 save(fullfile(expFolder,[expName,'analysis.mat']),'Conditions','Triggers')
 end
 
