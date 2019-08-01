@@ -65,10 +65,10 @@ row = find(grIdx');
 clGroup = col2(rearrange);
 [row2, ~] = find(grIdx);
 cuts = sum(grIdx,1);
-limits = cumsum(cuts);
-clGroup(row2(1:limits(1))) = 1;
-clGroup(row2(limits(1)+1:limits(2))) = 2;
-clGroup(row2(limits(2)+1:limits(3))) = 3;
+limits = [0,cumsum(cuts)];
+for cgroup = 1:MX_CLSS
+    clGroup(row2(limits(cgroup)+1:limits(cgroup+1))) = cgroup;
+end
 sortedData = cat(2,allClusters,spkCell,num2cell(clGroup));
 
 % Removes the noise from the matrix and saves an alternative output file
