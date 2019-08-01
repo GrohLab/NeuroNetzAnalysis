@@ -73,7 +73,7 @@ sortedData = cat(2,allClusters,spkCell,num2cell(clGroup));
 
 % Removes the noise from the matrix and saves an alternative output file
 if removeNoise
-    index = sortedData{:,3} == 3;
+    index = cellfun(@(x) x==3,sortedData(:,3));
     sortedData(index,:) = []; %#ok<NASGU>
     filename = [outputName, '_all_channels.mat'];
     fname = fullfile(pathToData, filename);
