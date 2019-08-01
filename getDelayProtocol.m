@@ -89,13 +89,20 @@ while sum(laserFlag) > 1
     end
 end
 laser = stimSig.(fields{chanSubs(laserFlag)});
-Triggers = struct('whisker',whisk,'laser',laser);
+
 %% Subscript processing and stimukus finding
 wObj = StepWaveform(whisk,fs,'on/off','Mechanical TTL');
 lObj = StepWaveform(laser,fs,'on/off','Laser TTL');
 wSub = wObj.subTriggers;
 lSub = lObj.subTriggers;
 
+whisk = double(StepWaveform.subs2idx(wSub,length(whisk)));
+laser = double(StepWaveform.subs2idx(lSub,length(laser)));
+
+Conditions(1).name = 'WhiskerAll';
+Conditions(1).Triggers = wSub;
+Conditions(2).name = 'LaserAll';
+Conditions(2).Triggers = lSub;
 maxPulses = min(size(lSub,1),size(wSub,1));
 dm = distmatrix(lSub(:,1)/fs,wSub(:,1)/fs);
 [srtDelay, whr] = sort(dm(:),'ascend');
@@ -129,7 +136,7 @@ Conditions(Ncond + cdl + 1).name = 'Laser Control';
 Conditions(Ncond + cdl + 1).Triggers = lSub(loneLaser,:);
 Conditions(Ncond + cdl + 2).name = 'WhiskerStim Control';
 Conditions(Ncond + cdl + 2).Triggers = wSub(lonePiezo,:);
-
+Triggers = struct('whisker',whisk,'laser',laser);
 save(fullfile(expFolder,[expName,'analysis.mat']),'Conditions','Triggers')
 end
 
