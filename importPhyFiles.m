@@ -1,5 +1,6 @@
 function importPhyFiles(pathToData, outputName, removeNoise)
-
+% Maximum number of groups. 3 so far: good, MUA, and noise
+MX_CLSS = 3;
 % Take Kilosort Data and create *all_channels.map for further analysis
 addpath(genpath('C:\Users\NeuroNetz\Documents\npy-matlab')) % path to npy-matlab
 addpath(genpath('C:\Users\NeuroNetz\Documents\GitHub\NeuroNetzAnalysis')) % path to readTSV
