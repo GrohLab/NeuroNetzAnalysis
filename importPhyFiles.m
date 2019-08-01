@@ -8,7 +8,7 @@ addpath(genpath('C:\Users\NeuroNetz\Documents\GitHub\NeuroNetzAnalysis')) % path
 %pathToData = 'C:\Users\NeuroNetz\Documents\Data\Alex\M73_attempt3';
 
 % What is your outputfile called
-if ~exist('outputName','var')
+if ~exist('outputName','var') || isempty(outputName)
     binFile = dir(fullfile(pathToData,'*.bin'));
     binName = binFile(1).name;[~,bfName,fExt] = fileparts(binName);
     outputName = strrep(bfName,fExt,'');
