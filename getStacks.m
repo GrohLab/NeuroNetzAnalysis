@@ -57,15 +57,23 @@ if exist('consEvents','var') && ~isempty(consEvents)
             for ce = 1:Ne
                 if ~isempty(consEvents2{ce})
                     if evntTrain(ce)
+                        % Logical event
                         stWv = StepWaveform(consEvents{ce},fs);
                         consEvents2{ce} = stWv.Triggers;
+                    elseif ~sum(round(consEvents{ce}) - consEvents{ce})
+                        % Subscript event
+                        consEvents2(ce) = consEvents(ce);
                     else
+                        % 'Raw' signal
                         fprintf(1,'Transforming the considered event %d to',ce)
                         fprintf(1,' logical\n');
                         aux = abs(consEvents2{ce});
                         consEvents2{ce} = aux > mean(aux);
                     end
                 else
+                    % Empty variable will be deleted
+                    fprintf(1,'Input event %d is empty and will be deleted\n',...
+                        ce)
                     consEvents2(ce) = [];
                 end
             end
@@ -80,12 +88,12 @@ postSamples = ceil(timeSpan(2) * fs);
 Nt = prevSamples + postSamples + 1;
 discreteStack = false(2+Ne,Nt,Na);
 % Creation of the logical spike train
-if isnumeric(spT) && ~sum(round(spT) - spT)
+if isnumeric(spT) && ~sum(round(spT) - spT) && nnz(spT) == max(size(spT))
     mxS = spT(end) + Nt;
     spTemp = false(1,mxS);
     spTemp(spT) = true;
     spT = spTemp;
-elseif ~sum(round(spT) - spT) && ~islogical(spT)
+elseif ~sum(round(spT) - spT) && nnz(spT) == max(size(spT))
     spT = round(spT * fs);
     mxS = spT(end) + Nt;
     spT = StepWaveform.subs2idx(spT,mxS);
