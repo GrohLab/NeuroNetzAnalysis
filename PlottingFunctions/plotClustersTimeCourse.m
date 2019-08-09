@@ -11,15 +11,6 @@ if ~exist('Conditions','var') || ~exist('Triggers','var')
     end
 end
 %% 
-% Spikes={};
-% Names={};
-% 
-% for i=1:size(sortedData,1)
-%     Spikes{i}=cell2mat(sortedData(i,2));
-%     Names{i}=sortedData(i,1);
-% end
-
-
 mech=Triggers.whisker;
 light=Triggers.light;
 lenSpks = length(Spikes);
