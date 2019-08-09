@@ -14,6 +14,7 @@ if length(P1) == length(P2)
 else
     kbd = NaN;
     fprintf('! The distributions have different resolutions (different length)!\n')
+    fprintf('No divergence calculated\n')
     return;
 end
 aux = rdivide(P1,P2);
