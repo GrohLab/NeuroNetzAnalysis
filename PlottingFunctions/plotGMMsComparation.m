@@ -66,12 +66,12 @@ lFlag = arrayfun(isaline,lns);
 title('PDFs comparison');box off
 legend(lns(lFlag))
 xlabel('Time [s]');
-ax.YAxis(1).Label = 'Probability';
+ax.YAxis(1).Label.String = 'P(x)';
 ax.YAxis(1).Color = [0,0,0];
 ax.YAxis(2).Color = [0,0,0];
 ax.YAxis(2).Limits = [0,1];
 ax.YAxis(2).TickValues = [0, 0.5, 1];
-ax.YAxis(2).Label = 'Cumulative probability';
+ax.YAxis(2).Label = '\SigmaP(x)';
 
 yyaxis('left');ylabel('Probability')
 yyaxis('right');ylabel('Cumulative probability');
