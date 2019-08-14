@@ -76,7 +76,7 @@ end
 if plotit
     t=[1:size(uptrig_light,2)]/ppms-timeBefore/ppms;
     m=get(gca,'ylim');m=m(end)*.9;
-    p=plot(t,mean(uptrig_light)*m,'b','linewidth',.5)
+    p=plot(t,mean(uptrig_light)*m,'b','linewidth',.5);
     hold on
     axis tight
     ylim(get(gca,'ylim')*1.5);
@@ -88,7 +88,7 @@ end
 
 if plotit
     m=get(gca,'ylim');m=m(end)*.9;
-    p=plot(t,mean(uptrig_EEG)*m,'g','linewidth',2)
+    p=plot(t,mean(uptrig_EEG)*m,'g','linewidth',2);
     hold on
     axis tight
     ylim(get(gca,'ylim')*1.5);
