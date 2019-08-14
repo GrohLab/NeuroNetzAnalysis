@@ -1,6 +1,7 @@
 function plotGMMs(parameters,data)
 data = sort(data(:),'ascend');
 M=size(parameters,1);
+pik = zeros(M,length(data));
 for k=1:M
     %pik(k,:)=parameters(k,1)*evalgauss(data,parameters(k,2),...
     %    parameters(k,3));
