@@ -3,7 +3,9 @@ function [fig,p_xhat,KLd] = plotGMMsComparation(parameters,Xdomain,IDe)
 %   Detailed explanation goes here
 normPDF = @(x) x./sum(x);
 isaline = @(x) isa(x,'matlab.graphics.chart.primitive.Line');
-
+if ndims(parameters) > 3
+    parameters = squeeze(parameters);
+end
 M = size(parameters,1);
 C = size(parameters,3);
 pik = zeros(M,length(Xdomain),C);
@@ -19,14 +21,15 @@ for cc = 1:C
         pik(k,:,cc)=pik(k,:,cc).*parameters(k,1,cc);
     end
 end
-p_xhat = squeeze(sum(pik,1))';
+p_xhat = squeeze(sum(pik,1,'omitnan'))';
 conComb = combnk(1:C,2);
 Ncmp = size(conComb,1);
 KLd = zeros(Ncmp,3);
 
 for cpdf = 1:Ncmp
     KLd(cpdf,1:2) = conComb(cpdf,:);
-    if ~sum(p_xhat(conComb(cpdf,1),:)) || ~sum(p_xhat(conComb(cpdf,2),:))
+    if ~sum(p_xhat(conComb(cpdf,1),:)) ||...
+            ~sum(p_xhat(conComb(cpdf,2),:))
         continue
     end
     KLd(cpdf,3) = KullbackLeiblerDivergence(...
@@ -41,7 +44,7 @@ for cpdf = 1:C
         continue
     end
     p_xhat(cpdf,:) = normPDF(p_xhat(cpdf,:));
-    if cpdf > 1
+    if cpdf == 2
         ax = fig.Children;
         set(ax,'NextPlot','add')
     end
@@ -71,9 +74,6 @@ ax.YAxis(1).Color = [0,0,0];
 ax.YAxis(2).Color = [0,0,0];
 ax.YAxis(2).Limits = [0,1];
 ax.YAxis(2).TickValues = [0, 0.5, 1];
-ax.YAxis(2).Label = '\SigmaP(x)';
-
-yyaxis('left');ylabel('Probability')
-yyaxis('right');ylabel('Cumulative probability');
+ax.YAxis(2).Label.String = '\SigmaP(x)';
 end
 
