@@ -45,7 +45,7 @@ classdef (Abstract) DiscreteWaveform < GeneralWaveform
         % Get the first event of a train
         function fot = get.FirstOfTrain(obj)
             fs = obj.SamplingFreq;
-            trigs = obj.Triggers;
+            trigs = obj.subTriggers;
             evntTms = trigs(:,1)./fs;
             if ~isnan(obj.MinIEI)
                 fot = DiscreteWaveform.firstOfTrain(evntTms,obj.MinIEI);
