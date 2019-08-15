@@ -6,7 +6,7 @@ function [sonoStruct] =...
 %   which is the period in seconds for the Fourier transform to be applied;
 %   and overlap, which is the percentage for the moving windows to retake
 %   into the FFT from the previous one.
-
+%   Emilio Isaias-Camacho @ GrohLab 2018
 N = length(signal);
 if nargin == 3
     Nw = 2^log2(sampling_frequency);
