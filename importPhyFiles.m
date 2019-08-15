@@ -34,7 +34,8 @@ catch LE
         fprintf(1,'frequency.\n');
         return
     end
-    
+    save(fullfile( pathToData, [outputName, '_sampling_frequency.mat']),...
+        'fs')
 end
 
 % Do you want to remove Noise Data?
@@ -46,6 +47,7 @@ end
 spkTms = readNPY(fullfile(pathToData, 'spike_times.npy'));
 clID = readNPY(fullfile(pathToData, 'spike_clusters.npy'));
 clGr = readTSV(fullfile(pathToData,'cluster_group.tsv'));
+clInfo = getClusterInfo(fullfile(pathToData,'cluster_info.tsv'));
 
 nIdx = cellfun(@strcmp,clGr(:,2),repmat("noise",size(clGr,1),1));
 gIdx = cellfun(@strcmp,clGr(:,2),repmat("good",size(clGr,1),1));
@@ -71,17 +73,19 @@ for cgroup = 1:MX_CLSS
     clGroup(row2(limits(cgroup)+1:limits(cgroup+1))) = cgroup;
 end
 sortedData = cat(2,allClusters,spkCell,num2cell(clGroup));
-
+importedFlag = ismember(clInfo.id,sortedData(:,1));
+CHAN_AMPS = [clInfo.channel(importedFlag), clInfo.Amplitude(importedFlag)];
 % Removes the noise from the matrix and saves an alternative output file
 if removeNoise
     index = cellfun(@(x) x==3,sortedData(:,3));
     sortedData(index,:) = []; %#ok<NASGU>
+    CHAN_AMPS(index,:) = []; %#ok<NASGU>
     filename = [outputName, '_all_channels.mat'];
     fname = fullfile(pathToData, filename);
-    save(fname, 'sortedData', 'fs');
+    save(fname, 'sortedData', 'fs','CHAN_AMPS');
 else
     filename = [outputName, '_all_channels.mat'];
     fname = fullfile(pathToData, filename);
-    save(fname, 'sortedData', 'fs');
+    save(fname, 'sortedData', 'fs','CHAN_AMPS');
 end
 end
