@@ -1,7 +1,30 @@
 function ax =...
     plotPSTH(trig, PSTH, sweeps, binSz, timeLapse, expName, IDe, koIdx, tIdx, fs, ax)
-%UNTITLED4 Summary of this function goes here
-%   Detailed explanation goes here
+%PLOTPSTH takes the output from the function getPSTH and plots the
+%normalized counts of the discrete stack events as either bar plots or as
+%lines, depending on their nature. If the event is pulsed, then the plot
+%will be a line. Otherwise, it would be a bar i.e. spike times.
+%   [axes] = plotPSTH(trig, PSTH, sweeps, binSz, timeLapse, expName, IDe,
+%       koIdx, tIdx, fs, ax)
+%   
+%   INPUTS:
+%       trig - Trigger signal. This is an output from the getPSTH function
+%       PSTH - Cell array containing the relative times of the events
+%       sweeps - Number of trials in the experiment
+%       binSz - Bin size (in seconds)
+%       timeLapse - Viewing window for the PSTH (in seconds)
+%       expName - Name of the experiment
+%       IDe - Identification of each event in the PSTH plot
+%       koIdx - 
+%       tIdx - Logical array indicating the trigger signal (true)
+%       fs - Sampling frequency
+%       [ax] - Optional axis variable to plot the PSTH in a predefined
+%       figure
+%   
+%   OUTPUTS:
+%       ax - axis variable in which the PSTH plot is embedded.
+% Emilio Isaias-Camacho @GrohLab 2018
+
 koIdx(tIdx) = false;
 trigID = IDe{tIdx};
 IDe(tIdx) = [];
