@@ -1,5 +1,27 @@
-function importPhyFiles(pathToData, outputName, removeNoise)
+function importPhyFiles(pathToData, outputName, removeNoise, ChAndAmpFlag)
+%IMPORTPHYFILES reads the files created by both Kilosort and Phy or Phy2
+%and, depending on the flag configurations, it saves a .mat file. The
+%contents of this file are constructed with the output files (.tsv, .npy).
+%           importPhyFiles( pathToData, outputName, removeNoise,
+%               ChAndAmpFlag)
+%       INPUTS: no marking means required, [] mean optional but needed for
+%                                             later input arguments.
+%           pathToData - Path string to where the .tsv and .npy files are
+%                           located
+%           [outputName] - Name for the .mat file to be created.
+%                           WARNING! if the file already exists, the
+%                           function will overwrite it
+%           [removeNoise] - Default false; flag to indicate the inclusion
+%                           of the clusters labelled as noise.
+%           [ChAndAmpFlag] - Default false; flag to indicate the inclusion
+%                            of channel and amplitude of each cluster.
+%       OUTPUTS:
+%           No variable imported to the workspace but a .mat files written
+%           in the given folder; either in the pathToData or in the
+%           outputName.
+%  Alexandra Merkel & Emilio Isaias-Camacho @ GrohLab 2019
 % Maximum number of groups. 3 so far: good, MUA, and noise
+
 MX_CLSS = 3;
 % Take Kilosort Data and create *all_channels.map for further analysis
 addpath(genpath('C:\Users\NeuroNetz\Documents\npy-matlab')) % path to npy-matlab
@@ -43,11 +65,18 @@ if ~exist('removeNoise','var')
     removeNoise = false;
 end
 
+% Do you want to include channel and amplitude information?
+if ~exist('ChAndAmpFlag','var')
+    ChAndAmpFlag = false;
+end
+
 % Reading the KiloSort datafiles (phy updates these files)
 spkTms = readNPY(fullfile(pathToData, 'spike_times.npy'));
 clID = readNPY(fullfile(pathToData, 'spike_clusters.npy'));
 clGr = readTSV(fullfile(pathToData,'cluster_group.tsv'));
-clInfo = getClusterInfo(fullfile(pathToData,'cluster_info.tsv'));
+if ChAndAmpFlag
+    clInfo = getClusterInfo(fullfile(pathToData,'cluster_info.tsv'));
+end
 
 nIdx = cellfun(@strcmp,clGr(:,2),repmat("noise",size(clGr,1),1));
 gIdx = cellfun(@strcmp,clGr(:,2),repmat("good",size(clGr,1),1));
@@ -73,13 +102,19 @@ for cgroup = 1:MX_CLSS
     clGroup(row2(limits(cgroup)+1:limits(cgroup+1))) = cgroup;
 end
 sortedData = cat(2,allClusters,spkCell,num2cell(clGroup));
-importedFlag = ismember(clInfo.id,sortedData(:,1));
-CHAN_AMPS = [clInfo.channel(importedFlag), clInfo.Amplitude(importedFlag)];
+if ChAndAmpFlag
+    importedFlag = ismember(clInfo.id,sortedData(:,1));
+    CHAN_AMPS = [clInfo.channel(importedFlag), clInfo.Amplitude(importedFlag)];
+else
+    CHAN_AMPS = [];
+end
 % Removes the noise from the matrix and saves an alternative output file
 if removeNoise
     index = cellfun(@(x) x==3,sortedData(:,3));
     sortedData(index,:) = []; %#ok<NASGU>
-    CHAN_AMPS(index,:) = []; %#ok<NASGU>
+    if ChAndAmpFlag
+        CHAN_AMPS(index,:) = []; %#ok<NASGU>
+    end
     filename = [outputName, '_all_channels.mat'];
     fname = fullfile(pathToData, filename);
     save(fname, 'sortedData', 'fs','CHAN_AMPS');
