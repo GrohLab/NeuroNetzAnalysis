@@ -50,6 +50,8 @@ imagesc(ax1,'XData',psthTX,'CData',PSTHn);
 colormap(ax1,clrmp)
 
 trigTX = linspace(-timeLapse(1),timeLapse(2),size(trig,2));
+
+% Plotting lines for depicting the on- and offset of the trigger
 tObj = StepWaveform(trig,1/mean(diff(trigTX)));
 tSubs = tObj.subTriggers;
 if ~isempty(tSubs)
@@ -65,6 +67,7 @@ else
         'LineStyle',':','Color',clr,'LineWidth',2)
 end
 
+% Formatting the heatmap
 ax1.YLim = [0.5,size(PSTH,1)+0.5];
 ax1.XLim = [-timeLapse(1)-binSz/2, timeLapse(2)+binSz/2];
 ax1.YTick = 1:Ncl;
@@ -72,15 +75,15 @@ ax1.YTickLabel = IDe(2:end);
 ax1.YAxis.Label.String = sprintf('Cluster ID_{%d #clusters}', size(PSTH,1));
 ax1.XAxis.Visible = 'off';
 
-
+% Plotting the population PSTH together with the trigger probability
 ax2 = subplot(4,1,4,'Parent',fig);
 popPSTH = sum(PSTH,1)/Ncl;
 plot(ax2,psthTX,popPSTH,'Color',[0.8,0.8,0.8],'DisplayName','Population PSTH')
 yyaxis(ax2,'right')
-
 plot(ax2,trigTX,trig,'LineWidth',1.5,'Color',clr,'DisplayName',IDe{1},...
     'LineStyle',':')
 
+% Formatting the population PSTH plot
 ax2.YAxis(1).Label.String = 'Probability';
 ax2.YAxis(2).Visible = 'off';
 ax2.YAxis(1).Limits = [0,1.01];
@@ -97,6 +100,7 @@ title(ax1,[expName,sprintf(' %d trials',sweeps)])
 end
 
 function clrmp = defineWhYellRedColormap()
+%Helper function to store the color map
 clrmp = [1.0000    1.0000    1.0000
     1.0000    0.9909    0.9727
     1.0000    0.9818    0.9455
