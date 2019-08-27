@@ -1,11 +1,11 @@
 function fig =...
-    plotClusterReactivity(PSTH,trig,sweeps,timeLapse,binSz,IDe,expName)
+    plotClusterReactivity(PSTH,trig,sweeps,timeLapse,binSz,IDe,expName,stims,IDs)
 %PLOTCLUSTERREACTIVITY gets the individual PSTH from the getPSTH function
 %and plots it for each cluster. It also plots the population PSTH on the
 %bottom of the figure and draws a line for the beguinning and end of the
 %stimuli.
 %   fig = PlotClusterReactivity(PSTH, trig, sweeps, timeLapse, binSz,...
-%               IDe, expName)
+%               IDe, expName, stims, IDs)
 %
 %       INPUTS:
 %           PSTH - a MxN matrix containing the counts for the M individual
@@ -28,14 +28,25 @@ function fig =...
 
 % If the trigger is the whisker stimulating device, then the color of the
 % trigger will be green. Otherwise, it would be light blue for the laser.
+stimClrFlag = 1;
 if contains(IDe{1},'piezo','IgnoreCase',true) ||...
         contains(IDe{1},'whisker','IgnoreCase',true)
     clr = [0, 0.8, 0];
 elseif contains(IDe{1},'light','IgnoreCase',true) ||...
         contains(IDe{1},'laser','IgnoreCase',true)
     clr = [80, 187, 211]/255;
+    stimClrFlag = 2;
 else
     clr = [165, 70, 87]/255; 
+    stimClrFlag = 3;
+end
+
+fthAxFlag = false;
+if ~exist('stims','var')
+    totlX = 4;
+elseif ~isempty(stims)
+    fthAxFlag = true;
+    totlX = 5;
 end
 
 % Number of clusters and number of bins in the PSTH
@@ -43,7 +54,7 @@ end
 % Normalizing the PSTH to the maximal value on each cluster.
 PSTHn = PSTH./max(PSTH,[],2);
 fig = figure('Name',expName,'Color',[1,1,1]);
-ax1 = subplot(4,1,1:3,'Parent',fig);
+ax1 = subplot(totlX,1,1:3,'Parent',fig);
 psthTX = linspace(-timeLapse(1),timeLapse(2),Npt);
 clrmp = defineWhYellRedColormap;
 imagesc(ax1,'XData',psthTX,'CData',PSTHn);
@@ -76,7 +87,7 @@ ax1.YAxis.Label.String = sprintf('Cluster ID_{%d #clusters}', size(PSTH,1));
 ax1.XAxis.Visible = 'off';
 
 % Plotting the population PSTH together with the trigger probability
-ax2 = subplot(4,1,4,'Parent',fig);
+ax2 = subplot(totlX,1,4,'Parent',fig);
 popPSTH = sum(PSTH,1)/Ncl;
 plot(ax2,psthTX,popPSTH,'Color',[0.8,0.8,0.8],'DisplayName','Population PSTH')
 yyaxis(ax2,'right')
@@ -97,6 +108,37 @@ ax2.ClippingStyle = 'rectangle';
 legend(ax2,'show','Location','best')
 linkaxes([ax1,ax2],'x')
 title(ax1,[expName,sprintf(' %d trials',sweeps)])
+
+% Optional: showing the raw traces of the stimuli
+stimClrMap = [0, 204, 0;
+    80, 187, 211;
+    165, 70, 87]/255;
+
+if fthAxFlag
+    ax3 = subplot(totlX,1,5,'Parent',fig);
+    [r,c] = size(stims);
+    if r < c
+        stims = stims';
+    end
+    if exist('IDs','var')
+        for cs = 1:min(r,c)
+            plot(ax3,trigTX,stims(:,cs),'LineStyle','-.','LineWidth',0.5,...
+                'DisplayName', IDs{cs})
+            if cs == 1
+                ax3.NextPlot = 'add';
+                ax3.Children.Color = clr;
+            end
+        end
+        legend(ax3,'show','Location','best')
+    else
+        plot(ax3,trigTX,stims,'LineStyle','-.','LineWidth',0.5)
+    end
+    ax3.Box = 'off';
+    ax3.XLim = [-timeLapse(1), timeLapse(2)];
+    ax3.XAxis.Visible = 'off';
+    ax3.YAxis.Visible = 'off';
+    linkaxes([ax1,ax2,ax3],'x')
+end
 end
 
 function clrmp = defineWhYellRedColormap()
