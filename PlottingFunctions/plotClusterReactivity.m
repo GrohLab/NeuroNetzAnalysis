@@ -28,18 +28,7 @@ function fig =...
 
 % If the trigger is the whisker stimulating device, then the color of the
 % trigger will be green. Otherwise, it would be light blue for the laser.
-stimClrFlag = 1;
-if contains(IDe{1},'piezo','IgnoreCase',true) ||...
-        contains(IDe{1},'whisker','IgnoreCase',true)
-    clr = [0, 0.8, 0];
-elseif contains(IDe{1},'light','IgnoreCase',true) ||...
-        contains(IDe{1},'laser','IgnoreCase',true)
-    clr = [80, 187, 211]/255;
-    stimClrFlag = 2;
-else
-    clr = [165, 70, 87]/255; 
-    stimClrFlag = 3;
-end
+clr = defineColorForStimuli(IDe);
 
 fthAxFlag = false;
 if ~exist('stims','var')
@@ -88,17 +77,18 @@ ax1.XAxis.Visible = 'off';
 
 % Plotting the population PSTH together with the trigger probability
 ax2 = subplot(totlX,1,4,'Parent',fig);
-popPSTH = sum(PSTH,1)/Ncl;
+popPSTH = sum(PSTHn,1,'omitnan')/Ncl;
 plot(ax2,psthTX,popPSTH,'Color',[0.8,0.8,0.8],'DisplayName','Population PSTH')
 yyaxis(ax2,'right')
 plot(ax2,trigTX,trig,'LineWidth',1.5,'Color',clr,'DisplayName',IDe{1},...
     'LineStyle',':')
 
 % Formatting the population PSTH plot
-ax2.YAxis(1).Label.String = 'Probability';
-ax2.YAxis(2).Visible = 'off';
-ax2.YAxis(1).Limits = [0,1.01];
+ax2.YAxis(1).Label.String = 'Population activity';
 ax2.YAxis(2).Limits = [0,1.01];
+ax2.YAxis(2).Color = 'k';
+ax2.YAxis(2).Label.String = 'Stimulus probability';
+
 
 ax2.XLabel.String = sprintf('Time_{%.2f ms} [s]',binSz*1e3);
 ax2.XLim = [-timeLapse(1), timeLapse(2)];
@@ -120,19 +110,23 @@ if fthAxFlag
     if r < c
         stims = stims';
     end
-    if exist('IDs','var')
-        for cs = 1:min(r,c)
+    
+    for cs = 1:min(r,c)
+        if exist('IDs','var')
             plot(ax3,trigTX,stims(:,cs),'LineStyle','-.','LineWidth',0.5,...
                 'DisplayName', IDs{cs})
-            if cs == 1
-                ax3.NextPlot = 'add';
-                ax3.Children.Color = clr;
-            end
+        else
+            plot(ax3,trigTX,stims(:,cs),'LineStyle','-.','LineWidth',0.5)
         end
-        legend(ax3,'show','Location','best')
-    else
-        plot(ax3,trigTX,stims,'LineStyle','-.','LineWidth',0.5)
+        
+        ax3.Children(1).Color = defineColorForStimuli(IDs(cs));
+        
+        if cs == 1
+            ax3.NextPlot = 'add';
+        end
     end
+    legend(ax3,'show','Location','best')
+
     ax3.Box = 'off';
     ax3.XLim = [-timeLapse(1), timeLapse(2)];
     ax3.XAxis.Visible = 'off';
@@ -141,6 +135,17 @@ if fthAxFlag
 end
 end
 
+function clr = defineColorForStimuli(IDe)
+if contains(IDe{1},'piezo','IgnoreCase',true) ||...
+        contains(IDe{1},'whisker','IgnoreCase',true)
+    clr = [0, 0.8, 0];
+elseif contains(IDe{1},'light','IgnoreCase',true) ||...
+        contains(IDe{1},'laser','IgnoreCase',true)
+    clr = [80, 187, 211]/255;
+else
+    clr = [165, 70, 87]/255; 
+end
+end
 function clrmp = defineWhYellRedColormap()
 %Helper function to store the color map
 clrmp = [1.0000    1.0000    1.0000
