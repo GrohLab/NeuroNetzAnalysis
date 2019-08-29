@@ -7,8 +7,36 @@ function [relativeSpikeTimes, tx] =...
     fs,... Original sampling frequency
     ERASE_kIDX... Boolean flag indicating if
     )
-%UNTITLED2 Summary of this function goes here
-%   Detailed explanation goes here
+%GETRASTERFROMSTACK converts the logical positions of the spikes into
+%spike times relative to the trigger time. It returns a cell array ExT,
+%where E is the number of events and T is the number of triggers. The user
+%has the 'flexibility' to choose which triggers to take out of the results
+%with the koIdx input variable. This should be a vector of Tx1 elements.
+%Similarly, the user can also select which events to leave out of the
+%result by using the input variable koIdx, which should be Ex1 boolean
+%vector.
+%   [relativeSpikeTimes, tx] = getRasterFromStack(discreteStack, kIdx,
+%                               koIdx, timeLapse, fs, ERASE_kIDX)
+%       INPUTS:
+%           discreteStack - boolean matrix sized ExSxT, where E is number
+%           of events to consider, S is the number of samples, and T is the
+%           number of triggers. This matrix is obtained by calling the
+%           function getStacks. 
+%           kIdx - Tx1 boolean vector which indicate which triggers should
+%           be kicked out by having a true value.
+%           koIdx - Ex1 boolean vector indicating which events should be
+%           ignored for the results.
+%           timeLapse - 2x1 numerical vector indicating the time in seconds
+%           before and after the trigger
+%           fs - sampling frequency
+%           ERASE_kIDX - boolean scalar to indicate if the kicked out
+%           events should be erased from the results. default false.
+%       OUTPUTS:
+%           relativeSpikeTimes - (E-(#koIdx))x(T-(#kIdx)) cell array
+%           containing the relative time spikes in seconds for each event
+%           and for each trigger.
+%           tx - time axis for the time span given.
+%   Emilio Isaias-Camacho @ GrohLab 2019
 [Ne, Nt, Na] = size(discreteStack);
 % There will be for each neuron (or event) Na - !(kIdx) number of trials
 relativeSpikeTimes = cell(Ne-(sum(~koIdx) + 1), Na);
