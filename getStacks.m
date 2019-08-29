@@ -11,7 +11,7 @@ function [discreteStack, continuouStack] =...
 % consEvents are 
 discreteStack = NaN;
 continuouStack = NaN;
-%% Computing the size of the PSTH stack
+%% Computing the size of the stack
 if isa(alignP,'logical')
     alWf = StepWaveform(alignP,fs,'on-off','Align triggers');
     alignP = alWf.Triggers;
@@ -25,6 +25,7 @@ switch ONOFF
         disp('Unrecognized trigger selection. Considering onsets')
         ONOFF = 'on';
 end
+
 [auxR,auxC] = size(alignP);
 % if auxR < auxC
 %     alignP = alignP';
