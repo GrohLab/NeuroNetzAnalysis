@@ -2,9 +2,10 @@ function [relativeSpikeTimes, tx] =...
     getRasterFromStack(...
     discreteStack,... Discrete stack containing the alignment points
     kIdx,... Boolean array indicating which trials should be ignored
-    koIdx,... Boolean array indicating which events should be taken out.
+    koIdx,... Boolean array indicating which events should be kept.
     timeLapse,... 2 element array contaning the time before the trigger and the time after the trigger in seconds
     fs,... Original sampling frequency
+    tmsORsubsFlag,... Subscripts or times boolean flag
     ERASE_kIDX... Boolean flag indicating if
     )
 %GETRASTERFROMSTACK converts the logical positions of the spikes into
@@ -12,7 +13,7 @@ function [relativeSpikeTimes, tx] =...
 %where E is the number of events and T is the number of triggers. The user
 %has the 'flexibility' to choose which triggers to take out of the results
 %with the koIdx input variable. This should be a vector of Tx1 elements.
-%Similarly, the user can also select which events to leave out of the
+%Similarly, the user can also select which events to include in the
 %result by using the input variable koIdx, which should be Ex1 boolean
 %vector.
 %   [relativeSpikeTimes, tx] = getRasterFromStack(discreteStack, kIdx,
@@ -37,6 +38,9 @@ function [relativeSpikeTimes, tx] =...
 %           and for each trigger.
 %           tx - time axis for the time span given.
 %   Emilio Isaias-Camacho @ GrohLab 2019
+if ~exist('tmsORsubsFlag','var')
+    tmsORsubsFlag = true;
+end
 [Ne, Nt, Na] = size(discreteStack);
 % There will be for each neuron (or event) Na - !(kIdx) number of trials
 relativeSpikeTimes = cell(Ne-(sum(~koIdx) + 1), Na);
@@ -64,7 +68,12 @@ for cse = iE
                 % if sum(isSpike) == 0
                     % If the event contains spikes
                     spikeTimes = tx(squeeze(discreteStack(cse,:,cap)));
-                    relativeSpikeTimes(spIdx,cap) = {round(fs*spikeTimes)};
+                    if tmsORsubsFlag
+                        relativeSpikeTimes(spIdx,cap) = {spikeTimes};
+                    else
+                        relativeSpikeTimes(spIdx,cap) =...
+                            {round(fs*spikeTimes)};
+                    end
                     %lvl = (cse - 2)*Na + cap;
                 % end
             % end
