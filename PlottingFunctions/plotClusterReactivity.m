@@ -99,11 +99,6 @@ legend(ax2,'show','Location','best')
 linkaxes([ax1,ax2],'x')
 title(ax1,[expName,sprintf(' %d trials',sweeps)])
 
-% Optional: showing the raw traces of the stimuli
-stimClrMap = [0, 204, 0;
-    80, 187, 211;
-    165, 70, 87]/255;
-
 if fthAxFlag
     ax3 = subplot(totlX,1,5,'Parent',fig);
     [r,c] = size(stims);
