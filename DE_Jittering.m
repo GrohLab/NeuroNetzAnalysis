@@ -45,7 +45,7 @@ end
 Ns = min(structfun(@numel,Triggers));
 % Total duration of the recording
 Nt = Ns/fs;
-% Useless clusters (labeled as noise or very low firing rate)
+% Useless clusters (labeled as noise or they have very low firing rate)
 badsIdx = cellfun(@(x) x==3,sortedData(:,3));
 bads = find(badsIdx);
 totSpkCount = cellfun(@numel,sortedData(:,2));
