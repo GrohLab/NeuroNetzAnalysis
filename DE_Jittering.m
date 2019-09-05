@@ -86,16 +86,21 @@ binSz = 0.0005;
 allWhiskerStimulus = 1;
 whiskerControl = 9;
 laserControl = 8;
-consideredConditions = [3:7,9];
+consideredConditions = 3:9;
+Nccond = length(consideredConditions);
 % Time windows to evaluate if a unit is responsive or not.
 spontaneousWindow = [-0.01, -0.002];
 responseWindow = [0.002, 0.01];
+% Adding all the triggers from the piezo and the laser in one array
+allWhiskersPlusLaserControl = ...
+    union(Conditions(allWhiskerStimulus).Triggers,...
+    Conditions(laserControl).Triggers,'rows');
 %% Logical and numerical stack for computations
 % dst - dicrete stack has a logical nature
 % cst - continuous stack has a numerical nature
 % Both of these stacks have the same number of time samples and trigger
 % points. They differ only in the number of considered events.
-[dst, cst] = getStacks(spkLog,Conditions(allWhiskerStimulus).Triggers,...
+[dst, cst] = getStacks(spkLog, allWhiskersPlusLaserControl,...
     'on',timeLapse,fs,fs,[spkSubs;{Conditions(laserControl).Triggers}],...
     continuousSignals);
 % Number of clusters + the piezo as the first event + the laser as the last
@@ -106,10 +111,10 @@ responseWindow = [0.002, 0.01];
 tx = (0:Nt)/fs - timeLapse(1);
 % Boolean flags indicating which trigger belongs to which condition (delay
 % flags)
-delFlags = false(NTa,numel(consideredConditions));
+delFlags = false(NTa,Nccond);
 counter2 = 1;
 for ccond = consideredConditions
-    delFlags(:,counter2) = ismember(Conditions(allWhiskerStimulus).Triggers(:,1),...
+    delFlags(:,counter2) = ismember(allWhiskersPlusLaserControl(:,1),...
         Conditions(ccond).Triggers(:,1));
     counter2 = counter2 + 1;
 end
@@ -122,14 +127,14 @@ respActStackIdx = tx >= responseWindow(1) & tx <= responseWindow(2);
 % the second until one before the last row, during the defined spontaneous
 % time window, and the whisker control condition. 
 sponTimeMarginal = sum(...
-    dst(2:Ne-1,sponActStackIdx,delFlags(:,length(consideredConditions))),2);
+    dst(2:Ne-1,sponActStackIdx,delFlags(:,Nccond)),2);
 sponTimeMarginal = squeeze(sponTimeMarginal);
-sponActPerTrial = sum(sponTimeMarginal,2)/Na(length(consideredConditions));
+sponActPerTrial = sum(sponTimeMarginal,2)/Na(Nccond);
 % Similarly for the responsive user-defined time window
 respTimeMarginal = sum(...
-    dst(2:Ne-1,respActStackIdx,delFlags(:,length(consideredConditions))),2);
+    dst(2:Ne-1,respActStackIdx,delFlags(:,Nccond)),2);
 respTimeMarginal = squeeze(respTimeMarginal);
-respActPerTrial = sum(respTimeMarginal,2)/Na(length(consideredConditions));
+respActPerTrial = sum(respTimeMarginal,2)/Na(Nccond);
 activationIndex = -log(sponActPerTrial./respActPerTrial);
 whiskerResponsiveUnitsIdx = activationIndex > 1;
 display(find(whiskerResponsiveUnitsIdx))
@@ -141,7 +146,6 @@ isWithinResponsiveWindow =...
     @(x) x > responseWindow(1) & x < responseWindow(2);
 
 Nwru = sum(whiskerResponsiveUnitsIdx);
-Nccond = length(consideredConditions);
 unitSelectionIdx = [whiskerResponsiveUnitsIdx(2:Ncl);false];
 firstSpike = zeros(Nwru,Nccond);
 
