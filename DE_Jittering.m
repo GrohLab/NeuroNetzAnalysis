@@ -159,6 +159,7 @@ for ccond = 1:size(delFlags,2)
             cell2mat(spikeTimesINRespWin(ccl,frstSpikeFlag)));    
     end
 end
+% This line looks pretty for saving the relative spike times.
 %% Plotting the population activity
 for ccond = 1:Nccond
     [PSTH, trig, sweeps] = getPSTH(...
