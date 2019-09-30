@@ -95,7 +95,16 @@ wObj = StepWaveform(whisk,fs,'on/off','Mechanical TTL');
 lObj = StepWaveform(laser,fs,'on/off','Laser TTL');
 wSub = wObj.subTriggers;
 lSub = lObj.subTriggers;
-
+glitchInWhisker = diff(wSub,1,2) == 0;
+if any(glitchInWhisker)
+    fprintf(1,'There were some ''funky'' triggers in whisker... deleting\n')
+    wSub(glitchInWhisker,:) = [];
+end
+glitchInLaser = diff(lSub,1,2) == 0;
+if any(glitchInLaser)
+    fprintf(1,'There were some ''funky'' triggers in laser... deleting\n')
+    lSub(glitchInLaser,:) = [];
+end
 whisk = double(StepWaveform.subs2idx(wSub,length(whisk)));
 laser = double(StepWaveform.subs2idx(lSub,length(laser)));
 
@@ -115,7 +124,7 @@ if std(delays.*1e3) < 1
 end
 Ndel = numel(delays);
 fprintf(1,'Delays found:')
-lsDel = false(size(lSub,1),Ndel);
+lsDel = false(length(timeDelay),Ndel);
 Ncond = numel(Conditions);
 for cdl = 1:Ndel
     fprintf(1,' %.1f',delays(cdl)*1e3)
