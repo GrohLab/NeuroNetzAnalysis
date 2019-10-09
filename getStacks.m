@@ -121,7 +121,7 @@ if Ns
         Ns = numel(varargin);
         lngths = cellfun(@length,varargin);
         lnthCheck = std(lngths);
-        if lnthCheck > 1
+        if any(lnthCheck./lngths > 1)
             outlier = zscore(lngths).^2 > 0.5;
             fprintf(1,'Warning! One of the considered continuous signals')
             fprintf(1,' length deviates considerably from the rest.\n')
