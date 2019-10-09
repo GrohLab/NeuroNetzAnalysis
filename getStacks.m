@@ -308,21 +308,21 @@ else
 end
 contSigSeg = zeros(Ns,Nt,'single');
 if Idxs(1) >= 1 && Idxs(2) <= N
-    signalSegments = getSignalSegments(signalCell, Idxs);
-    contSigSeg = single(reshape(cell2mat(signalSegments),...
-        Ns, Nt));
+    Subs = Idxs;
+    SegSubs = 1:Nt;
 elseif Idxs(1) <= 0
-    Idxs(Idxs <= 0) = 1;
-    signalSegments = getSignalSegments(signalCell, Idxs);
-    contSigSeg(:,Nt - Idxs(2) + 1:Nt) =...
-        single(reshape(cell2mat(signalSegments),...
-        Ns, length(Nt - Idxs(2) + 1:Nt)));
+    Subs(Idxs <= 0) = 1;
+    SegSubs = Nt - Idxs(2) + 1:Nt;
 else
-    Idxs(Idxs > N) = N;
-    signalSegments = getSignalSegments(signalCell, Idxs);
-    contSigSeg(:,1:diff(Idxs)+1) =...
-        single(reshape(cell2mat(signalSegments),...
-        Ns, length(1:diff(Idxs)+1)));
+    Subs(Idxs > N) = N;
+    SegSubs = 1:diff(Idxs)+1;
+end
+signalSegments = getSignalSegments(signalCell, Subs);
+signalMat = cell2mat(signalSegments);
+if Ns == size(signalMat,1)
+    contSigSeg(:,SegSubs) = signalMat;
+else
+    contSigSeg(:,SegSubs) = cell2mat(signalSegments');
 end
 end
 
@@ -345,18 +345,18 @@ catch ME
     fprintf('Very unlikely case: signals with different length\n')
     fprintf('Worth debugging!\n')
 end
-if Ns == 1
-    transpSign = cellfun(@isrow,sigSeg);
-    if sum(~transpSign)
-        try
-            sigSeg(~transpSign) =...
-                {sigSeg{~transpSign}'};
-        catch
-            auxSegm = cellfun(@transpose,sigSeg(~transpSign),...
-                'UniformOutput',false);
-            sigSeg(~transpSign) = auxSegm;
-        end
+
+transpSign = cellfun(@isrow,sigSeg);
+if sum(~transpSign)
+    try
+        sigSeg(~transpSign) =...
+            {sigSeg{~transpSign}'};
+    catch
+        auxSegm = cellfun(@transpose,sigSeg(~transpSign),...
+            'UniformOutput',false);
+        sigSeg(~transpSign) = auxSegm;
     end
 end
+
 end
 
