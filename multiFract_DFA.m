@@ -1,4 +1,3 @@
-%OUTPUTS
 function [profile,...   Auxiliary output
     Hq,...              Hurst exponents
     tq,...              Scaling exponents
@@ -12,9 +11,13 @@ function [profile,...   Auxiliary output
     q,...               q-order statistics
     m)...               m-order polynomial to detrend
     %MULTIFRACT_DFA Computation of the multifractal spectrum using $q$-orders
-%   Detailed explanation goes here
+
+%OUTPUTS
 
 % Determining the profile as in Kantelhardt et al. 2002
+if iscolumn(signal)
+    signal = signal';
+end
 profile = cumsum(signal - mean(signal));
 % profile = cumsum(profile - mean(profile));
 Fq = zeros(length(q),length(scale));
