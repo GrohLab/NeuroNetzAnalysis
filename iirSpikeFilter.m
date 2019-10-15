@@ -7,7 +7,7 @@ function [csig] = iirSpikeFilter(signal,sampling_frequency,cutFreq)
 %   cutFreq is a vector containing the low and high cut frequencies in this
 %   order
 [b, a] = cheby2(3,30,1/sqrt(2));
-if ~exist('cutFreq','var') && isempty(cutFreq) && length(cutFreq) ~= 2 &&...
+if ~exist('cutFreq','var') || isempty(cutFreq) || length(cutFreq) ~= 2 ||...
         cutFreq(1) > cutFreq(2)
     cutFreq = [600, 9e3];
 end
