@@ -125,7 +125,223 @@ else
     condFlags = true(NTa, 1);
 end
 Na = sum(condFlags,1);
-%% Counting spikes in given windows
+%% Counting spikes in given windows and computing the statistical significance
 sponActStackIdx = tx >= spontaneousWindow(1) & tx <= spontaneousWindow(2);
 respActStackIdx = tx >= responseWindow(1) & tx <= responseWindow(2);
+if size(condFlags,2) == 2
+    % Getting the counts in the specified response and spontaneous time
+    % windows
+    contCountResponse = squeeze(sum(dst(2:end,respActStackIdx,delayFlags(:,1)),2));
+    contCountSpontan = squeeze(sum(dst(2:end,sponActStackIdx,delayFlags(:,1)),2));
+    postCountResponse = squeeze(sum(dst(2:end,respActStackIdx,delayFlags(:,2)),2));
+    postCountSpontan = squeeze(sum(dst(2:end,sponActStackIdx,delayFlags(:,2)),2));
+    % Computing the rates for the spike counts with the given time windows
+    delta_t = diff(responsiveWindow);
+    contRateResponse = mean(contCountResponse/delta_t,2);
+    contRateSpontan = mean(contCountSpontan/delta_t);
+    postRateResponse = mean(postCountResponse/delta_t);
+    postRateSpontan = mean(postCountSpontan/delta_t);
+    % Computing the probability of spike for all trials in the given
+    % windows
+    % Flags
+    contBoolResponse = double(contCountResponse > 0);
+    contBoolSpontan = double(contCountSpontan > 0);
+    postBoolResponse = double(postCountResponse > 0);
+    postBoolSpontan = double(postCountSpontan > 0);
+    % Probability
+    contProbResponse = mean(contBoolResponse,2);
+    contProbSpontan = mean(contBoolSpontan,2);
+    postProbResponse = mean(postBoolResponse,2);
+    postProbSpontan = mean(postBoolSpontan,2);
+    
+    % Shuffled counts for paired tests: 
+    shufContCountResp = zeros(size(contCountResponse));
+    shufContCountSpon = shufContCountResp;
+    shufPostCountResp = zeros(size(postCountResponse));
+    shufPostCountSpon = shufPostCountResp;
+    for ccl = 1:Ncl 
+        shufContCountResp(ccl,:) = contCountResponse(ccl,randperm(Na(1)));
+        shufContCountSpon(ccl,:) = contCountSpontan(ccl,randperm(Na(1)));
+        shufPostCountResp(ccl,:) = postCountResponse(ccl,randperm(Na(2)));
+        shufPostCountSpon(ccl,:) = postCountSpontan(ccl,randperm(Na(2)));
+    end
+    
+    % Computing the statistical tests: Wilcoxon [p, h] = signrank(x,y);
+    % paired test, shuffling required!
+    % Control and post-induction conditions for unaltered and shuffled
+    % chonological sequence
+    HContCond = zeros(Ncl,1);
+    PContCond = HContCond;
+    HShufContCond = HContCond;
+    PShufContCond = HContCond;
+    HPostCond = HContCond;
+    PPostCond = HContCond;
+    HShufPostCond = HContCond;
+    PShufPostCond = HContCond;
+    % KS test [h, p] = kstest2(x,y); for unpaired conditions 
+    % Spontaneous and evoked activitiy in both control and post-induction
+    % conditions.
+    HSpon = HContCond;
+    PSpon = HContCond;
+    HResp = HContCond;
+    PResp = HContCond;
+    for ccl = 1:Ncl
+        % Wilcoxon test
+        % Control condition: spontaneous against evoked windows.
+        [PContCond(ccl), HContCond(ccl)] = signrank(contCountSpontan(ccl,:),...
+            contCountResponse(ccl,:));
+        % Shuffled control condition
+        [PShufContCond(ccl), HShufContCond(ccl)] = signrank(shufContCountSpon(ccl,:),...
+            shufContCountResp(ccl,:));
+        % Post-induction conditions
+        [PPostCond(ccl), HPostCond(ccl)] = signrank(postCountSpontan(ccl,:),...
+            postCountSpontan(ccl,:));
+        % Shuffled post-induction condition
+        [PShufPostCond(ccl), HShufPostCond(ccl)] = signrank(...
+            shufPostCountSpon(ccl,:), shufPostCountResp(ccl,:));
+        % Kolmogorov-Smirnov test
+        % Spontaneous activity
+        [HSpon(ccl), PSpon(ccl)] = kstest2(contCountSpontan(ccl,:),...
+            postCountSpontan(ccl,:));
+        % Evoked activity
+        [HResp(ccl), PResp(ccl)] = kstest2(contCountResponse(ccl,:),...
+            postCountResponse(ccl,:));
+    end
+else
+end
+%% Plotting the scatter data points
+% Auxiliary variable for labelling the data points in the scatter plots.
+clsLbls = num2str((1:Ncl)');
+% Rate plots
+controlFig = figure('Color',[1,1,1],'Name','Control condition','Visible','off');
+postFig = figure('Color',[1,1,1],'Name','Post-induction','Visible','off');
+sponFig = figure('Color',[1,1,1],'Name','Spontaneous','Visible','off');
+respFig = figure('Color',[1,1,1],'Name','Evoked','Visible','off');
+controlAx = axes('Parent',controlFig);
+postAx = axes('Parent',postFig);
+sponAx = axes('Parent',sponFig);
+respAx = axes('Parent',respFig);
+
+% Control plot (spontaneous vs evoked)
+scatter(controlAx, contRateSpontan, contRateResponse, 'DisplayName',...
+    'Rate per cluster'); grid(controlAx, 'on');
+xlabel(controlAx, 'Spontaneous rate [Hz]');
+ylabel(controlAx, 'Evoked rate [Hz]');
+title(controlAx, 'Control condition: spontaneous vs evoked')
+hold(controlAx,'on'); scatter(controlAx, contRateSpontan(HContCond == 1),...
+    contRateResponse(HContCond == 1), 'Marker','square',...
+    'DisplayName','Sync')
+scatter(controlAx, contRateSpontan(HShufContCond == 1),...
+    contRateResponse(HShufContCond == 1), 'Marker','+',...
+    'DisplayName','Shuf')
+legend(controlAx,'show')
+text(controlAx, contRateSpontan, contRateResponse, clsLbls);
+controlFig.Visible = 'on';
+% Post-induction (spontaneous vs evoked)
+scatter(postAx, postRateSpontan, postRateResponse, 'DisplayName',...
+    'Rate per cluster'); grid(postAx, 'on');
+hold(postAx,'on'); scatter(postAx, postRateSpontan(HPostCond == 1),...
+    postRateResponse(HPostCond == 1), 'Marker','square',...
+    'DisplayName','Sync')
+scatter(postAx, postRateSpontan(HShufPostCond == 1),...
+    postRateResponse(HShufPostCond == 1), 'Marker','+',...
+    'DisplayName','Shuf')
+xlabel(postAx, 'Spontaneous rate [Hz]');
+ylabel(postAx, 'Evoked rate [Hz]');
+title(postAx, 'Post-induction condition: spontaneous vs evoked')
+legend(postAx,'show')
+text(postAx, postRateSpontan, postRateResponse, clsLbls);
+postFig.Visible = 'on';
+% Spontaneous activity (Control vs post-induction)
+scatter(sponAx, contRateSpontan, postRateSpontan); grid(sponAx, 'on');
+xlabel(sponAx, 'Control spontaneous rate [Hz]');
+ylabel(sponAx, 'Post-induction spontaneous rate [Hz]');
+title(sponAx, 'Spontaneous activity: control vs post-induction')
+hold(sponAx,'on'); scatter(sponAx, contRateSpontan(HSpon == 1),...
+    postRateSpontan(HSpon == 1),'Marker','+','DisplayName','H=1');
+legend(sponAx, 'show');
+text(sponAx, contRateSpontan, postRateSpontan, clsLbls);
+sponFig.Visible = 'on';
+% Evoked activity (Control vs post-induction)
+scatter(respAx, contRateResponse, postRateResponse); grid(respAx, 'on');
+xlabel(respAx, 'Control evoked rate [Hz]');
+ylabel(respAx, 'Post-induction evoked rate [Hz]');
+title(respAx, 'Evoked activity: control vs post-induction')
+hold(respAx,'on'); scatter(respAx, contRateResponse(HResp == 1),...
+    postRateResponse(HResp == 1),'Marker','+','DisplayName','H=1');
+legend(respAx, 'show')
+text(respAx, contRateResponse, postRateResponse, clsLbls);
+respFig.Visible = 'on';
+
+% Probability plots
+controlFigp = figure('Color',[1,1,1],'Name','Control condition','Visible','off');
+postFigp = figure('Color',[1,1,1],'Name','Post-induction','Visible','off');
+sponFigp = figure('Color',[1,1,1],'Name','Spontaneous','Visible','off');
+respFigp = figure('Color',[1,1,1],'Name','Evoked','Visible','off');
+controlAxp = axes('Parent',controlFigp);
+postAxp = axes('Parent',postFigp);
+sponAxp = axes('Parent',sponFigp);
+respAxp = axes('Parent',respFigp);
+
+
+% Control plot (spontaneous vs evoked)
+scatter(controlAxp, contProbSpontan, contProbResponse, 'DisplayName',...
+    'p(s) per cluster'); grid(controlAxp, 'on');
+xlabel(controlAxp, 'p(Spontaneous)');
+ylabel(controlAxp, 'p(Evoked)');
+title(controlAxp, 'Control condition_{p(s)}: spontaneous vs evoked')
+%{ 
+% STATISTICAL SIGNIFICANCE HIGHLIGHTING
+% hold(controlAxp,'on'); scatter(controlAxp, contProbSpontan(HContCond == 1),...
+%     contProbResponse(HContCond == 1), 'Marker','square',...
+%     'DisplayName','Sync')
+% scatter(controlAxp, contProbSpontan(HShufContCond == 1),...
+%     contProbResponse(HShufContCond == 1), 'Marker','+',...
+%     'DisplayName','Shuf')
+% legend(controlAxp,'show')
+%}
+text(controlAxp, contProbSpontan, contProbResponse, clsLbls);
+controlFigp.Visible = 'on';
+% Post-induction (spontaneous vs evoked)
+scatter(postAxp, postProbSpontan, postProbResponse, 'DisplayName',...
+    'p(s) per cluster'); grid(postAxp, 'on');
+%{
+STATISTICAL SIGNIFICANCE HIGHLIGHTING
+hold(postAxp,'on'); scatter(postAxp, postProbSpontan(HPostCond == 1),...
+    postProbResponse(HPostCond == 1), 'Marker','square',...
+    'DisplayName','Sync')
+scatter(postAxp, postProbSpontan(HShufPostCond == 1),...
+    postProbResponse(HShufPostCond == 1), 'Marker','+',...
+    'DisplayName','Shuf')
+legend(postAxp,'show')
+%}
+xlabel(postAxp, 'p(Spontaneous)');
+ylabel(postAxp, 'p(Evoked)');
+title(postAxp, 'Post-induction condition_{p(s)}: spontaneous vs evoked')
+text(postAxp, postProbSpontan, postProbResponse, clsLbls);
+postFigp.Visible = 'on';
+% Spontaneous activity (Control vs post-induction)
+scatter(sponAxp, contProbSpontan, postProbSpontan); grid(sponAxp, 'on');
+xlabel(sponAxp, 'p(Spontaneous | Control)');
+ylabel(sponAxp, 'p(Spontaneous | Post-induction)');
+title(sponAxp, 'Spontaneous activity_{p(s)}: control vs post-induction')
+%{
+STATISTICAL SIGNIFICANCE HIGHLIGHTING
+hold(sponAxp,'on'); scatter(sponAxp, contProbSpontan(HSpon == 1),...
+    postProbSpontan(HSpon == 1),'Marker','+','DisplayName','H=1');
+%}    
+text(sponAxp, contProbSpontan, postProbSpontan, clsLbls);
+sponFigp.Visible = 'on';
+% Evoked activity (Control vs post-induction)
+scatter(respAxp, contProbResponse, postProbResponse); grid(respAxp, 'on');
+xlabel(respAxp, 'p(Evoked | Control)');
+ylabel(respAxp, 'p(Evoked | Post-induction)');
+title(respAxp, 'Evoked activity_{p(s)}: control vs post-induction')
+%{
+STATISTICAL SIGNIFICANCE HIGHLIGHTING
+hold(respAxp,'on'); scatter(respAxp, contProbResponse(HResp == 1),...
+    postProbResponse(HResp == 1),'Marker','+','DisplayName','H=1');
+%}
+text(respAxp, contProbResponse, postProbResponse, clsLbls);
+respFigp.Visible = 'on';
 
