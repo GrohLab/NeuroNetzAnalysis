@@ -6,6 +6,7 @@ binFiles = dir(fullfile(dataDir,'*.bin'));
 % and triggers.
 expSubfix = fullfile(dataDir,expName);
 assignin('base','expSubfix',expSubfix)
+assignin('base','expName',expName)
 try
     load([expSubfix,'_sampling_frequency.mat'],'fs')
 catch
