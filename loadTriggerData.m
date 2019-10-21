@@ -5,6 +5,7 @@ binFiles = dir(fullfile(dataDir,'*.bin'));
 % Loading the sampling frequency, the sorted clusters, and the conditions
 % and triggers.
 expSubfix = fullfile(dataDir,expName);
+assignin('base','expSubfix',expSubfix)
 try
     load([expSubfix,'_sampling_frequency.mat'],'fs')
 catch
