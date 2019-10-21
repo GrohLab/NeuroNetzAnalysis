@@ -1,6 +1,7 @@
 %% LTP
 % Loading the necessary files (spike times, 
-dataDir = 'E:\Data\VPM\LTP\190701_LTP_3700_1500_1520';
+% dataDir = 'E:\Data\VPM\LTP\190701_LTP_3700_1500_1520';
+dataDir = 'D:\LTP\190716_Jesus_Emilio LTP_3751_1520_1500';
 figureDir = fullfile(dataDir,'Figures\');
 if ~loadTriggerData(dataDir)
     fprintf(1,'Not possible to load all the necessary variables')
@@ -55,7 +56,7 @@ lObj = StepWaveform(laser,fs);
 lSubs = lObj.subTriggers;
 laser = lObj.subs2idx(lSubs,Ns);
 mObj.delete;lObj.delete;
-continuousSignals = {piezo;laser;LFP};
+continuousSignals = {double(piezo);double(laser);LFP};
 %% User prompt for relevant information:
 % Time lapse, bin size, and spontaneous and response windows
 promptStrings = {'Viewing window (time lapse) [s]:','Response window [s]',...
@@ -95,7 +96,7 @@ end
 % Select the onset or the offset of a trigger
 fprintf(1,'Condition ''%s''\n', Conditions(chCond).name)
 onOffStr = questdlg('Trigger on the onset or on the offset?','Onset/Offset',...
-    'on','off','Cancel','Onset');
+    'on','off','Cancel','on');
 if strcmpi(onOffStr,'Cancel')
     fprintf(1,'Cancelling...\n')
     return
@@ -120,6 +121,8 @@ if abs(errGap) > 1
     % If the gap is bigger in one order of magnitude, we consider it to be
     % another condition (Control / Post-induction)
     condFlags = false(NTa, 2);
+    condFlags(1:timeGapSub,1) = true;
+    condFlags(timeGapSub+1:end,2) = true;
 else
     % Otherwise, it is only one condition
     condFlags = true(NTa, 1);
@@ -131,16 +134,20 @@ respActStackIdx = tx >= responseWindow(1) & tx <= responseWindow(2);
 if size(condFlags,2) == 2
     % Getting the counts in the specified response and spontaneous time
     % windows
-    contCountResponse = squeeze(sum(dst(2:end,respActStackIdx,delayFlags(:,1)),2));
-    contCountSpontan = squeeze(sum(dst(2:end,sponActStackIdx,delayFlags(:,1)),2));
-    postCountResponse = squeeze(sum(dst(2:end,respActStackIdx,delayFlags(:,2)),2));
-    postCountSpontan = squeeze(sum(dst(2:end,sponActStackIdx,delayFlags(:,2)),2));
+    contCountResponse = squeeze(sum(dst(2:end,respActStackIdx,condFlags(:,1)),2));
+    contCountSpontan = squeeze(sum(dst(2:end,sponActStackIdx,condFlags(:,1)),2));
+    postCountResponse = squeeze(sum(dst(2:end,respActStackIdx,condFlags(:,2)),2));
+    postCountSpontan = squeeze(sum(dst(2:end,sponActStackIdx,condFlags(:,2)),2));
     % Computing the rates for the spike counts with the given time windows
-    delta_t = diff(responsiveWindow);
+    delta_t = diff(responseWindow);
     contRateResponse = mean(contCountResponse/delta_t,2);
-    contRateSpontan = mean(contCountSpontan/delta_t);
-    postRateResponse = mean(postCountResponse/delta_t);
-    postRateSpontan = mean(postCountSpontan/delta_t);
+    contRateSpontan = mean(contCountSpontan/delta_t,2);
+    postRateResponse = mean(postCountResponse/delta_t,2);
+    postRateSpontan = mean(postCountSpontan/delta_t,2);
+    % Auxiliary variable to plot the diagonal line and to keep the scales
+    % across the different plots 
+    llx = max(max(max(contRateResponse, postRateResponse),...
+        max(contRateSpontan, postRateSpontan)));
     % Computing the probability of spike for all trials in the given
     % windows
     % Flags
@@ -212,6 +219,7 @@ end
 %% Plotting the scatter data points
 % Auxiliary variable for labelling the data points in the scatter plots.
 clsLbls = num2str((1:Ncl)');
+llx = round(llx*1.1,-1);
 % Rate plots
 controlFig = figure('Color',[1,1,1],'Name','Control condition','Visible','off');
 postFig = figure('Color',[1,1,1],'Name','Post-induction','Visible','off');
@@ -234,7 +242,9 @@ hold(controlAx,'on'); scatter(controlAx, contRateSpontan(HContCond == 1),...
 scatter(controlAx, contRateSpontan(HShufContCond == 1),...
     contRateResponse(HShufContCond == 1), 'Marker','+',...
     'DisplayName','Shuf')
-legend(controlAx,'show')
+legend(controlAx,'show'); axis(controlAx, 'square');  
+line(controlAx, 'XData', [0, llx], 'YData', [0, llx], 'Color', [0.8, 0.8, 0.8],...
+    'LineStyle', '--');
 text(controlAx, contRateSpontan, contRateResponse, clsLbls);
 controlFig.Visible = 'on';
 % Post-induction (spontaneous vs evoked)
@@ -249,7 +259,9 @@ scatter(postAx, postRateSpontan(HShufPostCond == 1),...
 xlabel(postAx, 'Spontaneous rate [Hz]');
 ylabel(postAx, 'Evoked rate [Hz]');
 title(postAx, 'Post-induction condition: spontaneous vs evoked')
-legend(postAx,'show')
+legend(postAx,'show');  axis(postAx, 'square');  
+line(postAx, 'XData', [0, llx], 'YData', [0, llx], 'Color', [0.8, 0.8, 0.8],...
+    'LineStyle', '--');
 text(postAx, postRateSpontan, postRateResponse, clsLbls);
 postFig.Visible = 'on';
 % Spontaneous activity (Control vs post-induction)
@@ -259,7 +271,9 @@ ylabel(sponAx, 'Post-induction spontaneous rate [Hz]');
 title(sponAx, 'Spontaneous activity: control vs post-induction')
 hold(sponAx,'on'); scatter(sponAx, contRateSpontan(HSpon == 1),...
     postRateSpontan(HSpon == 1),'Marker','+','DisplayName','H=1');
-legend(sponAx, 'show');
+legend(sponAx, 'show'); axis(sponAx, 'square');  
+line(sponAx, 'XData', [0, llx], 'YData', [0, llx], 'Color', [0.8, 0.8, 0.8],...
+    'LineStyle', '--');
 text(sponAx, contRateSpontan, postRateSpontan, clsLbls);
 sponFig.Visible = 'on';
 % Evoked activity (Control vs post-induction)
@@ -269,7 +283,9 @@ ylabel(respAx, 'Post-induction evoked rate [Hz]');
 title(respAx, 'Evoked activity: control vs post-induction')
 hold(respAx,'on'); scatter(respAx, contRateResponse(HResp == 1),...
     postRateResponse(HResp == 1),'Marker','+','DisplayName','H=1');
-legend(respAx, 'show')
+legend(respAx, 'show'); axis(respAx, 'square');  
+line(respAx, 'XData', [0, llx], 'YData', [0, llx], 'Color', [0.8, 0.8, 0.8],...
+    'LineStyle', '--');
 text(respAx, contRateResponse, postRateResponse, clsLbls);
 respFig.Visible = 'on';
 
@@ -301,6 +317,9 @@ title(controlAxp, 'Control condition_{p(s)}: spontaneous vs evoked')
 % legend(controlAxp,'show')
 %}
 text(controlAxp, contProbSpontan, contProbResponse, clsLbls);
+axis(controlAxp, 'square');  
+line(controlAxp, 'XData', [0, 1], 'YData', [0, 1], 'Color', [0.8, 0.8, 0.8],...
+    'LineStyle', '--');
 controlFigp.Visible = 'on';
 % Post-induction (spontaneous vs evoked)
 scatter(postAxp, postProbSpontan, postProbResponse, 'DisplayName',...
@@ -319,6 +338,9 @@ xlabel(postAxp, 'p(Spontaneous)');
 ylabel(postAxp, 'p(Evoked)');
 title(postAxp, 'Post-induction condition_{p(s)}: spontaneous vs evoked')
 text(postAxp, postProbSpontan, postProbResponse, clsLbls);
+axis(postAxp, 'square');  
+line(postAxp, 'XData', [0, 1], 'YData', [0, 1], 'Color', [0.8, 0.8, 0.8],...
+    'LineStyle', '--');
 postFigp.Visible = 'on';
 % Spontaneous activity (Control vs post-induction)
 scatter(sponAxp, contProbSpontan, postProbSpontan); grid(sponAxp, 'on');
@@ -331,6 +353,9 @@ hold(sponAxp,'on'); scatter(sponAxp, contProbSpontan(HSpon == 1),...
     postProbSpontan(HSpon == 1),'Marker','+','DisplayName','H=1');
 %}    
 text(sponAxp, contProbSpontan, postProbSpontan, clsLbls);
+axis(sponAxp, 'square');  
+line(sponAxp, 'XData', [0, 1], 'YData', [0, 1], 'Color', [0.8, 0.8, 0.8],...
+    'LineStyle', '--');
 sponFigp.Visible = 'on';
 % Evoked activity (Control vs post-induction)
 scatter(respAxp, contProbResponse, postProbResponse); grid(respAxp, 'on');
@@ -343,5 +368,71 @@ hold(respAxp,'on'); scatter(respAxp, contProbResponse(HResp == 1),...
     postProbResponse(HResp == 1),'Marker','+','DisplayName','H=1');
 %}
 text(respAxp, contProbResponse, postProbResponse, clsLbls);
+axis(respAxp, 'square');  
+line(respAxp, 'XData', [0, 1], 'YData', [0, 1], 'Color', [0.8, 0.8, 0.8],...
+    'LineStyle', '--');
 respFigp.Visible = 'on';
+%% Saving the results (Figures and configuration)
+pause(20);
+saveFigs =...
+    questdlg('Do you wish to save the figures?','Save','Yes','No','Yes');
+saveFlag = false;
+if strcmpi(saveFigs, 'yes')
+    saveFlag = true;
+    if ~exist(figureDir,'dir')
+        if ~mkdir(figureDir)
+            fprintf(1,'There was a problem creating the ''Figures'' folder\n');
+            fprintf(1,'Please verify the location\n')
+            saveFlag = false;
+        end
+    end
+else
+    closeFigs = questdlg('Would you like to close all figures?',...
+        'Close all', 'Yes', 'No', 'No');
+    if strcmpi(closeFigs,'yes')
+        close all
+    end
+end
 
+saveConfig = questdlg('What about the configuration for the analysis?',...
+    'Save Configuration', 'Yes', 'No', 'Yes');
+if strcmpi(saveConfig,'yes')
+    configStruct = struct('TimeLapse',timeLapse,...
+        'ResponseWindow',responseWindow,...
+        'BinSize',binSz, 'Condition', Conditions(chCond).name);
+    configFile = [expSubfix,'_ConfigStruct.mat'];
+    if ~exist(configFile,'file')
+        save([expSubfix,'_ConfigStruct.mat'],'configStruct')
+    else
+        fprintf(1,'The configuration file exists! No configuration saved\n')
+    end
+end
+
+if saveFlag
+    figArray = [controlFig,postFig,sponFig,respFig,...
+        controlFigp,postFigp,sponFigp,respFigp];
+    figNameCell = {'Control condition', 'Post-induction condition',...
+        'Spontaneous activity', 'Evoked activity'};
+    figNameCell = [figNameCell, ...
+        cellfun(@(x) [x,' p(s)'],figNameCell,'UniformOutput',false)];
+    arrayfun(@configureFigureToPDF, figArray);
+    for cf = 1:numel(figArray)
+        emfFile = fullfile(figureDir,[figNameCell{cf},'.emf']);
+        pdfFile = fullfile(figureDir,[figNameCell{cf},'.pdf']);
+        figFile = fullfile(figureDir,[figNameCell{cf},'.fig']);
+        fileExist = [exist(emfFile,'file'),...
+            exist(pdfFile,'file'), exist(figFile,'file')];
+        if any(fileExist)
+            ovrAns =...
+                questdlg('Some figures exist already. Do you wish to overwrite?',...
+                'Yes', 'No', 'No');
+            if strcmp(ovrAns,'No')                            
+                fprintf(1,'No figures saved!\n')
+                break;
+            end               
+        end
+        print(figArray(cf), emfFile, '-dmeta')
+        print(figArray(cf), pdfFile, '-dpdf', '-fillpage')
+        savefig(figArray(cf), figFile)
+    end
+end
