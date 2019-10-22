@@ -307,15 +307,15 @@ else
     
 end
 contSigSeg = zeros(Ns,Nt,'single');
+Subs = Idxs;
 if Idxs(1) >= 1 && Idxs(2) <= N
-    Subs = Idxs;
     SegSubs = 1:Nt;
 elseif Idxs(1) <= 0
     Subs(Idxs <= 0) = 1;
-    SegSubs = Nt - Idxs(2) + 1:Nt;
+    SegSubs = Nt - Subs(2) + 1:Nt;
 else
     Subs(Idxs > N) = N;
-    SegSubs = 1:diff(Idxs)+1;
+    SegSubs = 1:diff(Subs)+1;
 end
 signalSegments = getSignalSegments(signalCell, Subs);
 signalMat = cell2mat(signalSegments);
