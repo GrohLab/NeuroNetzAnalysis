@@ -103,10 +103,10 @@ if strcmpi(onOffStr,'Cancel')
 end
 
 % Constructing the stack out of the user's choice
-[dst, cst] = getStacks(spkLog,Conditions(chCond).Triggers,onOffStr,...
+[discStack, cst] = getStacks(spkLog,Conditions(chCond).Triggers,onOffStr,...
     timeLapse,fs,fs,spkSubs,continuousSignals);
 
-[Ne, Nt, NTa] = size(dst);
+[Ne, Nt, NTa] = size(discStack);
 % Computing the time axis for the stack
 tx = (0:Nt)/fs - timeLapse(1);
 %% LTP Exclusive: Control and post-induction conditions
@@ -133,8 +133,8 @@ consideredConditions = [1,3];
 Nccond = 2;
 goodsIdx = ~badsIdx';
 for ccond = 1:Nccond
-    [PSTH, trig, sweeps] = getPSTH(... dst([true;whiskerResponsiveUnitsIdx;true],:,:),timeLapse,...
-        dst,timeLapse,...
+    [PSTH, trig, sweeps] = getPSTH(... discStack([true;whiskerResponsiveUnitsIdx;true],:,:),timeLapse,...
+        discStack,timeLapse,...
         ~condFlags(:,ccond),binSz,fs);
     fig = plotClusterReactivity(PSTH,trig,sweeps,timeLapse,binSz,...
         [{Conditions(consideredConditions(ccond)).name};... sortedData(goods(whiskerResponsiveUnitsIdx),1);{'Laser'}],...
@@ -156,10 +156,10 @@ respActStackIdx = tx >= responseWindow(1) & tx <= responseWindow(2);
 if size(condFlags,2) == 2
     % Getting the counts in the specified response and spontaneous time
     % windows
-    contCountResponse = squeeze(sum(dst(2:end,respActStackIdx,condFlags(:,1)),2));
-    contCountSpontan = squeeze(sum(dst(2:end,sponActStackIdx,condFlags(:,1)),2));
-    postCountResponse = squeeze(sum(dst(2:end,respActStackIdx,condFlags(:,2)),2));
-    postCountSpontan = squeeze(sum(dst(2:end,sponActStackIdx,condFlags(:,2)),2));
+    contCountResponse = squeeze(sum(discStack(2:end,respActStackIdx,condFlags(:,1)),2));
+    contCountSpontan = squeeze(sum(discStack(2:end,sponActStackIdx,condFlags(:,1)),2));
+    postCountResponse = squeeze(sum(discStack(2:end,respActStackIdx,condFlags(:,2)),2));
+    postCountSpontan = squeeze(sum(discStack(2:end,sponActStackIdx,condFlags(:,2)),2));
     % Computing the rates for the spike counts with the given time windows
     delta_t = diff(responseWindow);
     contRateResponse = mean(contCountResponse/delta_t,2);
