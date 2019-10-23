@@ -1,7 +1,7 @@
 function iOk = loadTriggerData(dataDir)
 iOk = false;
 binFiles = dir(fullfile(dataDir,'*.bin'));
-[~,expName,~] = fileparts( binFiles.name);
+[~,expName,~] = fileparts( binFiles(1).name);
 % Loading the sampling frequency, the sorted clusters, and the conditions
 % and triggers.
 expSubfix = fullfile(dataDir,expName);
