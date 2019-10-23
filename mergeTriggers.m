@@ -13,6 +13,10 @@ if isempty(confSigFiles)
     return
 end
 Ncf = numel(confSigFiles);
+
+binFiles = dir(fullfile(dataDir,'*.bin'));
+[~, baseName, ~] = fileparts(binFiles(1).name);
+
 % Selecting files
 fileNamesCell = frstRow(struct2cell(confSigFiles));
 [incFiles, iok] = listdlg('ListString',fileNamesCell,...
@@ -58,7 +62,7 @@ for cfs = 1:Ncf
     headFields = fieldnames(headVars);
     N = max(structfun(@(x) x.npoints,headVars));
     fs = max(structfun(@(x) x.SamplingFrequency,headVars));
-    existFlags = false(1,2);
+    existFlags = false;
     for ch = 1:numel(headFields)
         if contains(headVars.(headFields{ch}).title, whiskStimClue,...
                 'IgnoreCase', true)
@@ -68,7 +72,7 @@ for cfs = 1:Ncf
             if iscolumn(currWhisk)
                 currWhisk = currWhisk';
             end
-            whisk = [whisk, currWhisk];
+            whisk = [whisk, currWhisk(1:N)];
         end
         if contains(headVars.(headFields{ch}).title, laserStimClue,...
                 'IgnoreCase', true)
@@ -78,7 +82,7 @@ for cfs = 1:Ncf
             if iscolumn(currLaser)
                 currLaser = currLaser';
             end
-            laser = [laser, currLaser];
+            laser = [laser, currLaser(1:N)];
         end
         if contains(headVars.(headFields{ch}).title, cortxRecClue,...
                 'IgnoreCase', true)
@@ -97,7 +101,7 @@ for cfs = 1:Ncf
             end
         end
     end
-    if existFlags(1)
+    if existFlags
         if isempty(laser)
             laser = [laser, repmat(min(whisk),1,N)];
         else
@@ -107,6 +111,42 @@ for cfs = 1:Ncf
         whisk = [whisk, repmat(min(whisk),1,N)];
     end
 end
-fprintf(1,'To be continued...\n')
+
+%% Computation of the subscripts and creation of the condition variable
+pObj = StepWaveform(whisk, fs);
+pSubs = pObj.subTriggers;
+if any(diff(pSubs(:,1),1,1) < 1)
+    pFrstFlag = pObj.FirstOfTrain;
+    pSubs = pSubs(pFrstFlag,:);
+end
+% Big silence in between control and post-induction
+[~, condSepSub] = max(diff(pSubs(:,1),1,1));
+
+
+lObj = StepWaveform(laser, fs);
+lSubs = lObj.subTriggers;
+lFrstFlag = lObj.FirstOfTrain;
+lSubs = lSubs(lFrstFlag,:);
+
+Conditions = struct('name', 'Control',...
+    'Triggers', pSubs(1:condSepSub,:));
+Conditions(2).name = 'Induction';
+Conditions(2).Triggers = lSubs;
+Conditions(3).name = 'Post_induction';
+Conditions(3).Triggers =  pSubs(condSepSub+1:end,:);
+Conditions(4).name = 'AllPiezo';
+Conditions(4).Triggers = pSubs;
+Triggers = struct('Piezo', whisk, 'Laser', laser, 'LFP', lfp);
+
+analysisFileName = fullfile(dataDir,[baseName, 'analysis.mat']);
+if exist(analysisFileName,'file')
+    ovwrAns = questdlg(['The analysis file for the given folder exists.',...
+        ' Would you like to overwrite it?'],'Overwrite','Yes','No','Yes');
+    if strcmp(ovwrAns,'No')
+        fprintf(1,'No file saved.')
+        return
+    end
+end
+save(analysisFileName, 'Conditions', 'Triggers', 'fs');
 
 end
