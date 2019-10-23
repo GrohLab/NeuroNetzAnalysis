@@ -66,7 +66,7 @@ for cfs = 1:Ncf
     for ch = 1:numel(headFields)
         if contains(headVars.(headFields{ch}).title, whiskStimClue,...
                 'IgnoreCase', true)
-            existFlags(1) = true;
+            existFlags = true;
             wChanField = strrep(headFields{ch},'head','chan');
             currWhisk = chanVars.(wChanField);
             if iscolumn(currWhisk)
@@ -76,7 +76,7 @@ for cfs = 1:Ncf
         end
         if contains(headVars.(headFields{ch}).title, laserStimClue,...
                 'IgnoreCase', true)
-            existFlags(2) = true;
+            existFlags = false;
             lChanField = strrep(headFields{ch},'head','chan');
             currLaser = chanVars.(lChanField);
             if iscolumn(currLaser)
