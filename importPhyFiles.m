@@ -1,4 +1,5 @@
-function importPhyFiles(pathToData, outputName, removeNoise, ChAndAmpFlag)
+function [ sortedData, clInfo] = ...
+    importPhyFiles(pathToData, outputName, removeNoise)
 %IMPORTPHYFILES reads the files created by both Kilosort and Phy or Phy2
 %and, depending on the flag configurations, it saves a .mat file. The
 %contents of this file are constructed with the output files (.tsv, .npy).
@@ -13,8 +14,6 @@ function importPhyFiles(pathToData, outputName, removeNoise, ChAndAmpFlag)
 %                           function will overwrite it
 %           [removeNoise] - Default false; flag to indicate the inclusion
 %                           of the clusters labelled as noise.
-%           [ChAndAmpFlag] - Default false; flag to indicate the inclusion
-%                            of channel and amplitude of each cluster.
 %       OUTPUTS:
 %           No variable imported to the workspace but a .mat files written
 %           in the given folder; either in the pathToData or in the
@@ -26,9 +25,6 @@ MX_CLSS = 3;
 % Take Kilosort Data and create *all_channels.map for further analysis
 addpath(genpath('C:\Users\NeuroNetz\Documents\npy-matlab')) % path to npy-matlab
 addpath(genpath('C:\Users\NeuroNetz\Documents\GitHub\NeuroNetzAnalysis')) % path to readTSV
-
-% Where is your KiloSort Data saved
-%pathToData = 'C:\Users\NeuroNetz\Documents\Data\Alex\M73_attempt3';
 
 % What is your outputfile called
 if ~exist('outputName','var') || isempty(outputName)
@@ -65,19 +61,25 @@ if ~exist('removeNoise','var')
     removeNoise = false;
 end
 
-% Do you want to include channel and amplitude information?
-if ~exist('ChAndAmpFlag','var')
-    ChAndAmpFlag = false;
-end
-
 % Reading the KiloSort datafiles (phy updates these files)
 spkTms = readNPY(fullfile(pathToData, 'spike_times.npy'));
 clID = readNPY(fullfile(pathToData, 'spike_clusters.npy'));
 clGr = readTSV(fullfile(pathToData,'cluster_group.tsv'));
-if ChAndAmpFlag
-    clInfo = getClusterInfo(fullfile(pathToData,'cluster_info.tsv'));
+clAmps = readNPY(fullfile(pathToData, 'amplitudes.npy'));
+% Preparing the information file to get cluster location
+fClInfoID = fopen(fullfile(pathToData, 'cluster_info.tsv'), 'r');
+if fClInfoID <= 0
+    fprintf(1,'There is an issue with reading:\n - ''%s'' -\n',...
+        fullfile(pathToData, 'cluster_info.tsv'))
+    fprintf(1, 'No file written!\n')
+    fclose(fClInfoID);
+    return
 end
+infoHeads = strsplit(fgetl(fClInfoID), '\t');
+chanHeadIdx = contains(infoHeads, 'chan', 'IgnoreCase', true);
 
+
+% Creating a logical index for the user labels
 nIdx = cellfun(@strcmp,clGr(:,2),repmat("noise",size(clGr,1),1));
 gIdx = cellfun(@strcmp,clGr(:,2),repmat("good",size(clGr,1),1));
 mIdx = cellfun(@strcmp,clGr(:,2),repmat("mua",size(clGr,1),1));
@@ -86,11 +88,17 @@ grIdx = [gIdx, mIdx, nIdx];
 allClusters = cellfun(@num2str,clGr(:,1),'UniformOutput',false);
 
 spkCell = cell(size(clGr,1),1);
-
+ampsCell = zeros(size(clGr,1),1);
+clPos = zeros(size(clGr,1), 1);
 for ccln = 1:numel(allClusters)
-    spkCell(ccln) = {double(spkTms(clID == clGr{ccln,1}))/fs};
+    spkIdx = clID == clGr{ccln,1};
+    spkCell(ccln) = {double(spkTms(spkIdx))/fs};
+    ampsCell(ccln) = mean(clAmps(spkIdx));
+    fileVals = strsplit(fgetl(fClInfoID), '\t',...
+        'CollapseDelimiters', false);
+    clPos(ccln) = str2double(fileVals{chanHeadIdx});
 end
-
+fclose(fClInfoID);
 row = find(grIdx');
 [r,col2] = ind2sub(size(grIdx),row);
 [~,rearrange] = sort(r);
@@ -102,25 +110,21 @@ for cgroup = 1:MX_CLSS
     clGroup(row2(limits(cgroup)+1:limits(cgroup+1))) = cgroup;
 end
 sortedData = cat(2,allClusters,spkCell,num2cell(clGroup));
-if ChAndAmpFlag
-    importedFlag = ismember(clInfo.id,sortedData(:,1));
-    CHAN_AMPS = [clInfo.channel(importedFlag), clInfo.Amplitude(importedFlag)];
-else
-    CHAN_AMPS = [];
-end
+clInfo = [ampsCell, clPos];
 % Removes the noise from the matrix and saves an alternative output file
 if removeNoise
-    index = cellfun(@(x) x==3,sortedData(:,3));
-    sortedData(index,:) = []; %#ok<NASGU>
-    if ChAndAmpFlag
-        CHAN_AMPS(index,:) = []; %#ok<NASGU>
-    end
-    filename = [outputName, '_all_channels.mat'];
-    fname = fullfile(pathToData, filename);
-    save(fname, 'sortedData', 'fs','CHAN_AMPS');
-else
-    filename = [outputName, '_all_channels.mat'];
-    fname = fullfile(pathToData, filename);
-    save(fname, 'sortedData', 'fs','CHAN_AMPS');
+    sortedData(nIdx,:) = [];
+    clInfo(index,:) = [];
 end
+filename = [outputName, '_all_channels.mat'];
+fname = fullfile(pathToData, filename);
+if exist(fname, 'file')
+    saveAns = questdlg(sprintf('%s exists already! Overwrite?',filename),...
+        'Overwrite?', 'Yes', 'No', 'Yes');
+    if strcmp(saveAns, 'No')
+        fprintf(1, 'No file written!\n')
+        return
+    end
+end
+save(fname, 'sortedData', 'fs', 'clInfo');
 end
