@@ -1,8 +1,8 @@
 %% LTP
 % Loading the necessary files (spike times, 
-% dataDir = 'E:\Data\VPM\LTP\190701_LTP_3700_1500_1520';
-dataDir = 'D:\LTP\190716_Jesus_Emilio LTP_3751_1520_1500';
-figureDir = fullfile(dataDir,'Figures\');
+dataDir = 'E:\Data\VPM\LTP\191001_Jesus_LTP_3712_1500_1500\LTP';
+% dataDir = 'D:\LTP\190716_Jesus_Emilio LTP_3751_1520_1500';
+figureDir = fullfile(dataDir,'Figures\');                                                                                                                                                                                               
 if ~loadTriggerData(dataDir)
     fprintf(1,'Not possible to load all the necessary variables')
     return
