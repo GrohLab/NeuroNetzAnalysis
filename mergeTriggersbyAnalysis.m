@@ -56,12 +56,7 @@ cortxRecClue = {'lfp', 'ctx'};
 offset = 0;
 whisk = []; laser = []; lfp = [];
 for cfs = 1:Ncf
-    computeOffFlag = true;
     fprintf(1,'%s\n', confSigFiles(cfs).name)
-    if any(contains(confSigFiles(cfs).name, {'after','post'}, 'IgnoreCase',...
-            true))
-        computeOffFlag = false;
-    end
     auxCSFile = fullfile(confSigFiles(cfs).folder, confSigFiles(cfs).name);
     headVars = load(auxCSFile, 'head*');
     chanVars = load(auxCSFile, 'chan*');
@@ -99,13 +94,9 @@ for cfs = 1:Ncf
                 'IgnoreCase', true)
             cChanField = strrep(headFields{ch},'head','chan');
             lfs = headVars.(headFields{ch}).SamplingFrequency;
-            if computeOffFlag
-                Ns_lfp = double(headVars.(headFields{ch}).npoints);
-                Nt_lfp = Ns_lfp / lfs;
-                offset = abs(Nt_lfp - double(N)/fs);
-            else 
-                offset = 0;
-            end
+            Ns_lfp = double(headVars.(headFields{ch}).npoints);
+            Nt_lfp = Ns_lfp / lfs;
+            offset = abs(Nt_lfp - double(N)/fs);
             [currlfp, tx] = changeSignalFS(chanVars.(cChanField), lfs, fs);
             if iscolumn(currlfp)
                 currlfp = currlfp';
