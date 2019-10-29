@@ -10,6 +10,7 @@ if ~copyfile(fileName,strrep(fileName, '.tsv', '.csv'))
     return
 end
 tempFileName = strrep(fileName, '.tsv', '.csv');
-clInfo = readtable(tempFileName);
+clInfo = readtable(tempFileName,...
+    'ReadVariableNames', true, 'ReadRowNames', true, 'Delimiter', '\t');
 delete(tempFileName)
 end
