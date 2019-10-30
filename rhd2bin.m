@@ -379,11 +379,11 @@ if (data_present)
             board_dig_out_raw(board_dig_out_index:(board_dig_out_index + num_samples_per_data_block - 1)) = fread(fid, num_samples_per_data_block, 'uint16');
         end
 
-        fraction_done = 100 * (i / num_data_blocks);
+        fraction_done = 100 * (double(i) / double(num_data_blocks));
         if (fraction_done >= percent_done)
             fprintf(1, '%d%% done...\n', percent_done);
             percent_done = percent_done + print_increment;
-            tempData = int16(int32(amplifier_data(:,1:amplifier_index))-((2^15)-1));
+            tempData = int16(int32(amplifier_data)-((2^15)-1));
             fwrite(fbID,tempData,'int16')
             % datIdx = amplifier_index + 1;
             amplifier_index = 1;
@@ -400,7 +400,7 @@ if (data_present)
     % Make sure we have read exactly the right amount of data.
     bytes_remaining = filesize - ftell(fid);
     if (bytes_remaining ~= 0)
-        %error('Error: End of file not reached.');
+        error('Error: End of file not reached.');
     end
 
 end
