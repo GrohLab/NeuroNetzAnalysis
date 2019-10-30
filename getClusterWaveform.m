@@ -1,4 +1,4 @@
-function waveform = getClusterWaveform(clusterID, dataDir)
+function waveTable = getClusterWaveform(clusterID, dataDir)
 %GETCLUSTERWAVEFORM reads the raw binary file and compiles the voltage
 %traces for the given cluster (the cluster number should be the one
 %assigned by Kilosort/Phy). The output is a cell (or a structure)
@@ -13,7 +13,7 @@ function waveform = getClusterWaveform(clusterID, dataDir)
 % Emilio Isaias-Camacho @GrohLab 2019
 
 %% Input validation
-waveform = [];
+waveTable = table();
 checkNature = @(x) [iscell(x), ischar(x), isnumeric(x)];
 if ~any(checkNature(clusterID))
     fprintf(1,'Unsupported input!\n')
@@ -26,12 +26,6 @@ if ~exist(dataDir, 'dir')
     fprintf(1,'Please provide the data directory\n')
     return
 end
-%% Getting ready for the file reading
-% Reading the cluster summary
-clTable = readClusterInfo(fullfile(dataDir, 'cluster_info.tsv'));
-% Reading the channel map
-chanMap = readNPY(fullfile(dataDir, 'channel_map.npy'));
-Nch = max(chanMap);
 % Converting the ID(s) to cell arrays according to their nature
 switch bi2de(checkNature(clusterID),'left-msb')
     case 1
@@ -51,8 +45,14 @@ switch bi2de(checkNature(clusterID),'left-msb')
         end
 end
 clusterID = unique(clusterID);
-% Determining hosting channels
-clIdx = false(numel(clTable.Properties.RowNames), numel(clusterID));
+%% Getting ready for the file reading
+% Reading the cluster summary
+clTable = readClusterInfo(fullfile(dataDir, 'cluster_info.tsv'));
+% Reading the channel map
+chanMap = readNPY(fullfile(dataDir, 'channel_map.npy'));
+Nch = numel(chanMap)-1;
+% Verifying if the given clusters exist in this experiment
+clIdx = false(size(clTable, 1), numel(clusterID));
 for ccl = 1:numel(clusterID)
     clIdx(:,ccl) = strcmp(clTable.id, clusterID(ccl));
 end
@@ -60,7 +60,6 @@ missClustFlag = ~any(clIdx,1);
 if ~all(~missClustFlag)    
     fprintf(1,'Some of the given clusters do not exist in this experiment\n')
     fprintf(1,'Clusters not found:\n')
-    
     fprintf(1,'%s\n', clusterID{missClustFlag})
     if sum(missClustFlag) < numel(clusterID)
         contAns = questdlg('Continue without these clusters?', 'Continue?',...
@@ -77,8 +76,23 @@ end
 clusterID(missClustFlag) = [];
 clIdx(:,missClustFlag) = [];
 clIdx = any(clIdx,2);
+% Determining hosting channels
 ch2read = chanMap(clTable{clusterID, 'channel'} + 1);
 
+
+% Verifying if the waveform(s) for the given cluster(s) was/were computed
+% already
+%{
+waveFile = dir(fullfile(dataDir,'_waveforms.mat'));
+if exist(waveFile, 'file')
+    load(fullfile(dataDir, waveFile.name),'waveTable')
+    N_exCl = size(waveTable, 1);
+    exIdx = false(N_exCl, numel(clusterID));
+    for ccl = 1:N_exCl
+        exIdx(:,ccl) = strcmp(waveTable.id, clusterID(ccl));
+    end
+end
+%}
 
 % Determinig the spike times for the given clusters
 spikeFile = dir(fullfile(dataDir,'*_all_channels.mat'));
@@ -115,14 +129,11 @@ while ~feof(fID) && cchan <= numel(clusterID)
     for cspk = 1:numel(spkSubs{cchan})
         % Jumping to 1 ms before the time when the spike occured
         fseek(fID, 2*((Nch+1)*(spkDists(cspk) - spikeSamples)), 'cof');
-        % Logical flag for average
-        % avFlag = any(waveform(cchan,:));
         % Reading the waveform
         rawWave = fread(fID, [1, spikeWaveTime], 'int16=>single', 2*Nch);
         % Averaging the waveform
         waveform(cchan,:) = waveform(cchan, :) + rawWave /...
             cspk;
-            %(~avFlag*1 + avFlag*2);;
         % Jumping back to the exact time of the spike
         fseek(fID, -2*((Nch+1)*(spikeSamples+1)), 'cof');
     end
@@ -131,5 +142,13 @@ while ~feof(fID) && cchan <= numel(clusterID)
     frewind(fID);
 end
 fclose(fID);
+
+%% Arranging the output
+if isrow(clusterID)
+    clusterID = clusterID';
+end
+waveTable = table(waveform, ch2read,...
+    'RowNames', clusterID, 'VariableNames', {'Waveform', 'Channel'});
+waveTable.Properties.DimensionNames{1} = 'id';
 end
 
