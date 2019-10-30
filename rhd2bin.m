@@ -438,13 +438,13 @@ if (data_present)
 %     temp_sensor_data = temp_sensor_data / 100; % units = deg C
 % 
     % Check for gaps in timestamps.
-    num_gaps = sum(diff(t_amplifier) ~= 1);
-    if (num_gaps == 0)
-        fprintf(1, 'No missing timestamps in data.\n');
-    else
-        fprintf(1, 'Warning: %d gaps in timestamp data found.  Time scale will not be uniform!\n', ...
-            num_gaps);
-    end
+%     num_gaps = sum(diff(t_amplifier) ~= 1);
+%     if (num_gaps == 0)
+%         fprintf(1, 'No missing timestamps in data.\n');
+%     else
+%         fprintf(1, 'Warning: %d gaps in timestamp data found.  Time scale will not be uniform!\n', ...
+%             num_gaps);
+%     end
 % 
 %     % Scale time steps (units = seconds).
 %     t_amplifier = t_amplifier / sample_rate;
