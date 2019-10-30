@@ -29,6 +29,9 @@ end
 %% Getting ready for the file reading
 % Reading the cluster summary
 clTable = readClusterInfo(fullfile(dataDir, 'cluster_info.tsv'));
+% Reading the channel map
+chanMap = readNPY(fullfile(dataDir, 'channel_map.npy'));
+Nch = max(chanMap);
 % Converting the ID(s) to cell arrays according to their nature
 switch bi2de(checkNature(clusterID),'left-msb')
     case 1
@@ -47,21 +50,18 @@ switch bi2de(checkNature(clusterID),'left-msb')
             return
         end
 end
+clusterID = unique(clusterID);
 % Determining hosting channels
-try
-    ch2read = clTable{clusterID, 'channel'};
-catch
+clIdx = false(numel(clTable.Properties.RowNames), numel(clusterID));
+for ccl = 1:numel(clusterID)
+    clIdx(:,ccl) = strcmp(clTable.id, clusterID(ccl));
+end
+missClustFlag = ~any(clIdx,1);
+if ~all(~missClustFlag)    
     fprintf(1,'Some of the given clusters do not exist in this experiment\n')
     fprintf(1,'Clusters not found:\n')
-    missClustFlag = false(numel(clusterID),1);
-    clIdx = false(numel(clTable.Properties.RowNames), numel(clusterID));
-    for ccl = 1:numel(clusterID)
-        clIdx(:,ccl) = strcmp(clTable.id, clusterID(ccl));
-        if ~any(clIdx(:,ccl))
-            missClustFlag(ccl) = true;
-            fprintf(1,'%s\n', clusterID{ccl})
-        end
-    end
+    
+    fprintf(1,'%s\n', clusterID{missClustFlag})
     if sum(missClustFlag) < numel(clusterID)
         contAns = questdlg('Continue without these clusters?', 'Continue?',...
             'Yes','No','Yes');
@@ -73,10 +73,12 @@ catch
         fprintf(1,'No valid cluster ID provided!\n')
         return
     end
-    clusterID(missClustFlag) = [];
-    clIdx(:,missClustFlag) = [];
-    ch2read = clTable{clusterID, 'channel'};
-end
+end    
+clusterID(missClustFlag) = [];
+clIdx(:,missClustFlag) = [];
+clIdx = any(clIdx,2);
+ch2read = chanMap(clTable{clusterID, 'channel'} + 1);
+
 
 % Determinig the spike times for the given clusters
 spikeFile = dir(fullfile(dataDir,'*_all_channels.mat'));
@@ -88,13 +90,46 @@ if ~isempty(spikeFile)
     end
 end
 %% Reading the binary file
+% Taking ?1.25 ms around the spike.
+spikeWaveTime = 2*round(1.25e-3 * fs) + 1;
+spikeSamples = (spikeWaveTime - 1)/2;
 binFile = dir(fullfile(dataDir, '*.bin'));
 if isempty(binFile)
     fprintf(1, 'Without a binary file it is impossible to get the waveforms')
     fprintf(1,'\n');
     return
 end
-spkSubs = cellfun(@(x) round(x.*fs),sortedData(:,2),...
+spkSubs = cellfun(@(x) round(x.*fs),sortedData(clIdx,2),...
     'UniformOutput',false);
+waveform = zeros(numel(clusterID), spikeWaveTime);
+% [ch2read, readOrder, repeatChs] = unique(ch2read);
+fID = fopen(fullfile(dataDir, binFile.name), 'r');
+cchan = 1;
+% Main loop
+while ~feof(fID) && cchan <= numel(clusterID)
+    fprintf(1,'Reading channel %d ',ch2read(cchan))
+    % Jumping to the channel 
+    fseek(fID, 2*(ch2read(cchan)), 'cof');
+    spkDists = [spkSubs{cchan}(1);diff(spkSubs{cchan})];
+    fprintf(1,'looking for cluster %s...', clusterID{cchan})
+    for cspk = 1:numel(spkSubs{cchan})
+        % Jumping to 1 ms before the time when the spike occured
+        fseek(fID, 2*((Nch+1)*(spkDists(cspk) - spikeSamples)), 'cof');
+        % Logical flag for average
+        % avFlag = any(waveform(cchan,:));
+        % Reading the waveform
+        rawWave = fread(fID, [1, spikeWaveTime], 'int16=>single', 2*Nch);
+        % Averaging the waveform
+        waveform(cchan,:) = waveform(cchan, :) + rawWave /...
+            cspk;
+            %(~avFlag*1 + avFlag*2);;
+        % Jumping back to the exact time of the spike
+        fseek(fID, -2*((Nch+1)*(spikeSamples+1)), 'cof');
+    end
+    fprintf(1,' done!\n')
+    cchan = cchan + 1;
+    frewind(fID);
+end
+fclose(fID);
 end
 
