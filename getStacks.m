@@ -130,10 +130,19 @@ if Ns
             Ns = Ns - sum(outlier);
         end
         MAX_CONT_SAMP = min(cellfun(@length,varargin));
+        % Convert all signals into a row vector
         RoC = cellfun(@isrow,varargin);
-        if ~any(RoC)
+        if ~all(RoC)
             varargin(~RoC) = cellfun(@transpose,varargin(~RoC),...
                 'UniformOutput',false);
+        end
+        % Convert all signals to double
+        clss = cellfun(@class, varargin, 'UniformOutput', false);
+        if numel(unique(clss)) > 1
+            diffTypeFlag = ...
+                ~cellfun(@contains, clss, repmat({'double'},numel(clss),1));
+            varargin(diffTypeFlag) =...
+                cellfun(@double, varargin(diffTypeFlag), 'UniformOutput', false);
         end
     end
     if sum(signalCheck) ~= Ns && ~any(signalCheck3)
@@ -335,27 +344,38 @@ if Ns == 1
     end
 end
 
+% Transpose column vectors
+transpSign = cellfun(@isrow,signalCell);
+if ~all(transpSign)
+    try
+        signalCell(~transpSign) =...
+            {signalCell{~transpSign}'};
+    catch
+        auxSegm = cellfun(@transpose,signalCell(~transpSign),...
+            'UniformOutput',false);
+        signalCell(~transpSign) = auxSegm;
+    end
+end
+
+% % Equalize data type
+% clss = cellfun(@class, signalCell, 'UniformOutput', false);
+% if numel(unique(clss)) > 1
+%     diffTypeFlag = ...
+%         ~cellfun(@contains, clss, repmat({'double'},numel(clss),1));
+%     signalCell(diffTypeFlag) =...
+%         cellfun(@double, signalCell(diffTypeFlag), 'UniformOutput', false);
+% end
+
 try
     sigSeg =...
         cellfun(...
         @(x) x(:,round((Idxs(1):Idxs(2)))),...
         signalCell, 'UniformOutput', false);
 catch ME
-    disp(ME.getReport)
-    fprintf('Very unlikely case: signals with different length\n')
+    fprintf('The is an issue with the continuous cell array.\n')
     fprintf('Worth debugging!\n')
-end
-
-transpSign = cellfun(@isrow,sigSeg);
-if sum(~transpSign)
-    try
-        sigSeg(~transpSign) =...
-            {sigSeg{~transpSign}'};
-    catch
-        auxSegm = cellfun(@transpose,sigSeg(~transpSign),...
-            'UniformOutput',false);
-        sigSeg(~transpSign) = auxSegm;
-    end
+    disp(ME.getReport)
+    dbstop
 end
 
 end
