@@ -108,7 +108,7 @@ end
 
 [Ne, Nt, NTa] = size(discStack);
 % Computing the time axis for the stack
-tx = (0:Nt)/fs - timeLapse(1);
+tx = (0:Nt - 1)/fs - timeLapse(1);
 %% LTP Exclusive: Control and post-induction conditions
 % Boolean flags indicating which trigger belongs to which condition (delay
 % flags)
@@ -119,19 +119,25 @@ tx = (0:Nt)/fs - timeLapse(1);
 gapFlag = abs(zscore(biGaps)) > 3;
 mainGaps = sort(gapSubs(gapFlag), 'ascend');
 Ng = numel(mainGaps);
-condFlags = false(NTa, Ng+1);
+Ncond = Ng+1;
+condFlags = false(NTa, Ncond);
 initSub = 1;
 for cg = 1:Ng
     condFlags(initSub:mainGaps(cg),cg) = true;
     initSub = mainGaps(cg) + 1;
 end
-condFlags(initSub:NTa,Ng+1) = true;
+condFlags(initSub:NTa, Ncond) = true;
 Na = sum(condFlags,1);
 
 
 %% Counting spikes in given windows and computing the statistical significance
 sponActStackIdx = tx >= spontaneousWindow(1) & tx <= spontaneousWindow(2);
 respActStackIdx = tx >= responseWindow(1) & tx <= responseWindow(2);
+
+
+
+
+
 if size(condFlags,2) == 2
     % Getting the counts in the specified response and spontaneous time
     % windows
