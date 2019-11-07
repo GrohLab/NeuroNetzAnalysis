@@ -113,22 +113,20 @@ tx = (0:Nt)/fs - timeLapse(1);
 % Boolean flags indicating which trigger belongs to which condition (delay
 % flags)
 % Determining if the gap between stimuli are big enough to separate the
-% conditions
-avGap = mean(diff(Conditions(chCond).Triggers(:,1),1,1));
-[gapVal, timeGapSub] = max(diff(Conditions(chCond).Triggers(:,1),1,1));
-errGap = log(avGap) - log(gapVal);
-if abs(errGap) > 1
-    % If the gap is bigger in one order of magnitude, we consider it to be
-    % another condition (Control / Post-induction)
-    condFlags = false(NTa, 2);
-    condFlags(1:timeGapSub,1) = true;
-    condFlags(timeGapSub+1:end,2) = true;
-else
-    % Otherwise, it is only one condition
-    condFlags = true(NTa, 1);
+% conditions. If the gap is bigger than 3 standard deviations, the gap is
+% sufficiently big to account for another set
+[biGaps, gapSubs] = sort(diff(Conditions(chCond).Triggers(:,1)), 'descend');
+gapFlag = abs(zscore(biGaps)) > 3;
+mainGaps = sort(gapSubs(gapFlag), 'ascend');
+Ng = numel(mainGaps);
+condFlags = false(NTa, Ng+1);
+initSub = 1;
+for cg = 1:Ng
+    condFlags(initSub:mainGaps(cg),cg) = true;
+    initSub = mainGaps(cg) + 1;
 end
+condFlags(initSub:NTa,Ng+1) = true;
 Na = sum(condFlags,1);
-
 
 
 %% Counting spikes in given windows and computing the statistical significance
