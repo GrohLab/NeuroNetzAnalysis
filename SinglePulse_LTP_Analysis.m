@@ -134,9 +134,9 @@ Na = sum(condFlags,1);
 sponActStackIdx = tx >= spontaneousWindow(1) & tx <= spontaneousWindow(2);
 respActStackIdx = tx >= responseWindow(1) & tx <= responseWindow(2);
 
-
-
-
+timeFlags = [sponActStackIdx;respActStackIdx];
+statTests(discStack,condFlags,timeFlags);
+return
 
 if size(condFlags,2) == 2
     % Getting the counts in the specified response and spontaneous time
