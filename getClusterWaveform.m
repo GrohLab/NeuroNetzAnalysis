@@ -1,4 +1,4 @@
-function waveTable = getClusterWaveform(clusterID, dataDir)
+function clWaveforms = getClusterWaveform(clusterID, dataDir)
 %GETCLUSTERWAVEFORM reads the raw binary file and compiles the voltage
 %traces for the given cluster (the cluster number should be the one
 %assigned by Kilosort/Phy). The output is a cell (or a structure)
@@ -13,7 +13,7 @@ function waveTable = getClusterWaveform(clusterID, dataDir)
 % Emilio Isaias-Camacho @GrohLab 2019
 
 %% Input validation
-waveTable = table();
+clWaveforms = cell(1,2);
 checkNature = @(x) [iscell(x), ischar(x), isnumeric(x)];
 if ~any(checkNature(clusterID))
     fprintf(1,'Unsupported input!\n')
@@ -48,13 +48,23 @@ clusterID = unique(clusterID);
 %% Getting ready for the file reading
 % Reading the cluster summary
 clTable = readClusterInfo(fullfile(dataDir, 'cluster_info.tsv'));
-% Reading the channel map
+% % Reading the channel map
 chanMap = readNPY(fullfile(dataDir, 'channel_map.npy'));
 Nch = numel(chanMap)-1;
-% Verifying if the given clusters exist in this experiment
+
+spkTmls = readNPY(fullfile(dataDir, 'spike_templates.npy'));
+spkCls = readNPY(fullfile(dataDir, 'spike_clusters.npy'));
+
+% Logical variables for clusters (clIdx) and spikes (spkIdx)
 clIdx = false(size(clTable, 1), numel(clusterID));
+spkIdx = false(size(spkCls,1), numel(clusterID));
+clTempSubs = cell(numel(clusterID),1);
+% Verifying if the given clusters exist in this experiment
 for ccl = 1:numel(clusterID)
     clIdx(:,ccl) = strcmp(clTable.id, clusterID(ccl));
+    spkIdx(:,ccl) = spkCls == str2double(clusterID);
+    % Determining the template for the given cluster
+    clTempSubs{ccl} = mode(spkTmls(spkIdx(:,ccl)));
 end
 missClustFlag = ~any(clIdx,1);
 if ~all(~missClustFlag)    
@@ -75,10 +85,12 @@ if ~all(~missClustFlag)
 end    
 clusterID(missClustFlag) = [];
 clIdx(:,missClustFlag) = [];
+spkIdx(:, missClustFlag) = [];
+clTempSubs(missClustFlag) = [];
 clIdx = any(clIdx,2);
 % Determining hosting channels
-ch2read = chanMap(clTable{clusterID, 'channel'} + 1);
-
+% ch2read = chanMap(clTable{clusterID, 'channel'} + 1);
+ch2read = clTable{clusterID, 'channel'};
 
 % Verifying if the waveform(s) for the given cluster(s) was/were computed
 % already
@@ -104,7 +116,7 @@ if ~isempty(spikeFile)
     end
 end
 %% Reading the binary file
-% Taking ?1.25 ms around the spike.
+% Taking ~1.25 ms around the spike.
 spikeWaveTime = 2*round(1.25e-3 * fs) + 1;
 spikeSamples = (spikeWaveTime - 1)/2;
 binFile = dir(fullfile(dataDir, '*.bin'));
@@ -113,42 +125,52 @@ if isempty(binFile)
     fprintf(1,'\n');
     return
 end
+pcFeat = readNPY(fullfile(dataDir, 'pc_features.npy'));
+pcInd = readNPY(fullfile(dataDir, 'pc_feature_ind.npy'));
+
+
+
 spkSubs = cellfun(@(x) round(x.*fs),sortedData(clIdx,2),...
     'UniformOutput',false);
-waveform = zeros(numel(clusterID), spikeWaveTime);
+clWaveforms = cell(numel(clusterID),3);
 % [ch2read, readOrder, repeatChs] = unique(ch2read);
 fID = fopen(fullfile(dataDir, binFile.name), 'r');
 cchan = 1;
 % Main loop
 while ~feof(fID) && cchan <= numel(clusterID)
+    % Computing the location of the channel features
+    pcIdx = ch2read(cchan) == chanMap(pcInd(clTempSubs{cchan}+1,:)+1);
+    clFeat = pcFeat(spkIdx(:,cchan), :, pcIdx);
     fprintf(1,'Reading channel %d ',ch2read(cchan))
     % Jumping to the channel 
     fseek(fID, 2*(ch2read(cchan)), 'cof');
+    % Computing the distance from spike to spike
     spkDists = [spkSubs{cchan}(1);diff(spkSubs{cchan})];
     fprintf(1,'looking for cluster %s...', clusterID{cchan})
+    % Allocating space for the spikes
+    waveform = zeros(spikeWaveTime, numel(spkSubs{cchan}));
     for cspk = 1:numel(spkSubs{cchan})
         % Jumping to 1 ms before the time when the spike occured
         fseek(fID, 2*((Nch+1)*(spkDists(cspk) - spikeSamples)), 'cof');
         % Reading the waveform
-        rawWave = fread(fID, [1, spikeWaveTime], 'int16=>single', 2*Nch);
-        % Averaging the waveform
-        waveform(cchan,:) = waveform(cchan, :) + rawWave /...
-            cspk;
+        waveform(:,cspk) =...
+            fread(fID, [spikeWaveTime, 1], 'int16=>single', 2*Nch);
         % Jumping back to the exact time of the spike
         fseek(fID, -2*((Nch+1)*(spikeSamples+1)), 'cof');
     end
     fprintf(1,' done!\n')
+    clWaveforms(cchan,:) = [clusterID(cchan), {waveform}, {clFeat}];
     cchan = cchan + 1;
     frewind(fID);
 end
 fclose(fID);
 
-%% Arranging the output
-if isrow(clusterID)
-    clusterID = clusterID';
-end
-waveTable = table(waveform, ch2read,...
-    'RowNames', clusterID, 'VariableNames', {'Waveform', 'Channel'});
-waveTable.Properties.DimensionNames{1} = 'id';
+% %% Arranging the output
+% if isrow(clusterID)
+%     clusterID = clusterID';
+% end
+% waveTable = table(waveform, ch2read,...
+%     'RowNames', clusterID, 'VariableNames', {'Waveform', 'Channel'});
+% waveTable.Properties.DimensionNames{1} = 'id';
 end
 
