@@ -15,7 +15,7 @@ checkStack = @(x) any([islogical(x), size(x) >= 1, numel(size(x)) == 3]);
 [~, Nt, NTa] = size(dStack);
 
 checkCondFlag = @(x) all([size(x,1) == NTa, islogical(x)]);
-checkTimeFlags = @(x) all([length(x) == Nt, islogical(x)]);
+checkTimeFlags = @(x) all([size(x,1) == 2,size(x,2) == Nt, islogical(x)]);
 
 
 addRequired(p, 'dStack', checkStack)
@@ -29,6 +29,21 @@ parse(p,dStack, condFlag, timeFlags, varargin{:})
 testType = p.Results.test;
 
 %% Preparatory variables
-
+% Number of conditions to cycle through
+Ncond = size(condFlag, 2);
+for cc1 = 1:Ncond
+    for cc2 = cc1:Ncond
+        if cc1 == cc2
+            % Comparing spontaneous versus evoked from the same condition
+            sponCount =...
+                squeeze(sum(dStack(2:end,timeFlags(1,:),condFlag(:,cc1)),2));
+            evokCount =...
+                squeeze(sum(dStack(2:end,timeFlags(2,:),condFlag(:,cc1)),2));
+            
+            continue
+        end
+        % Comparing condition A versus condition B; spontaneous and evoked
+    end
+end
 end
 
