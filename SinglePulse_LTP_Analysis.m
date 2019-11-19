@@ -209,7 +209,7 @@ if size(condFlags,2) == 2
             shufContCountResp(ccl,:));
         % Post-induction conditions
         [PPostCond(ccl), HPostCond(ccl)] = signrank(postCountSpontan(ccl,:),...
-            postCountSpontan(ccl,:));
+            postCountResponse(ccl,:));
         % Shuffled post-induction condition
         [PShufPostCond(ccl), HShufPostCond(ccl)] = signrank(...
             shufPostCountSpon(ccl,:), shufPostCountResp(ccl,:));
