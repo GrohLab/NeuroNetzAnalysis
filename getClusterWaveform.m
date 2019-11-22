@@ -15,6 +15,7 @@ function clWaveforms = getClusterWaveform(clusterID, dataDir)
 %% Input validation
 clWaveforms = cell(1,2);
 checkNature = @(x) [iscell(x), ischar(x), isnumeric(x)];
+getLastCell = @(x) x{numel(x)};
 if ~any(checkNature(clusterID))
     fprintf(1,'Unsupported input!\n')
     fprintf(1,'Be sure you input either the cluster ID as a ')
@@ -49,9 +50,14 @@ clusterID = unique(clusterID);
 % Reading the cluster summary
 clTable = readClusterInfo(fullfile(dataDir, 'cluster_info.tsv'));
 % % Reading the channel map
+fP = fopen(fullfile(dataDir,'params.py'),'r');
+fgetl(fP);
+ln = fgetl(fP);
+fclose(fP);
+Nch = getLastCell(textscan(ln,'%s = %d'))-1;
+% Reading the channel order
 chanMap = readNPY(fullfile(dataDir, 'channel_map.npy'));
-Nch = numel(chanMap)-1;
-
+% Preparatory variables for organising the output
 spkTmls = readNPY(fullfile(dataDir, 'spike_templates.npy'));
 spkCls = readNPY(fullfile(dataDir, 'spike_clusters.npy'));
 
@@ -62,7 +68,7 @@ clTempSubs = cell(numel(clusterID),1);
 % Verifying if the given clusters exist in this experiment
 for ccl = 1:numel(clusterID)
     clIdx(:,ccl) = strcmp(clTable.id, clusterID(ccl));
-    spkIdx(:,ccl) = spkCls == str2double(clusterID);
+    spkIdx(:,ccl) = spkCls == str2double(clusterID(ccl));
     % Determining the template for the given cluster
     clTempSubs{ccl} = mode(spkTmls(spkIdx(:,ccl)));
 end
