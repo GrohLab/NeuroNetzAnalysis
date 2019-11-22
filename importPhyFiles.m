@@ -114,7 +114,7 @@ clInfo = [ampsCell, clPos];
 % Removes the noise from the matrix and saves an alternative output file
 if removeNoise
     sortedData(nIdx,:) = [];
-    clInfo(index,:) = [];
+    clInfo(nIdx,:) = [];
 end
 filename = [outputName, '_all_channels.mat'];
 fname = fullfile(pathToData, filename);
