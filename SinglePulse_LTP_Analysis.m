@@ -131,98 +131,68 @@ Na = sum(condFlags,1);
 
 
 %% Counting spikes in given windows and computing the statistical significance
+% Time logical flags
 sponActStackIdx = tx >= spontaneousWindow(1) & tx <= spontaneousWindow(2);
 respActStackIdx = tx >= responseWindow(1) & tx <= responseWindow(2);
-
 timeFlags = [sponActStackIdx;respActStackIdx];
-statTests(discStack,condFlags,timeFlags);
-return
-
-if size(condFlags,2) == 2
-    % Getting the counts in the specified response and spontaneous time
-    % windows
-    contCountResponse = squeeze(sum(discStack(2:end,respActStackIdx,condFlags(:,1)),2));
-    contCountSpontan = squeeze(sum(discStack(2:end,sponActStackIdx,condFlags(:,1)),2));
-    postCountResponse = squeeze(sum(discStack(2:end,respActStackIdx,condFlags(:,2)),2));
-    postCountSpontan = squeeze(sum(discStack(2:end,sponActStackIdx,condFlags(:,2)),2));
-    % Computing the rates for the spike counts with the given time windows
-    delta_t = diff(responseWindow);
-    contRateResponse = mean(contCountResponse/delta_t,2);
-    contRateSpontan = mean(contCountSpontan/delta_t,2);
-    postRateResponse = mean(postCountResponse/delta_t,2);
-    postRateSpontan = mean(postCountSpontan/delta_t,2);
-    % Auxiliary variable to plot the diagonal line and to keep the scales
-    % across the different plots 
-    llx = max(max(max(contRateResponse, postRateResponse),...
-        max(contRateSpontan, postRateSpontan)));
-    % Computing the probability of spike for all trials in the given
-    % windows
-    % Flags
-    contBoolResponse = double(contCountResponse > 0);
-    contBoolSpontan = double(contCountSpontan > 0);
-    postBoolResponse = double(postCountResponse > 0);
-    postBoolSpontan = double(postCountSpontan > 0);
-    % Probability
-    contProbResponse = mean(contBoolResponse,2);
-    contProbSpontan = mean(contBoolSpontan,2);
-    postProbResponse = mean(postBoolResponse,2);
-    postProbSpontan = mean(postBoolSpontan,2);
-    
-    % Shuffled counts for paired tests: 
-    shufContCountResp = zeros(size(contCountResponse));
-    shufContCountSpon = shufContCountResp;
-    shufPostCountResp = zeros(size(postCountResponse));
-    shufPostCountSpon = shufPostCountResp;
-    for ccl = 1:Ncl 
-        shufContCountResp(ccl,:) = contCountResponse(ccl,randperm(Na(1)));
-        shufContCountSpon(ccl,:) = contCountSpontan(ccl,randperm(Na(1)));
-        shufPostCountResp(ccl,:) = postCountResponse(ccl,randperm(Na(2)));
-        shufPostCountSpon(ccl,:) = postCountSpontan(ccl,randperm(Na(2)));
+% Time window
+delta_t = diff(responseWindow);
+% Statistical tests
+[Results, Counts] = statTests(discStack,condFlags,timeFlags);
+% Firing rate for all clusters, for all trials
+meanfr = cellfun(@(x) mean(x,2),Counts,'UniformOutput',false);
+%% Plots
+mxfr = cellfun(@(x) max(x),meanfr);
+mxfr = round(mxfr*1.1,-1);
+Nr = numel(Results);
+figs = gobjects(Nr,1);
+ax = gobjects(2,1);
+aslSubX = 1;
+aslSubY = 2;
+axLabels = {'Spontaneous_', 'Evoked_'};
+Hc = [];
+for cr = 1:Nr
+    combCell = textscan(Results(cr).Combination,'%d %d\t%s');    
+    cond1 = double(combCell{1}); cond2 = double(combCell{2});
+    figs(cr) = figure('Color',[1,1,1],'Visible','off');
+    actvty = Results(cr).Activity(1).Type;
+    if contains(actvty,'condition')
+        figType = 1;
+    else
+        figType = 2;
     end
-    
-    % Computing the statistical tests: Wilcoxon [p, h] = signrank(x,y);
-    % paired test, shuffling required!
-    % Control and post-induction conditions for unaltered and shuffled
-    % chonological sequence
-    HContCond = zeros(Ncl,1);
-    PContCond = HContCond;
-    HShufContCond = HContCond;
-    PShufContCond = HContCond;
-    HPostCond = HContCond;
-    PPostCond = HContCond;
-    HShufPostCond = HContCond;
-    PShufPostCond = HContCond;
-    % KS test [h, p] = kstest2(x,y); for unpaired conditions 
-    % Spontaneous and evoked activitiy in both control and post-induction
-    % conditions.
-    HSpon = HContCond;
-    PSpon = HContCond;
-    HResp = HContCond;
-    PResp = HContCond;
-    for ccl = 1:Ncl
-        % Wilcoxon test
-        % Control condition: spontaneous against evoked windows.
-        [PContCond(ccl), HContCond(ccl)] = signrank(contCountSpontan(ccl,:),...
-            contCountResponse(ccl,:));
-        % Shuffled control condition
-        [PShufContCond(ccl), HShufContCond(ccl)] = signrank(shufContCountSpon(ccl,:),...
-            shufContCountResp(ccl,:));
-        % Post-induction conditions
-        [PPostCond(ccl), HPostCond(ccl)] = signrank(postCountSpontan(ccl,:),...
-            postCountResponse(ccl,:));
-        % Shuffled post-induction condition
-        [PShufPostCond(ccl), HShufPostCond(ccl)] = signrank(...
-            shufPostCountSpon(ccl,:), shufPostCountResp(ccl,:));
-        % Kolmogorov-Smirnov test
-        % Spontaneous activity
-        [HSpon(ccl), PSpon(ccl)] = kstest2(contCountSpontan(ccl,:),...
-            postCountSpontan(ccl,:));
-        % Evoked activity
-        [HResp(ccl), PResp(ccl)] = kstest2(contCountResponse(ccl,:),...
-            postCountResponse(ccl,:));
+    csp = 1;
+    while csp <= figType
+        actvty = Results(cr).Activity(csp).Type;
+        H = Results(cr).Activity(csp).Pvalues < 0.05;
+        Hc = [Hc,H];
+        ttle = sprintf('%s: %d vs. %d',actvty,cond1,cond2);
+        ax(csp) = subplot(1,figType,csp,'Parent',figs(cr));
+        switch actvty
+            case 'Spontaneous'
+                aslSubX = 1; aslSubY = 1;
+            case 'Evoked'
+                aslSubX = 2; aslSubY = 2;
+            otherwise
+                aslSubX = 1; aslSubY = 2;
+        end
+        xaxis = meanfr{cond1, aslSubX}; yaxis = meanfr{cond2, aslSubY};
+        scatter(ax(csp),xaxis,yaxis); grid(ax(csp), 'on'); 
+        grid(ax(csp), 'minor'); axis('square'); 
+        axis(ax(csp), [0, mxfr(cond1,aslSubX), 0, mxfr(cond1,aslSubY)]);
+        ax(csp).NextPlot = 'add';
+        axMx = max(mxfr(cond1,aslSubX),mxfr(cond2,aslSubY));
+        line(ax(csp), 'XData', [0, axMx],...
+            'YData', [0, axMx],...
+            'Color', [0.8, 0.8, 0.8], 'LineStyle', '--');
+        title(ax(csp),ttle); 
+        xlabel(ax(csp), [axLabels{aslSubX},num2str(cond1),' [Hz]']); 
+        ylabel(ax(csp), [axLabels{aslSubY},num2str(cond2),' [Hz]']);
+        scatter(ax(csp),xaxis(H), yaxis(H),15)
+        csp = csp + 1;
     end
-else
 end
+set(figs,'Visible','on')
 %% Plotting the scatter data points
 % Auxiliary variable for labelling the data points in the scatter plots.
 clsLbls = num2str((1:Ncl)');
