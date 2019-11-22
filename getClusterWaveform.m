@@ -149,12 +149,15 @@ while ~feof(fID) && cchan <= numel(clusterID)
     clFeat = pcFeat(spkIdx(:,cchan), :, pcIdx);
     fprintf(1,'Reading channel %d ',ch2read(cchan))
     % Jumping to the channel 
-    fseek(fID, 2*(ch2read(cchan)), 'cof');
+    fseek(fID, 2*(ch2read(cchan)), 'bof');
     % Computing the distance from spike to spike
     spkDists = [spkSubs{cchan}(1);diff(spkSubs{cchan})];
     fprintf(1,'looking for cluster %s...', clusterID{cchan})
     % Allocating space for the spikes
     waveform = zeros(spikeWaveTime, numel(spkSubs{cchan}));
+    %fig = figure('Color',[1,1,1],'Visible', 'off');
+    %ax = axes('Parent', fig); ax.NextPlot = 'add';
+    %subSet = 1:floor(numel(spkDists)*0.1);    
     for cspk = 1:numel(spkSubs{cchan})
         % Jumping to 1 ms before the time when the spike occured
         fseek(fID, 2*((Nch+1)*(spkDists(cspk) - spikeSamples)), 'cof');
@@ -163,11 +166,15 @@ while ~feof(fID) && cchan <= numel(clusterID)
             fread(fID, [spikeWaveTime, 1], 'int16=>single', 2*Nch);
         % Jumping back to the exact time of the spike
         fseek(fID, -2*((Nch+1)*(spikeSamples+1)), 'cof');
+    %    if ismember(cspk,subSet)
+    %        plot(ax,waveform(:,cspk),'DisplayName',num2str(cspk));
+    %    end
     end
     fprintf(1,' done!\n')
     clWaveforms(cchan,:) = [clusterID(cchan), {waveform}, {clFeat}];
     cchan = cchan + 1;
     frewind(fID);
+    %fig.Visible = 'on';
 end
 fclose(fID);
 
