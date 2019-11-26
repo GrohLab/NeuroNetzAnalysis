@@ -93,7 +93,7 @@ clusterID(missClustFlag) = [];
 clIdx(:,missClustFlag) = [];
 spkIdx(:, missClustFlag) = [];
 clTempSubs(missClustFlag) = [];
-clIdx = any(clIdx,2);
+[clSub,~] = find(clIdx);
 % Determining hosting channels
 % ch2read = chanMap(clTable{clusterID, 'channel'} + 1);
 ch2read = clTable{clusterID, 'channel'};
@@ -136,7 +136,7 @@ pcInd = readNPY(fullfile(dataDir, 'pc_feature_ind.npy'));
 
 
 
-spkSubs = cellfun(@(x) round(x.*fs),sortedData(clIdx,2),...
+spkSubs = cellfun(@(x) round(x.*fs),sortedData(clSub,2),...
     'UniformOutput',false);
 clWaveforms = cell(numel(clusterID),3);
 % [ch2read, readOrder, repeatChs] = unique(ch2read);
