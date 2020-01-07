@@ -1,8 +1,13 @@
 %% LTP
-% Loading the necessary files (spike times, 
-dataDir = 'E:\Data\VPM\LTP\191016_Jesus_LTP_3710_1520_1500';
+% Choosing the working directory
+dataDir = uigetdir('E:\Data\VPM\LTP','Choose a working directory');
+if dataDir == 0
+    return
+end
+%dataDir = 'E:\Data\VPM\LTP\191016_Jesus_LTP_3710_1520_1500';
 % dataDir = 'D:\LTP\190716_Jesus_Emilio LTP_3751_1520_1500';
-figureDir = fullfile(dataDir,'Figures\');                                                                                                                                                                                               
+figureDir = fullfile(dataDir,'Figures\');
+% Loading the necessary files
 if ~loadTriggerData(dataDir)
     fprintf(1,'Not possible to load all the necessary variables\n')
     return
@@ -143,14 +148,15 @@ delta_t = diff(responseWindow);
 meanfr = cellfun(@(x) mean(x,2)/delta_t,Counts,'UniformOutput',false);
 %% Plots
 mxfr = cellfun(@(x) max(x),meanfr);
-mxfr = round(mxfr*1.1,-1);
+mxfr = round(mxfr*1.15, -1);
 Nr = numel(Results);
 figs = gobjects(Nr,1);
 ax = gobjects(2,1);
 aslSubX = 1;
 aslSubY = 2;
 axLabels = {'Spontaneous_', 'Evoked_'};
-Hc = [];
+Ncond = size(condFlags,2);
+Hc = false(Ne-1,1);
 for cr = 1:Nr
     combCell = textscan(Results(cr).Combination,'%d %d\t%s');    
     cond1 = double(combCell{1}); cond2 = double(combCell{2});
@@ -177,7 +183,8 @@ for cr = 1:Nr
                 aslSubX = 1; aslSubY = 2;
         end
         xaxis = meanfr{cond1, aslSubX}; yaxis = meanfr{cond2, aslSubY};
-        scatter(ax(csp),xaxis,yaxis); grid(ax(csp), 'on'); 
+        scatter(ax(csp),xaxis,yaxis); grid(ax(csp), 'on');
+        text(ax(csp), xaxis, yaxis, sortedData(goods,1))
         grid(ax(csp), 'minor'); axis('square'); 
         axis(ax(csp), [0, mxfr(cond1,aslSubX), 0, mxfr(cond1,aslSubY)]);
         ax(csp).NextPlot = 'add';
@@ -188,249 +195,259 @@ for cr = 1:Nr
         title(ax(csp),ttle); 
         xlabel(ax(csp), [axLabels{aslSubX},num2str(cond1),' [Hz]']); 
         ylabel(ax(csp), [axLabels{aslSubY},num2str(cond2),' [Hz]']);
-        scatter(ax(csp),xaxis(H), yaxis(H),15)
+        scatter(ax(csp),xaxis(H), yaxis(H),15, 'DisplayName', 'Significant')
+        [mdl,~,rsq] = fit_poly(xaxis, yaxis, 1);
         csp = csp + 1;
+        if aslSubX == 1 && aslSubY == 2
+            H2 = Results(cr).Activity(csp).Pvalues < 0.05;
+            scatter(ax(csp-1), xaxis(H2), yaxis(H2), '.', 'DisplayName', 'Shuffled')
+        end 
     end
 end
 set(figs,'Visible','on')
+
+%% Waveforms
+wfclIdx = any(Hc, 2);
+clWf = getClusterWaveform(sortedData(goods(wfclIdx),1), dataDir);
+
 %% Plotting the scatter data points
-% Auxiliary variable for labelling the data points in the scatter plots.
-clsLbls = num2str((1:Ncl)');
-llx = round(llx*1.1,-1);
-% Rate plots
-controlFig = figure('Color',[1,1,1],'Name','Control condition','Visible','off');
-postFig = figure('Color',[1,1,1],'Name','Post-induction','Visible','off');
-sponFig = figure('Color',[1,1,1],'Name','Spontaneous','Visible','off');
-respFig = figure('Color',[1,1,1],'Name','Evoked','Visible','off');
-controlAx = axes('Parent',controlFig);
-postAx = axes('Parent',postFig);
-sponAx = axes('Parent',sponFig);
-respAx = axes('Parent',respFig);
-
-% Control plot (spontaneous vs evoked)
-scatter(controlAx, contRateSpontan, contRateResponse, 'DisplayName',...
-    'Rate per cluster'); grid(controlAx, 'on');
-xlabel(controlAx, 'Spontaneous rate [Hz]');
-ylabel(controlAx, 'Evoked rate [Hz]');
-title(controlAx, 'Control condition: spontaneous vs evoked')
-hold(controlAx,'on'); scatter(controlAx, contRateSpontan(HContCond == 1),...
-    contRateResponse(HContCond == 1), 'Marker','square',...
-    'DisplayName','Sync')
-scatter(controlAx, contRateSpontan(HShufContCond == 1),...
-    contRateResponse(HShufContCond == 1), 'Marker','+',...
-    'DisplayName','Shuf')
-legend(controlAx,'show'); axis(controlAx, 'square');  
-line(controlAx, 'XData', [0, llx], 'YData', [0, llx], 'Color', [0.8, 0.8, 0.8],...
-    'LineStyle', '--');
-text(controlAx, contRateSpontan, contRateResponse, clsLbls);
-controlFig.Visible = 'on';
-% Post-induction (spontaneous vs evoked)
-scatter(postAx, postRateSpontan, postRateResponse, 'DisplayName',...
-    'Rate per cluster'); grid(postAx, 'on');
-hold(postAx,'on'); scatter(postAx, postRateSpontan(HPostCond == 1),...
-    postRateResponse(HPostCond == 1), 'Marker','square',...
-    'DisplayName','Sync')
-scatter(postAx, postRateSpontan(HShufPostCond == 1),...
-    postRateResponse(HShufPostCond == 1), 'Marker','+',...
-    'DisplayName','Shuf')
-xlabel(postAx, 'Spontaneous rate [Hz]');
-ylabel(postAx, 'Evoked rate [Hz]');
-title(postAx, 'Post-induction condition: spontaneous vs evoked')
-legend(postAx,'show');  axis(postAx, 'square');  
-line(postAx, 'XData', [0, llx], 'YData', [0, llx], 'Color', [0.8, 0.8, 0.8],...
-    'LineStyle', '--');
-text(postAx, postRateSpontan, postRateResponse, clsLbls);
-postFig.Visible = 'on';
-% Spontaneous activity (Control vs post-induction)
-scatter(sponAx, contRateSpontan, postRateSpontan); grid(sponAx, 'on');
-xlabel(sponAx, 'Control spontaneous rate [Hz]');
-ylabel(sponAx, 'Post-induction spontaneous rate [Hz]');
-title(sponAx, 'Spontaneous activity: control vs post-induction')
-hold(sponAx,'on'); scatter(sponAx, contRateSpontan(HSpon == 1),...
-    postRateSpontan(HSpon == 1),'Marker','+','DisplayName','H=1');
-legend(sponAx, 'show'); axis(sponAx, 'square');  
-line(sponAx, 'XData', [0, llx], 'YData', [0, llx], 'Color', [0.8, 0.8, 0.8],...
-    'LineStyle', '--');
-text(sponAx, contRateSpontan, postRateSpontan, clsLbls);
-sponFig.Visible = 'on';
-% Evoked activity (Control vs post-induction)
-scatter(respAx, contRateResponse, postRateResponse); grid(respAx, 'on');
-xlabel(respAx, 'Control evoked rate [Hz]');
-ylabel(respAx, 'Post-induction evoked rate [Hz]');
-title(respAx, 'Evoked activity: control vs post-induction')
-hold(respAx,'on'); scatter(respAx, contRateResponse(HResp == 1),...
-    postRateResponse(HResp == 1),'Marker','+','DisplayName','H=1');
-legend(respAx, 'show'); axis(respAx, 'square');  
-line(respAx, 'XData', [0, llx], 'YData', [0, llx], 'Color', [0.8, 0.8, 0.8],...
-    'LineStyle', '--');
-text(respAx, contRateResponse, postRateResponse, clsLbls);
-respFig.Visible = 'on';
-
-% Probability plots
-controlFigp = figure('Color',[1,1,1],'Name','Control condition','Visible','off');
-postFigp = figure('Color',[1,1,1],'Name','Post-induction','Visible','off');
-sponFigp = figure('Color',[1,1,1],'Name','Spontaneous','Visible','off');
-respFigp = figure('Color',[1,1,1],'Name','Evoked','Visible','off');
-controlAxp = axes('Parent',controlFigp);
-postAxp = axes('Parent',postFigp);
-sponAxp = axes('Parent',sponFigp);
-respAxp = axes('Parent',respFigp);
-
-
-% Control plot (spontaneous vs evoked)
-scatter(controlAxp, contProbSpontan, contProbResponse, 'DisplayName',...
-    'p(s) per cluster'); grid(controlAxp, 'on');
-xlabel(controlAxp, 'p(Spontaneous)');
-ylabel(controlAxp, 'p(Evoked)');
-title(controlAxp, 'Control condition_{p(s)}: spontaneous vs evoked')
-%{ 
-% STATISTICAL SIGNIFICANCE HIGHLIGHTING
-% hold(controlAxp,'on'); scatter(controlAxp, contProbSpontan(HContCond == 1),...
-%     contProbResponse(HContCond == 1), 'Marker','square',...
+% % Auxiliary variable for labelling the data points in the scatter plots.
+% clsLbls = num2str((1:Ncl)');
+% llx = round(llx*1.1,-1);
+% % Rate plots
+% controlFig = figure('Color',[1,1,1],'Name','Control condition','Visible','off');
+% postFig = figure('Color',[1,1,1],'Name','Post-induction','Visible','off');
+% sponFig = figure('Color',[1,1,1],'Name','Spontaneous','Visible','off');
+% respFig = figure('Color',[1,1,1],'Name','Evoked','Visible','off');
+% controlAx = axes('Parent',controlFig);
+% postAx = axes('Parent',postFig);
+% sponAx = axes('Parent',sponFig);
+% respAx = axes('Parent',respFig);
+% 
+% % Control plot (spontaneous vs evoked)
+% scatter(controlAx, contRateSpontan, contRateResponse, 'DisplayName',...
+%     'Rate per cluster'); grid(controlAx, 'on');
+% xlabel(controlAx, 'Spontaneous rate [Hz]');
+% ylabel(controlAx, 'Evoked rate [Hz]');
+% title(controlAx, 'Control condition: spontaneous vs evoked')
+% hold(controlAx,'on'); scatter(controlAx, contRateSpontan(HContCond == 1),...
+%     contRateResponse(HContCond == 1), 'Marker','square',...
 %     'DisplayName','Sync')
-% scatter(controlAxp, contProbSpontan(HShufContCond == 1),...
-%     contProbResponse(HShufContCond == 1), 'Marker','+',...
+% scatter(controlAx, contRateSpontan(HShufContCond == 1),...
+%     contRateResponse(HShufContCond == 1), 'Marker','+',...
 %     'DisplayName','Shuf')
-% legend(controlAxp,'show')
-%}
-text(controlAxp, contProbSpontan, contProbResponse, clsLbls);
-axis(controlAxp, 'square');  
-line(controlAxp, 'XData', [0, 1], 'YData', [0, 1], 'Color', [0.8, 0.8, 0.8],...
-    'LineStyle', '--');
-controlFigp.Visible = 'on';
-% Post-induction (spontaneous vs evoked)
-scatter(postAxp, postProbSpontan, postProbResponse, 'DisplayName',...
-    'p(s) per cluster'); grid(postAxp, 'on');
-%{
-STATISTICAL SIGNIFICANCE HIGHLIGHTING
-hold(postAxp,'on'); scatter(postAxp, postProbSpontan(HPostCond == 1),...
-    postProbResponse(HPostCond == 1), 'Marker','square',...
-    'DisplayName','Sync')
-scatter(postAxp, postProbSpontan(HShufPostCond == 1),...
-    postProbResponse(HShufPostCond == 1), 'Marker','+',...
-    'DisplayName','Shuf')
-legend(postAxp,'show')
-%}
-xlabel(postAxp, 'p(Spontaneous)');
-ylabel(postAxp, 'p(Evoked)');
-title(postAxp, 'Post-induction condition_{p(s)}: spontaneous vs evoked')
-text(postAxp, postProbSpontan, postProbResponse, clsLbls);
-axis(postAxp, 'square');  
-line(postAxp, 'XData', [0, 1], 'YData', [0, 1], 'Color', [0.8, 0.8, 0.8],...
-    'LineStyle', '--');
-postFigp.Visible = 'on';
-% Spontaneous activity (Control vs post-induction)
-scatter(sponAxp, contProbSpontan, postProbSpontan); grid(sponAxp, 'on');
-xlabel(sponAxp, 'p(Spontaneous | Control)');
-ylabel(sponAxp, 'p(Spontaneous | Post-induction)');
-title(sponAxp, 'Spontaneous activity_{p(s)}: control vs post-induction')
-%{
-STATISTICAL SIGNIFICANCE HIGHLIGHTING
-hold(sponAxp,'on'); scatter(sponAxp, contProbSpontan(HSpon == 1),...
-    postProbSpontan(HSpon == 1),'Marker','+','DisplayName','H=1');
-%}    
-text(sponAxp, contProbSpontan, postProbSpontan, clsLbls);
-axis(sponAxp, 'square');  
-line(sponAxp, 'XData', [0, 1], 'YData', [0, 1], 'Color', [0.8, 0.8, 0.8],...
-    'LineStyle', '--');
-sponFigp.Visible = 'on';
-% Evoked activity (Control vs post-induction)
-scatter(respAxp, contProbResponse, postProbResponse); grid(respAxp, 'on');
-xlabel(respAxp, 'p(Evoked | Control)');
-ylabel(respAxp, 'p(Evoked | Post-induction)');
-title(respAxp, 'Evoked activity_{p(s)}: control vs post-induction')
-%{
-STATISTICAL SIGNIFICANCE HIGHLIGHTING
-hold(respAxp,'on'); scatter(respAxp, contProbResponse(HResp == 1),...
-    postProbResponse(HResp == 1),'Marker','+','DisplayName','H=1');
-%}
-text(respAxp, contProbResponse, postProbResponse, clsLbls);
-axis(respAxp, 'square');  
-line(respAxp, 'XData', [0, 1], 'YData', [0, 1], 'Color', [0.8, 0.8, 0.8],...
-    'LineStyle', '--');
-respFigp.Visible = 'on';
-%% Saving the results (Figures and configuration)
-pause(20);
-saveFigs =...
-    questdlg('Do you wish to save the figures?','Save','Yes','No','Yes');
-saveFlag = false;
-if strcmpi(saveFigs, 'yes')
-    saveFlag = true;
-    if ~exist(figureDir,'dir')
-        if ~mkdir(figureDir)
-            fprintf(1,'There was a problem creating the ''Figures'' folder\n');
-            fprintf(1,'Please verify the location\n')
-            saveFlag = false;
-        end
-    end
-else
-    closeFigs = questdlg('Would you like to close all figures?',...
-        'Close all', 'Yes', 'No', 'No');
-    if strcmpi(closeFigs,'yes')
-        close all
-    end
-end
-
-saveConfig = questdlg('What about the configuration for the analysis?',...
-    'Save Configuration', 'Yes', 'No', 'Yes');
-if strcmpi(saveConfig,'yes')
-    configStruct = struct('TimeLapse',timeLapse,...
-        'ResponseWindow',responseWindow,...
-        'BinSize',binSz, 'Condition', Conditions(chCond).name);
-    configFile = [expSubfix,'_ConfigStruct.mat'];
-    if ~exist(configFile,'file')
-        save([expSubfix,'_ConfigStruct.mat'],'configStruct')
-    else
-        fprintf(1,'The configuration file exists! No configuration saved\n')
-    end
-end
-
-if saveFlag
-    figArray = [controlFig,postFig,sponFig,respFig,...
-        controlFigp,postFigp,sponFigp,respFigp];
-    figNameCell = {'Control condition', 'Post-induction condition',...
-        'Spontaneous activity', 'Evoked activity'};
-    figNameCell = [figNameCell, ...
-        cellfun(@(x) [x,' p(s)'],figNameCell,'UniformOutput',false)];
-    arrayfun(@configureFigureToPDF, figArray);
-    for cf = 1:numel(figArray)
-        emfFile = fullfile(figureDir,[figNameCell{cf},'.emf']);
-        pdfFile = fullfile(figureDir,[figNameCell{cf},'.pdf']);
-        figFile = fullfile(figureDir,[figNameCell{cf},'.fig']);
-        fileExist = [exist(emfFile,'file'),...
-            exist(pdfFile,'file'), exist(figFile,'file')];
-        if any(fileExist)
-            ovrAns =...
-                questdlg('Some figures exist already. Do you wish to overwrite?',...
-                'Overwrite','Yes', 'No', 'No');
-            if strcmp(ovrAns,'No')                            
-                fprintf(1,'No figures saved!\n')
-                break;
-            end               
-        end
-        print(figArray(cf), emfFile, '-dmeta')
-        print(figArray(cf), pdfFile, '-dpdf', '-fillpage')
-        savefig(figArray(cf), figFile)
-    end
-end
-
-%% Verification PSTH
-consideredConditions = [1,3];
-Nccond = 2;
-goodsIdx = ~badsIdx';
-for ccond = 1:Nccond
-    [PSTH, trig, sweeps] = getPSTH(... discStack([true;whiskerResponsiveUnitsIdx;true],:,:),timeLapse,...
-        discStack,timeLapse,...
-        ~condFlags(:,ccond),binSz,fs);
-    fig = plotClusterReactivity(PSTH,trig,sweeps,timeLapse,binSz,...
-        [{Conditions(consideredConditions(ccond)).name};... sortedData(goods(whiskerResponsiveUnitsIdx),1);{'Laser'}],...
-        sortedData(goods,1)],...
-        strrep(expName,'_','\_'));
-    configureFigureToPDF(fig);
-    print(fig,fullfile(figureDir,sprintf('%s %s.pdf',...
-        expName, Conditions(consideredConditions(ccond)).name)),...
-        '-dpdf','-fillpage')
-    print(fig,fullfile(figureDir,sprintf('%s %s.emf',...
-        expName, Conditions(consideredConditions(ccond)).name)),...
-        '-dmeta')
-end
+% legend(controlAx,'show'); axis(controlAx, 'square');  
+% line(controlAx, 'XData', [0, llx], 'YData', [0, llx], 'Color', [0.8, 0.8, 0.8],...
+%     'LineStyle', '--');
+% text(controlAx, contRateSpontan, contRateResponse, clsLbls);
+% controlFig.Visible = 'on';
+% % Post-induction (spontaneous vs evoked)
+% scatter(postAx, postRateSpontan, postRateResponse, 'DisplayName',...
+%     'Rate per cluster'); grid(postAx, 'on');
+% hold(postAx,'on'); scatter(postAx, postRateSpontan(HPostCond == 1),...
+%     postRateResponse(HPostCond == 1), 'Marker','square',...
+%     'DisplayName','Sync')
+% scatter(postAx, postRateSpontan(HShufPostCond == 1),...
+%     postRateResponse(HShufPostCond == 1), 'Marker','+',...
+%     'DisplayName','Shuf')
+% xlabel(postAx, 'Spontaneous rate [Hz]');
+% ylabel(postAx, 'Evoked rate [Hz]');
+% title(postAx, 'Post-induction condition: spontaneous vs evoked')
+% legend(postAx,'show');  axis(postAx, 'square');  
+% line(postAx, 'XData', [0, llx], 'YData', [0, llx], 'Color', [0.8, 0.8, 0.8],...
+%     'LineStyle', '--');
+% text(postAx, postRateSpontan, postRateResponse, clsLbls);
+% postFig.Visible = 'on';
+% % Spontaneous activity (Control vs post-induction)
+% scatter(sponAx, contRateSpontan, postRateSpontan); grid(sponAx, 'on');
+% xlabel(sponAx, 'Control spontaneous rate [Hz]');
+% ylabel(sponAx, 'Post-induction spontaneous rate [Hz]');
+% title(sponAx, 'Spontaneous activity: control vs post-induction')
+% hold(sponAx,'on'); scatter(sponAx, contRateSpontan(HSpon == 1),...
+%     postRateSpontan(HSpon == 1),'Marker','+','DisplayName','H=1');
+% legend(sponAx, 'show'); axis(sponAx, 'square');  
+% line(sponAx, 'XData', [0, llx], 'YData', [0, llx], 'Color', [0.8, 0.8, 0.8],...
+%     'LineStyle', '--');
+% text(sponAx, contRateSpontan, postRateSpontan, clsLbls);
+% sponFig.Visible = 'on';
+% % Evoked activity (Control vs post-induction)
+% scatter(respAx, contRateResponse, postRateResponse); grid(respAx, 'on');
+% xlabel(respAx, 'Control evoked rate [Hz]');
+% ylabel(respAx, 'Post-induction evoked rate [Hz]');
+% title(respAx, 'Evoked activity: control vs post-induction')
+% hold(respAx,'on'); scatter(respAx, contRateResponse(HResp == 1),...
+%     postRateResponse(HResp == 1),'Marker','+','DisplayName','H=1');
+% legend(respAx, 'show'); axis(respAx, 'square');  
+% line(respAx, 'XData', [0, llx], 'YData', [0, llx], 'Color', [0.8, 0.8, 0.8],...
+%     'LineStyle', '--');
+% text(respAx, contRateResponse, postRateResponse, clsLbls);
+% respFig.Visible = 'on';
+% 
+% % Probability plots
+% controlFigp = figure('Color',[1,1,1],'Name','Control condition','Visible','off');
+% postFigp = figure('Color',[1,1,1],'Name','Post-induction','Visible','off');
+% sponFigp = figure('Color',[1,1,1],'Name','Spontaneous','Visible','off');
+% respFigp = figure('Color',[1,1,1],'Name','Evoked','Visible','off');
+% controlAxp = axes('Parent',controlFigp);
+% postAxp = axes('Parent',postFigp);
+% sponAxp = axes('Parent',sponFigp);
+% respAxp = axes('Parent',respFigp);
+% 
+% 
+% % Control plot (spontaneous vs evoked)
+% scatter(controlAxp, contProbSpontan, contProbResponse, 'DisplayName',...
+%     'p(s) per cluster'); grid(controlAxp, 'on');
+% xlabel(controlAxp, 'p(Spontaneous)');
+% ylabel(controlAxp, 'p(Evoked)');
+% title(controlAxp, 'Control condition_{p(s)}: spontaneous vs evoked')
+% %{ 
+% % STATISTICAL SIGNIFICANCE HIGHLIGHTING
+% % hold(controlAxp,'on'); scatter(controlAxp, contProbSpontan(HContCond == 1),...
+% %     contProbResponse(HContCond == 1), 'Marker','square',...
+% %     'DisplayName','Sync')
+% % scatter(controlAxp, contProbSpontan(HShufContCond == 1),...
+% %     contProbResponse(HShufContCond == 1), 'Marker','+',...
+% %     'DisplayName','Shuf')
+% % legend(controlAxp,'show')
+% %}
+% text(controlAxp, contProbSpontan, contProbResponse, clsLbls);
+% axis(controlAxp, 'square');  
+% line(controlAxp, 'XData', [0, 1], 'YData', [0, 1], 'Color', [0.8, 0.8, 0.8],...
+%     'LineStyle', '--');
+% controlFigp.Visible = 'on';
+% % Post-induction (spontaneous vs evoked)
+% scatter(postAxp, postProbSpontan, postProbResponse, 'DisplayName',...
+%     'p(s) per cluster'); grid(postAxp, 'on');
+% %{
+% STATISTICAL SIGNIFICANCE HIGHLIGHTING
+% hold(postAxp,'on'); scatter(postAxp, postProbSpontan(HPostCond == 1),...
+%     postProbResponse(HPostCond == 1), 'Marker','square',...
+%     'DisplayName','Sync')
+% scatter(postAxp, postProbSpontan(HShufPostCond == 1),...
+%     postProbResponse(HShufPostCond == 1), 'Marker','+',...
+%     'DisplayName','Shuf')
+% legend(postAxp,'show')
+% %}
+% xlabel(postAxp, 'p(Spontaneous)');
+% ylabel(postAxp, 'p(Evoked)');
+% title(postAxp, 'Post-induction condition_{p(s)}: spontaneous vs evoked')
+% text(postAxp, postProbSpontan, postProbResponse, clsLbls);
+% axis(postAxp, 'square');  
+% line(postAxp, 'XData', [0, 1], 'YData', [0, 1], 'Color', [0.8, 0.8, 0.8],...
+%     'LineStyle', '--');
+% postFigp.Visible = 'on';
+% % Spontaneous activity (Control vs post-induction)
+% scatter(sponAxp, contProbSpontan, postProbSpontan); grid(sponAxp, 'on');
+% xlabel(sponAxp, 'p(Spontaneous | Control)');
+% ylabel(sponAxp, 'p(Spontaneous | Post-induction)');
+% title(sponAxp, 'Spontaneous activity_{p(s)}: control vs post-induction')
+% %{
+% STATISTICAL SIGNIFICANCE HIGHLIGHTING
+% hold(sponAxp,'on'); scatter(sponAxp, contProbSpontan(HSpon == 1),...
+%     postProbSpontan(HSpon == 1),'Marker','+','DisplayName','H=1');
+% %}    
+% text(sponAxp, contProbSpontan, postProbSpontan, clsLbls);
+% axis(sponAxp, 'square');  
+% line(sponAxp, 'XData', [0, 1], 'YData', [0, 1], 'Color', [0.8, 0.8, 0.8],...
+%     'LineStyle', '--');
+% sponFigp.Visible = 'on';
+% % Evoked activity (Control vs post-induction)
+% scatter(respAxp, contProbResponse, postProbResponse); grid(respAxp, 'on');
+% xlabel(respAxp, 'p(Evoked | Control)');
+% ylabel(respAxp, 'p(Evoked | Post-induction)');
+% title(respAxp, 'Evoked activity_{p(s)}: control vs post-induction')
+% %{
+% STATISTICAL SIGNIFICANCE HIGHLIGHTING
+% hold(respAxp,'on'); scatter(respAxp, contProbResponse(HResp == 1),...
+%     postProbResponse(HResp == 1),'Marker','+','DisplayName','H=1');
+% %}
+% text(respAxp, contProbResponse, postProbResponse, clsLbls);
+% axis(respAxp, 'square');  
+% line(respAxp, 'XData', [0, 1], 'YData', [0, 1], 'Color', [0.8, 0.8, 0.8],...
+%     'LineStyle', '--');
+% respFigp.Visible = 'on';
+% %% Saving the results (Figures and configuration)
+% pause(20);
+% saveFigs =...
+%     questdlg('Do you wish to save the figures?','Save','Yes','No','Yes');
+% saveFlag = false;
+% if strcmpi(saveFigs, 'yes')
+%     saveFlag = true;
+%     if ~exist(figureDir,'dir')
+%         if ~mkdir(figureDir)
+%             fprintf(1,'There was a problem creating the ''Figures'' folder\n');
+%             fprintf(1,'Please verify the location\n')
+%             saveFlag = false;
+%         end
+%     end
+% else
+%     closeFigs = questdlg('Would you like to close all figures?',...
+%         'Close all', 'Yes', 'No', 'No');
+%     if strcmpi(closeFigs,'yes')
+%         close all
+%     end
+% end
+% 
+% saveConfig = questdlg('What about the configuration for the analysis?',...
+%     'Save Configuration', 'Yes', 'No', 'Yes');
+% if strcmpi(saveConfig,'yes')
+%     configStruct = struct('TimeLapse',timeLapse,...
+%         'ResponseWindow',responseWindow,...
+%         'BinSize',binSz, 'Condition', Conditions(chCond).name);
+%     configFile = [expSubfix,'_ConfigStruct.mat'];
+%     if ~exist(configFile,'file')
+%         save([expSubfix,'_ConfigStruct.mat'],'configStruct')
+%     else
+%         fprintf(1,'The configuration file exists! No configuration saved\n')
+%     end
+% end
+% 
+% if saveFlag
+%     figArray = [controlFig,postFig,sponFig,respFig,...
+%         controlFigp,postFigp,sponFigp,respFigp];
+%     figNameCell = {'Control condition', 'Post-induction condition',...
+%         'Spontaneous activity', 'Evoked activity'};
+%     figNameCell = [figNameCell, ...
+%         cellfun(@(x) [x,' p(s)'],figNameCell,'UniformOutput',false)];
+%     arrayfun(@configureFigureToPDF, figArray);
+%     for cf = 1:numel(figArray)
+%         emfFile = fullfile(figureDir,[figNameCell{cf},'.emf']);
+%         pdfFile = fullfile(figureDir,[figNameCell{cf},'.pdf']);
+%         figFile = fullfile(figureDir,[figNameCell{cf},'.fig']);
+%         fileExist = [exist(emfFile,'file'),...
+%             exist(pdfFile,'file'), exist(figFile,'file')];
+%         if any(fileExist)
+%             ovrAns =...
+%                 questdlg('Some figures exist already. Do you wish to overwrite?',...
+%                 'Overwrite','Yes', 'No', 'No');
+%             if strcmp(ovrAns,'No')                            
+%                 fprintf(1,'No figures saved!\n')
+%                 break;
+%             end               
+%         end
+%         print(figArray(cf), emfFile, '-dmeta')
+%         print(figArray(cf), pdfFile, '-dpdf', '-fillpage')
+%         savefig(figArray(cf), figFile)
+%     end
+% end
+% 
+% %% Verification PSTH
+% consideredConditions = [1,3];
+% Nccond = 2;
+% goodsIdx = ~badsIdx';
+% for ccond = 1:Nccond
+%     [PSTH, trig, sweeps] = getPSTH(... discStack([true;whiskerResponsiveUnitsIdx;true],:,:),timeLapse,...
+%         discStack,timeLapse,...
+%         ~condFlags(:,ccond),binSz,fs);
+%     fig = plotClusterReactivity(PSTH,trig,sweeps,timeLapse,binSz,...
+%         [{Conditions(consideredConditions(ccond)).name};... sortedData(goods(whiskerResponsiveUnitsIdx),1);{'Laser'}],...
+%         sortedData(goods,1)],...
+%         strrep(expName,'_','\_'));
+%     configureFigureToPDF(fig);
+%     print(fig,fullfile(figureDir,sprintf('%s %s.pdf',...
+%         expName, Conditions(consideredConditions(ccond)).name)),...
+%         '-dpdf','-fillpage')
+%     print(fig,fullfile(figureDir,sprintf('%s %s.emf',...
+%         expName, Conditions(consideredConditions(ccond)).name)),...
+%         '-dmeta')
+% end
