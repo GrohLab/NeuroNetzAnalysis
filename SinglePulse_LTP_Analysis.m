@@ -63,10 +63,10 @@ laser = lObj.subs2idx(lSubs,Ns);
 mObj.delete;lObj.delete;
 continuousSignals = {double(piezo);double(laser);LFP};
 %% User prompt for relevant information:
-% Time lapse, bin size, and spontaneous and response windows
+
 promptStrings = {'Viewing window (time lapse) [s]:','Response window [s]',...
     'Bin size [s]:'};
-defInputs = {'0.1, 0.1', '0.002, 0.05', '0.01'};
+defInputs = {'0.1, 0.1', '0.002, 0.05', '0.001'};
 answ = inputdlg(promptStrings,'Inputs', [1, 30],defInputs);
 if isempty(answ)
     fprintf(1,'Cancelling...\n')
@@ -135,6 +135,7 @@ condFlags(initSub:NTa, Ncond) = true;
 Na = sum(condFlags,1);
 
 
+
 %% Counting spikes in given windows and computing the statistical significance
 % Time logical flags
 sponActStackIdx = tx >= spontaneousWindow(1) & tx <= spontaneousWindow(2);
@@ -156,7 +157,8 @@ aslSubX = 1;
 aslSubY = 2;
 axLabels = {'Spontaneous_', 'Evoked_'};
 Ncond = size(condFlags,2);
-Hc = false(Ne-1,1);
+Hc = false(Ne-1, Nr*2 - Nccond);
+hCount = 1;
 for cr = 1:Nr
     combCell = textscan(Results(cr).Combination,'%d %d\t%s');    
     cond1 = double(combCell{1}); cond2 = double(combCell{2});
@@ -171,7 +173,8 @@ for cr = 1:Nr
     while csp <= figType
         actvty = Results(cr).Activity(csp).Type;
         H = Results(cr).Activity(csp).Pvalues < 0.05;
-        Hc = [Hc,H];
+        Hc(:,hCount) = H;
+        hCount = hCount + 1;
         ttle = sprintf('%s: %d vs. %d',actvty,cond1,cond2);
         ax(csp) = subplot(1,figType,csp,'Parent',figs(cr));
         switch actvty
@@ -197,6 +200,9 @@ for cr = 1:Nr
         ylabel(ax(csp), [axLabels{aslSubY},num2str(cond2),' [Hz]']);
         scatter(ax(csp),xaxis(H), yaxis(H),15, 'DisplayName', 'Significant')
         [mdl,~,rsq] = fit_poly(xaxis, yaxis, 1);
+        line(ax(csp),'XData',[0, axMx],...
+            'YData', [0*mdl(1) + mdl(2), axMx*mdl(1) + mdl(2)],...
+            'DisplayName', 'Trend line', 'LineStyle', ':', 'LineWidth', 0.5)
         csp = csp + 1;
         if aslSubX == 1 && aslSubY == 2
             H2 = Results(cr).Activity(csp).Pvalues < 0.05;
