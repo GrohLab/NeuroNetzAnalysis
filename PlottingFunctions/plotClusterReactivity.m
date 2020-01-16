@@ -77,7 +77,7 @@ ax1.XAxis.Visible = 'off';
 
 % Plotting the population PSTH together with the trigger probability
 ax2 = subplot(totlX,1,4,'Parent',fig);
-popPSTH = sum(PSTH,1,'omitnan')/Ncl;
+popPSTH = sum(PSTH,1,'omitnan')/(Ncl * sweeps);
 plot(ax2,psthTX,popPSTH,'Color',[0.8,0.8,0.8],'DisplayName','Population PSTH')
 yyaxis(ax2,'right')
 plot(ax2,trigTX,trig,'LineWidth',1.5,'Color',clr,'DisplayName',IDe{1},...
