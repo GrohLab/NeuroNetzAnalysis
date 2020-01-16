@@ -131,7 +131,5 @@ Conditions(NpairCond+2).Triggers = mSub(pmFlag,:);
 
 Triggers = struct('whisker',mech,'laser',laser);
 [~,expName,~]=fileparts(binFile(1).name);
-save(fullfile(expFolder,[expName,'analysis.mat']),'Conditions','Triggers')
+save(fullfile(expFolder,[expName,'analysis.mat']),'Conditions','Triggers','-v7.3')
 end
-
-
