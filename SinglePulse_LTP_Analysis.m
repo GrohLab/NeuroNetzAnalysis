@@ -146,6 +146,9 @@ delta_t = diff(responseWindow);
 % Statistical tests
 [Results, Counts] = statTests(discStack,condFlags,timeFlags);
 % Firing rate for all clusters, for all trials
+
+% Plotting
+figs = scatterSignificance(Results, Counts, condNames, delta_t, sortedData(goods,1));
 meanfr = cellfun(@(x) mean(x,2)/delta_t,Counts,'UniformOutput',false);
 %% Plots
 mxfr = cellfun(@(x) max(x),meanfr);
