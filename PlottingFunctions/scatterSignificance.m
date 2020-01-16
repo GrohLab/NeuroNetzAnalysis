@@ -8,7 +8,7 @@ meanfr = cellfun(@(x) mean(x,2)/Delta_t, Counts, 'UniformOutput', false);
 mxfr = cellfun(@(x) max(x),meanfr);
 mxfr = round(mxfr*1.15, -1);
 Nr = numel(Results);
-figs = gobjects(Nr,1);
+Figs = gobjects(Nr,1);
 ax = gobjects(2,1);
 axLabels = {'Spontaneous_', 'Evoked_'};
 Ncond = numel(CondNames);
@@ -18,7 +18,7 @@ hCount = 1;
 for cr = 1:Nr
     combCell = textscan(Results(cr).Combination,'%d %d\t%s');    
     cond1 = double(combCell{1}); cond2 = double(combCell{2});
-    figs(cr) = figure('Color',[1,1,1],'Visible','off','Units','normalized');
+    Figs(cr) = figure('Color',[1,1,1],'Visible','off','Units','normalized');
     actvty = Results(cr).Activity(1).Type;
     if contains(actvty,'condition')
         figType = 1;
@@ -33,7 +33,7 @@ for cr = 1:Nr
         hCount = hCount + 1;        
         ttle = sprintf('%s: %s vs. %s',actvty, CondNames{cond1},...
             CondNames{cond2});
-        ax(csp) = subplot(1,figType,csp,'Parent',figs(cr));
+        ax(csp) = subplot(1,figType,csp,'Parent',Figs(cr));
         switch actvty
             case 'Spontaneous'
                 aslSubX = 1; aslSubY = 1;
@@ -67,11 +67,11 @@ for cr = 1:Nr
             scatter(ax(csp-1), xaxis(H2), yaxis(H2), '.', 'DisplayName', 'Shuffled')
         end
         if csp == 3
-            figs(cr).OuterPosition =...
-                [figs(cr).OuterPosition(1:2), 0.5344, 0.4275];
+            Figs(cr).OuterPosition =...
+                [Figs(cr).OuterPosition(1:2), 0.5344, 0.4275];
         end
     end
 end
-set(figs,'Visible','on')
+set(Figs,'Visible','on')
 end
 
