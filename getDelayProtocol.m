@@ -135,7 +135,13 @@ for cdl = 1:Ndel
     Conditions(Ncond + cdl).Triggers =...
         wSub(sort(piezSub(lsDel(:,cdl))),:);
 end
-fprintf(1,' ms\n')
+
+ %this is a fix to account for a  file with no delays (e.g. period of whisker stimuli followed by period of laser stimuli)
+if Ndel==0,cdl=0;
+        fprintf(1,' none!')
+else
+    fprintf(1,' ms\n')
+end 
 [~,lghtSub] = min(dm,[],2,'omitnan');
 [~,piezSub] = min(dm,[],1,'omitnan');
 piezSub = piezSub';
@@ -145,7 +151,14 @@ Conditions(Ncond + cdl + 1).name = 'Laser Control';
 Conditions(Ncond + cdl + 1).Triggers = lSub(loneLaser,:);
 Conditions(Ncond + cdl + 2).name = 'WhiskerStim Control';
 Conditions(Ncond + cdl + 2).Triggers = wSub(lonePiezo,:);
-Triggers = struct('whisker',whisk,'laser',laser);
+
+%if there are no delays, then WhiskerAll is redundant with WhiskerStim
+%Control and  LaserAll is redundant with Laser Control, so just take
+%control condtions
+if Ndel==0
+    Conditions=Conditions((end-1):end);
+end
+
 save(fullfile(expFolder,[expName,'analysis.mat']),'Conditions','Triggers')
 end
 
