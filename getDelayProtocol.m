@@ -107,6 +107,8 @@ if any(glitchInLaser)
 end
 whisk = double(StepWaveform.subs2idx(wSub,length(whisk)));
 laser = double(StepWaveform.subs2idx(lSub,length(laser)));
+Triggers.whisker = whisk;
+Triggers.laser = laser;
 
 Conditions(1).name = 'WhiskerAll';
 Conditions(1).Triggers = wSub;
