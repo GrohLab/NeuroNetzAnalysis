@@ -62,28 +62,28 @@ for chead = 1:numel(headers)
     laserFlag(chead) = checkSignal(titles{chead},'laser');
 end
 %% Possible user interaction and correct assignment of the signals
-whiskSubs = find(whiskFlag);
+% whiskSubs = find(whiskFlag);
 while sum(whiskFlag) ~= 1
-    wSub = listdlg('ListString',titles(whiskFlag),...
+    wSub = listdlg('ListString',titles,...
         'PromptString','Select the mechanical TTL',...
         'SelectionMode','single');
     if ~isempty(wSub)
         whiskFlag = false(size(whiskFlag));
-        whiskFlag(whiskSubs(wSub)) = true;
+        whiskFlag(wSub) = true;
     else
         fprintf(1,'Please select one of the displayed signals!\n')
     end
 end
 whisk = stimSig.(fields{chanSubs(whiskFlag)});
 
-laserSubs = find(laserFlag);
+% laserSubs = find(laserFlag);
 while sum(laserFlag) ~= 1
-    lSub = listdlg('ListString',titles(laserFlag),...
+    lSub = listdlg('ListString',titles,...
         'PromptString','Select the laser TTL',...
         'SelectionMode','single');
     if ~isempty(lSub)
         laserFlag = false(size(laserFlag));
-        laserFlag(laserSubs(lSub)) = true;
+        laserFlag(lSub) = true;
     else
         fprintf(1,'Please select one of the displayed signals!\n')
     end
