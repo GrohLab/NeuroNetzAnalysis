@@ -30,6 +30,8 @@ function [relativeSpikeTimes, tx] =...
 %           timeLapse - 2x1 numerical vector indicating the time in seconds
 %           before and after the trigger
 %           fs - sampling frequency
+%           tmsORsubsFlag - boolean number to indicate the output to be
+%           either subscripts or time stamps.
 %           ERASE_kIDX - boolean scalar to indicate if the kicked out
 %           events should be erased from the results. default false.
 %       OUTPUTS:
