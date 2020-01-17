@@ -45,7 +45,7 @@ for chead = 1:numel(headers)
 end
 %% Possible user interaction
 mechSubs = find(mechFlag);
-while sum(mechFlag) > 1
+while sum(mechFlag) ~= 1
     mSub = listdlg('ListString',titles(mechFlag),...
         'PromptString','Select the mechanical TTL',...
         'SelectionMode','single');
@@ -59,7 +59,7 @@ end
 mech = stimSig.(fields{chanSubs(mechFlag)});
 
 laserSubs = find(laserFlag);
-while sum(laserFlag) > 1
+while sum(laserFlag) ~= 1
     lSub = listdlg('ListString',titles(laserFlag),...
         'PromptString','Select the laser TTL',...
         'SelectionMode','single');

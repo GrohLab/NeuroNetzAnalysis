@@ -63,7 +63,7 @@ for chead = 1:numel(headers)
 end
 %% Possible user interaction and correct assignment of the signals
 whiskSubs = find(whiskFlag);
-while sum(whiskFlag) > 1
+while sum(whiskFlag) ~= 1
     wSub = listdlg('ListString',titles(whiskFlag),...
         'PromptString','Select the mechanical TTL',...
         'SelectionMode','single');
@@ -77,7 +77,7 @@ end
 whisk = stimSig.(fields{chanSubs(whiskFlag)});
 
 laserSubs = find(laserFlag);
-while sum(laserFlag) > 1
+while sum(laserFlag) ~= 1
     lSub = listdlg('ListString',titles(laserFlag),...
         'PromptString','Select the laser TTL',...
         'SelectionMode','single');
