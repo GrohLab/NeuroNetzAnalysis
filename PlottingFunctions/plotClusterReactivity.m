@@ -78,13 +78,19 @@ ax1.XAxis.Visible = 'off';
 % Plotting the population PSTH together with the trigger probability
 ax2 = subplot(totlX,1,4,'Parent',fig);
 popPSTH = sum(PSTH,1,'omitnan')/(Ncl * sweeps);
-plot(ax2,psthTX,popPSTH,'Color',[0.8,0.8,0.8],'DisplayName','Population PSTH')
+if max(popPSTH(:)) <= 0.1
+    semilogy(ax2,psthTX,popPSTH,'Color',[0.8,0.8,0.8],'DisplayName','Population PSTH')
+    axLabel = 'Log Population activity';
+else
+    plot(ax2,psthTX,popPSTH,'Color',[0.8,0.8,0.8],'DisplayName','Population PSTH')
+    axLabel = 'Population activity';
+end
 yyaxis(ax2,'right')
 plot(ax2,trigTX,trig,'LineWidth',1.5,'Color',clr,'DisplayName',IDe{1},...
     'LineStyle',':')
 
 % Formatting the population PSTH plot
-ax2.YAxis(1).Label.String = 'Population activity';
+ax2.YAxis(1).Label.String = axLabel;
 ax2.YAxis(1).Limits = [0,1.01];
 ax2.YAxis(2).Limits = [0,1.01];
 ax2.YAxis(2).Color = 'k';
