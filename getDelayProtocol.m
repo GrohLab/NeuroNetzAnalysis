@@ -30,7 +30,7 @@ end
 
 csFile = dir(fullfile(expFolder,'*_CondSig.mat'));
 if ~isempty(csFile)
-    stimSig = load(fullfile(csFile.folder,csFile.name),'chan*','head*');
+    stimSig = load(fullfile(csFile(1).folder,csFile(1).name),'chan*','head*');
 else
     warning('Please create the CondSig.mat file first\n')
     return
@@ -38,7 +38,7 @@ end
 
 fsFile = dir(fullfile(expFolder,'*_sampling_frequency.mat'));
 if ~isempty(fsFile)
-    load(fullfile(fsFile.folder,fsFile.name),'fs');
+    load(fullfile(fsFile(1).folder,fsFile(1).name),'fs');
 else
     warning('Please create the _sampling_frequency.mat file first\n')
     return
