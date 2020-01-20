@@ -15,17 +15,17 @@ else
     return
 end
 
-fsFile = dir(fullfile(expFolder,'*_sampling_frequency.mat'));
-if ~isempty(fsFile)
-    load(fullfile(fsFile.folder,fsFile.name),'fs');
-else
-    warning('Please create the _sampling_frequency.mat file first\n')
-    return
-end
-
 binFile = dir(fullfile(expFolder,'*.smrx'));
 if isempty(binFile)
     warning('There is no experiment in this folder...\n')
+    return
+end
+
+fsFile = dir(fullfile(expFolder,'*_sampling_frequency.mat'));
+if ~isempty(fsFile)
+    load(fullfile(fsFile(1).folder,fsFile(1).name),'fs');
+else
+    warning('Please create the _sampling_frequency.mat file first\n')
     return
 end
 
