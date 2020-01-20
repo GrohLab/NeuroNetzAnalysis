@@ -131,7 +131,7 @@ Conditions(NpairCond+2).Triggers = mSub(pmFlag,:);
 
 Ncond = numel(Conditions);
 Conditions(Ncond + 1).name = 'MechAll';
-Conditions(Ncond + 1).Triggers = sort(growingSubs);
+Conditions(Ncond + 1).Triggers = growingSubs;
 
 Triggers = struct('whisker',mech,'laser',laser);
 [~,expName,~]=fileparts(binFile(1).name);
