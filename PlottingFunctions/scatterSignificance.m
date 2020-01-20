@@ -8,7 +8,7 @@ meanfr = cellfun(@(x) mean(x,2)/Delta_t, Counts, 'UniformOutput', false);
 mxfr = cellfun(@(x) max(x),meanfr);
 mxfr = round(mxfr*1.15, -1);
 if ~min(mxfr(:))
-    mxfr(mxfr==0) = 1;
+    mxfr(mxfr==0) = 10;
 end
 Nr = numel(Results);
 Figs = gobjects(Nr,1);
