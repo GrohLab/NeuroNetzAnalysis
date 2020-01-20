@@ -9,7 +9,7 @@ Conditions = struct('name',{},'Triggers',{});
 Triggers = struct();
 csFile = dir(fullfile(expFolder,'*_CondSig.mat'));
 if ~isempty(csFile)
-    stimSig = load(fullfile(csFile.folder,csFile.name),'chan*','head*');
+    stimSig = load(fullfile(csFile(1).folder,csFile(1).name),'chan*','head*');
 else
     warning('Please create the CondSig.mat file first\n')
     return
