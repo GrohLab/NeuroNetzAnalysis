@@ -19,7 +19,7 @@ function [ sortedData, clInfo] = ...
 %           in the given folder; either in the pathToData or in the
 %           outputName.
 %  Alexandra Merkel & Emilio Isaias-Camacho @ GrohLab 2019
-% Maximum number of groups. 3 so far: good, MUA, and noise
+% Maximum number of groups. 3 so far: 1 - good, 2 - MUA, and 3 - noise
 
 MX_CLSS = 3;
 % Take Kilosort Data and create *all_channels.map for further analysis
