@@ -31,6 +31,9 @@ fileID = fopen(filename,'r');
 % This call is based on the structure of the file used to generate this
 % code. If an error occurs for a different file, try regenerating the code
 % from the Import Tool.
+header = textscan(fileID, formatSpec, 1);
+header = cellfun(@(x) x{1}, header, 'UniformOutput', 0);
+
 dataArray = textscan(fileID, formatSpec, endRow(1)-startRow(1)+1, 'Delimiter', delimiter, 'TextType', 'string', 'HeaderLines', startRow(1)-1, 'ReturnOnError', false, 'EndOfLine', '\r\n');
 for block=2:length(startRow)
     frewind(fileID);
