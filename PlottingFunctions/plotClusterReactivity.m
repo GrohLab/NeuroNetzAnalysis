@@ -79,6 +79,7 @@ ax1.XAxis.Visible = 'off';
 ax2 = subplot(totlX,1,4,'Parent',fig);
 popPSTH = sum(PSTH,1,'omitnan')/(Ncl * sweeps);
 if max(popPSTH(:)) <= 0.1
+    popPSTH(popPSTH == 0) = 1e-3;
     semilogy(ax2,psthTX,popPSTH,'Color',[0.8,0.8,0.8],'DisplayName','Population PSTH')
     axLabel = 'Log Population activity';
 else
