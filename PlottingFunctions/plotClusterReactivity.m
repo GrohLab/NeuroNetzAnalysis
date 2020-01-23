@@ -46,6 +46,7 @@ fig = figure('Name',expName,'Color',[1,1,1]);
 ax1 = subplot(totlX,1,1:3,'Parent',fig);
 psthTX = linspace(-timeLapse(1),timeLapse(2),Npt);
 clrmp = defineWhYellRedColormap;
+% clrmp = defineBlueRedColormap();
 imagesc(ax1,'XData',psthTX,'CData',PSTHn);
 colormap(ax1,clrmp)
 
@@ -149,6 +150,11 @@ else
     clr = [165, 70, 87]/255; 
 end
 end
+
+function clrmp = defineBlueRedColormap()
+clrmp = [linspace(0,1,256)', zeros(256,1), linspace(1,0,256)'];
+end
+
 function clrmp = defineWhYellRedColormap()
 %Helper function to store the color map
 clrmp = [1.0000    1.0000    1.0000
