@@ -45,7 +45,8 @@ PSTHn = PSTH./max(PSTH,[],2);
 fig = figure('Name',expName,'Color',[1,1,1]);
 ax1 = subplot(totlX,1,1:3,'Parent',fig);
 psthTX = linspace(-timeLapse(1),timeLapse(2),Npt);
-clrmp = defineWhYellRedColormap;
+clrmp = parula;
+% clrmp = defineWhYellRedColormap;
 % clrmp = defineBlueRedColormap();
 imagesc(ax1,'XData',psthTX,'CData',PSTHn);
 colormap(ax1,clrmp)
@@ -79,21 +80,15 @@ ax1.XAxis.Visible = 'off';
 % Plotting the population PSTH together with the trigger probability
 ax2 = subplot(totlX,1,4,'Parent',fig);
 popPSTH = sum(PSTH,1,'omitnan')/(Ncl * sweeps);
-if max(popPSTH(:)) <= 0.1
-    popPSTH(popPSTH == 0) = 1e-3;
-    semilogy(ax2,psthTX,popPSTH,'Color',[0.8,0.8,0.8],'DisplayName','Population PSTH')
-    axLabel = 'Log Population activity';
-else
-    plot(ax2,psthTX,popPSTH,'Color',[0.8,0.8,0.8],'DisplayName','Population PSTH')
-    axLabel = 'Population activity';
-end
+plot(ax2,psthTX,popPSTH,'Color',[0.8,0.8,0.8],'DisplayName','Population PSTH')
+axLabel = 'Population activity';
 yyaxis(ax2,'right')
 plot(ax2,trigTX,trig,'LineWidth',1.5,'Color',clr,'DisplayName',IDe{1},...
     'LineStyle',':')
 
 % Formatting the population PSTH plot
 ax2.YAxis(1).Label.String = axLabel;
-ax2.YAxis(1).Limits = [0,1.01];
+% ax2.YAxis(1).Limits = [0,1.01];
 ax2.YAxis(2).Limits = [0,1.01];
 ax2.YAxis(2).Color = 'k';
 ax2.YAxis(2).Label.String = 'Stimulus probability';
