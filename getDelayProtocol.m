@@ -59,30 +59,41 @@ headers = cellfun(@strrep,fields(chanFlag),...
 titles = cell(numel(headers),1);
 whiskFlag = false(numel(titles),1);
 laserFlag = whiskFlag;
+lfpFlag = whiskFlag;
 for chead = 1:numel(headers)
     titles{chead} = stimSig.(headers{chead}).title;
     whiskFlag(chead) = checkSignal(titles{chead},'piezo') |...
         checkSignal(titles{chead},'puff');
     laserFlag(chead) = checkSignal(titles{chead},'laser');
+    lfpFlag(chead) = checkSignal(titles{chead},'lfp');
 end
 %% Possible user interaction and correct assignment of the signals
-% whiskSubs = find(whiskFlag);
+whiskSubs = 1:numel(titles);
+laserSubs = whiskSubs;
+lfpSubs = whiskSubs;
+if any(whiskFlag)
+    whiskSubs = find(whiskFlag);
+end
 while sum(whiskFlag) ~= 1
-    wSub = listdlg('ListString',titles,...
+    wSub = listdlg('ListString',titles(whiskSubs),...
         'PromptString','Select the mechanical TTL',...
         'SelectionMode','single');
     if ~isempty(wSub)
         whiskFlag = false(size(whiskFlag));
         whiskFlag(wSub) = true;
+        
     else
         fprintf(1,'Please select one of the displayed signals!\n')
     end
 end
 whisk = stimSig.(fields{chanSubs(whiskFlag)});
+whiskHead = stimSig.(headers{whiskFlag});
 
-% laserSubs = find(laserFlag);
+if any(laserFlag)
+    laserSubs = find(laserFlag);
+end
 while sum(laserFlag) ~= 1
-    lSub = listdlg('ListString',titles,...
+    lSub = listdlg('ListString',titles(laserSubs),...
         'PromptString','Select the laser TTL',...
         'SelectionMode','single');
     if ~isempty(lSub)
@@ -94,6 +105,31 @@ while sum(laserFlag) ~= 1
 end
 laser = stimSig.(fields{chanSubs(laserFlag)});
 
+if any(lfpFlag)
+    lfpSubs = find(lfpFlag);
+end
+iOk = true;
+while sum(lfpFlag) ~= 1 && iOk
+    [lSub, iOk] = listdlg('ListString',titles(lfpSubs),...
+        'PromptString','Select the lfp signal',...
+        'SelectionMode','single','CancelString', 'none');
+    if ~isempty(lSub)
+        lfpFlag = false(size(lfpFlag));
+        lfpFlag(lSub) = true;
+    end
+end
+if iOk
+    lfp = stimSig.(fields{chanSubs(lfpFlag)});
+else
+    lfp = 0;
+end
+
+%% Trigger variable construction
+intanDomain = round([whiskHead.start, whiskHead.stop]*whiskHead.SamplingFrequency);
+if length(whisk) < length(lfp)
+    lfp = lfp(intanDomain(1):intanDomain(2));
+end
+Triggers.whisker = whisk; Triggers.laser = laser; Triggers.lfp = lfp;
 %% Subscript processing and stimukus finding
 wObj = StepWaveform(whisk,fs,'on/off','Mechanical TTL');
 lObj = StepWaveform(laser,fs,'on/off','Laser TTL');
