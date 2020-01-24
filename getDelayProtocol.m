@@ -12,9 +12,9 @@ findUnpairedPulse = @(x) cat(1,false,reshape(diff(sort(x)) == 0,numel(x)-1,1));
 Conditions = struct('name',{},'Triggers',{});
 Triggers = struct();
 
-binFile = dir(fullfile(expFolder,'*.smrx'));
-[~,expName,~] = fileparts(binFile(1).name);
-if isempty(binFile)
+smrxFile = dir(fullfile(expFolder,'*.smrx'));
+[~,expName,~] = fileparts(smrxFile(1).name);
+if isempty(smrxFile)
     warning('There is no experiment in this folder...\n')
     return
 end
@@ -32,8 +32,12 @@ csFile = dir(fullfile(expFolder,'*_CondSig.mat'));
 if ~isempty(csFile)
     stimSig = load(fullfile(csFile(1).folder,csFile(1).name),'chan*','head*');
 else
-    warning('Please create the CondSig.mat file first\n')
-    return
+    try 
+        getConditionSignalsBF(fopen(fullfile(smrxFile(1).folder, smrxFile(1).name)));
+    catch
+        warning('Please create the CondSig.mat file first\n')
+        return
+    end
 end
 
 fsFile = dir(fullfile(expFolder,'*_sampling_frequency.mat'));
@@ -105,10 +109,6 @@ if any(glitchInLaser)
     fprintf(1,'There were some ''funky'' triggers in laser... deleting\n')
     lSub(glitchInLaser,:) = [];
 end
-whisk = double(StepWaveform.subs2idx(wSub,length(whisk)));
-laser = double(StepWaveform.subs2idx(lSub,length(laser)));
-Triggers.whisker = whisk;
-Triggers.laser = laser;
 
 Conditions(1).name = 'WhiskerAll';
 Conditions(1).Triggers = wSub;
