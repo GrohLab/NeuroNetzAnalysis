@@ -62,6 +62,7 @@ if ~exist('removeNoise','var')
 end
 
 % Reading the KiloSort datafiles (phy updates these files)
+
 spkTms = readNPY(fullfile(pathToData, 'spike_times.npy'));
 clID = readNPY(fullfile(pathToData, 'spike_clusters.npy'));
 clGr = readTSV(fullfile(pathToData,'cluster_group.tsv'));
