@@ -345,8 +345,9 @@ if Ns == 1
 end
 
 % Transpose column vectors
-transpSign = cellfun(@isrow,signalCell);
-if ~all(transpSign)
+transpSign = cellfun(@iscolumn, signalCell);
+
+if any(transpSign)
     try
         signalCell(~transpSign) =...
             {signalCell{~transpSign}'};
@@ -375,7 +376,7 @@ catch ME
     fprintf('The is an issue with the continuous cell array.\n')
     fprintf('Worth debugging!\n')
     disp(ME.getReport)
-    dbstop
+    dbstop in getStacks at 378
 end
 
 end
