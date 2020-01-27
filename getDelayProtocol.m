@@ -126,8 +126,10 @@ end
 
 %% Trigger variable construction
 intanDomain = round([whiskHead.start, whiskHead.stop]*whiskHead.SamplingFrequency);
-if length(whisk) < length(lfp)
+if intanDomain(2) <= length(lfp) 
     lfp = lfp(intanDomain(1):intanDomain(2));
+elseif diff(intanDomain) <= length(lfp)
+    lfp = lfp(intanDomain(1):length(lfp));
 end
 Triggers.whisker = whisk; Triggers.laser = laser; Triggers.lfp = lfp;
 %% Subscript processing and stimukus finding
