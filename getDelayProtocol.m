@@ -129,7 +129,11 @@ intanDomain = round([whiskHead.start, whiskHead.stop]*whiskHead.SamplingFrequenc
 if intanDomain(2) <= length(lfp) 
     lfp = lfp(intanDomain(1):intanDomain(2));
 elseif diff(intanDomain) <= length(lfp)
-    lfp = lfp(intanDomain(1):length(lfp));
+    try
+        lfp = lfp(intanDomain(1):length(whisk));
+    catch
+        lfp = lfp(intanDomain(1):length(lfp));
+    end
 end
 Triggers.whisker = whisk; Triggers.laser = laser; Triggers.lfp = lfp;
 %% Subscript processing and stimukus finding
