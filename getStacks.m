@@ -329,7 +329,11 @@ end
 signalSegments = getSignalSegments(signalCell, Subs);
 signalMat = cell2mat(signalSegments);
 if Ns == size(signalMat,1)
-    contSigSeg(:,SegSubs) = signalMat;
+    if ~issparse(signalMat)
+        contSigSeg(:,SegSubs) = signalMat;
+    else
+        contSigSeg(:,SegSubs) = full(signalMat);
+    end
 else
     contSigSeg(:,SegSubs) = cell2mat(signalSegments');
 end
