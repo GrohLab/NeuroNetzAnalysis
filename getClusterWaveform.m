@@ -114,17 +114,16 @@ ch2read = clTable{clusterID, 'channel'};
 
 % Verifying if the waveform(s) for the given cluster(s) was/were computed
 % already
-%{
+
 waveFile = dir(fullfile(dataDir,'_waveforms.mat'));
 if exist(waveFile, 'file')
-    load(fullfile(dataDir, waveFile.name),'waveTable')
+    load(fullfile(dataDir, waveFile.name),'clWaveforms')
     N_exCl = size(waveTable, 1);
     exIdx = false(N_exCl, numel(clusterID));
     for ccl = 1:N_exCl
-        exIdx(:,ccl) = strcmp(waveTable.id, clusterID(ccl));
+        exIdx(:,ccl) = strcmp(clWaveforms{ccl}, clusterID(ccl));
     end
 end
-%}
 
 
 
