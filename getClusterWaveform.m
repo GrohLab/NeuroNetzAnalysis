@@ -13,7 +13,7 @@ function clWaveforms = getClusterWaveform(clusterID, dataDir)
 % Emilio Isaias-Camacho @GrohLab 2019
 
 %% Input validation
-clWaveforms = cell(1,2);
+clWaveforms = cell(1,3);
 checkNature = @(x) [iscell(x), ischar(x), isnumeric(x)];
 getLastCell = @(x) x{numel(x)};
 if ~any(checkNature(clusterID))
@@ -115,16 +115,24 @@ ch2read = clTable{clusterID, 'channel'};
 % Verifying if the waveform(s) for the given cluster(s) was/were computed
 % already
 
-waveFile = dir(fullfile(dataDir,'_waveforms.mat'));
-if exist(waveFile, 'file')
+waveFile = dir(fullfile(dataDir,'*_waveforms.mat'));
+if ~isempty(waveFile)
     load(fullfile(dataDir, waveFile.name),'clWaveforms')
-    N_exCl = size(waveTable, 1);
-    exIdx = false(N_exCl, numel(clusterID));
-    for ccl = 1:N_exCl
-        exIdx(:,ccl) = strcmp(clWaveforms{ccl}, clusterID(ccl));
-    end
+    % N_exCl = size(clWaveforms, 1);
+    [exIdx, exSub] = ismember(clWaveforms(:,1),clusterID);
+    % exIdx = false(N_exCl, numel(clusterID));
+    % for ccl = 1:N_exCl
+    %    exIdx(:,ccl) = strcmp(clWaveforms{ccl,1}, clusterID(ccl));
+    % end
 end
+% 'Removing' unwanted cluster waveforms
+clWaveforms = clWaveforms(exIdx,:);
+Nexcl = nnz(exIdx);
+Nrqcl = length(clusterID);
 
+
+cl_fromBin = fetchWaveforms_fromBin(dataDir, clusterID,...
+    clSub, clTempSubs, spkIdx, ch2read);
 
 
 
