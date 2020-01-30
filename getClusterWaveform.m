@@ -55,12 +55,26 @@ fgetl(fP);
 ln = fgetl(fP);
 fclose(fP);
 Nch = getLastCell(textscan(ln,'%s = %d'))-1;
+necessaryFiles = {fullfile(dataDir, 'channel_map.npy');...
+    fullfile(dataDir, 'spike_templates.npy');...
+    fullfile(dataDir, 'spike_clusters.npy')};
+allOk = [exist(necessaryFiles{1},'file'), exist(necessaryFiles{2},'file'),...
+    exist(necessaryFiles{3},'file')];
+if ~all(allOk)
+    fprintf(1,'The following files were not found:\n')
+    for cf = find(~allOk)
+        fprintf(1,'%s\n', necessaryFiles{cf})
+    end
+    fprintf(1,'Cannot continue without these files. Aborting...\n')
+    return
+end
+%% Reading the necessary files
 % Reading the channel order
-chanMap = readNPY(fullfile(dataDir, 'channel_map.npy'));
+chanMap = readNPY(necessaryFiles{1});
 % Preparatory variables for organising the output
-spkTmls = readNPY(fullfile(dataDir, 'spike_templates.npy'));
-spkCls = readNPY(fullfile(dataDir, 'spike_clusters.npy'));
-
+spkTmls = readNPY(necessaryFiles{2});
+spkCls = readNPY(necessaryFiles{3});
+%% Input arguments verification
 % Logical variables for clusters (clIdx) and spikes (spkIdx)
 clIdx = false(size(clTable, 1), numel(clusterID));
 spkIdx = false(size(spkCls,1), numel(clusterID));
