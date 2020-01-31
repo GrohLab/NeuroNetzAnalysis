@@ -112,35 +112,84 @@ clTempSubs(missClustFlag) = [];
 % ch2read = chanMap(clTable{clusterID, 'channel'} + 1);
 ch2read = clTable{clusterID, 'channel'};
 
-% Verifying if the waveform(s) for the given cluster(s) was/were computed
-% already
+%% Verifying if the waveform(s) for the given cluster(s) was/were computed
 
 waveFile = dir(fullfile(dataDir,'*_waveforms.mat'));
+
 if ~isempty(waveFile)
-    load(fullfile(dataDir, waveFile.name),'clWaveforms')
+    waveFileName = fullfile(dataDir, waveFile.name);
+    load(waveFileName,'clWaveforms')
     % N_exCl = size(clWaveforms, 1);
     [exIdx, exSub] = ismember(clWaveforms(:,1),clusterID);
-    % exIdx = false(N_exCl, numel(clusterID));
-    % for ccl = 1:N_exCl
-    %    exIdx(:,ccl) = strcmp(clWaveforms{ccl,1}, clusterID(ccl));
-    % end
+    % 'Removing' unwanted cluster waveforms and retrieving missing clusters
+    clWaveforms = clWaveforms(exIdx,:);
+    % Number of stored clusters
+    Nstcl = nnz(exIdx);
+    % Number of requested clusters
+    Nrqcl = length(clusterID);
+    missingClSubs = setdiff(1:Nrqcl, exSub);
+    Nbncl = numel(missingClSubs);
+    if Nbncl
+        % Allocation of the bigger space
+        clOutput = cell(Nstcl+Nbncl,3);
+        % Reading the clusters from the file
+        cl_fromBin = fetchWaveforms_fromBin(dataDir, clusterID(missingClSubs),...
+            chanMap, Nch, clSub(missingClSubs), clTempSubs(missingClSubs),...
+            spkIdx(:,missingClSubs), ch2read(missingClSubs));
+        % Ordering the clusters alfabetically due to the string nature of the
+        % ID
+        reqClID = [clWaveforms(:,1); cl_fromBin(:,1)];
+        [~, reqOrdSub] = sort(reqClID);
+        % Assigning the clusters from the cell-array
+        clOutput(reqOrdSub <= Nstcl,:) = clWaveforms;
+        % Assigning the clusters from the bin file
+        clOutput(reqOrdSub > Nstcl,:) = cl_fromBin;
+        % Re-assigning the variable names
+        clWaveforms = clOutput;
+        save(waveFileName, 'clWaveforms','-append')
+    end
+else
+    clWaveforms = fetchWaveforms_fromBin(dataDir, clusterID,...
+        chanMap, Nch, clSub, clTempSubs, spkIdx, ch2read);
+    % Naming the waveform file
+    binFile = dir(fullfile(dataDir,'*.bin'));
+    smrxFile = dir(fullfile(dataDir, '*.smrx'));
+    if numel(binFile) == 1 
+        % As the binary file
+        [~,baseName] = fileparts(fullfile(binFile.folder,binFile.name));
+    elseif numel(smrxFile) == 1
+        % As the smrx file
+        [~,baseName] = fileparts(fullfile(smrxFile.folder,smrxFile.name));
+    elseif numel(binFile) > 1 || numel(smrxFile) > 1
+        % User dependent name
+        [~, bbaseNames] = arrayfun(@(x) fileparts(x.name), binFile,...
+            'UniformOutput', 0);
+        [~, sbaseNames] = arrayfun(@(x) fileparts(x.name), smrxFile,...
+            'UniformOutput', 0);
+        bsBaseNames = [bbaseNames;sbaseNames];
+        [bnSub, iOk] = listdlg('ListString', bsBaseNames,...
+            'PromptString', 'Output name:',...
+            'CancelString', 'None of these');
+        if ~iOk
+            slfnans = questdlg('Would you like to name it yourself?',...
+                'File name','Yes','No','Yes');
+            if strcmp(slfnans,'Yes')
+                slfName = inputdlg('File name:','Write a title',[16,200],...
+                    bsBaseNames{1});
+                [~,baseName] = fileparts(slfName);
+            end
+        else
+            baseName = bsBaseNames{bnSub};
+        end
+    end
+    waveFileName = fullfile(dataDir, [baseName, '_waveforms.mat']);
+    save(waveFileName, 'clWaveforms')
 end
-% 'Removing' unwanted cluster waveforms
-clWaveforms = clWaveforms(exIdx,:);
-Nexcl = nnz(exIdx);
-Nrqcl = length(clusterID);
-
-
-cl_fromBin = fetchWaveforms_fromBin(dataDir, clusterID,...
-    clSub, clTempSubs, spkIdx, ch2read);
-
-
-
 end
 
 function clWaveforms =...
     fetchWaveforms_fromBin(dataDir, clusterID,...
-    clSub, clTempSubs, spkIdx, ch2read)
+    chanMap, Nch, clSub, clTempSubs, spkIdx, ch2read)
 %% Reading the binary file
 clWaveforms = cell(numel(clusterID),3);
 % Determinig the spike times for the given clusters
@@ -161,16 +210,10 @@ if isempty(binFile)
     fprintf(1,'\n');
     return
 end
-
-
 pcFeat = readNPY(fullfile(dataDir, 'pc_features.npy'));
 pcInd = readNPY(fullfile(dataDir, 'pc_feature_ind.npy'));
-
-
-
 spkSubs = cellfun(@(x) round(x.*fs),sortedData(clSub,2),...
     'UniformOutput',false);
-
 % [ch2read, readOrder, repeatChs] = unique(ch2read);
 fID = fopen(fullfile(dataDir, binFile.name), 'r');
 cchan = 1;
@@ -194,8 +237,14 @@ while ~feof(fID) && cchan <= numel(clusterID)
         % Jumping to 1 ms before the time when the spike occured
         fseek(fID, 2*((Nch+1)*(spkDists(cspk) - spikeSamples)), 'cof');
         % Reading the waveform
-        waveform(:,cspk) =...
-            fread(fID, [spikeWaveTime, 1], 'int16=>single', 2*Nch);
+        cwf = fread(fID, [spikeWaveTime, 1], 'int16=>single', 2*Nch);
+        % Assigning the waveform to the saving variable. If the waveform is
+        % cut, then assign only the gathered piece.
+        try
+            waveform(:,cspk) = cwf;
+        catch
+            waveform(1:length(cwf),cspk) = cwf;
+        end
         % Jumping back to the exact time of the spike
         fseek(fID, -2*((Nch+1)*(spikeSamples+1)), 'cof');
         %    if ismember(cspk,subSet)
