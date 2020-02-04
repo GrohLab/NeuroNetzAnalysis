@@ -11,10 +11,10 @@ function clusterInfo = getClusterInfo(filename)
 %               each cluster and M columns corresponding to each variable
 %               in the file (e.g. id, amplitude, channel, etc.)
 % Emilio Isaias-Camacho @ GrohLab 2020
-
 %% Initial and auxiliary variables
 getContFirstCell = @(x) x{1};
 clusterInfo = table;
+
 %% Validation of the input argument; the filename
 % Checking for existence
 if ~exist(filename,'file')
@@ -23,6 +23,7 @@ if ~exist(filename,'file')
 end
 % Checking for validity
 [~, fname, fext] = fileparts(filename);
+fname = char(fname); fext = char(fext);
 if ~strcmp([fname,fext],'cluster_info.tsv')
     fprintf(1,'Wrong file fed to the function!\n')
     fprintf(1,'It must be the phy-generated file ''cluster_info.tsv''\n')
