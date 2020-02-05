@@ -13,7 +13,7 @@ end
 Nr = numel(Results);
 Figs = gobjects(Nr,1);
 ax = gobjects(2,1);
-axLabels = {'Spontaneous_', 'Evoked_'};
+axLabels = {'Spontaneous_{', 'Evoked_{'};
 Ncond = numel(CondNames);
 Ne = size(Results(1).Activity(1).Pvalues,1);
 Hc = false(Ne, Nr*2 - Ncond);
@@ -56,8 +56,8 @@ for cr = 1:Nr
             'YData', [0, axMx],...
             'Color', [0.8, 0.8, 0.8], 'LineStyle', '--');
         title(ax(csp),ttle); 
-        xlabel(ax(csp), [axLabels{aslSubX},num2str(cond1),' [Hz]']); 
-        ylabel(ax(csp), [axLabels{aslSubY},num2str(cond2),' [Hz]']);
+        xlabel(ax(csp), [axLabels{aslSubX},CondNames{cond1},'} [Hz]']); 
+        ylabel(ax(csp), [axLabels{aslSubY},CondNames{cond2},'} [Hz]']);
         scatter(ax(csp),xaxis(H), yaxis(H),15, 'DisplayName', 'Significant')
         [mdl,~,rsq] = fit_poly(xaxis, yaxis, 1);
         line(ax(csp),'XData',[0, axMx],...
