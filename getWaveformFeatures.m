@@ -3,7 +3,6 @@ function [feats] = getWaveformFeatures(mean_wf, fs)
 %   Detailed explanation goes here
 tmPts = getWaveformCriticalPoints(mean_wf, fs);
 [Nt, Ncl] = size(mean_wf);
-feats = zeros(Ncl,2);
 tx = (0:Nt-1)/fs;
 pt_dt = zeros(Ncl,1);
 for ccl = 1:Ncl
