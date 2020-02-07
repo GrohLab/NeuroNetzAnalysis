@@ -65,4 +65,5 @@ for cv = 1:Nv
 end
 % Naming the rows and columns appropiately and respectively.
 clusterInfo.Properties.DimensionNames = {'Clusters', 'Measures'};
+clusterInfo.Properties.RowNames = clusterInfo.id;
 end

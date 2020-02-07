@@ -54,7 +54,7 @@ fP = fopen(fullfile(dataDir,'params.py'),'r');
 fgetl(fP);
 ln = fgetl(fP);
 fclose(fP);
-Nch = getLastCell(textscan(ln,'%s = %d'))-1;
+Nch = double(getLastCell(textscan(ln,'%s = %d'))-1);
 necessaryFiles = {fullfile(dataDir, 'channel_map.npy');...
     fullfile(dataDir, 'spike_templates.npy');...
     fullfile(dataDir, 'spike_clusters.npy')};
