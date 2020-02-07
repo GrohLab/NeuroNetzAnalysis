@@ -8,7 +8,6 @@ end
 Nwf = (rs*(dim==2)) + (cs*(dim==1));
 evals = zeros(Nwf,1);
 ft = fftshift(fft(signal,[],dim),dim);
-
 for cs = 1:Nwf
     if dim == 1
         p = ft(:,cs);
