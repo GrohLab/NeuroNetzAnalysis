@@ -39,6 +39,7 @@ Nv = length(heads);
 % Read all the values in the file
 conts = getContFirstCell(textscan(fID, '%s', 'Delimiter', '\t',...
     'Whitespace', ' '));
+emptyIdx = cellfun(@isempty, conts); conts(emptyIdx) = {'0'};
 % Close the file and process the contents
 fclose(fID);
 %% Scanning the extracted contents 
