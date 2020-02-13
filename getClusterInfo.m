@@ -48,7 +48,7 @@ conts_rs = reshape(conts,Nv,Ne/Nv)';
 for cv = 1:Nv
     % Proceeding slightly different for each variable
     switch heads{cv}
-        case {'id','KSLabel','group'}
+        case {'id','KSLabel','group','NeuronType'}
             % Read as string if the header indicates strings
             vals = cellfun(@(x) getContFirstCell(textscan(x,'%s')),...
                 conts_rs(:,cv));
