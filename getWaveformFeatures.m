@@ -9,11 +9,11 @@ for ccl = 1:Ncl
     % Time difference between the peak and the trough (peak-trough time
     % diff)
     Nzc = size(tmPts{ccl,1},1);
-    Ywf = interp1(tx,mean_wf(:,ccl),tmPts{ccl,1});
-    [~, ySub] = sort(Ywf);
-    pt_dt(ccl) = abs(tmPts{ccl,1}(ySub(1)) - tmPts{ccl,1}(ySub(Nzc)));
+    cwave = mean_wf(:,ccl) - mean(mean_wf(:,ccl));
+    Ywf = interp1(tx,cwave,tmPts{ccl,1});
+    [~, ySub] = sort(abs(Ywf));
+    pt_dt(ccl) = abs(tmPts{ccl,1}(ySub(Nzc)) - tmPts{ccl,1}(ySub(Nzc-1)));
 end
 evals = getSpectralEntropy(mean_wf);
 feats = [pt_dt, evals];
 end
-
