@@ -4,5 +4,4 @@ sig = cov(data);
 [U,S] = svd(sig);
 Sinv = diag(1./sqrt(diag(S)));
 WhiteData = (Sinv * U' * dataZ')';
-
 end
