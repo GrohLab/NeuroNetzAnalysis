@@ -1,5 +1,5 @@
 function [feats] = getWaveformFeatures(mean_wf, fs)
-%UNTITLED Summary of this function goes here
+%GETWAVEFORMFEATURES computes the features of the 
 %   Detailed explanation goes here
 tmPts = getWaveformCriticalPoints(mean_wf, fs);
 [Nt, Ncl] = size(mean_wf);
