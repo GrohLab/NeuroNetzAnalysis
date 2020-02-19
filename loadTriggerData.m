@@ -5,6 +5,13 @@ binFiles = dir(fullfile(dataDir,'*.bin'));
 % Loading the sampling frequency, the sorted clusters, and the conditions
 % and triggers.
 expSubfix = fullfile(dataDir,expName);
+
+chanMap = readNPY(fullfile(dataDir,'channel_map.npy'));
+chanPos = readNPY(fullfile(dataDir,'channel_positions.npy'));
+
+assignin('base','chanMap',chanMap)
+assignin('base','chanPos',chanPos)
+
 assignin('base','expSubfix',expSubfix)
 assignin('base','expName',expName)
 try
@@ -44,5 +51,13 @@ catch
     load([expSubfix,'_all_channels.mat'],'sortedData')
 end
 assignin('base','sortedData',sortedData)
+try
+    clInfo = getClusterInfo(fullfile(dataDir,'cluster_info.tsv'));
+catch
+    fprintf(1, 'No ''cluster_info.tsv'' file found!\n')
+    fprintf(1, 'Be sure to save your sorting with phy\n')
+    clInfo = table();
+end
+assignin('base','clInfo',clInfo)
 iOk = true;
 end
