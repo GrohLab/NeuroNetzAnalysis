@@ -11,7 +11,11 @@ checkSignal = @(x,y) contains(x,y,'IgnoreCase',true);
 findUnpairedPulse = @(x) cat(1,false,reshape(diff(sort(x)) == 0,numel(x)-1,1));
 Conditions = struct('name',{},'Triggers',{});
 Triggers = struct();
-
+if ~loadTriggerData(expFolder)
+    fprintf(1,'No condition extracted.\n')
+    return
+end
+%{
 smrxFile = dir(fullfile(expFolder,'*.smrx'));
 [~,expName,~] = fileparts(smrxFile(1).name);
 if isempty(smrxFile)
