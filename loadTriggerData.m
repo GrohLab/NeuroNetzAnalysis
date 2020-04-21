@@ -1,6 +1,7 @@
 function iOk = loadTriggerData(dataDir)
 iOk = false;
 binFiles = dir(fullfile(dataDir,'*.bin'));
+smrxFiles = dir(fullfile(dataDir,'*.smrx'));
 [~,expName,~] = fileparts( binFiles(1).name);
 % Loading the sampling frequency, the sorted clusters, and the conditions
 % and triggers.
@@ -17,8 +18,13 @@ assignin('base','expName',expName)
 try
     load([expSubfix,'_sampling_frequency.mat'],'fs')
 catch
-    fprintf(1,'Seems like the kilosort-phy pipeline hasn''t been touched!\n')
-    return
+    try
+        [~,smrxBaseName] = fileparts(smrxFiles(1).name);
+        load([fullfile(dataDir,smrxBaseName),'_sampling_frequency.mat'],'fs')
+    catch
+        fprintf(1,'Did not find the sampling frequency. Cannot continue\n')
+        return
+    end
 end
 assignin('base','fs',fs)
 try
