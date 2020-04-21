@@ -51,7 +51,7 @@ else
     warning('Please create the _sampling_frequency.mat file first\n')
     return
 end
-
+%}
 %%
 
 fields = fieldnames(stimSig);
@@ -184,11 +184,12 @@ for cdl = 1:Ndel
         wSub(sort(piezSub(lsDel(:,cdl))),:);
 end
 %{
-this is a fix to account for a  file with no delays (e.g. period of whisker
+this is a fix to account for a file with no delays (e.g. period of whisker
 stimuli followed by period of laser stimuli)
 %}
-if Ndel==0,cdl=0;
-        fprintf(1,' none!')
+if Ndel==0
+    cdl=0;
+    fprintf(1,' none!')
 else
     fprintf(1,' ms\n')
 end 
