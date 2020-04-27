@@ -1,53 +1,363 @@
-classdef ProtocolGetter
+classdef ProtocolGetter < handle
     %PROTOCOLGETTER tries to recognize and extract the experimental
-    %protocol
+    %protocol from either single or merged recordings
     
-    properties
-        dataDir char
-        ismerged logical
-        fileOrder cell
+    properties (SetAccess = 'private')
+        dataDir char = '';
+        ismerged (1,1) logical = false;
+        fileOrder string = "";
+        condSigFiles string = "";
+        fs (1,1) double = 3e4;
+        Triggers struct;
+        Edges (1,2) struct;
+    end
+    
+    properties % To set the get access to protected
     end
     
     methods
         function obj = ProtocolGetter(directory)
             %UNTITLED4 Construct an instance of this class
             %   Detailed explanation goes here
+            foStr = '_fileOrder';
+            getBaseNames = @(x) arrayfun(@(y) fileparts(y.name), x,...
+                'UniformOutput', 0);
+            % Good folder?
             if ~exist(directory,'dir')
                 fprintf('Invalid folder! No object created!\n')
                 return
             end
             obj.dataDir = directory;
-            binFiles = dir([directory, '*.bin']);
-            smrxFiles = dir([directory, '*.smrx']);
-            Nb = numel(binFiles); Ns = numel(smrxFiles);
-            [~,binBaseNames] = arrayfun(@(x) fileparts(x.name), binFiles,...
-                'UniformOutput', 0);
-            [~,smrxBaseNames] = arrayfun(@(x) fileparts(x.name), smrxFiles,...
-                'UniformOutput', 0);
+            fsFile = dir(fullfile(directory,'*_sampling_frequency.mat'));
+            load(fullfile(directory,fsFile(1).name),'fs')
+            obj.fs = fs;
+            [~,binBaseNames] = getBaseNames(dir(fullfile(directory, '*.bin')));
+            smrxFiles = dir(fullfile(directory, '*.smrx'));
+            [~,smrxBaseNames] = getBaseNames(smrxFiles);
+            merFiles = dir([directory, '*', foStr, '.txt']);
+            Nb = numel(binBaseNames); Ns = numel(smrxBaseNames);
             % Checking if the number of binnary files equals the number of
             % CED recorded files and if their names match. sitFlags has 4
-            % likely cases encoded from
-            sitFlags = [Nb == Ns,...
+            % likely cases encoded from.
+            sitFlags = [Nb == Ns, isempty(merFiles),...
                 any(ismember(binBaseNames, smrxBaseNames))];
             selNum = bin2num(sitFlags,0);
-            switch selNum
-                case 0 % Merged binnary file using all SMRX files; ideal
-                    merFiles = dir([directory,'*_fileOrder.mat']);
-                    if ~isempty(merFiles)
-                        
+            if any(selNum == setdiff(0:5,3))
+                if ~sitFlags(2)
+                    obj.ismerged = true;
+                    foID = fopen(fullfile(merFiles(1).folder,...
+                        merFiles(1).name),'r');
+                    smrxFlags = zeros(Ns,1,'single'); counter = 1;
+                    while ~feof(foID) && counter <= Ns
+                        smrxFlags(counter) = counter * contains(fgetl(foID),...
+                            smrxBaseNames);
+                        counter = counter + 1;
                     end
-                case 1 
-                case 2
-                case 3
+                    smrxFlags(smrxFlags == 0) = [];
+                    fclose(foID);
+                    smrxBaseNames = smrxBaseNames(smrxFlags);
+                else
+                    % User interaction for older merges
+                    mergeQuest =...
+                        sprintf(...
+                        ['Did you merge %s.bin from more than one ''smrx''',...
+                        ' file?'],binBaseNames{1});
+                    mm = questdlg(mergeQuest,...
+                        'Merged?','Yes','No','Yes');
+                    if strcmpi(mm,'yes')
+                        % Which smrx files were used
+                        obj.ismerged = true;
+                        [smrxFlags, iOk] = listdlg(...
+                            'ListString',smrxBaseNames,...
+                            'SelectionMode','multiple',...
+                            'Name','SMRX select',...
+                            'PromptString','Out of which smrx files?');
+                        if iOk
+                            % Correct order?
+                            smrxBaseNames = smrxBaseNames(smrxFlags);
+                            oo = questdlg('Are they in order?',...
+                                'Order','Yes','No','Yes');
+                            if strcmpi(oo,'no')
+                                % Reorder the file names
+                                orderAns = inputdlg(smrxBaseNames,...
+                                    'File order',[1, 60],string(smrxFlags));
+                                nFileOrder = str2double(orderAns);
+                                nSmrxBaseNames = smrxBaseNames;
+                                if ~isempty(orderAns) && sum(abs(smrxFlags - nFileOrder)) ~= 0
+                                    fprintf(1,'Changing file order...\n')
+                                    nSmrxBaseNames(nFileOrder) = smrxBaseNames;
+                                    smrxBaseNames = nSmrxBaseNames;
+                                    smrxFlags = nFileOrder;
+                                else
+                                    fprintf(1, 'Order unaltered.\n')
+                                end
+                                
+                            end
+                            % Create a merge file (_fileOrder)
+                            binSl = 1;
+                            if Nb > 1
+                                [binSl, iOk] =...
+                                    listdlg('ListString',binBaseNames,...
+                                    'SelectionMode','single',...
+                                    'PromptString','For which binary file');
+                                if ~iOk
+                                    fprintf(1, 'Error: None binary file selected!\n');
+                                    fprintf(1, 'No object created.\n')
+                                    return
+                                end
+                            end
+                            foID = fopen(fullfile(obj.dataDir,...
+                                [binBaseNames{binSl}, '_fileOrder.txt']),'w');
+                            for csf = 1:size(smrxBaseNames,1)
+                                fprintf(foID, '%s\n',...
+                                    [smrxBaseNames{csf}, '.smrx']);
+                            end
+                            fprintf(foID, '%s', [binBaseNames{binSl},...
+                                '.bin']);
+                            fclose(foID);
+                        else
+                            fprintf(1, 'Cancelled by the user.\n');
+                            fprintf(1, 'No object created.\n');
+                            return
+                        end
+                    else
+                        % Binary file builed from one smrx
+                        smrxFlags = 1;
+                        if Ns > 1 && sitFlag(3)
+                            % If there are more than one but one matching
+                            % name
+                            smrxUniqueFlag = ismember(smrxBaseNames,...
+                                binBaseNames(1));
+                            if smrxUniqueFlag
+                                smrxBaseNames = smrxBaseNames(smrxUniqueFlag);
+                            else
+                                % No matching name
+                                [usedSxFile, iOk] =...
+                                    listdlg('ListString',smrxBaseNames,...
+                                    'Name','SMRX file selection',...
+                                    'PromptString','Select the SMRX file',...
+                                    'SelectionMode','single');
+                                if iOk
+                                    smrxBaseNames = smrxBaseNames(usedSxFile);
+                                else
+                                    % File not in this folder?
+                                    fprintf(1,['Perhaps the file is not',...
+                                        'located in this folder?\n',...
+                                        'No object created.\n'])
+                                    return
+                                end
+                            end
+                        end
+                    end
+                end
+                obj.fileOrder = string(smrxBaseNames(smrxFlags)) + ".smrx";
+            else
+                % Likely single file transformation
+                obj.fileOrder = string(smrxBaseNames) + ".smrx";
             end
+        end
+        
+        function obj = getConditionSignals(obj)
+            %GETCONDITIONSIGNALS extracts the condition signals from the
+            %SMRX files.
+            fprintf(1,'Reading SMRX files:\n')
+            Ns = size(obj.fileOrder,1);
+            for csf = 1:Ns
+                fprintf(1,'%s\n',obj.fileOrder(csf));
+                fID = fopen(fullfile(obj.dataDir, obj.fileOrder(csf)),'r');
+                getConditionSignalsBF(fID);
+            end
+            obj.condSigFiles = extractBefore(obj.fileOrder,".smrx") +...
+                "_condSig.mat";
+        end
+        
+        function obj = getSignalEdges(obj)
+            %GETSIGNALEDGES looks into the _condSig files and searches for
+            %whisker, laser, and lfp channels for then concatenate the edge
+            %samples.
+            mStimStruct = struct();
+            for csf = 1:size(obj.condSigFiles,1)
+                % Load the channel variables
+                stimSig = load(...
+                    fullfile(obj.dataDir,obj.condSigFiles(csf)));
+                fields = fieldnames(stimSig);
+                % Identify who is who
+                [idMat, titles, headers] =...
+                    ProtocolGetter.searchIDFromSignals(stimSig);
+                headers = string(headers);
+                % Variable assignment
+                stSgStruct = ProtocolGetter.assign2StimulationSignals(...
+                    stimSig, idMat, titles, fields);
+                wHead = stimSig.(headers(idMat(:,1)));
+                stSgStruct = ProtocolGetter.correctLFPLength(...
+                    stSgStruct, wHead);
+                mStimStruct = catStruct(mStimStruct, stSgStruct);
+            end
+            obj.Triggers = mStimStruct;
+            % Extract signal edges
+            [wSubs, lSubs] = ProtocolGetter.extractSignalEdges(mStimStruct,...
+                obj.fs);
+            subs = {wSubs,lSubs};
+            for cstr = 1:2
+                obj.Edges(cstr).Name = titles(idMat(:,cstr));
+                obj.Edges(cstr).Subs = subs{cstr};
+            end
+            function mStimStruct = catStruct(mStimStruct, stSgStruct)
+                fns = string(fieldnames(mStimStruct));
+                if isempty(fns)
+                    mStimStruct = stSgStruct;
+                else
+                    for cfn = 1:length(fns)
+                        mStimStruct.(fns(cfn)) = cat(...
+                            2*isrow(stSgStruct.(fns(cfn))) +...
+                            1*iscolumn(stSgStruct.(fns(cfn))),...
+                            mStimStruct.(fns(cfn)),stSgStruct.(fns(cfn)));
+                    end
+                end
+            end
+        end
+        
+        function obj = getFrequencyEdges(obj)
+            %GETFREQUENCYEDGES looks for train of stimulus in both signals
+            %and saves the position and frequency of the train.
+            % Whisker, piezo, mechanical
+            [wFreq, wFlags, wFreqs] = ProtocolGetter.extractFrequencyTrains(...
+                obj.Edges(1).Subs, obj.fs);
+            wTrainBodyFlags = ismembertol(wFreqs, wFreq, 0.01);
+            obj.Edges(1).Subs = obj.Edges(1).Subs(~wTrainBodyFlags,:);
+            wFlags([false;wTrainBodyFlags]) = []; 
+            wFreqs([false;wTrainBodyFlags(1:end-1)]) = [];
+            obj.Edges(1).Frequency = round(wFlags .* wFreqs,1);
+            % Laser
+            [lFreq, lFlags, lFreqs] = ProtocolGetter.extractFrequencyTrains(...
+                obj.Edges(2).Subs, obj.fs);
+            lTrainBodyFlags = ismembertol(lFreqs, lFreq, 0.01);
+            obj.Edges(2).Subs = obj.Edges(2).Subs(~lTrainBodyFlags,:);
+            lFlags(lTrainBodyFlags) = []; lFreqs(lTrainBodyFlags) = [];
+            disp('Breakpoint')
+        end
+        
+        function obj = pairStimulus(obj)
+            %PAIRSTIMULUS looks at the temporal relationships between both
+            %stimulus.
             
         end
         
-        function outputArg = method1(obj,inputArg)
-            %METHOD1 Summary of this method goes here
-            %   Detailed explanation goes here
-            outputArg = obj.Property1 + inputArg;
+    end
+    
+    methods (Static)
+        function [idMat, titles, headers] = searchIDFromSignals(stimSig)
+            checkSignal = @(x,y) contains(x,y,'IgnoreCase',true);
+            fields = fieldnames(stimSig);
+            chanFlag = cellfun(@contains,fields,repmat({'chan'},numel(fields),1));
+            chanSubs = find(chanFlag);
+            headers = cellfun(@strrep,fields(chanFlag),...
+                repmat({'chan'},numel(chanSubs),1),...
+                repmat({'head'},numel(chanSubs),1),'UniformOutput',false);
+            titles = cell(numel(headers),1);
+            whiskFlag = false(numel(titles),1);
+            laserFlag = whiskFlag;
+            lfpFlag = whiskFlag;
+            for chead = 1:numel(headers)
+                titles{chead} = stimSig.(headers{chead}).title;
+                whiskFlag(chead) = checkSignal(titles{chead},'piezo') |...
+                    checkSignal(titles{chead},'puff') |...
+                    checkSignal(titles{chead},'mech');
+                laserFlag(chead) = checkSignal(titles{chead},'laser');
+                lfpFlag(chead) = checkSignal(titles{chead},'lfp');
+            end
+            idMat = [whiskFlag, laserFlag, lfpFlag];
         end
+        
+        function stSgStruct =...
+                assign2StimulationSignals(stimSig, idMat, titles, fields)
+            whiskSubs = 1:numel(titles);
+            laserSubs = whiskSubs;
+            lfpSubs = whiskSubs;
+            whiskFlag = idMat(:,1); laserFlag = idMat(:,2);
+            lfpFlag = idMat(:,3);
+            chanSubs = find(contains(fields,'chan'));
+            if any(whiskFlag)
+                whiskSubs = find(whiskFlag);
+            end
+            while sum(whiskFlag) ~= 1
+                wSub = listdlg('ListString',titles(whiskSubs),...
+                    'PromptString','Select the mechanical TTL',...
+                    'SelectionMode','single');
+                if ~isempty(wSub)
+                    whiskFlag = false(size(whiskFlag));
+                    whiskFlag(wSub) = true;
+                else
+                    fprintf(1,'Please select one of the displayed signals!\n')
+                end
+            end
+            whisk = stimSig.(fields{chanSubs(whiskFlag)});
+            if any(laserFlag)
+                laserSubs = find(laserFlag);
+            end
+            while sum(laserFlag) ~= 1
+                lSub = listdlg('ListString',titles(laserSubs),...
+                    'PromptString','Select the laser TTL',...
+                    'SelectionMode','single');
+                if ~isempty(lSub)
+                    laserFlag = false(size(laserFlag));
+                    laserFlag(lSub) = true;
+                else
+                    fprintf(1,'Please select one of the displayed signals!\n')
+                end
+            end
+            laser = stimSig.(fields{chanSubs(laserFlag)});
+            
+            if any(lfpFlag)
+                lfpSubs = find(lfpFlag);
+            end
+            iOk = true;
+            while sum(lfpFlag) ~= 1 && iOk
+                [lSub, iOk] = listdlg('ListString',titles(lfpSubs),...
+                    'PromptString','Select the lfp signal',...
+                    'SelectionMode','single','CancelString', 'none');
+                if ~isempty(lSub)
+                    lfpFlag = false(size(lfpFlag));
+                    lfpFlag(lSub) = true;
+                end
+            end
+            if iOk
+                lfp = stimSig.(fields{chanSubs(lfpFlag)});
+            else
+                lfp = 0;
+            end
+            stSgStruct = struct('Whisker',whisk,'Laser',laser,'LFP',lfp);
+        end
+        
+        function [stSgStruct, Ns] = correctLFPLength(stSgStruct, wHead)
+            intanDomain = round([wHead.start, wHead.stop]*wHead.SamplingFrequency);
+            lfp = stSgStruct.LFP;
+            Ns = length(stSgStruct.Whisker);
+            lfp = lfp(intanDomain(1):length(lfp));
+            if length(lfp) < Ns
+                lfp = padarray(lfp,Ns - length(lfp),'symmetric',...
+                    'post');
+            end
+            stSgStruct.LFP = lfp;
+        end
+        
+        function [wSubs, lSubs] = extractSignalEdges(Triggers, fs)
+            wObj = StepWaveform(Triggers.Whisker, fs);
+            lObj = StepWaveform(Triggers.Laser, fs);
+            getGlitch = @(x) (diff(x,1,2) == 0);
+            wSubs = wObj.subTriggers;
+            wSubs(getGlitch(wSubs),:) = [];
+            lSubs = lObj.subTriggers;
+            lSubs(getGlitch(lSubs),:) = [];
+        end
+        
+        function [freqCond, fstSubs, pulsFreq] =...
+                extractFrequencyTrains(subs, fs)
+            fstSubs = StepWaveform.firstOfTrain(subs(:,1)/fs);
+            pulsFreq = 1./diff(subs(:,1)./fs);
+            freqCond = round(uniquetol(pulsFreq, 0.1/max(pulsFreq)), 1);
+            freqCond = freqCond(freqCond >= 1);
+        end
+        
     end
 end
-
