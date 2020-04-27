@@ -52,7 +52,7 @@ else
     return
 end
 %}
-%%
+%% Identification of the channels
 
 fields = fieldnames(stimSig);
 chanFlag = cellfun(@contains,fields,repmat({'chan'},numel(fields),1));
@@ -72,6 +72,9 @@ for chead = 1:numel(headers)
     lfpFlag(chead) = checkSignal(titles{chead},'lfp');
 end
 %% Possible user interaction and correct assignment of the signals
+% If the channels are not named in an standard way, the experimenter should
+% aid and select which imported channels correspond to the respective
+% variables.
 whiskSubs = 1:numel(titles);
 laserSubs = whiskSubs;
 lfpSubs = whiskSubs;
@@ -85,7 +88,6 @@ while sum(whiskFlag) ~= 1
     if ~isempty(wSub)
         whiskFlag = false(size(whiskFlag));
         whiskFlag(wSub) = true;
-        
     else
         fprintf(1,'Please select one of the displayed signals!\n')
     end
@@ -155,7 +157,7 @@ if any(glitchInLaser)
     fprintf(1,'There were some ''funky'' triggers in laser... deleting\n')
     lSub(glitchInLaser,:) = [];
 end
-
+%% Condition creation
 Conditions(1).name = 'WhiskerAll';
 Conditions(1).Triggers = wSub;
 Conditions(2).name = 'LaserAll';
