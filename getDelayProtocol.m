@@ -191,7 +191,7 @@ stimuli followed by period of laser stimuli)
 %}
 if Ndel==0
     cdl=0;
-    fprintf(1,' none!')
+    fprintf(1,' none!\n')
 else
     fprintf(1,' ms\n')
 end 
