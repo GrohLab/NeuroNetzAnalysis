@@ -10,6 +10,7 @@ classdef ProtocolGetter < handle
         fs (1,1) double = 3e4;
         Triggers struct;
         Edges (1,2) struct;
+        Conditions struct;
     end
     
     properties % To set the get access to protected
@@ -34,7 +35,7 @@ classdef ProtocolGetter < handle
             [~,binBaseNames] = getBaseNames(dir(fullfile(directory, '*.bin')));
             smrxFiles = dir(fullfile(directory, '*.smrx'));
             [~,smrxBaseNames] = getBaseNames(smrxFiles);
-            merFiles = dir([directory, '*', foStr, '.txt']);
+            merFiles = dir(fullfile(directory, ['*', foStr, '.txt']));
             Nb = numel(binBaseNames); Ns = numel(smrxBaseNames);
             % Checking if the number of binnary files equals the number of
             % CED recorded files and if their names match. sitFlags has 4
@@ -199,7 +200,7 @@ classdef ProtocolGetter < handle
                 obj.fs);
             subs = {wSubs,lSubs};
             for cstr = 1:2
-                obj.Edges(cstr).Name = titles(idMat(:,cstr));
+                obj.Edges(cstr).Name = titles{idMat(:,cstr)};
                 obj.Edges(cstr).Subs = subs{cstr};
             end
             function mStimStruct = catStruct(mStimStruct, stSgStruct)
@@ -223,24 +224,91 @@ classdef ProtocolGetter < handle
             % Whisker, piezo, mechanical
             [wFreq, wFlags, wFreqs] = ProtocolGetter.extractFrequencyTrains(...
                 obj.Edges(1).Subs, obj.fs);
-            wTrainBodyFlags = ismembertol(wFreqs, wFreq, 0.01);
+            wTrainBodyFlags = ismembertol([0;wFreqs], wFreq, 0.01);
             obj.Edges(1).Subs = obj.Edges(1).Subs(~wTrainBodyFlags,:);
-            wFlags([false;wTrainBodyFlags]) = []; 
-            wFreqs([false;wTrainBodyFlags(1:end-1)]) = [];
+            wFlags(wTrainBodyFlags) = []; 
+            wFreqs(wTrainBodyFlags(1:end-1)) = [];
             obj.Edges(1).Frequency = round(wFlags .* wFreqs,1);
+            obj.Edges(1).FreqValues = wFreq;
+            fprintf(1, 'Found %d frequencies for %s (', numel(wFreq),...
+                obj.Edges(1).Name)
+            for cf = 1:numel(wFreq) - 1
+                fprintf(1, '%.1f, ', wFreq(cf))
+            end
+            fprintf(1, '%.1f Hz)\n', wFreq(end))
             % Laser
             [lFreq, lFlags, lFreqs] = ProtocolGetter.extractFrequencyTrains(...
                 obj.Edges(2).Subs, obj.fs);
-            lTrainBodyFlags = ismembertol(lFreqs, lFreq, 0.01);
+            lTrainBodyFlags = ismembertol([0;lFreqs], lFreq, 0.01);
             obj.Edges(2).Subs = obj.Edges(2).Subs(~lTrainBodyFlags,:);
-            lFlags(lTrainBodyFlags) = []; lFreqs(lTrainBodyFlags) = [];
-            disp('Breakpoint')
+            lFlags(lTrainBodyFlags) = []; 
+            lFreqs(lTrainBodyFlags(1:end-1)) = [];
+            obj.Edges(2).Frequency = round(lFlags .* lFreqs,1);
+            obj.Edges(2).FreqValues = lFreq;
+            fprintf(1, 'Found %d frequencies for %s (', numel(lFreq),...
+                obj.Edges(2).Name)
+            for cf = 1:numel(lFreq) - 1
+                fprintf(1, '%.1f, ', lFreq(cf))
+            end
+            fprintf(1, '%.1f Hz)\n', lFreq(end))
         end
         
         function obj = pairStimulus(obj)
             %PAIRSTIMULUS looks at the temporal relationships between both
-            %stimulus.
+            %stimulus. In other words, the delay between each other.
+            % Regardless of the pairing or condition, all stimuli from one
+            % signal are going to be grouped in the first conditions and
+            % labeled as '<signal_name>All', replacing <signal_name> by the
+            % actual name of your signal.
+            wSub = obj.Edges(1).Subs;lSub = obj.Edges(2).Subs;
+            for ccon = 1:size(obj.Edges,2)
+                obj.Conditions(ccon).name = [obj.Edges(ccon).Name, 'All'];
+                obj.Conditions(ccon).Triggers = obj.Edges(ccon).Subs;
+            end
+            % Finding the time difference between every pulse in two
+            % signals
+            mxPulses = min(size(lSub,1),size(wSub,1));
+            dm = distmatrix(lSub(:,1)/obj.fs,wSub(:,1)/obj.fs);
+            [strDelay, whr] = sort(dm(:),'ascend');
+            [lSubOrd, wSubOrd] = ind2sub(size(dm),whr(1:mxPulses));
+            timeDelay = strDelay(1:mxPulses);
+            % The delay will usually be milliseconds long, so a logarithmic
+            % scale will be useful.
+            delays = 10.^uniquetol(log10(timeDelay),0.01/log10(max(abs(timeDelay))));
+            % Removing delays that are greater than 1 second.
+            delays(delays > 1) = [];
+            if std(delays.*1e3) < 1
+                % Validation for similarity between the delays. If the
+                % standard deviation of the delays is smaller than 1 ms,
+                % then it is very likely that there are no protocolled
+                % delays.
+                delays = mean(delays);
+            end
+            % Assigning the subscripts to the Condition structure.
+            % Total number of delays
+            Ndel = numel(delays);
+            fprintf(1,'Delays found:')
+            % Logical matrix indicating membership of the subscripts to one
+            % or the other delays.
+            lsDel = false(length(timeDelay),Ndel);
+            Ncond = numel(obj.Conditions);
+            for cdl = 1:Ndel
+                % Starting from the last condition on
+                fprintf(1,' %.1f',delays(cdl)*1e3)
+                % Assign the boolean membership
+                lsDel(:,cdl) = ismembertol(log10(timeDelay),log10(delays(cdl)),...
+                    abs(0.01/log10(max(delays))));
+                % Create the name of the condition
+                obj.Conditions(Ncond + cdl).name = sprintf('Delay %0.3f s',...
+                    delays(cdl));
+                % Use the boolean membership to find the subscripts that
+                % belong to the current condition.
+                obj.Conditions(Ncond + cdl).Triggers =...
+                    wSub(sort(wSubOrd(lsDel(:,cdl))),:);
+            end
+            delFlag = any(lsDel,2);
             
+            wSub(sort(wSubOrd(delFlag)),:) = [];
         end
         
     end
@@ -353,10 +421,13 @@ classdef ProtocolGetter < handle
         
         function [freqCond, fstSubs, pulsFreq] =...
                 extractFrequencyTrains(subs, fs)
+            % Logical index pointing at the first pulse of a frequency
+            % train
             fstSubs = StepWaveform.firstOfTrain(subs(:,1)/fs);
+            % Inverse of the time difference between pulses (frequency)
             pulsFreq = 1./diff(subs(:,1)./fs);
             freqCond = round(uniquetol(pulsFreq, 0.1/max(pulsFreq)), 1);
-            freqCond = freqCond(freqCond >= 1);
+            freqCond = freqCond(freqCond >= 1); % Empty for no frequency
         end
         
     end
