@@ -11,6 +11,8 @@ classdef ProtocolGetter < handle
         Triggers struct;
         Edges (1,2) struct;
         Conditions struct;
+        isSaved logical = false;
+        BinFile string = "";
     end
     
     properties % To set the get access to protected
@@ -23,6 +25,7 @@ classdef ProtocolGetter < handle
             foStr = '_fileOrder';
             getBaseNames = @(x) arrayfun(@(y) fileparts(y.name), x,...
                 'UniformOutput', 0);
+            
             % Good folder?
             if ~exist(directory,'dir')
                 fprintf('Invalid folder! No object created!\n')
@@ -55,6 +58,7 @@ classdef ProtocolGetter < handle
                         counter = counter + 1;
                     end
                     smrxFlags(smrxFlags == 0) = [];
+                    binFile = string(fgetl(foID));
                     fclose(foID);
                     smrxBaseNames = smrxBaseNames(smrxFlags);
                 else
@@ -150,12 +154,15 @@ classdef ProtocolGetter < handle
                             end
                         end
                     end
+                    binFile = binBaseNames{1} + ".bin";
                 end
                 obj.fileOrder = string(smrxBaseNames(smrxFlags)) + ".smrx";
             else
                 % Likely single file transformation
+                binFile = binBaseNames{1} + ".bin";
                 obj.fileOrder = string(smrxBaseNames) + ".smrx";
             end
+            obj.BinFile = binFile;
         end
         
         function obj = getConditionSignals(obj)
@@ -260,8 +267,15 @@ classdef ProtocolGetter < handle
             % signal are going to be grouped in the first conditions and
             % labeled as '<signal_name>All', replacing <signal_name> by the
             % actual name of your signal.
+            fetchSubs = @(idx, bf, subOrd, subs) ...
+                subs(sort(subOrd(bf(:,idx))),:);
             wSub = obj.Edges(1).Subs;lSub = obj.Edges(2).Subs;
-            for ccon = 1:size(obj.Edges,2)
+            wFreqs = obj.Edges(1).Frequency;lFreqs = obj.Edges(2).Frequency;
+            wFreq = obj.Edges(1).FreqValues;lFreq = obj.Edges(2).FreqValues;
+            validateFreq = @(idx, bf, subOrd, freqs)...
+                nnz(fetchSubs(idx, bf, subOrd, freqs));
+            removeZeros = @(x) x(x~=0);
+            for ccon = 1:size(obj.Edges,2)  %#ok<*FXUP>
                 obj.Conditions(ccon).name = [obj.Edges(ccon).Name, 'All'];
                 obj.Conditions(ccon).Triggers = obj.Edges(ccon).Subs;
             end
@@ -287,7 +301,7 @@ classdef ProtocolGetter < handle
             % Assigning the subscripts to the Condition structure.
             % Total number of delays
             Ndel = numel(delays);
-            fprintf(1,'Delays found:')
+            fprintf(1,'% d Delays found:', Ndel)
             % Logical matrix indicating membership of the subscripts to one
             % or the other delays.
             lsDel = false(length(timeDelay),Ndel);
@@ -301,19 +315,95 @@ classdef ProtocolGetter < handle
                 % Create the name of the condition
                 obj.Conditions(Ncond + cdl).name = sprintf('Delay %0.3f s',...
                     delays(cdl));
+                % Verify if the selected subscripts are pulse trains 
+                if validateFreq(cdl, lsDel, lSubOrd, lFreqs) ||...
+                        validateFreq(cdl, lsDel, wSubOrd, wFreqs)
+                    delLFreqs = removeZeros(unique(...
+                        fetchSubs(cdl, lsDel, lSubOrd, lFreqs)));
+                    delWFreqs = removeZeros(unique(...
+                        fetchSubs(cdl, lsDel, wSubOrd, wFreqs)));
+                    for cdf = 1:length(delLFreqs)
+                        obj.Conditions(Ncond + cdl).name =...
+                            [obj.Conditions(Ncond + cdl).name,...
+                            sprintf(' + L_%.1f',delLFreqs(cdf))];
+                    end
+                    for cdf = 1:length(delWFreqs)
+                        obj.Conditions(Ncond + cdl).name =...
+                            [obj.Conditions(Ncond + cdl).name,...
+                            sprintf(' + W_%.1f',delWFreqs(cdf))];
+                    end
+                    obj.Conditions(Ncond + cdl).name =...
+                        [obj.Conditions(Ncond + cdl).name, ' Hz'];
+                end
                 % Use the boolean membership to find the subscripts that
                 % belong to the current condition.
                 obj.Conditions(Ncond + cdl).Triggers =...
-                    wSub(sort(wSubOrd(lsDel(:,cdl))),:);
+                    fetchSubs(cdl, lsDel, wSubOrd, wSub);
+                %  wSub(sort(wSubOrd(lsDel(:,cdl))),:); Line before
             end
+            Ncond = numel(obj.Conditions);
+            fprintf(1, ' ms\n')
             delFlag = any(lsDel,2);
-            
-            wSub(sort(wSubOrd(delFlag)),:) = [];
+            % Removing the used subscripts for delays (and possibly some
+            % frequencies)
+            wSub(fetchSubs(1,delFlag,wSubOrd,(1:size(wSub,1))'),:) = [];
+            wFreqs(fetchSubs(1,delFlag,wSubOrd,(1:size(wFreqs,1))')) = [];
+            lSub(fetchSubs(1,delFlag,lSubOrd,(1:size(lSub,1))'),:) = [];
+            lFreqs(fetchSubs(1,delFlag,lSubOrd,(1:size(lFreqs,1))')) = [];
+            % Creating the unpaired frequency conditions and removing those
+            % subscripts
+            [obj, wSub] = addFrequencyStimulus(obj,wSub,wFreqs,wFreq,1);
+            [obj, lSub] = addFrequencyStimulus(obj,lSub,lFreqs,lFreq,2);
+            % Add finally the control conditions
+            obj.Conditions(Ncond + 1).name =['Control ',obj.Edges(1).Name];
+            obj.Conditions(Ncond + 1).Triggers = wSub;
+            obj.Conditions(Ncond + 2).name =['Control ',obj.Edges(2).Name];
+            obj.Conditions(Ncond + 2).Triggers = lSub;
+            function [obj, subs] =...
+                    addFrequencyStimulus(obj,subs,freqs,freqVals,idx)
+                [Subf, FrFlags, CondNames] = fetchFrequencySubs(subs,...
+                    freqs, freqVals);
+                Nnc = size(Subf,1);
+                for ccon = 1:Nnc
+                    obj.Conditions(Ncond + ccon).name = [obj.Edges(idx).Name,...
+                        ' ', CondNames{ccon}];
+                    obj.Conditions(Ncond + ccon).Triggers = Subf{ccon};
+                end
+                subs(any(FrFlags,2),:) = [];
+                Ncond = numel(obj.Conditions);
+                function [fsubs, msFlag, names] =...
+                        fetchFrequencySubs(subs, freqs, freqVals)
+                    Nf = numel(freqVals);
+                    fsubs = cell(Nf,1);
+                    names = cell(fsubs);
+                    msFlag = false(size(freqs,1),Nf);
+                    for cf = 1:Nf
+                        msFlag(:,cf) = ismembertol(freqs,freqVals(cf),...
+                            0.11, 'DataScale', 1);
+                        fsubs{cf} = subs(msFlag(:,cf));
+                        names{cf} = sprintf('%.1f Hz', freqVals(cf));
+                    end
+                end
+            end
+        end
+        
+        function obj = saveConditions(obj)
+            if ~obj.isSaved
+                binBaseName = obj.BinFile.extractBefore(".bin");
+                if ~isempty(obj.Conditions) && ~isempty(obj.Triggers)
+                    Conditions = obj.Conditions; %#ok<*NASGU,*PROP>
+                    Triggers = obj.Triggers; fs = obj.fs;
+                    condFileName = fullfile(obj.dataDir, binBaseName+...
+                        "analysis.mat");
+                    save(condFileName, 'Conditions', 'Triggers', 'fs')
+                    obj.isSaved = true;
+                end
+            end
         end
         
     end
     
-    methods (Static)
+    methods (Static, Access = 'private')
         function [idMat, titles, headers] = searchIDFromSignals(stimSig)
             checkSignal = @(x,y) contains(x,y,'IgnoreCase',true);
             fields = fieldnames(stimSig);
