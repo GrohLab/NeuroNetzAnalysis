@@ -109,7 +109,6 @@ if fthAxFlag
     if r < c
         stims = stims';
     end
-    stims(:,std(stims,[],1) < 0.1) = 0;
     
     for cs = 1:min(r,c)
         if exist('IDs','var')
