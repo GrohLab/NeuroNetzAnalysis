@@ -380,7 +380,7 @@ classdef ProtocolGetter < handle
                     for cf = 1:Nf
                         msFlag(:,cf) = ismembertol(freqs,freqVals(cf),...
                             0.11, 'DataScale', 1);
-                        fsubs{cf} = subs(msFlag(:,cf));
+                        fsubs{cf} = subs(msFlag(:,cf),:);
                         names{cf} = sprintf('%.1f Hz', freqVals(cf));
                     end
                 end
