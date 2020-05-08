@@ -58,7 +58,8 @@ for cr = 1:Nr
         title(ax(csp),ttle); 
         xlabel(ax(csp), [axLabels{aslSubX},CondNames{cond1},'} [Hz]']); 
         ylabel(ax(csp), [axLabels{aslSubY},CondNames{cond2},'} [Hz]']);
-        scatter(ax(csp),xaxis(H), yaxis(H),15, 'DisplayName', 'Significant')
+        scatter(ax(csp),xaxis(H), yaxis(H),'SizeData',15,...
+            'DisplayName', 'Significant','Marker','.')
         [mdl,~,rsq] = fit_poly(xaxis, yaxis, 1);
         line(ax(csp),'XData',[0, axMx],...
             'YData', [0*mdl(1) + mdl(2), axMx*mdl(1) + mdl(2)],...
