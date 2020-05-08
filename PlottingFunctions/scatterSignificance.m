@@ -58,8 +58,8 @@ for cr = 1:Nr
         title(ax(csp),ttle); 
         xlabel(ax(csp), [axLabels{aslSubX},CondNames{cond1},'} [Hz]']); 
         ylabel(ax(csp), [axLabels{aslSubY},CondNames{cond2},'} [Hz]']);
-        scatter(ax(csp),xaxis(H), yaxis(H),'SizeData',15,...
-            'DisplayName', 'Significant','Marker','.')
+        scatter(ax(csp),xaxis(H), yaxis(H),'SizeData',30,...
+            'DisplayName', 'Significant','Marker','pentagram')
         [mdl,~,rsq] = fit_poly(xaxis, yaxis, 1);
         line(ax(csp),'XData',[0, axMx],...
             'YData', [0*mdl(1) + mdl(2), axMx*mdl(1) + mdl(2)],...
@@ -68,7 +68,7 @@ for cr = 1:Nr
         csp = csp + 1;
         if aslSubX == 1 && aslSubY == 2
             H2 = Results(cr).Activity(csp).Pvalues < 0.05;
-            scatter(ax(csp-1), xaxis(H2), yaxis(H2), '.', 'DisplayName', 'Shuffled')
+            scatter(ax(csp-1), xaxis(H2), yaxis(H2), '+', 'DisplayName', 'Shuffled')
         end
         if csp == 3
             Figs(cr).OuterPosition =...
