@@ -55,7 +55,7 @@ else
 end
 % Time axis
 spIdx = 1;
-tx = linspace(-timeLapse(1),timeLapse(2),Nt);
+tx = linspace(timeLapse(1),timeLapse(2),Nt);
 for cse = iE
     % For each spike train
     for cap = Na:-1:1

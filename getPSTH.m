@@ -44,7 +44,7 @@ cb = 0;
 sweeps = Na - sum(kIdx);
 trig = auxCounts(1,:)/sum(~kIdx);
 % Binned time axis
-timeAxis = seconds(linspace(-timeLapse(1),timeLapse(2),ceil(Nt/binEls)));
+timeAxis = seconds(linspace(timeLapse(1),timeLapse(2),ceil(Nt/binEls)));
 
 for ce = 2:Ne
     while cb < Nt/binEls - 1

@@ -84,7 +84,7 @@ if exist('consEvents','var') && ~isempty(consEvents)
     end
 end
 %% Preallocation of the discrete stack:
-prevSamples = ceil(timeSpan(1) * fs);
+prevSamples = ceil(abs(timeSpan(1)) * fs);
 postSamples = ceil(timeSpan(2) * fs);
 Nt = prevSamples + postSamples + 1;
 discreteStack = false(2+Ne,Nt,Na);
@@ -166,7 +166,7 @@ if Ns
 %     NtLFP = prevSamplesLFP + postSamplesLFP + 1;
 %     continuouStack = zeros(Ns,NtLFP,Na,'single');
 end
-prevSamplesLFP = ceil(timeSpan(1) * fsLFP);
+prevSamplesLFP = ceil(abs(timeSpan(1)) * fsLFP);
 postSamplesLFP = ceil(timeSpan(2) * fsLFP);
 NtLFP = prevSamplesLFP + postSamplesLFP + 1;
 continuouStack = zeros(Ns,NtLFP,Na,'single');

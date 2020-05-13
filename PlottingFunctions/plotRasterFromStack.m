@@ -9,7 +9,7 @@ function plotRasterFromStack(discreteStack, timeLapse, fs, figTitle, ax)
 [Ne, Nt, Na] = size(discreteStack);
 % Time axis
 tx = 0:1/fs:(Nt-1)/fs;
-tx = tx - timeLapse(1);
+tx = tx + timeLapse(1);
 AX_FLAG = true;
 if ~exist('ax','var') || isempty(ax)
     figure('Name',['Raster Plot ', figTitle],'Color',[1,1,1]);
@@ -48,7 +48,7 @@ for cse = 2:Ne
         end
     end
 end
-axis([-timeLapse(1),timeLapse(2),1,Na*(Ne-1)])
+axis([timeLapse(1),timeLapse(2),1,Na*(Ne-1)])
 
 end
 

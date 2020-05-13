@@ -29,7 +29,7 @@ for cse = 1:Ne
     for cap = Na:-1:1
         % For each alignment point
         if ~isempty(relativeSpikeTimes{cse,cap})
-            xspks = tx(relativeSpikeTimes{cse,cap} + idxOffset(1) + 1);
+            xspks = relativeSpikeTimes{cse,cap};
             lvl = (cse - 1)*Na + cap;
             for cs = 1:numel(xspks)
                 % For each spike

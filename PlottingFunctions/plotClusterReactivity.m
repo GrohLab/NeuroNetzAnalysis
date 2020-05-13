@@ -44,14 +44,14 @@ end
 PSTHn = PSTH./max(PSTH,[],2);
 fig = figure('Name',expName,'Color',[1,1,1]);
 ax1 = subplot(totlX,1,1:3,'Parent',fig);
-psthTX = linspace(-timeLapse(1),timeLapse(2),Npt);
+psthTX = linspace(timeLapse(1),timeLapse(2),Npt);
 clrmp = parula;
 % clrmp = defineWhYellRedColormap;
 % clrmp = defineBlueRedColormap();
 imagesc(ax1,'XData',psthTX,'CData',PSTHn);
 colormap(ax1,clrmp)
 
-trigTX = linspace(-timeLapse(1),timeLapse(2),size(trig,2));
+trigTX = linspace(timeLapse(1),timeLapse(2),size(trig,2));
 
 % Plotting lines for depicting the on- and offset of the trigger
 tObj = StepWaveform(trig,1/mean(diff(trigTX)));
@@ -71,7 +71,7 @@ end
 
 % Formatting the heatmap
 ax1.YLim = [0.5,size(PSTH,1)+0.5];
-ax1.XLim = [-timeLapse(1)-binSz/2, timeLapse(2)+binSz/2];
+ax1.XLim = [timeLapse(1)-binSz/2, timeLapse(2)+binSz/2];
 ax1.YTick = 1:Ncl;
 ax1.YTickLabel = IDe(2:end);
 ax1.YAxis.Label.String = sprintf('Cluster ID_{%d #clusters}', size(PSTH,1));
@@ -95,7 +95,7 @@ ax2.YAxis(2).Label.String = 'Stimulus probability';
 
 
 ax2.XLabel.String = sprintf('Time_{%.2f ms} [s]',binSz*1e3);
-ax2.XLim = [-timeLapse(1), timeLapse(2)];
+ax2.XLim = [timeLapse(1), timeLapse(2)];
 ax2.Box = 'off';
 ax2.ClippingStyle = 'rectangle';
 
@@ -127,7 +127,7 @@ if fthAxFlag
     legend(ax3,'show','Location','best')
 
     ax3.Box = 'off';
-    ax3.XLim = [-timeLapse(1), timeLapse(2)];
+    ax3.XLim = [timeLapse(1), timeLapse(2)];
     ax3.XAxis.Visible = 'off';
     ax3.YAxis.Visible = 'off';
     linkaxes([ax1,ax2,ax3],'x')
