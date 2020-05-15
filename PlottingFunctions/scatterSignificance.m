@@ -46,7 +46,8 @@ for cr = 1:Nr
                 aslSubX = 1; aslSubY = 2;
         end
         xaxis = meanfr{cond1, aslSubX}; yaxis = meanfr{cond2, aslSubY};
-        scatter(ax(csp),xaxis,yaxis); grid(ax(csp), 'on');
+        scatter(ax(csp), xaxis, yaxis, 'DisplayName', 'Clusters');
+        grid(ax(csp), 'on');
         text(ax(csp), xaxis, yaxis, clID)
         grid(ax(csp), 'minor'); axis('square'); 
         axis(ax(csp), [0, mxfr(cond1,aslSubX), 0, mxfr(cond1,aslSubY)]);
@@ -54,17 +55,18 @@ for cr = 1:Nr
         axMx = max(mxfr(cond1,aslSubX),mxfr(cond2,aslSubY));
         line(ax(csp), 'XData', [0, axMx],...
             'YData', [0, axMx],...
-            'Color', [0.8, 0.8, 0.8], 'LineStyle', '--');
+            'Color', [0.8, 0.8, 0.8], 'LineStyle', '--',...
+            'DisplayName', 'y = x');
         title(ax(csp),ttle); 
         xlabel(ax(csp), [axLabels{aslSubX},CondNames{cond1},'} [Hz]']); 
         ylabel(ax(csp), [axLabels{aslSubY},CondNames{cond2},'} [Hz]']);
         scatter(ax(csp),xaxis(H), yaxis(H),'SizeData',30,...
-            'DisplayName', 'Significant','Marker','pentagram')
+            'DisplayName', 'Significant', 'Marker', 'pentagram')
         [mdl,~,rsq] = fit_poly(xaxis, yaxis, 1);
         line(ax(csp),'XData',[0, axMx],...
             'YData', [0*mdl(1) + mdl(2), axMx*mdl(1) + mdl(2)],...
-            'DisplayName', sprintf('Trend line %.3f', rsq),...
-            'LineStyle', ':', 'LineWidth', 0.5)
+            'DisplayName', sprintf('Population trend %.3f (%.1fx %+.1f)',...
+            rsq, mdl(1), mdl(2)), 'LineStyle', ':', 'LineWidth', 0.5)
         csp = csp + 1;
         if aslSubX == 1 && aslSubY == 2
             H2 = Results(cr).Activity(csp).Pvalues < 0.05;
@@ -74,6 +76,7 @@ for cr = 1:Nr
             Figs(cr).OuterPosition =...
                 [Figs(cr).OuterPosition(1:2), 0.5344, 0.4275];
         end
+        legend(ax(csp-1),'show')
     end
 end
 set(Figs,'Visible','on')
