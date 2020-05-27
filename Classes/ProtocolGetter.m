@@ -216,10 +216,12 @@ classdef ProtocolGetter < handle
                     mStimStruct = stSgStruct;
                 else
                     for cfn = 1:length(fns)
-                        mStimStruct.(fns(cfn)) = cat(...
-                            2*isrow(stSgStruct.(fns(cfn))) +...
-                            1*iscolumn(stSgStruct.(fns(cfn))),...
-                            mStimStruct.(fns(cfn)),stSgStruct.(fns(cfn)));
+                        if ~isempty(stSgStruct.(fns(cfn)))
+                            mStimStruct.(fns(cfn)) = cat(...
+                                2*isrow(stSgStruct.(fns(cfn))) +...
+                                1*iscolumn(stSgStruct.(fns(cfn))),...
+                                mStimStruct.(fns(cfn)),stSgStruct.(fns(cfn)));
+                        end
                     end
                 end
             end
@@ -229,21 +231,34 @@ classdef ProtocolGetter < handle
             %GETFREQUENCYEDGES looks for train of stimulus in both signals
             %and saves the position and frequency of the train.
             % Whisker, piezo, mechanical
-            [wFreq, wFlags, wFreqs] = ProtocolGetter.extractFrequencyTrains(...
-                obj.Edges(1).Subs, obj.fs);
-            wTrainBodyFlags = ismembertol([0;wFreqs], wFreq, 0.01);
-            obj.Edges(1).Subs = obj.Edges(1).Subs(~wTrainBodyFlags,:);
-            wFlags(wTrainBodyFlags) = []; 
-            wFreqs(wTrainBodyFlags(1:end-1)) = [];
-            obj.Edges(1).Frequency = round(wFlags .* wFreqs,1);
-            obj.Edges(1).FreqValues = wFreq;
-            fprintf(1, 'Found %d frequencies for %s (', numel(wFreq),...
-                obj.Edges(1).Name)
-            for cf = 1:numel(wFreq) - 1
-                fprintf(1, '%.1f, ', wFreq(cf))
+            for cst = 1:size(obj.Edges, 2)
+                coupFreq = zeros(size(obj.Edges(cst)));
+                [wFreq, wFlags, wFreqs] = ProtocolGetter.extractFrequencyTrains(...
+                    obj.Edges(cst).Subs, obj.fs);
+                wTrainBodyFlags = ismembertol([0;wFreqs], wFreq, 0.01);
+                obj.Edges(cst).Subs = obj.Edges(cst).Subs(~wTrainBodyFlags,:);
+                wFlags(wTrainBodyFlags) = [];
+                wFreqs(wTrainBodyFlags(1:end-1)) = [];
+                if ~isempty(wFreq)
+                    coupFreq = round(wFlags .* wFreqs, 1);
+                end
+                obj.Edges(cst).Frequency = coupFreq;
+                obj.Edges(cst).FreqValues = wFreq;
+                fprintf(1, 'Found %d frequencies for %s (', numel(wFreq),...
+                    obj.Edges(cst).Name)
+                cf = 1;
+                while cf <= numel(wFreq)
+                    if cf < numel(wFreq)
+                        fprintf(1, '%.1f, ', wFreq(cf))
+                    else
+                        fprintf(1, '%.1f', wFreq(end))
+                    end
+                end
+                fprintf(1, ' Hz)\n')
             end
-            fprintf(1, '%.1f Hz)\n', wFreq(end))
             % Laser
+            %{
+            coupFreq = zeros(size(obj.Edges(2)));
             [lFreq, lFlags, lFreqs] = ProtocolGetter.extractFrequencyTrains(...
                 obj.Edges(2).Subs, obj.fs);
             lTrainBodyFlags = ismembertol([0;lFreqs], lFreq, 0.01);
@@ -258,6 +273,7 @@ classdef ProtocolGetter < handle
                 fprintf(1, '%.1f, ', lFreq(cf))
             end
             fprintf(1, '%.1f Hz)\n', lFreq(end))
+            %}
         end
         
         function obj = pairStimulus(obj)
@@ -316,8 +332,9 @@ classdef ProtocolGetter < handle
                 obj.Conditions(Ncond + cdl).name = sprintf('Delay %0.3f s',...
                     delays(cdl));
                 % Verify if the selected subscripts are pulse trains 
-                if validateFreq(cdl, lsDel, lSubOrd, lFreqs) ||...
-                        validateFreq(cdl, lsDel, wSubOrd, wFreqs)
+                if (all(wFreqs) || all(lFreqs)) &&...
+                        (validateFreq(cdl, lsDel, lSubOrd, lFreqs) ||...
+                        validateFreq(cdl, lsDel, wSubOrd, wFreqs))
                     delLFreqs = removeZeros(unique(...
                         fetchSubs(cdl, lsDel, lSubOrd, lFreqs)));
                     delWFreqs = removeZeros(unique(...
@@ -347,9 +364,13 @@ classdef ProtocolGetter < handle
             % Removing the used subscripts for delays (and possibly some
             % frequencies)
             wSub(fetchSubs(1,delFlag,wSubOrd,(1:size(wSub,1))'),:) = [];
-            wFreqs(fetchSubs(1,delFlag,wSubOrd,(1:size(wFreqs,1))')) = [];
+            if all(wFreqs)
+                wFreqs(fetchSubs(1,delFlag,wSubOrd,(1:size(wFreqs,1))')) = [];
+            end
             lSub(fetchSubs(1,delFlag,lSubOrd,(1:size(lSub,1))'),:) = [];
-            lFreqs(fetchSubs(1,delFlag,lSubOrd,(1:size(lFreqs,1))')) = [];
+            if all(lFreqs)
+                lFreqs(fetchSubs(1,delFlag,lSubOrd,(1:size(lFreqs,1))')) = [];
+            end
             % Creating the unpaired frequency conditions and removing those
             % subscripts
             [obj, wSub] = addFrequencyStimulus(obj,wSub,wFreqs,wFreq,1);
