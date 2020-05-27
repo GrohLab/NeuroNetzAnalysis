@@ -76,7 +76,7 @@ for cr = 1:Nr
             Figs(cr).OuterPosition =...
                 [Figs(cr).OuterPosition(1:2), 0.5344, 0.4275];
         end
-        legend(ax(csp-1),'show')
+        legend(ax(csp-1),'show','Location','best')
     end
 end
 set(Figs,'Visible','on')
