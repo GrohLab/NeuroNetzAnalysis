@@ -36,23 +36,20 @@ end
 [Ne, Nt, Na] = size(discreteStack);
 % Getting the raw PSTHs and kicking out the undesired trials
 auxCounts = sum(discreteStack(:,:,~kIdx),3);
-% Binning process.
-binEls = ceil(binSz * fs);
-PSTH = zeros(Ne-1,ceil(Nt/binEls));
+PSTH = zeros(Ne-1,ceil(diff(timeLapse)/binSz));
 % trig = zeros(1,ceil(Nt/binEls));
-cb = 0;
 sweeps = Na - sum(kIdx);
 trig = auxCounts(1,:)/sum(~kIdx);
 % Binned time axis
-timeAxis = seconds(linspace(timeLapse(1),timeLapse(2),ceil(Nt/binEls)));
-
+timeAxis = (0:size(PSTH,2)-1)*binSz + timeLapse(1);
+txfs = (0:Nt-1)/fs + timeLapse(1);
+figure('Visible','off')
 for ce = 2:Ne
-    while cb < Nt/binEls - 1
-        PSTH(ce-1,cb+1) = sum(auxCounts(ce,cb*binEls+1:(cb+1)*binEls));
-        % Question: to bin or not to bin the trigger signal?
-        % trig(cb+1) = sum(auxCounts(1,cb*binEls+1:(cb+1)*binEls));
-        cb = cb + 1;
-    end
+    tmVals = arrayfun(@(x,y) repmat(x,y,1), txfs, auxCounts(ce,:),...
+        'UniformOutput',0);
+    tmVals = cat(1,tmVals{:});
+    h = histogram(tmVals,'BinWidth',binSz,'BinLimits',timeLapse);
+    PSTH(ce-1,:) = h.Values;
     cb = 0;
 end
 end
