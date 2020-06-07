@@ -253,6 +253,7 @@ classdef ProtocolGetter < handle
                     else
                         fprintf(1, '%.1f', wFreq(end))
                     end
+                    cf = cf + 1;
                 end
                 fprintf(1, ' Hz)\n')
             end
@@ -364,11 +365,11 @@ classdef ProtocolGetter < handle
             % Removing the used subscripts for delays (and possibly some
             % frequencies)
             wSub(fetchSubs(1,delFlag,wSubOrd,(1:size(wSub,1))'),:) = [];
-            if all(wFreqs)
+            if nnz(wFreqs)
                 wFreqs(fetchSubs(1,delFlag,wSubOrd,(1:size(wFreqs,1))')) = [];
             end
             lSub(fetchSubs(1,delFlag,lSubOrd,(1:size(lSub,1))'),:) = [];
-            if all(lFreqs)
+            if nnz(lFreqs)
                 lFreqs(fetchSubs(1,delFlag,lSubOrd,(1:size(lFreqs,1))')) = [];
             end
             % Creating the unpaired frequency conditions and removing those
