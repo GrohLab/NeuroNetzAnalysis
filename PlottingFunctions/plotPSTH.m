@@ -25,18 +25,17 @@ function ax =...
 %       ax - axis variable in which the PSTH plot is embedded.
 % Emilio Isaias-Camacho @GrohLab 2018
 
-koIdx(tIdx) = false;
 trigID = IDe{tIdx};
 IDe(tIdx) = [];
 if ~exist('ax','var') || isempty(ax)
     fig = figure('Name',['PSTH for ',expName],'Color',[1,1,1]);
     ax = gca;
-else
-    fig = get(ax,'Parent');
+% else
+%     fig = get(ax,'Parent');
 end
 tx_PSTH = linspace(timeLapse(1),timeLapse(2),size(PSTH,2));
 tx_trig = linspace(timeLapse(1),timeLapse(2),length(trig));
-set(fig,'defaultAxesColorOrder',[0,0,0;0.2,0.2,0.2])
+% set(fig,'defaultAxesColorOrder',[0,0,0;0.2,0.2,0.2])
 plot(ax,tx_trig,trig,'DisplayName',trigID,'Color',[37, 154, 3]/255);
 ylabel(ax,'Stimulus probability')
 yyaxis(ax,'right');
@@ -46,12 +45,11 @@ bar(ax,tx_PSTH,PSTH(1,:)/(sweeps*binSz),1,...
     'FaceAlpha',0.3,'DisplayName',IDe{1});
 ylabel(ax,'Firing rate [Hz]')
 hold(ax,'on')
-idIdx = find(koIdx);
-idIdx = reshape(idIdx,1,numel(idIdx));
 binEl = fs * binSz;
 yyaxis(ax,'left')
 xlabel(ax,sprintf('Time_{%.3f} [s]',binSz))
-for cp = idIdx
+cp = 2;
+while cp <= size(PSTH,1)
     if max(PSTH(cp,:)) > sweeps
         yyaxis(ax,'left')
         plot(ax,tx_PSTH,(PSTH(cp,:))/(binEl*sweeps),...
@@ -63,6 +61,7 @@ for cp = idIdx
             'FaceColor',clrMap(cp,:),'DisplayName',IDe{cp},...
             'FaceAlpha',0.2);
     end
+    cp = cp + 1;
 end
 title(ax,[expName,' ',num2str(sweeps),' trials'],'Interpreter','none')
 yyaxis('left')
