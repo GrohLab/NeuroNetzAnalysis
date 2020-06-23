@@ -1,7 +1,12 @@
-function iOk = writeClusterInfo(clInfo, fileName)
+function iOk = writeClusterInfo(clInfo, fileName, owFlag)
 iOk = false;
+askOw = true;
+if exist('owFlag','var') && logical(owFlag)
+    askOw = false;
+end
+
 % If the file exists, ask if it should be overwritten.
-if exist(fileName,'file')
+if exist(fileName,'file') && askOw
     owAns = questdlg(sprintf('%s exists. Overwirte?',fileName),...
         'Overwrite','Yes','No','No');
     if strcmpi(owAns,'no')
