@@ -52,13 +52,20 @@ classdef ProtocolGetter < handle
                     foID = fopen(fullfile(merFiles(1).folder,...
                         merFiles(1).name),'r');
                     smrxFlags = zeros(Ns,1,'single'); counter = 1;
+                    smrxBaseNamesStr = string(smrxBaseNames);
                     while ~feof(foID) && counter <= Ns
-                        smrxFlags(counter) = counter * contains(fgetl(foID),...
-                            smrxBaseNames);
+                        [~,cfName,~] = fileparts(string(fgetl(foID)));
+                        smrxFlags = smrxFlags + counter * contains(...
+                            smrxBaseNamesStr, cfName);
                         counter = counter + 1;
                     end
+                    smrxBaseNames(smrxFlags == 0) = [];
                     smrxFlags(smrxFlags == 0) = [];
-                    binFile = string(fgetl(foID));
+                    if feof(foID)
+                        binFile = cfName + ".bin";
+                    else
+                        binFile = string(fgetl(foID));
+                    end
                     fclose(foID);
                     smrxBaseNames = smrxBaseNames(smrxFlags);
                 else
