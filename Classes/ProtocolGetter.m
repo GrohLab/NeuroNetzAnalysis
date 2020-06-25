@@ -520,7 +520,7 @@ classdef ProtocolGetter < handle
             intanDomain = round([wHead.start, wHead.stop]*wHead.SamplingFrequency);
             lfp = stSgStruct.LFP;
             Ns = length(stSgStruct.Whisker);
-            lfp = lfp(intanDomain(1):length(lfp));
+            lfp = lfp(intanDomain(1):intanDomain(2));
             if length(lfp) < Ns
                 lfp = padarray(lfp,Ns - length(lfp),'symmetric',...
                     'post');
