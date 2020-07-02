@@ -22,9 +22,9 @@ if ~exist(filename,'file')
     return
 end
 % Checking for validity
-[~, fname, fext] = fileparts(filename);
-fname = char(fname); fext = char(fext);
-if ~strcmp([fname,fext],'cluster_info.tsv')
+[~, ~, fext] = fileparts(filename);
+fext = char(fext);
+if ~strcmp(fext,'.tsv')
     fprintf(1,'Wrong file fed to the function!\n')
     fprintf(1,'It must be the phy-generated file ''cluster_info.tsv''\n')
     fprintf(1,'Try again with the correct file\n')
