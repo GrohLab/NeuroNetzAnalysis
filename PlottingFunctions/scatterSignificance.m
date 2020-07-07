@@ -1,4 +1,4 @@
-function [Figs] =...
+function [Figs, Results] =...
     scatterSignificance(Results, Counts, CondNames, Delta_t, clID)
 %SCATTERSIGNIFICANCE takes the statistical results from the statTests and
 %plots them against each other (conditions)
@@ -13,6 +13,7 @@ end
 Nr = numel(Results);
 Figs = gobjects(Nr,1);
 ax = gobjects(2,1);
+n = getHesseLineForm([1,0]);
 axLabels = {'Spontaneous_{', 'Evoked_{'};
 Ncond = numel(CondNames);
 Ne = size(Results(1).Activity(1).Pvalues,1);
@@ -46,6 +47,9 @@ for cr = 1:Nr
                 aslSubX = 1; aslSubY = 2;
         end
         xaxis = meanfr{cond1, aslSubX}; yaxis = meanfr{cond2, aslSubY};
+        % Directionality of change
+        dPts = [xaxis, yaxis] * n;
+        Results(cr).Activity(csp).Direction = dPts;
         scatter(ax(csp), xaxis, yaxis, 'DisplayName', 'Clusters');
         grid(ax(csp), 'on');
         text(ax(csp), xaxis, yaxis, clID)
