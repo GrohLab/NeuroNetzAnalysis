@@ -1,6 +1,6 @@
 %% Experiment pooling
 % Experiment folder search
-experimentDir = uigetdir('E:\Data\VPM\Jittering\Silicon Probes',...
+experimentDir = uigetdir('Z:\Jesus\LTP_Jesus_Emilio',...
     'Select an experiment directory');
 % Folders existing in the selected directory
 expFolders = dir(experimentDir);
@@ -16,7 +16,7 @@ Nexp = numel(chExp);
 % Time lapse, bin size, and spontaneous and response windows
 promptStrings = {'Viewing window (time lapse) [s]:','Response window [s]',...
     'Bin size [s]:'};
-defInputs = {'0.1, 0.1', '0.002, 0.05', '0.001'};
+defInputs = {'-0.1, 0.1', '0.002, 0.05', '0.001'};
 answ = inputdlg(promptStrings,'Inputs', [1, 30],defInputs);
 if isempty(answ)
     fprintf(1,'Cancelling...\n')
@@ -25,7 +25,7 @@ else
     timeLapse = str2num(answ{1}); %#ok<*ST2NM>
     if numel(timeLapse) ~= 2
         timeLapse = str2num(inputdlg('Please provide the time window [s]:',...
-            'Time window',[1, 30], '0.1, 0.1'));
+            'Time window',[1, 30], '-0.1, 0.1'));
         if isnan(timeLapse) || isempty(timeLapse)
             fprintf(1,'Cancelling...')
             return
@@ -37,7 +37,27 @@ end
 fprintf(1,'Time window: %.2f - %.2f ms\n',timeLapse(1)*1e3, timeLapse(2)*1e3)
 fprintf(1,'Response window: %.2f - %.2f ms\n',responseWindow(1)*1e3, responseWindow(2)*1e3)
 fprintf(1,'Bin size: %.3f ms\n', binSz*1e3)
+sponAns = questdlg('Mirror the spontaneous window?','Spontaneous window',...
+    'Yes','No','Yes');
 spontaneousWindow = -flip(responseWindow);
+if strcmpi(sponAns,'No')
+    spontPrompt = "Time before the trigger in [s] (e.g. -0.8, -0.6 s)";
+    sponDef = string(sprintf('%.3f, %.3f',spontaneousWindow(1),...
+        spontaneousWindow(2)));
+    sponStr = inputdlg(spontPrompt, 'Inputs',[1,30],sponDef);
+    if ~isempty(sponStr)
+        spontAux = str2num(sponStr{1});
+        if length(spontAux) ~= 2 || spontAux(1) > spontAux(2) || ...
+                spontAux(1) < timeLapse(1)
+            fprintf(1, 'The given input was not valid.\n')
+            fprintf(1, 'Keeping the mirror version!\n')
+        else
+            spontaneousWindow = spontAux;
+        end
+    end
+end
+fprintf(1,'Spontaneous window: %.2f to %.2f ms before the trigger\n',...
+    spontaneousWindow(1)*1e3, spontaneousWindow(2)*1e3)
 statFigFileNameEndings = {'.pdf','.emf'};
 figFormat = {'-dpdf','-dmeta'};
 
@@ -55,10 +75,9 @@ for cexp = chExp
         continue
     end
     % Figures directory for the considered experiment
-    figureDir = fullfile(expFolders(cexp).name,'Figures');
+    figureDir = fullfile(dataDir,'Figures\');
     if ~mkdir(figureDir)
-        fprintf(1,'There was an issue creating the figures folder!\n')
-        fprintf(1,'')
+        fprintf(1,'There was an issue with the figure folder...\n');
     end
     Ns = min(structfun(@numel,Triggers));
     % Total duration of the recording
