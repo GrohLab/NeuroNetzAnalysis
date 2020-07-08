@@ -2,6 +2,9 @@
 % Experiment folder search
 experimentDir = uigetdir('Z:\Jesus\LTP_Jesus_Emilio',...
     'Select an experiment directory');
+if experimentDir == 0
+    return
+end
 % Folders existing in the selected directory
 expFolders = dir(experimentDir);
 expFolders(1:2) = [];
@@ -59,7 +62,7 @@ end
 fprintf(1,'Spontaneous window: %.2f to %.2f ms before the trigger\n',...
     spontaneousWindow(1)*1e3, spontaneousWindow(2)*1e3)
 statFigFileNameEndings = {'.pdf','.emf'};
-figFormat = {'-dpdf','-dmeta'};
+printOpts = {{'-dpdf','-fillpage'},'-dmeta'};
 
 cellLogicalIndexing = @(x,idx) x(idx);
 
@@ -70,15 +73,47 @@ expCo = 1;
 % trial information for a PDF calculation
 relativeSpikeTimes = cell(Nexp);
 for cexp = chExp
-    if ~loadTriggerData(expFolders(cexp).name)
+    dataDir = fullfile(expFolders(cexp).folder, expFolders(cexp).name);
+    foldContents = dir(dataDir); foldContents(1:2) = [];
+    contNames = arrayfun(@(x) x.name, foldContents, 'UniformOutput', 0);
+    [~,~,fext] = cellfun(@fileparts, contNames, 'UniformOutput', 0);
+    ksPhyFlags = cell2mat(cellfun(@(x) strcmpi(x,{'.npy','.tsv','.py'}),...
+        fext, 'UniformOutput', 0));
+    dirNames = contNames([foldContents.isdir]);
+    if ~any(ksPhyFlags(:))
+        if ~isempty(dirNames)
+            [subFoldSel, iOk] = listdlg(...
+                'ListString', dirNames,...
+                'SelectionMode', 'single',...
+                'Name', 'Select the experiment folder:',...
+                'CancelString', 'Skip');
+            if ~iOk
+                fprintf(1, 'Skipping experiment %s', expFolders(cexp).name);
+                continue
+            end
+            dataDir = fullfile(dataDir, dirNames{subFoldSel});
+        else
+            fprintf(1,'This experiment hasn''t been spike-sorted!\n')
+            fprintf(1,'Skipping experiment %s\n', expFolders(cexp).name)
+            continue
+        end
+    end
+    if ~loadTriggerData(dataDir)
         fprintf(1,'Skipping experiment %s\n', expFolders(cexp).name)
         continue
     end
+    %{
     % Figures directory for the considered experiment
     figureDir = fullfile(dataDir,'Figures\');
     if ~mkdir(figureDir)
         fprintf(1,'There was an issue with the figure folder...\n');
+        fprintf(1,'Saving the figures in the data folder!\n');
+        fprintf(1,'%s\n',dataDir);
+        figureDir = dataDir;
     end
+    %}
+    %% Constructing the helper 'global' variables
+    % Number of total samples
     Ns = min(structfun(@numel,Triggers));
     % Total duration of the recording
     Nt = Ns/fs;
@@ -90,6 +125,25 @@ for cexp = chExp
     silentUnits = clusterSpikeRate < 0.1;
     bads = union(bads,find(silentUnits));
     goods = setdiff(1:size(sortedData,1),bads);
+    badsIdx = badsIdx | silentUnits;
+    if ~any(ismember(clInfo.Properties.VariableNames,'ActiveUnit'))
+        try
+            clInfo = addvars(clInfo,~badsIdx,'After','id',...
+                'NewVariableNames','ActiveUnit');
+        catch
+            clInfo = addvars(clInfo,false(size(clInfo,1),1),'After','id',...
+                'NewVariableNames','ActiveUnit');
+            clInfo{sortedData(~badsIdx,1),'ActiveUnit'} = true;
+            fprintf(1,'Not all clusters are curated!\n')
+            fprintf(1,'%s\n',dataDir)
+        end
+        try
+            writeClusterInfo(clInfo,fullfile(dataDir,'cluster_info.tsv'),true);
+        catch
+            fprintf(1,'Unable to write cluster info for %s\n',dataDir)
+        end
+    end
+    gclID = sortedData(goods,1);
     badsIdx = StepWaveform.subs2idx(bads,size(sortedData,1));
     % Logical spike trace for the first good cluster
     spkLog = StepWaveform.subs2idx(round(sortedData{goods(1),2}*fs),Ns);
@@ -98,14 +152,23 @@ for cexp = chExp
         'UniformOutput',false);
     % Number of good clusters
     Ncl = numel(goods);
-    gclID = sortedData(goods,1);
-    continuousSignals = {Triggers.whisker; Triggers.laser};
+    % Redefining the stimulus signals from the low amplitude to logical values
+    whStim = {'piezo','whisker','mech','audio'};
+    cxStim = {'laser','light'};
+    lfpRec = {'lfp','s1','cortex','s1lfp'};
+    trigNames = fieldnames(Triggers);
+    numTrigNames = numel(trigNames);
+    continuousSignals = struct2cell(Triggers);
     % User defined conditions variables if not already chosen
-    if ~exist('alignCond','var') && ~exist('Conditions','var')
-        condNames = arrayfun(@(x) x.name, Conditions, 'UniformOutput', false);
+    if ~exist('chCond','var')
+        Nt = round(sum(ceil(abs(timeLapse)*fs))+1);
+        % Computing the time axis for the stack
+        tx = (0:Nt - 1)/fs + timeLapse(1);
+        %% Condition triggered stacks
+        condNames = arrayfun(@(x) x.name,Conditions,'UniformOutput',false);
         condGuess = contains(condNames, 'whiskerall', 'IgnoreCase', true);
         % Choose the conditions to create the stack upon
-        [alignCond, iOk] = listdlg('ListString',condNames,'SelectionMode','single',...
+        [chCond, iOk] = listdlg('ListString',condNames,'SelectionMode','single',...
             'PromptString',...
             'Choose the condition which has all whisker triggers: (one condition)',...
             'InitialValue', find(condGuess), 'ListSize', [350, numel(condNames)*16]);
@@ -113,17 +176,19 @@ for cexp = chExp
             fprintf(1,'Cancelling...\n')
             return
         end
+        
         % Select the onset or the offset of a trigger
-        fprintf(1,'Condition ''%s''\n', Conditions(alignCond).name)
+        fprintf(1,'Condition ''%s''\n', Conditions(chCond).name)
         onOffStr = questdlg('Trigger on the onset or on the offset?','Onset/Offset',...
             'on','off','Cancel','on');
         if strcmpi(onOffStr,'Cancel')
             fprintf(1,'Cancelling...\n')
             return
         end
-
+        
+        %% Considered conditions selection
         % Choose the conditions to look at
-        auxSubs = setdiff(1:numel(condNames), alignCond);
+        auxSubs = setdiff(1:numel(condNames), chCond);
         ccondNames = condNames(auxSubs);
         [cchCond, iOk] = listdlg('ListString',ccondNames,'SelectionMode','multiple',...
             'PromptString',...
@@ -137,19 +202,33 @@ for cexp = chExp
         % Select the onset or the offset of a trigger
         fprintf(1,'Condition(s):\n')
         fprintf('- ''%s''\n', Conditions(auxSubs(cchCond)).name)
-        % Subscripts and names for the considered conditions
+        
+        ansFilt = questdlg('Would you like to filter for significance?','Filter',...
+            'Yes','No','Yes');
+        filtStr = 'unfiltered';
+        if strcmp(ansFilt,'Yes')
+            filtStr = 'filtered';
+        end
+        % Subscript to indicate the conditions with all whisker stimulations,
+        % whisker control, laser control, and the combination whisker and laser.
+        allWhiskerStimulus = chCond;
         consideredConditions = auxSubs(cchCond);
-        consCondNames = arrayfun(@(x) x.name, Conditions(consideredConditions),...
-            'UniformOutput', 0);
         Nccond = length(consideredConditions);
         
+        % Select the onset or the offset of a trigger
+        fprintf(1,'Condition(s):\n')
+        fprintf('- ''%s''\n', Conditions(auxSubs(cchCond)).name)
+        % Subscripts and names for the considered conditions
+        consCondNames = condNames(consideredConditions);
+        
+        % Time windows for comparison between conditions and activity
         sponActStackIdx = tx >= spontaneousWindow(1) & tx <= spontaneousWindow(2);
         respActStackIdx = tx >= responseWindow(1) & tx <= responseWindow(2);
         % The spontaneous activity of all the clusters, which are allocated from
         % the second until one before the last row, during the defined spontaneous
         % time window, and the whisker control condition.
         
-        timeFlags = [sponActStackIdx;respActStackIdx];
+        timeFlags = [sponActStackIdx; respActStackIdx];
         % Time window
         delta_t = diff(responseWindow);
         % Spontaneous vs evoked comparison
@@ -162,79 +241,256 @@ for cexp = chExp
     % cst - continuous stack has a numerical nature
     % Both of these stacks have the same number of time samples and trigger
     % points. They differ only in the number of considered events.
-    [discStack, cst] = getStacks(spkLog,Conditions(alignCond).Triggers,onOffStr,...
-        timeLapse,fs,fs,spkSubs,continuousSignals);
+    [auxDStack, auxCStack] = getStacks(spkLog, Conditions(chCond).Triggers,...
+        onOffStr, timeLapse, fs, fs, spkSubs, continuousSignals);
     % Number of clusters + the piezo as the first event + the laser as the last
     % event, number of time samples in between the time window, and number of
     % total triggers.
-    [Ne, Nt, NTa] = size(discStack);
-    % Computing the time axis for the stack
-    tx = (0:Nt - 1)/fs - timeLapse(1);
+    [Ne, Nt, NTa] = size(auxDStack);
     
     % Computing which alignment points belong to which condition.
-    delayFlags = false(NTa,Nccond);
+    auxDelayFlags = false(NTa,Nccond);
     counter2 = 1;
     for ccond = consideredConditions
-        delayFlags(:,counter2) = ismember(Conditions(alignCond).Triggers(:,1),...
+        auxDelayFlags(:,counter2) = ismember(Conditions(chCond).Triggers(:,1),...
             Conditions(ccond).Triggers(:,1));
         counter2 = counter2 + 1;
     end
-    Na = sum(delayFlags,1);
-
-    % Statistical tests
-    [Results, Counts] = statTests(discStack, delayFlags, timeFlags);
-    
-    % Plotting statistical tests
-    figs = scatterSignificance(Results, Counts, consCondNames, delta_t, gclID);
-    arrayfun(@configureFigureToPDF, figs);
-    % Firing rate for all clusters, for all trials
-    % meanfr = cellfun(@(x) mean(x,2)/delta_t,Counts,'UniformOutput',false);
-    for cfig = 1:numel(figs)
-        statFigName = strsplit(figs(cfig).Children(1).Title.String, ': ');
-        statFigName = statFigName{2};
-        statFigName = [statFigName,...
-            sprintf(' RW:%.1f-%.1f ms', responseWindow(1)*1e3, responseWindow(2)*1e3)];
-        print(figs(cfig), fullfile(figureDir, [statFigName, '.pdf']),...
-            '-dpdf','-fillpage');
-        print(figs(cfig), fullfile(figureDir, [statFigName, '.emf']),...
-            '-dmeta');
-        close(figs(cfig))
+    NaNew = sum(auxDelayFlags,1);
+    clInfo.id = cellfun(@(x) [sprintf('%d_',cexp), x], clInfo.id,...
+        'UniformOutput', 0);
+    clInfo.Properties.RowNames = clInfo.id;
+    if cexp == chExp(1)
+        
+        delayFlags = auxDelayFlags;
+        discStack = auxDStack;
+        cStack = auxCStack;
+        clInfoTotal = clInfo;
+    else
+        % Homogenizing trial numbers
+        if any(NaNew ~= NaPrev)
+            NaMin = min(NaPrev, NaNew);
+            NaMax = max(NaPrev, NaNew);
+            trigSubset = cell(numel(NaPrev),1);
+            for cc = 1:numel(NaPrev)
+                trigSubset{cc} = sort(randsample(NaMax(cc),NaMin(cc)));
+                if NaPrev(cc) == NaMin(cc)
+                    tLoc = find(auxDelayFlags(:,cc));
+                    tSubs = tLoc(trigSubset{cc});
+                    auxDelayFlags(setdiff(tLoc,tSubs),:) = [];
+                    auxDStack(:,:,setdiff(tLoc,tSubs)) = [];
+                    auxCStack(:,:,setdiff(tLoc,tSubs)) = [];
+                else
+                    tLoc = find(delayFlags(:,cc));
+                    tSubs = tLoc(trigSubset{cc});
+                    delayFlags(setdiff(tLoc,tSubs),:) = [];
+                    discStack(:,:,setdiff(tLoc,tSubs)) = [];
+                    cStack(:,:,setdiff(tLoc,tSubs)) = [];
+                end
+            end
+        end        
+        discStack = cat(1, discStack, auxDStack);
+        cStack = cat(1, cStack, auxCStack);
+        clInfoTotal = cat(1, clInfoTotal, clInfo);
     end
-    
-    % Filtering for the whisker responding clusters
-    H = cell2mat(cellfun(@(x) x.Pvalues,...
-        arrayfun(@(x) x.Activity, Results(indCondSubs), 'UniformOutput', 0),...
-        'UniformOutput', 0)) < 0.05;
-    Htc = sum(H,2);
-    % Those clusters responding more than 80% of all whisker stimulating
-    % conditions
-    wruIdx = Htc/Nccond > 0.80;
-    Nwru = nnz(wruIdx);
-    gclID = sortedData(goods,1);
-    fprintf('%d whisker responding clusters:\n', Nwru);
-    fprintf('- %s\n',gclID{wruIdx})
-    if ~Nwru
-        cans = questdlg('No evoked response! Skip?','No response!',...
-            'Yes','No','Yes');
-        if strcmp(cans,'Yes')
-            continue
+    NaPrev = NaNew;
+end
+figureDir = fullfile(experimentDir,'Figures\');
+if ~mkdir(figureDir)
+    fprintf(1,'There was an issue with the figure folder...\n');
+    fprintf(1,'Saving the figures in the data folder!\n');
+    fprintf(1,'%s\n',dataDir);
+    figureDir = dataDir;
+end
+
+% Statistical tests
+[Results, Counts] = statTests(discStack, delayFlags, timeFlags);
+
+% Plotting statistical tests
+[figs, Results] = scatterSignificance(Results, Counts,...
+    consCondNames, delta_t, gclID);
+arrayfun(@configureFigureToPDF, figs);
+% Firing rate for all clusters, for all trials
+% meanfr = cellfun(@(x) mean(x,2)/delta_t,Counts,'UniformOutput',false);
+stFigBasename = fullfile(figureDir,[expName,' ']);
+stFigSubfix = sprintf(' Stat RW%.1f-%.1fms SW%.1f-%.1fms',...
+    responseWindow(1)*1e3, responseWindow(2)*1e3, spontaneousWindow(1)*1e3,...
+    spontaneousWindow(2)*1e3);
+ccn = 1;
+%for cc = indCondSubs
+for cc = 1:numel(figs)
+    if ~ismember(cc, indCondSubs)
+        altCondNames = strsplit(figs(cc).Children(2).Title.String,': ');
+        altCondNames = altCondNames{2};
+    else
+        altCondNames = consCondNames{ccn};
+        ccn = ccn + 1;
+    end
+    stFigName = [stFigBasename, altCondNames, stFigSubfix];
+    if ~exist([stFigName,'.*'],'file')
+        print(figs(cc),[stFigName,'.pdf'],printOpts{1}{:})
+        print(figs(cc),[stFigName,'.emf'],printOpts{2})
+    end
+end
+
+% Filtering for the whisker responding clusters
+H = cell2mat(cellfun(@(x) x.Pvalues,...
+    arrayfun(@(x) x.Activity, Results(indCondSubs), 'UniformOutput', 0),...
+    'UniformOutput', 0)) < 0.05;
+Htc = sum(H,2);
+% Those clusters responding more than 80% of all whisker stimulating
+% conditions
+CtrlCond = contains(consCondNames,'control','IgnoreCase',true);
+wruIdx = any(H(:,CtrlCond),2);
+Nwru = nnz(wruIdx);
+
+fprintf('%d whisker responding clusters:\n', Nwru);
+fprintf('- %s\n',gclID{wruIdx})
+
+filterIdx = true(Ne,1);
+if strcmpi(filtStr, 'filtered')
+    filterIdx = [true; wruIdx];
+end
+
+% Getting spike times for every responding cluster and computing its
+% PDF
+
+%% Getting the relative spike times for the whisker responsive units (wru)
+% For each condition, the first spike of each wru will be used to compute
+% the standard deviation of it.
+configStructure = struct('Experiment', fullfile(dataDir,expName),...
+    'Viewing_window_s', timeLapse, 'Response_window_s', responseWindow,...
+    'BinSize_s', binSz, 'Trigger', struct('Name', condNames{chCond},...
+    'Edge',onOffStr), 'ConsideredConditions',{consCondNames});
+cellLogicalIndexing = @(x,idx) x(idx);
+isWithinResponsiveWindow =...
+    @(x) x > responseWindow(1) & x < responseWindow(2);
+
+firstSpike = zeros(Nwru,Nccond);
+M = 16;
+binAx = responseWindow(1):binSz:responseWindow(2);
+condHist = zeros(size(binAx,2)-1, Nccond);
+firstOrdStats = zeros(2,Nccond);
+condParams = zeros(M,3,Nccond);
+txpdf = responseWindow(1):1/fs:responseWindow(2);
+condPDF = zeros(numel(txpdf),Nccond);
+csvBase = fullfile(dataDir, expName);
+csvSubfx = sprintf(' VW%.1f-%.1f ms.csv', timeLapse(1)*1e3, timeLapse(2)*1e3);
+existFlag = false;
+condRelativeSpkTms = cell(Nccond,1);
+relativeSpkTmsStruct = struct('name',{},'SpikeTimes',{});
+spkDir = fullfile(dataDir, 'SpikeTimes');
+for ccond = 1:size(delayFlags,2)
+    csvFileName = [csvBase,' ',consCondNames{ccond}, csvSubfx];
+    relativeSpikeTimes = getRasterFromStack(discStack,~delayFlags(:,ccond),...
+        filterIdx(3:end), timeLapse, fs, true, false);
+    relativeSpikeTimes(:,~delayFlags(:,ccond)) = [];
+    relativeSpikeTimes(~filterIdx(2),:) = [];
+    condRelativeSpkTms{ccond} = relativeSpikeTimes;
+    %     respIdx = cellfun(isWithinResponsiveWindow, relativeSpikeTimes,...
+    %         'UniformOutput',false);
+    clSpkTms = cell(size(relativeSpikeTimes,1),1);
+    if exist(csvFileName, 'file') && ccond == 1
+        existFlag = true;
+        ansOW = questdlg(['The exported .csv files exist! ',...
+            'Would you like to overwrite them?'],'Overwrite?','Yes','No','No');
+        if strcmp(ansOW,'Yes')
+            existFlag = false;
+            fprintf(1,'Overwriting... ');
         end
     end
-    
-    % Getting spike times for every responding cluster and computing its
-    % PDF
-    
-    for ccond = 1:size(delayFlags,2)
-        relativeSpikeTimes(expCo) = getRasterFromStack(discStack,~delayFlags(:,ccond),...
-            wruIdx, timeLapse, fs, true, false);
-        relativeSpikeTimes{expCo}(:,~delayFlags(:,ccond)) = [];
-        respIdx = cellfun(isWithinResponsiveWindow, relativeSpikeTimes{expCo},...
-            'UniformOutput', false);
-        spikeTimesINRespWin = cellfun(cellLogicalIndexing,...
-            relativeSpikeTimes{expCo}, respIdx, 'UniformOutput',false);
-        
-        
+    fID = 1;
+    if ~existFlag
+        fID = fopen(csvFileName,'w');
+        fprintf(fID,'%s, %s\n','Cluster ID','Relative spike times [ms]');
     end
-    expCo = expCo + 1;
-    
+    for cr = 1:size(relativeSpikeTimes, 1)
+        clSpkTms(cr) = {sort(cell2mat(relativeSpikeTimes(cr,:)))};
+        if fID > 2
+            fprintf(fID,'%s,',gclID{cr});
+            fprintf(fID,'%f,',clSpkTms{cr});fprintf(fID,'\n');
+        end
+    end
+    if fID > 2
+        fclose(fID);
+    end
+    relativeSpkTmsStruct(ccond).name = consCondNames{ccond};
+    relativeSpkTmsStruct(ccond).SpikeTimes = condRelativeSpkTms{ccond};
+    %{
+    spikeTimesINRespWin = cellfun(cellLogicalIndexing,...
+        relativeSpikeTimes, respIdx, 'UniformOutput',false);
+    allSpikeTimes = cell2mat(spikeTimesINRespWin(:)');
+    condParams(:,:,ccond) = emforgmm(allSpikeTimes, M, 1e-6, 0);
+    condPDF(:,ccond) = genP_x(condParams(:,:,ccond), txpdf);
+    firstOrdStats(:,ccond) = [mean(allSpikeTimes), std(allSpikeTimes)];
+    hfig = figure('Visible', 'off'); h = histogram(allSpikeTimes, binAx,...
+        'Normalization', 'probability');
+    condHist(:,ccond) = h.Values;
+    close(hfig)
+    for ccl = 1:Nwru
+        frstSpikeFlag = ~cellfun(@isempty,spikeTimesINRespWin(ccl,:));
+        firstSpike(ccl,ccond) = std(...
+            cell2mat(spikeTimesINRespWin(ccl,frstSpikeFlag)));
+    end
+    %}
 end
+save(fullfile(dataDir,[expName,'_exportSpkTms.mat']),...
+    'relativeSpkTmsStruct','configStructure')
+
+%% Ordering PSTH
+orderedStr = 'ID ordered';
+dans = questdlg('Do you want to order the PSTH other than by IDs?',...
+    'Order', 'Yes', 'No', 'No');
+ordSubs = 1:nnz(filterIdx(2:Ncl+1));
+pclID = gclID(filterIdx(2:Ncl+1));
+if strcmp(dans, 'Yes')
+    if ~exist('clInfo','var')
+        clInfo = getClusterInfo(fullfile(dataDir,'cluster_info.tsv'));
+    end
+    % varClass = varfun(@class,clInfo,'OutputFormat','cell');
+    [ordSel, iOk] = listdlg('ListString', clInfo.Properties.VariableNames,...
+        'SelectionMode', 'multiple');
+    orderedStr = [];
+    ordVar = clInfo.Properties.VariableNames(ordSel);
+    for cvar = 1:numel(ordVar)
+        orderedStr = [orderedStr, sprintf('%s ',ordVar{cvar})]; %#ok<AGROW>
+    end
+    orderedStr = [orderedStr, 'ordered'];
+    
+    if ~strcmp(ordVar,'id')
+        [~,ordSubs] = sortrows(clInfo(pclID,:),ordVar);
+    end
+end
+%% Plot PSTH
+goodsIdx = ~badsIdx';
+csNames = fieldnames(Triggers);
+for ccond = 1:Nccond
+    figFileName = sprintf('%s %s VW%.1f-%.1f ms B%.1f ms RW%.1f-%.1f ms SW%.1f-%.1f ms %sset %s (%s)',...
+        expName, Conditions(consideredConditions(ccond)).name, timeLapse*1e3,...
+        binSz*1e3, responseWindow*1e3, spontaneousWindow*1e3, onOffStr,...
+        orderedStr, filtStr);
+    [PSTH, trig, sweeps] = getPSTH(discStack(filterIdx,:,:),timeLapse,...
+        ~delayFlags(:,ccond),binSz,fs);
+    stims = mean(auxCStack(:,:,delayFlags(:,ccond)),3);
+    stims = stims - median(stims,2);
+    for cs = 1:size(stims,1)
+        if abs(log10(var(stims(cs,:),[],2))) < 13
+            [m,b] = lineariz(stims(cs,:),1,0);
+            stims(cs,:) = m*stims(cs,:) + b;
+        else
+            stims(cs,:) = zeros(1,Nt);
+        end
+    end
+    figs = plotClusterReactivity(PSTH(ordSubs,:),trig,sweeps,timeLapse,binSz,...
+        [{Conditions(consideredConditions(ccond)).name};...
+        pclID(ordSubs)],...
+        strrep(expName,'_','\_'));
+    configureFigureToPDF(figs);
+    figs.Children(end).YLabel.String = [figs.Children(end).YLabel.String,...
+        sprintf('^{%s}',orderedStr)];
+    if ~exist([figFileName,'.pdf'], 'file') || ~exist([figFileName,'.emf'], 'file')
+        print(figs,fullfile(figureDir,[figFileName, '.pdf']),'-dpdf','-fillpage')
+        print(figs,fullfile(figureDir,[figFileName, '.emf']),'-dmeta')
+    end
+end
+
