@@ -2,7 +2,22 @@ function iOk = loadTriggerData(dataDir)
 iOk = false;
 binFiles = dir(fullfile(dataDir,'*.bin'));
 smrxFiles = dir(fullfile(dataDir,'*.smrx'));
+try
 [~,expName,~] = fileparts( binFiles(1).name);
+catch
+    fprintf(1,'No binary file in the folder!\n')
+    try
+       [~,expName,~] = fileparts( smrxFiles(1).name); 
+    catch
+        fprintf(1,'No smrx file in the folder either!\n')
+        forthAns =...
+            questdlg('No binary nor smrx files in this folder! Continue?',...
+            'Continue?','Yes','No','No');
+        if strcmpi(forthAns,'No')
+            return
+        end
+    end
+end
 % Loading the sampling frequency, the sorted clusters, and the conditions
 % and triggers.
 expSubfix = fullfile(dataDir,expName);
