@@ -85,13 +85,13 @@ Results = repmat(Results,possComb,1);
 
 %% Main loop
 cr = 1;
-for cc1 = 1:Ncond
+for ccond = 1:Ncond
     sponCountA = ...
-        squeeze(sum(dStack(2:end,timeFlags(1,:),condFlag(:,cc1)),2));
+        squeeze(sum(dStack(2:end,timeFlags(1,:),condFlag(:,ccond)),2));
     evokCountA = ...
-        squeeze(sum(dStack(2:end,timeFlags(2,:),condFlag(:,cc1)),2));
-    Counts(cc1,:) = [{sponCountA},{evokCountA}];
-    cc2 = cc1 + 1;
+        squeeze(sum(dStack(2:end,timeFlags(2,:),condFlag(:,ccond)),2));
+    Counts(ccond,:) = [{sponCountA},{evokCountA}];
+    cc2 = ccond + 1;
     while cc2 <= Ncond
         % Comparing condition A versus condition B; spontaneous and evoked
         sponCountB = ...
@@ -99,7 +99,7 @@ for cc1 = 1:Ncond
         evokCountB = ...
             squeeze(sum(dStack(2:end,timeFlags(2,:),condFlag(:,cc2)),2));
         [~, P] = runStatTest(statFun, sponCountA, sponCountB);
-        Results(cr).Combination = sprintf('%d %d\t%s',cc1,cc2,testType);
+        Results(cr).Combination = sprintf('%d %d\t%s',ccond,cc2,testType);
         Results(cr).Activity(1).Type = 'Spontaneous';
         Results(cr).Activity(1).Pvalues = P;
         [~, P] = runStatTest(statFun, evokCountA, evokCountB);
@@ -110,12 +110,12 @@ for cc1 = 1:Ncond
     end
     % Spontaneous vs evoked in the same condition. 
     [~, P] = runStatTest(@signrank, sponCountA, evokCountA);
-    Results(cr).Combination = sprintf('%d %d\t%s',cc1,cc1,'signrank');
+    Results(cr).Combination = sprintf('%d %d\t%s',ccond,ccond,'signrank');
     Results(cr).Activity(1).Type = 'Unaltered condition';
     Results(cr).Activity(1).Pvalues = P;
     % Spontaneous vs evoked in the same condition after shuffling.
-    shufSubsA = randperm(Na(cc1),Na(cc1));
-    shufSubsB = randperm(Na(cc1),Na(cc1));
+    shufSubsA = randperm(Na(ccond),Na(ccond));
+    shufSubsB = randperm(Na(ccond),Na(ccond));
     [~, P] = runStatTest(@signrank,...
         sponCountA(:,shufSubsA), evokCountA(:,shufSubsB));
     Results(cr).Activity(2).Type = 'Shuffled condition';
