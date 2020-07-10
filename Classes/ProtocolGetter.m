@@ -37,6 +37,15 @@ classdef ProtocolGetter < handle
             obj.fs = fs;
             [~,binBaseNames] = getBaseNames(dir(fullfile(directory, '*.bin')));
             smrxFiles = dir(fullfile(directory, '*.smrx'));
+            subfolderFlag = false;
+            if isempty(smrxFiles)
+                subfolderFlag = true;
+                smrxFiles = dir(fullfile(directory,'*\*.smrx'));
+            elseif isempty(smrxFiles)
+                fprintf(1,'The given directory contains no .smrx files. Please ')
+                fprintf(1,'try again with another folder which do contain .smrx files.\n')
+                return
+            end
             [~,smrxBaseNames] = getBaseNames(smrxFiles);
             merFiles = dir(fullfile(directory, ['*', foStr, '.txt']));
             Nb = numel(binBaseNames); Ns = numel(smrxBaseNames);
@@ -55,7 +64,7 @@ classdef ProtocolGetter < handle
                     smrxBaseNamesStr = string(smrxBaseNames);
                     while ~feof(foID) && counter <= Ns
                         [~,cfName,~] = fileparts(string(fgetl(foID)));
-                        smrxFlags = smrxFlags + counter * contains(...
+                        smrxFlags = smrxFlags + counter * strcmpi(...
                             smrxBaseNamesStr, cfName);
                         counter = counter + 1;
                     end
@@ -67,7 +76,14 @@ classdef ProtocolGetter < handle
                         binFile = string(fgetl(foID));
                     end
                     fclose(foID);
-                    smrxBaseNames = smrxBaseNames(smrxFlags);
+                    if subfolderFlag
+                        [~,subFolders] = arrayfun(@(x) fileparts(x.folder),...
+                                    smrxFiles, 'UniformOutput', 0);
+                        smrxBaseNames(smrxFlags) = arrayfun(@(x,y) ...
+                            fullfile(x,y), subFolders, smrxBaseNames);
+                    else
+                        smrxBaseNames(smrxFlags) = smrxBaseNames;
+                    end
                 else
                     % User interaction for older merges
                     mergeQuest =...
@@ -95,7 +111,7 @@ classdef ProtocolGetter < handle
                                     'File order',[1, 60],string(smrxFlags));
                                 nFileOrder = str2double(orderAns);
                                 nSmrxBaseNames = smrxBaseNames;
-                                if ~isempty(orderAns) && sum(abs(smrxFlags - nFileOrder)) ~= 0
+                                if ~isempty(orderAns) && ~issorted(nFileOrder)
                                     fprintf(1,'Changing file order...\n')
                                     nSmrxBaseNames(nFileOrder) = smrxBaseNames;
                                     smrxBaseNames = nSmrxBaseNames;
@@ -117,6 +133,17 @@ classdef ProtocolGetter < handle
                                     fprintf(1, 'No object created.\n')
                                     return
                                 end
+                            end
+                             subFolders = '';
+                            if subfolderFlag
+                                [~,subFolders] = arrayfun(...
+                                    @(x) fileparts(x.folder),...
+                                    smrxFiles,...
+                                    'UniformOutput', 0);
+                                subFolders(nFileOrder) = subFolders;
+                                subFolders = string(subFolders);
+                                smrxBaseNames = arrayfun(@(x,y) fullfile(...
+                                    x,y), subFolders, smrxBaseNames);
                             end
                             foID = fopen(fullfile(obj.dataDir,...
                                 [binBaseNames{binSl}, '_fileOrder.txt']),'w');
@@ -163,7 +190,7 @@ classdef ProtocolGetter < handle
                     end
                     binFile = binBaseNames{1} + ".bin";
                 end
-                obj.fileOrder = string(smrxBaseNames(smrxFlags)) + ".smrx";
+                obj.fileOrder = string(smrxBaseNames) + ".smrx";
             else
                 % Likely single file transformation
                 binFile = binBaseNames{1} + ".bin";
@@ -204,8 +231,9 @@ classdef ProtocolGetter < handle
                 stSgStruct = ProtocolGetter.assign2StimulationSignals(...
                     stimSig, idMat, titles, fields);
                 wHead = stimSig.(headers(idMat(:,1)));
+                eHead = stimSig.(headers(idMat(:,3)));
                 stSgStruct = ProtocolGetter.correctLFPLength(...
-                    stSgStruct, wHead);
+                    stSgStruct, wHead, eHead);
                 mStimStruct = catStruct(mStimStruct, stSgStruct);
             end
             obj.Triggers = mStimStruct;
@@ -516,16 +544,42 @@ classdef ProtocolGetter < handle
             stSgStruct = struct('Whisker',whisk,'Laser',laser,'LFP',lfp);
         end
         
-        function [stSgStruct, Ns] = correctLFPLength(stSgStruct, wHead)
+        function [stSgStruct, Ns] = correctLFPLength(stSgStruct, wHead,...
+                eHead)
+            expDomain = round([min(wHead.start, eHead.start),...
+                max(wHead.stop, eHead.stop)] *...
+                max(wHead.SamplingFrequency, eHead.SamplingFrequency));
+            intanFs = wHead.SamplingFrequency;
             intanDomain = round([wHead.start, wHead.stop]*wHead.SamplingFrequency);
+            cedFs = eHead.SamplingFrequency;
+            cedDomain = round([eHead.start, eHead.stop] * cedFs);
+            tx = (0:expDomain(2)-1)/intanFs;
             lfp = stSgStruct.LFP;
-            Ns = length(stSgStruct.Whisker);
-            lfp = lfp(intanDomain(1):intanDomain(2));
-            if length(lfp) < Ns
-                lfp = padarray(lfp,Ns - length(lfp),'symmetric',...
-                    'post');
+            if cedFs ~= intanFs
+                lfp = resample(double(lfp), intanFs/cedFs, 1);
+                cedDomain = cedDomain .* [1, intanFs/cedFs];
             end
-            stSgStruct.LFP = lfp;
+            
+            % Length LFP  correction
+            init = max(intanDomain(1), cedDomain(1));
+            if cedDomain(2) < intanDomain(2)
+                fin = cedDomain(2);
+            else
+                fin = intanDomain(2);
+            end
+            stSgStruct.LFP = lfp(init:fin);
+            
+            % Intan signals corrections
+            init = 1;
+            fin = size(stSgStruct.LFP);
+            flds = fieldnames(stSgStruct);
+            lfpFlag = contains(flds, 'lfp', 'IgnoreCase', 1);
+            flds(lfpFlag) = [];
+            for cf = 1:numel(flds)
+                vars = stSgStruct.(flds{cf});
+                stSgStruct.(flds{cf}) = vars(init:fin);
+            end
+            Ns = fin;
         end
         
         function [wSubs, lSubs] = extractSignalEdges(Triggers, fs)
