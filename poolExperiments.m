@@ -256,25 +256,27 @@ for cexp = chExp
             Conditions(ccond).Triggers(:,1));
         counter2 = counter2 + 1;
     end
+    %% Building the population stack
     NaNew = sum(auxDelayFlags,1);
     clInfo.id = cellfun(@(x) [sprintf('%d_',cexp), x], clInfo.id,...
         'UniformOutput', 0);
     clInfo.Properties.RowNames = clInfo.id;
     if cexp == chExp(1)
-        
+        % First assignment
         delayFlags = auxDelayFlags;
         discStack = auxDStack;
         cStack = auxCStack;
         clInfoTotal = clInfo;
+        NaStack = NaNew;
     else
         % Homogenizing trial numbers
-        if any(NaNew ~= NaPrev)
-            NaMin = min(NaPrev, NaNew);
-            NaMax = max(NaPrev, NaNew);
-            trigSubset = cell(numel(NaPrev),1);
-            for cc = 1:numel(NaPrev)
+        if any(NaNew ~= NaStack)
+            NaMin = min(NaStack, NaNew);
+            NaMax = max(NaStack, NaNew);
+            trigSubset = cell(numel(NaStack),1);
+            for cc = 1:numel(NaStack)
                 trigSubset{cc} = sort(randsample(NaMax(cc),NaMin(cc)));
-                if NaPrev(cc) == NaMin(cc)
+                if NaStack(cc) == NaMin(cc)
                     tLoc = find(auxDelayFlags(:,cc));
                     tSubs = tLoc(trigSubset{cc});
                     auxDelayFlags(setdiff(tLoc,tSubs),:) = [];
@@ -286,23 +288,64 @@ for cexp = chExp
                     delayFlags(setdiff(tLoc,tSubs),:) = [];
                     discStack(:,:,setdiff(tLoc,tSubs)) = [];
                     cStack(:,:,setdiff(tLoc,tSubs)) = [];
+                    NaStack(cc) = NaNew(cc); 
                 end
             end
-        end        
+        end
+        auxDStack(1,:,:) = [];
         discStack = cat(1, discStack, auxDStack);
         cStack = cat(1, cStack, auxCStack);
+        popVarNames = clInfoTotal.Properties.VariableNames;
+        curVarNames = clInfo.Properties.VariableNames;
+        Npv = numel(popVarNames); Ncv = numel(curVarNames);
+        if Npv ~= Ncv || any(~ismember(popVarNames, curVarNames))
+            [logIdx, whr] = ismember(popVarNames, curVarNames);
+            issueNames = find(~logIdx);
+            for cvn = issueNames
+                if iscell(clInfoTotal.(popVarNames{cvn}))
+                    varFill = repmat({mode(string(...
+                        clInfoTotal.(popVarNames{cvn})))},[size(clInfo,1),1]);
+                else
+                    varFill = repmat(mode(clInfoTotal.(popVarNames{cvn})),...
+                        [size(clInfo,1),1]);
+                end
+                clInfo = addvars(clInfo, varFill, 'NewVariableNames',...
+                    popVarNames{cvn});
+            end
+            newVarNames = curVarNames(setdiff(1:Ncv, whr));
+            if numel(newVarNames) > 1
+                % If there are more than 1 variables to be included in the
+                % population cluster information
+                dbstop in poolExperiments at 315
+            elseif numel(newVarNames) == 1 &&...
+                    strcmpi(newVarNames, 'amplitude')
+                % If there is just one and that is 'amplitude' (very
+                % specific)
+                try
+                    clInfo.Properties.VariableNames{setdiff(1:Ncv, whr)} =...
+                        'amp';
+                catch
+                    clInfo = removevars(clInfo,'amp');
+                    clInfo.Properties.VariableNames{setdiff(1:Ncv, whr)} =...
+                        'amp';
+                end
+            end
+        end
         clInfoTotal = cat(1, clInfoTotal, clInfo);
     end
-    NaPrev = NaNew;
 end
-figureDir = fullfile(experimentDir,'Figures\');
+gclID = clInfoTotal{logical(clInfoTotal.ActiveUnit),'id'};
+Ncl = numel(gclID);
+%% Population analysis
+figureDir = fullfile(experimentDir,'PopFigures\');
 if ~mkdir(figureDir)
     fprintf(1,'There was an issue with the figure folder...\n');
     fprintf(1,'Saving the figures in the data folder!\n');
     fprintf(1,'%s\n',dataDir);
     figureDir = dataDir;
 end
-
+[~,expName] = fileparts(experimentDir);
+dataDir = experimentDir;
 % Statistical tests
 [Results, Counts] = statTests(discStack, delayFlags, timeFlags);
 
@@ -351,9 +394,39 @@ filterIdx = true(Ne,1);
 if strcmpi(filtStr, 'filtered')
     filterIdx = [true; wruIdx];
 end
-
-% Getting spike times for every responding cluster and computing its
-% PDF
+clInfoTotal = addvars(clInfoTotal, false(size(clInfoTotal,1),1), 'NewVariableNames', 'Control'); 
+clInfoTotal{logical(clInfoTotal.ActiveUnit), 'Control'} = wruIdx;
+%% Temporal dynamics
+trigTms = cell2mat(arrayfun(@(x) x.Triggers(:,1), Conditions(cchCond),...
+    'UniformOutput', 0)')*fs;
+[~,cnd] = find(delayFlags);
+[~, tmOrdSubs] = sort(trigTms, 'ascend');
+cnd = cnd(tmOrdSubs); trialAx = trigTms(tmOrdSubs);
+modFlag = sign(clInfoTotal{clInfoTotal.ActiveUnit & clInfoTotal.Control,...
+    'Modulation'});
+modFlag = modFlag > 0;
+cmap = lines(Nccond);
+cmap(CtrlCond,:) = ones(1,3)*1/3;
+tdFig = figure('Name', 'Temporal dynamics', 'Color', [1,1,1]);
+plotOpts = {'LineStyle', 'none', 'LineWidth', 0.25, 'Marker', '.'};
+modLabel = {'Facilitation', 'Suppression'};
+clrSat = 0.5;
+ax = gobjects(2, 1);
+for ccond = 1:Nccond
+    fates = cell2mat(cellfun(@(x) (x(wruIdx,:)./delta_t)', Counts(ccond,2),...
+        'UniformOutput', 0));
+    for cm = 1:2
+        ax(cm) = subplot(2,1,cm, 'Parent', tdFig);
+        plot(ax(cm), trialAx(cnd == ccond), mean(fates(:,modFlag),2),...
+            plotOpts{:}, 'Color', cmap(ccond,:))
+        hold(ax(cm),'on')
+        
+        modFlag = ~modFlag;
+        cmap(ccond,:) = brighten(cmap(ccond,:), clrSat);
+        clrSat = -clrSat;
+    end
+end
+linkaxes(ax, 'xy')
 
 %% Getting the relative spike times for the whisker responsive units (wru)
 % For each condition, the first spike of each wru will be used to compute
@@ -374,14 +447,19 @@ firstOrdStats = zeros(2,Nccond);
 condParams = zeros(M,3,Nccond);
 txpdf = responseWindow(1):1/fs:responseWindow(2);
 condPDF = zeros(numel(txpdf),Nccond);
-csvBase = fullfile(dataDir, expName);
 csvSubfx = sprintf(' VW%.1f-%.1f ms.csv', timeLapse(1)*1e3, timeLapse(2)*1e3);
 existFlag = false;
 condRelativeSpkTms = cell(Nccond,1);
 relativeSpkTmsStruct = struct('name',{},'SpikeTimes',{});
-spkDir = fullfile(dataDir, 'SpikeTimes');
+csvDir = fullfile(dataDir, 'SpikeTimes');
+if ~exist(csvDir,'dir')
+    iOk = mkdir(csvDir);
+    if ~iOk
+        fprintf(1, 'Please verify your writing permissions!\n')
+    end
+end
 for ccond = 1:size(delayFlags,2)
-    csvFileName = [csvBase,' ',consCondNames{ccond}, csvSubfx];
+    csvFileName = fullfile(csvDir,[expName,' ',consCondNames{ccond}, csvSubfx]);
     relativeSpikeTimes = getRasterFromStack(discStack,~delayFlags(:,ccond),...
         filterIdx(3:end), timeLapse, fs, true, false);
     relativeSpikeTimes(:,~delayFlags(:,ccond)) = [];
@@ -404,10 +482,11 @@ for ccond = 1:size(delayFlags,2)
         fID = fopen(csvFileName,'w');
         fprintf(fID,'%s, %s\n','Cluster ID','Relative spike times [ms]');
     end
+    rsclSub = find(filterIdx(2:end))-1;
     for cr = 1:size(relativeSpikeTimes, 1)
         clSpkTms(cr) = {sort(cell2mat(relativeSpikeTimes(cr,:)))};
         if fID > 2
-            fprintf(fID,'%s,',gclID{cr});
+            fprintf(fID,'%s,',gclID{rsclSub(cr)});
             fprintf(fID,'%f,',clSpkTms{cr});fprintf(fID,'\n');
         end
     end
@@ -434,7 +513,7 @@ for ccond = 1:size(delayFlags,2)
     end
     %}
 end
-save(fullfile(dataDir,[expName,'_exportSpkTms.mat']),...
+save(fullfile(csvDir,[expName,'_exportSpkTms.mat']),...
     'relativeSpkTmsStruct','configStructure')
 
 %% Ordering PSTH
@@ -444,25 +523,25 @@ dans = questdlg('Do you want to order the PSTH other than by IDs?',...
 ordSubs = 1:nnz(filterIdx(2:Ncl+1));
 pclID = gclID(filterIdx(2:Ncl+1));
 if strcmp(dans, 'Yes')
-    if ~exist('clInfo','var')
-        clInfo = getClusterInfo(fullfile(dataDir,'cluster_info.tsv'));
+    if ~exist('clInfoTotal','var')
+        clInfoTotal = getClusterInfo(fullfile(dataDir,'cluster_info.tsv'));
     end
     % varClass = varfun(@class,clInfo,'OutputFormat','cell');
-    [ordSel, iOk] = listdlg('ListString', clInfo.Properties.VariableNames,...
+    [ordSel, iOk] = listdlg('ListString', clInfoTotal.Properties.VariableNames,...
         'SelectionMode', 'multiple');
     orderedStr = [];
-    ordVar = clInfo.Properties.VariableNames(ordSel);
+    ordVar = clInfoTotal.Properties.VariableNames(ordSel);
     for cvar = 1:numel(ordVar)
         orderedStr = [orderedStr, sprintf('%s ',ordVar{cvar})]; %#ok<AGROW>
     end
     orderedStr = [orderedStr, 'ordered'];
     
     if ~strcmp(ordVar,'id')
-        [~,ordSubs] = sortrows(clInfo(pclID,:),ordVar);
+        [~,ordSubs] = sortrows(clInfoTotal(pclID,:),ordVar);
     end
 end
 %% Plot PSTH
-goodsIdx = ~badsIdx';
+goodsIdx = logical(clInfoTotal.ActiveUnit);
 csNames = fieldnames(Triggers);
 for ccond = 1:Nccond
     figFileName = sprintf('%s %s VW%.1f-%.1f ms B%.1f ms RW%.1f-%.1f ms SW%.1f-%.1f ms %sset %s (%s)',...
