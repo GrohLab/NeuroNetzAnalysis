@@ -231,9 +231,13 @@ classdef ProtocolGetter < handle
                 stSgStruct = ProtocolGetter.assign2StimulationSignals(...
                     stimSig, idMat, titles, fields);
                 wHead = stimSig.(headers(idMat(:,1)));
-                eHead = stimSig.(headers(idMat(:,3)));
-                stSgStruct = ProtocolGetter.correctLFPLength(...
-                    stSgStruct, wHead, eHead);
+                try
+                    eHead = stimSig.(headers(idMat(:,3)));
+                    stSgStruct = ProtocolGetter.correctLFPLength(...
+                        stSgStruct, wHead, eHead);
+                catch
+                    fprintf(1, 'No LFP in the current experiment!\n')
+                end
                 mStimStruct = catStruct(mStimStruct, stSgStruct);
             end
             obj.Triggers = mStimStruct;
