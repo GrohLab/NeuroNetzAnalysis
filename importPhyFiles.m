@@ -1,4 +1,4 @@
-function [ sortedData, clInfo] = ...
+function [ sortedData ] = ...
     importPhyFiles(pathToData, outputName, removeNoise)
 %IMPORTPHYFILES reads the files created by both Kilosort and Phy or Phy2
 %and, depending on the flag configurations, it saves a .mat file. The
@@ -62,11 +62,9 @@ if ~exist('removeNoise','var')
 end
 
 % Reading the KiloSort datafiles (phy updates these files)
-
 spkTms = readNPY(fullfile(pathToData, 'spike_times.npy'));
 clID = readNPY(fullfile(pathToData, 'spike_clusters.npy'));
 clGr = readTSV(fullfile(pathToData,'cluster_group.tsv'));
-clAmps = readNPY(fullfile(pathToData, 'amplitudes.npy'));
 % Preparing the information file to get cluster location
 fClInfoID = fopen(fullfile(pathToData, 'cluster_info.tsv'), 'r');
 if fClInfoID <= 0
@@ -76,9 +74,6 @@ if fClInfoID <= 0
     fclose(fClInfoID);
     return
 end
-infoHeads = strsplit(fgetl(fClInfoID), '\t');
-chanHeadIdx = contains(infoHeads, 'chan', 'IgnoreCase', true);
-
 
 % Creating a logical index for the user labels
 nIdx = cellfun(@strcmp,clGr(:,2),repmat("noise",size(clGr,1),1));
@@ -89,15 +84,9 @@ grIdx = [gIdx, mIdx, nIdx];
 allClusters = cellfun(@num2str,clGr(:,1),'UniformOutput',false);
 
 spkCell = cell(size(clGr,1),1);
-ampsCell = zeros(size(clGr,1),1);
-clPos = zeros(size(clGr,1), 1);
 for ccln = 1:numel(allClusters)
     spkIdx = clID == clGr{ccln,1};
     spkCell(ccln) = {double(spkTms(spkIdx))/fs};
-    ampsCell(ccln) = mean(clAmps(spkIdx));
-    fileVals = strsplit(fgetl(fClInfoID), '\t',...
-        'CollapseDelimiters', false);
-    clPos(ccln) = str2double(fileVals{chanHeadIdx});
 end
 fclose(fClInfoID);
 row = find(grIdx');
@@ -111,11 +100,9 @@ for cgroup = 1:MX_CLSS
     clGroup(row2(limits(cgroup)+1:limits(cgroup+1))) = cgroup;
 end
 sortedData = cat(2,allClusters,spkCell,num2cell(clGroup));
-clInfo = [ampsCell, clPos];
 % Removes the noise from the matrix and saves an alternative output file
 if removeNoise
     sortedData(nIdx,:) = [];
-    clInfo(nIdx,:) = [];
 end
 filename = [outputName, '_all_channels.mat'];
 fname = fullfile(pathToData, filename);
@@ -127,5 +114,5 @@ if exist(fname, 'file')
         return
     end
 end
-save(fname, 'sortedData', 'fs', 'clInfo');
+save(fname, 'sortedData', 'fs');
 end
