@@ -288,7 +288,7 @@ for cexp = chExp
                     delayFlags(setdiff(tLoc,tSubs),:) = [];
                     discStack(:,:,setdiff(tLoc,tSubs)) = [];
                     cStack(:,:,setdiff(tLoc,tSubs)) = [];
-                    NaStack(cc) = NaNew(cc); 
+                    NaStack(cc) = NaNew(cc);
                 end
             end
         end
@@ -391,19 +391,30 @@ fprintf('%d whisker responding clusters:\n', Nwru);
 fprintf('- %s\n',gclID{wruIdx})
 
 filterIdx = true(Ne,1);
-if strcmpi(filtStr, 'filtered')
+if strcmpi(filtStr, 'filtered') && nnz(wruIdx)
     filterIdx = [true; wruIdx];
 end
 clInfoTotal = addvars(clInfoTotal, false(size(clInfoTotal,1),1), 'NewVariableNames', 'Control'); 
 clInfoTotal{logical(clInfoTotal.ActiveUnit), 'Control'} = wruIdx;
 %% Temporal dynamics
 trigTms = cell2mat(arrayfun(@(x) x.Triggers(:,1), Conditions(cchCond),...
-    'UniformOutput', 0)')*fs;
+    'UniformOutput', 0)')/fs;
 [~,cnd] = find(delayFlags);
 [~, tmOrdSubs] = sort(trigTms, 'ascend');
 cnd = cnd(tmOrdSubs); trialAx = trigTms(tmOrdSubs);
-modFlag = sign(clInfoTotal{clInfoTotal.ActiveUnit & clInfoTotal.Control,...
-    'Modulation'});
+try
+    modFlag = sign(clInfoTotal{clInfoTotal.ActiveUnit &...
+        clInfoTotal.Control, 'Modulation'});    
+catch
+    clInfoTotal = addvars(clInfoTotal, zeros(size(clInfoTotal,1),1),...
+        'NewVariableNames', 'Modulation');
+    clInfoTotal{logical(clInfoTotal.ActiveUnit),'Modulation'} =...
+        Results(1).Activity(2).Direction;
+    modFlag = sign(clInfoTotal{clInfoTotal.ActiveUnit &...
+        clInfoTotal.Control, 'Modulation'}); 
+end
+Ngr = 10;
+
 modFlag = modFlag > 0;
 cmap = lines(Nccond);
 cmap(CtrlCond,:) = ones(1,3)*1/3;
@@ -412,20 +423,36 @@ plotOpts = {'LineStyle', 'none', 'LineWidth', 0.25, 'Marker', '.'};
 modLabel = {'Facilitation', 'Suppression'};
 clrSat = 0.5;
 ax = gobjects(2, 1);
+leyendas = {'Control','After Induction'};
 for ccond = 1:Nccond
-    fates = cell2mat(cellfun(@(x) (x(wruIdx,:)./delta_t)', Counts(ccond,2),...
+    rates = cell2mat(cellfun(@(x) (x(wruIdx,:)./delta_t)', Counts(ccond,2),...
         'UniformOutput', 0));
+    nates = cell2mat(cellfun(@(x) (x(~wruIdx,:)./delta_t)', Counts(ccond,2),...
+        'UniformOutput', 0));
+    
     for cm = 1:2
         ax(cm) = subplot(2,1,cm, 'Parent', tdFig);
-        plot(ax(cm), trialAx(cnd == ccond), mean(fates(:,modFlag),2),...
-            plotOpts{:}, 'Color', cmap(ccond,:))
+        [~, yhat] = fit_poly(trialAx(cnd == ccond),...
+            mean(rates(:,modFlag),2), 1);
+        expDurMin = minutes(seconds(trialAx(cnd == ccond)));
+        mfr = mean(rates(:,modFlag),2);
+        plot(ax(cm), expDurMin, mfr, plotOpts{:}, 'Color', cmap(ccond,:),...
+            'DisplayName',sprintf('%s (%.3f)',consCondNames{ccond},mean(mfr)))
         hold(ax(cm),'on')
-        
+        plot(ax(cm), expDurMin, yhat, 'LineWidth', 0.25,...
+            'Color', cmap(ccond,:), 'DisplayName','')
+        mfr = mean(nates,2);
+        plot(ax(cm), expDurMin, mfr, plotOpts{:}, 'Color', [0.75, 0.75, 0.75],...
+            'DisplayName', sprintf('Non-responses (%.2f)',mean(mfr)))
+        [~, yhat] = fit_poly(trialAx(cnd == ccond), mfr, 1);
+        plot(ax(cm), expDurMin, yhat, 'LineWidth', 0.25,...
+            'Color', [0.9, 0.9, 0.9], 'DisplayName','')
         modFlag = ~modFlag;
         cmap(ccond,:) = brighten(cmap(ccond,:), clrSat);
         clrSat = -clrSat;
     end
 end
+legend('show')
 linkaxes(ax, 'xy')
 
 %% Getting the relative spike times for the whisker responsive units (wru)
@@ -516,6 +543,29 @@ end
 save(fullfile(csvDir,[expName,'_exportSpkTms.mat']),...
     'relativeSpkTmsStruct','configStructure')
 
+%% ISI cumulative fraction distribution
+binFig = figure('Visible','off');
+areaFig = figure('Visible','on');
+areaAx = axes('Parent', areaFig);
+lax = log(1/fs):0.2:log(0.03);
+% cmap = [0,0,102;... azul marino
+%     153, 204, 255]/255; % azul cielo
+cmap = lines(2);
+areaOpts = {'EdgeColor', 'none', 'FaceAlpha', 0.7, 'FaceColor'};
+for ccond = 1:Nccond
+    ISI = cellfun(@(x) diff(x(x >= 0 & x <= 0.03)), ...
+        relativeSpkTmsStruct(ccond).SpikeTimes(modFlag,:), 'UniformOutput', 0);
+    ISI_merge = [ISI{:}];
+    lISI = log(ISI_merge);
+    hisi = histogram(lISI, lax, 'Parent', binFig, 'DisplayStyle', 'stairs');
+    area(areaAx, lax(1:end-1), hisi.Values, areaOpts{:}, cmap(ccond,:));
+    
+    if ccond == 1
+        hold(binFig.Children, 'on'); hold(areaFig.Children, 'on');
+    end
+end
+hisi = hisi.Parent.Children;
+
 %% Ordering PSTH
 orderedStr = 'ID ordered';
 dans = questdlg('Do you want to order the PSTH other than by IDs?',...
@@ -543,13 +593,18 @@ end
 %% Plot PSTH
 goodsIdx = logical(clInfoTotal.ActiveUnit);
 csNames = fieldnames(Triggers);
+Nbn = diff(timeLapse)/binSz;
+if (Nbn - round(Nbn)) ~= 0
+    Nbn = ceil(Nbn);
+end
+PSTH = zeros(nnz(filterIdx) - 1, Nbn, Nccond);
 for ccond = 1:Nccond
     figFileName = sprintf('%s %s VW%.1f-%.1f ms B%.1f ms RW%.1f-%.1f ms SW%.1f-%.1f ms %sset %s (%s)',...
         expName, Conditions(consideredConditions(ccond)).name, timeLapse*1e3,...
         binSz*1e3, responseWindow*1e3, spontaneousWindow*1e3, onOffStr,...
         orderedStr, filtStr);
-    [PSTH, trig, sweeps] = getPSTH(discStack(filterIdx,:,:),timeLapse,...
-        ~delayFlags(:,ccond),binSz,fs);
+    [PSTH(:,:,ccond), trig, sweeps] = getPSTH(discStack(filterIdx,:,:),...
+        timeLapse, ~delayFlags(:,ccond), binSz, fs);
     stims = mean(auxCStack(:,:,delayFlags(:,ccond)),3);
     stims = stims - median(stims,2);
     for cs = 1:size(stims,1)
@@ -560,10 +615,10 @@ for ccond = 1:Nccond
             stims(cs,:) = zeros(1,Nt);
         end
     end
-    figs = plotClusterReactivity(PSTH(ordSubs,:),trig,sweeps,timeLapse,binSz,...
-        [{Conditions(consideredConditions(ccond)).name};...
-        pclID(ordSubs)],...
-        strrep(expName,'_','\_'));
+    
+    figs = plotClusterReactivity(PSTH(ordSubs,:,ccond), trig, sweeps,...
+        timeLapse, binSz, [{Conditions(consideredConditions(ccond)).name};...
+        pclID(ordSubs)], strrep(expName,'_','\_'));
     configureFigureToPDF(figs);
     figs.Children(end).YLabel.String = [figs.Children(end).YLabel.String,...
         sprintf('^{%s}',orderedStr)];
@@ -573,3 +628,57 @@ for ccond = 1:Nccond
     end
 end
 
+%% Comparing the PSTHs for all conditions
+psthFig = figure('Color', [1,1,1], 'Name', 'Condition PSTH comparison',...
+    'Visible', 'off');
+txpsth = (0:Nbn-1)*binSz + timeLapse(1);
+focusIdx = txpsth >= responseWindow(1) & txpsth <= responseWindow(2);
+txfocus = txpsth(focusIdx);
+PSTH_raw = squeeze(sum(PSTH(:,:,:),1));
+PSTH_trial = PSTH_raw./NaStack;
+PSTH_prob = PSTH_raw./sum(PSTH_raw,1);
+PSTH_all = cat(3, PSTH_raw, PSTH_trial, PSTH_prob);
+axp = gobjects(3,1);
+subpltsTitles = {'PSTH for all conditions (trial-normalized)',...
+    'Cumulative density function', 'Cumulative sum for normalized spikes'};
+yaxsLbls = {'Spikes / Trials', 'Spike probability', 'Spike number'};
+for cax = 1:3
+    axp(cax) = subplot(3, 1, cax, 'Parent', psthFig, 'NextPlot', 'add');
+    for ccond = 1:Nccond
+        plotOpts = {'DisplayName', consCondNames{ccond}};
+        switch cax
+            case 1 % Plot the trial-normalized PSTH; page #2
+                plot(axp(cax), txfocus, PSTH_all(focusIdx,ccond,2),...
+                    plotOpts{:})
+            case 2 % Plot the cumulative probability function; page 3
+                PSTH_aux = PSTH_all(focusIdx, ccond, 3);
+                PSTH_aux = PSTH_aux / sum(PSTH_aux);
+                plot(axp(cax), txfocus, cumsum(PSTH_aux), plotOpts{:})
+            case 3 % Plot the cumulative sum for the mean spikes; page 2
+                plot(axp(cax), txfocus, ...
+                    cumsum(PSTH_all(focusIdx, ccond, 2)), plotOpts{:})
+        end
+    end
+    legend(axp(cax), 'show', 'Location', 'best')
+    title(axp(cax), subpltsTitles{cax})
+    ylabel(axp(cax), yaxsLbls{cax})
+    if cax < 3
+        xticks(axp(cax), '')
+    else
+        xlabel(axp(cax), sprintf('Time_{%.2f ms} [s]', binSz*1e3))
+    end
+end
+psthFig.Visible = 'on';
+psthFig = configureFigureToPDF(psthFig);
+psthFigFileName = sprintf('%s PSTH All conditions RW%.2f-%.2f ms',expName,...
+    responseWindow*1e3);
+psthFigFileName = fullfile(figureDir,psthFigFileName);
+if ~exist([psthFigFileName,'.pdf'], 'file') 
+    print(psthFig, [psthFigFileName, '.pdf'],'-dpdf','-fillpage')
+end
+if ~exist([psthFigFileName,'.emf'], 'file')
+    print(psthFig, [psthFigFileName, '.emf'],'-dmeta')
+end
+
+
+%%
