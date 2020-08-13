@@ -211,7 +211,6 @@ for cexp = chExp
         end
         % Subscript to indicate the conditions with all whisker stimulations,
         % whisker control, laser control, and the combination whisker and laser.
-        allWhiskerStimulus = chCond;
         consideredConditions = auxSubs(cchCond);
         Nccond = length(consideredConditions);
         
