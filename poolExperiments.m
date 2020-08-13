@@ -235,6 +235,7 @@ for cexp = chExp
         isWithinResponsiveWindow =...
             @(x) x > responseWindow(1) & x < responseWindow(2);
     end
+    
     % Constructing the stack out of the user's choice
     % discStack - dicrete stack has a logical nature
     % cst - continuous stack has a numerical nature
@@ -257,6 +258,13 @@ for cexp = chExp
     end
     %% Building the population stack
     NaNew = sum(auxDelayFlags,1);
+    % Removing not considered conditions
+    if sum(NaNew) ~= NTa
+        emtyRow = find(~sum(auxDelayFlags,2));
+        auxDelayFlags(emtyRow,:) = [];
+        auxDStack(:,:,emtyRow) = [];
+        auxCStack(:,:,emtyRow) = [];
+    end
     clInfo.id = cellfun(@(x) [sprintf('%d_',cexp), x], clInfo.id,...
         'UniformOutput', 0);
     clInfo.Properties.RowNames = clInfo.id;
