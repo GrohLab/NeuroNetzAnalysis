@@ -110,7 +110,8 @@ clTempSubs(missClustFlag) = [];
 [clSub,~] = find(clIdx);
 % Determining hosting channels
 % ch2read = chanMap(clTable{clusterID, 'channel'} + 1);
-ch2read = clTable{clusterID, 'channel'};
+chanInTable = contains(clTable.Properties.VariableNames,{'ch','channels'});
+ch2read = clTable{clusterID, clTable.Properties.VariableNames{chanInTable}};
 
 %% Verifying if the waveform(s) for the given cluster(s) was/were computed
 
