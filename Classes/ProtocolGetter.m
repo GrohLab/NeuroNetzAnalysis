@@ -210,7 +210,7 @@ classdef ProtocolGetter < handle
                 getConditionSignalsBF(fID);
             end
             obj.condSigFiles = extractBefore(obj.fileOrder,".smrx") +...
-                "_condSig.mat";
+                "_CondSig.mat";
         end
         
         function obj = getSignalEdges(obj)
