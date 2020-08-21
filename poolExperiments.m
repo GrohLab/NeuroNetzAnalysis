@@ -321,6 +321,18 @@ for cexp = chExp
             [logIdx, whr] = ismember(popVarNames, curVarNames);
             issueNames = find(~logIdx);
             for cvn = issueNames
+                % Phy version validation
+                nameFlags = contains(phyNames, popVarNames{cvn});
+                if nnz(nameFlags)
+                    [varRow, phyVer] = find(nameFlags);
+                    [~, nPos] = ismember(curVarNames, phyNames(varRow,:));
+                    nPos = logical(nPos);
+                    if any(nPos)
+                        clInfo.Properties.VariableNames{nPos} =...
+                            popVarNames{cvn};
+                        continue
+                    end
+                end
                 if iscell(clInfoTotal.(popVarNames{cvn}))
                     varFill = repmat({mode(string(...
                         clInfoTotal.(popVarNames{cvn})))},[size(clInfo,1),1]);
