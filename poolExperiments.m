@@ -706,9 +706,10 @@ end
 psthFig = figure('Color', [1,1,1], 'Name', 'Condition PSTH comparison',...
     'Visible', 'off');
 txpsth = (0:Nbn-1)*binSz + timeLapse(1);
-focusIdx = txpsth >= responseWindow(1) & txpsth <= responseWindow(2);
+focusWindow = [0, 30]*1e-3;
+focusIdx = txpsth >= focusWindow(1) & txpsth <= focusWindow(2);
 txfocus = txpsth(focusIdx);
-PSTH_raw = squeeze(sum(PSTH(:,:,:),1));
+PSTH_raw = squeeze(sum(PSTH(modFlags(:,1),:,:),1));
 PSTH_trial = PSTH_raw./NaStack;
 PSTH_prob = PSTH_raw./sum(PSTH_raw,1);
 PSTH_all = cat(3, PSTH_raw, PSTH_trial, PSTH_prob);
@@ -717,7 +718,7 @@ subpltsTitles = {'PSTH for all conditions (trial-normalized)',...
     'Cumulative density function', 'Cumulative sum for normalized spikes'};
 yaxsLbls = {'Spikes / Trials', 'Spike probability', 'Spike number'};
 for cax = 1:3
-    axp(cax) = subplot(3, 1, cax, 'Parent', psthFig, 'NextPlot', 'add');
+    axp(cax) = subplot(4, 1, cax, 'Parent', psthFig, 'NextPlot', 'add');
     for ccond = 1:Nccond
         plotOpts = {'DisplayName', consCondNames{ccond}};
         switch cax
@@ -742,6 +743,14 @@ for cax = 1:3
         xlabel(axp(cax), sprintf('Time_{%.2f ms} [s]', binSz*1e3))
     end
 end
+axp(4) = subplot(4,1,4, 'Parent', psthFig);
+PSTH_diff = PSTH_prob(:,2) - PSTH_prob(:,1);
+bar(axp(4), txfocus(PSTH_diff(focusIdx) > 0), PSTH_diff(PSTH_diff > 0 & focusIdx'),...
+    'FaceColor', [51, 204, 51]/255, 'DisplayName', 'Potentiation'); hold on
+bar(axp(4), txfocus(PSTH_diff(focusIdx) <= 0), PSTH_diff(PSTH_diff <= 0 & focusIdx'),...
+    'FaceColor', [204, 51, 0]/255, 'DisplayName', 'Depression');
+axp(4).Box = 'off';
+linkaxes(axp, 'x')
 psthFig.Visible = 'on';
 psthFig = configureFigureToPDF(psthFig);
 psthFigFileName = sprintf('%s PSTH All conditions RW%.2f-%.2f ms',expName,...
