@@ -8,11 +8,19 @@ end
 % Folders existing in the selected directory
 expFolders = dir(experimentDir);
 expFolders(1:2) = [];
+folderNames = arrayfun(@(x) x.name, expFolders, 'UniformOutput', 0);
+folderFlag = arrayfun(@(x) x.isdir, expFolders);
 % Selection of the considered experiments
-[chExp, iOk] = listdlg('ListString', arrayfun(@(x) x.name, expFolders,...
-    'UniformOutput', 0), 'InitialValue', 1:size(expFolders,1),...
+[fSel, iOk] = listdlg('ListString', folderNames(folderFlag),...
+    'InitialValue', 1:nnz(folderFlag),...
     'PromptString', 'Select the experiments to consider:',...
-    'SelectionMode', 'multiple', 'ListSize', [350, (numel(expFolders))*16]);
+    'SelectionMode', 'multiple', 'ListSize', [350, (nnz(folderFlag))*16]);
+if ~iOk
+    fprintf(1, 'Cancelling...\n');
+    return
+end
+folderSub = find(folderFlag);
+chExp = folderSub(fSel);
 Nexp = numel(chExp);
 
 %% User controlling variables
@@ -318,6 +326,8 @@ for cexp = chExp
                 end
                 clInfo = addvars(clInfo, varFill, 'NewVariableNames',...
                     popVarNames{cvn});
+                curVarNames = clInfo.Properties.VariableNames;
+                
             end
             newVarNames = curVarNames(setdiff(1:Ncv, whr));
             if numel(newVarNames) > 1
@@ -377,7 +387,8 @@ for cc = 1:numel(figs)
         ccn = ccn + 1;
     end
     stFigName = [stFigBasename, altCondNames, stFigSubfix];
-    if ~exist([stFigName,'.*'],'file')
+    if ~exist([stFigName,'.pdf'],'file') ||...
+            ~exist([stFigName,'.emf'],'file')
         print(figs(cc),[stFigName,'.pdf'],printOpts{1}{:})
         print(figs(cc),[stFigName,'.emf'],printOpts{2})
     end
@@ -404,63 +415,104 @@ end
 clInfoTotal = addvars(clInfoTotal, false(size(clInfoTotal,1),1), 'NewVariableNames', 'Control'); 
 clInfoTotal{logical(clInfoTotal.ActiveUnit), 'Control'} = wruIdx;
 %% Temporal dynamics
-trigTms = cell2mat(arrayfun(@(x) x.Triggers(:,1), Conditions(cchCond),...
+trigTms = cell2mat(arrayfun(@(x) x.Triggers(:,1), Conditions(chCond),...
     'UniformOutput', 0)')/fs;
 [~,cnd] = find(delayFlags);
 [~, tmOrdSubs] = sort(trigTms, 'ascend');
 cnd = cnd(tmOrdSubs); trialAx = trigTms(tmOrdSubs);
+% Modulation: distance from the y=x line.
 try
-    modFlag = sign(clInfoTotal{clInfoTotal.ActiveUnit &...
+    modFlags = sign(clInfoTotal{clInfoTotal.ActiveUnit &...
         clInfoTotal.Control, 'Modulation'});    
 catch
     clInfoTotal = addvars(clInfoTotal, zeros(size(clInfoTotal,1),1),...
         'NewVariableNames', 'Modulation');
     clInfoTotal{logical(clInfoTotal.ActiveUnit),'Modulation'} =...
         Results(1).Activity(2).Direction;
-    modFlag = sign(clInfoTotal{clInfoTotal.ActiveUnit &...
+    modFlags = sign(clInfoTotal{clInfoTotal.ActiveUnit &...
         clInfoTotal.Control, 'Modulation'}); 
 end
-Ngr = 10;
 
-modFlag = modFlag > 0;
+modFlags = modFlags > 0;
+modFlags(:,2) = ~modFlags;
 cmap = lines(Nccond);
 cmap(CtrlCond,:) = ones(1,3)*1/3;
 tdFig = figure('Name', 'Temporal dynamics', 'Color', [1,1,1]);
-plotOpts = {'LineStyle', 'none', 'LineWidth', 0.25, 'Marker', '.'};
+plotOpts = {'LineStyle', 'none', 'Marker', '.'};
 modLabel = {'Facilitation', 'Suppression'};
 clrSat = 0.5;
-ax = gobjects(2, 1);
+ax = gobjects(size(modFlags,2), 1);
 leyendas = {'Control','After Induction'};
+
+rates = cellfun(@(x) x/delta_t, Counts, 'UniformOutput', 0);
+evokd = cat(2, rates{:,2});
+spont = cat(2, rates{:,1});
+
+for cmod = 1:size(modFlags,2)
+    tcount = 1;
+    ax(cmod) = subplot(size(modFlags,2),1,cmod,'Parent',tdFig);
+    ax(cmod).NextPlot = 'add';
+    for ccond = 1:Nccond
+        [xmean, xconf] = expdist(...
+            evokd(modFlags(:,cmod), tcount:sum(NaStack(1:ccond))));
+        tcount = 1 + sum(NaStack(1:ccond));
+        plot(ax(cmod), minutes(seconds(trialAx)), xmean, 'LineStyle', 'none',...
+            'Marker', '.')
+    end
+end
+
+%% Firing rate distribution
+%{
+Ngr = pi;
+while ~all(~mod(NaStack, Ngr))
+    if Ngr ~= pi
+        fprintf(1, '%.2f is not a divisor of %s\b!\nTry again!\n',Ngr,...
+            sprintf('%d ',NaStack))
+    end
+    trialGroupChar = inputdlg('Trial grouping:','Trial grouping',[1,16],...
+        {num2str(Ngr)});
+    if str2double(trialGroupChar)
+        Ngr = str2double(trialGroupChar);
+    else
+        disp('Cancelling the execution of the pipeline\n')
+        return;
+    end
+end
+
 for ccond = 1:Nccond
     rates = cell2mat(cellfun(@(x) (x(wruIdx,:)./delta_t)', Counts(ccond,2),...
         'UniformOutput', 0));
     nates = cell2mat(cellfun(@(x) (x(~wruIdx,:)./delta_t)', Counts(ccond,2),...
         'UniformOutput', 0));
-    
-    for cm = 1:2
-        ax(cm) = subplot(2,1,cm, 'Parent', tdFig);
-        [~, yhat] = fit_poly(trialAx(cnd == ccond),...
-            mean(rates(:,modFlag),2), 1);
-        expDurMin = minutes(seconds(trialAx(cnd == ccond)));
-        mfr = mean(rates(:,modFlag),2);
-        plot(ax(cm), expDurMin, mfr, plotOpts{:}, 'Color', cmap(ccond,:),...
-            'DisplayName',sprintf('%s (%.3f)',consCondNames{ccond},mean(mfr)))
+    % Reshaping the matrices for a group mean
+    % rates = squeeze(reshape(rates',size(rates,2),Ngr,[]));
+    % nates = squeeze(reshape(nates',size(nates,2),Ngr,[]));
+    expDurMin = minutes(seconds(trialAx(cnd == ccond)));
+    expDurMin = expDurMin(1:Ngr:end);
+    for cm = 1:size(modFlags,2)
+        ax(cm) = subplot(size(modFlags,2),1,cm, 'Parent', tdFig);
+        modfr = squeeze(mean(mean(rates(modFlags(:,cm),:,:),2),1));
+        moder = squeeze(std(std(rates(modFlags(:,cm),:,:),[],2),[],1));
+        plot(ax(cm), expDurMin, modfr, plotOpts{:}, 'Color', cmap(ccond,:),...
+            'DisplayName',sprintf('%s (%.2f Hz)',consCondNames{ccond},mean(modfr)))
         hold(ax(cm),'on')
+        [~, yhat] = fit_poly(double(expDurMin), modfr, 1);
         plot(ax(cm), expDurMin, yhat, 'LineWidth', 0.25,...
             'Color', cmap(ccond,:), 'DisplayName','')
-        mfr = mean(nates,2);
-        plot(ax(cm), expDurMin, mfr, plotOpts{:}, 'Color', [0.75, 0.75, 0.75],...
-            'DisplayName', sprintf('Non-responses (%.2f)',mean(mfr)))
-        [~, yhat] = fit_poly(trialAx(cnd == ccond), mfr, 1);
+        nrFr = squeeze(mean(mean(nates,2),1));
+        nrer = squeeze(std(std(nates,[],2),1));
+        plot(ax(cm), expDurMin, nrFr, plotOpts{:}, 'Color', [0.75, 0.75, 0.75],...
+            'DisplayName', sprintf('Non-responses (%.2f Hz)', mean(nrFr)))
+        [~, yhat] = fit_poly(double(expDurMin), nrFr, 1);
         plot(ax(cm), expDurMin, yhat, 'LineWidth', 0.25,...
             'Color', [0.9, 0.9, 0.9], 'DisplayName','')
-        modFlag = ~modFlag;
         cmap(ccond,:) = brighten(cmap(ccond,:), clrSat);
         clrSat = -clrSat;
     end
 end
 legend('show')
 linkaxes(ax, 'xy')
+%}
 
 %% Getting the relative spike times for the whisker responsive units (wru)
 % For each condition, the first spike of each wru will be used to compute
@@ -561,7 +613,7 @@ cmap = lines(2);
 areaOpts = {'EdgeColor', 'none', 'FaceAlpha', 0.7, 'FaceColor'};
 for ccond = 1:Nccond
     ISI = cellfun(@(x) diff(x(x >= 0 & x <= 0.03)), ...
-        relativeSpkTmsStruct(ccond).SpikeTimes(modFlag,:), 'UniformOutput', 0);
+        relativeSpkTmsStruct(ccond).SpikeTimes(modFlags,:), 'UniformOutput', 0);
     ISI_merge = [ISI{:}];
     lISI = log(ISI_merge);
     hisi = histogram(lISI, lax, 'Parent', binFig, 'DisplayStyle', 'stairs');
@@ -622,7 +674,6 @@ for ccond = 1:Nccond
             stims(cs,:) = zeros(1,Nt);
         end
     end
-    
     figs = plotClusterReactivity(PSTH(ordSubs,:,ccond), trig, sweeps,...
         timeLapse, binSz, [{Conditions(consideredConditions(ccond)).name};...
         pclID(ordSubs)], strrep(expName,'_','\_'));
@@ -630,8 +681,8 @@ for ccond = 1:Nccond
     figs.Children(end).YLabel.String = [figs.Children(end).YLabel.String,...
         sprintf('^{%s}',orderedStr)];
     if ~exist([figFileName,'.pdf'], 'file') || ~exist([figFileName,'.emf'], 'file')
-        print(figs,fullfile(figureDir,[figFileName, '.pdf']),'-dpdf','-fillpage')
-        print(figs,fullfile(figureDir,[figFileName, '.emf']),'-dmeta')
+        print(figs, fullfile(figureDir,[figFileName, '.pdf']),'-dpdf','-fillpage')
+        print(figs, fullfile(figureDir,[figFileName, '.emf']),'-dmeta')
     end
 end
 
