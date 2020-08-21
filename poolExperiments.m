@@ -22,6 +22,10 @@ end
 folderSub = find(folderFlag);
 chExp = folderSub(fSel);
 Nexp = numel(chExp);
+% Auxiliary variable for the phy multiple updates
+phyNames = ["ch","channel";...
+    "sh", "shank";...
+    "fr", "firing_rate"];
 
 %% User controlling variables
 % Time lapse, bin size, and spontaneous and response windows
