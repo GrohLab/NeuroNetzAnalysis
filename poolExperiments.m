@@ -84,7 +84,7 @@ expCo = 1;
 % results, and extract the spike times for all clusters blending in the
 % trial information for a PDF calculation
 relativeSpikeTimes = cell(Nexp);
-for cexp = chExp
+for cexp = reshape(chExp, 1, [])
     dataDir = fullfile(expFolders(cexp).folder, expFolders(cexp).name);
     foldContents = dir(dataDir); foldContents(1:2) = [];
     contNames = arrayfun(@(x) x.name, foldContents, 'UniformOutput', 0);
