@@ -357,7 +357,7 @@ classdef ProtocolGetter < handle
             % Assigning the subscripts to the Condition structure.
             % Total number of delays
             Ndel = numel(delays);
-            fprintf(1,'% d Delays found:', Ndel)
+            fprintf(1,'%d Delays found:', Ndel)
             % Logical matrix indicating membership of the subscripts to one
             % or the other delays.
             lsDel = false(length(timeDelay),Ndel);
