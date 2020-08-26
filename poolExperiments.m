@@ -433,6 +433,7 @@ clInfoTotal{logical(clInfoTotal.ActiveUnit), 'Control'} = wruIdx;
 %% Temporal dynamics
 trigTms = cell2mat(arrayfun(@(x) x.Triggers(:,1), Conditions(chCond),...
     'UniformOutput', 0)')/fs;
+sumtac = @(x) squeeze(sum(sum(x,2),1));
 [~,cnd] = find(delayFlags);
 [~, tmOrdSubs] = sort(trigTms, 'ascend');
 cnd = cnd(tmOrdSubs); trialAx = trigTms(tmOrdSubs);
@@ -463,17 +464,20 @@ leyendas = {'Control','After Induction'};
 rates = cellfun(@(x) x/delta_t, Counts, 'UniformOutput', 0);
 evokd = cat(2, rates{:,2});
 spont = cat(2, rates{:,1});
-
 for cmod = 1:size(modFlags,2)
     tcount = 1;
     ax(cmod) = subplot(size(modFlags,2),1,cmod,'Parent',tdFig);
     ax(cmod).NextPlot = 'add';
     for ccond = 1:Nccond
-        [xmean, xconf] = expdist(...
-            evokd(modFlags(:,cmod), tcount:sum(NaStack(1:ccond))));
-        tcount = 1 + sum(NaStack(1:ccond));
-        plot(ax(cmod), minutes(seconds(trialAx)), xmean, 'LineStyle', 'none',...
+        revk = evokd(~wruIdx,:);
+        trSubs = tcount:sum(NaStack(1:ccond));
+        %[xmean, xconf] = expfit(...
+            %revk(modFlags(:,cmod), trSubs));
+        %xmean = mean(revk(modFlags(:,cmod), trSubs), 1);
+        xmean = mean(revk(:, trSubs), 1);
+        plot(ax(cmod), minutes(seconds(trialAx(trSubs))), xmean, 'LineStyle', 'none',...
             'Marker', '.')
+        tcount = 1 + sum(NaStack(1:ccond));
     end
 end
 
@@ -629,7 +633,7 @@ cmap = lines(2);
 areaOpts = {'EdgeColor', 'none', 'FaceAlpha', 0.7, 'FaceColor'};
 for ccond = 1:Nccond
     ISI = cellfun(@(x) diff(x(x >= 0 & x <= 0.03)), ...
-        relativeSpkTmsStruct(ccond).SpikeTimes(modFlags,:), 'UniformOutput', 0);
+        relativeSpkTmsStruct(ccond).SpikeTimes(modFlags(:,1),:), 'UniformOutput', 0);
     ISI_merge = [ISI{:}];
     lISI = log(ISI_merge);
     hisi = histogram(lISI, lax, 'Parent', binFig, 'DisplayStyle', 'stairs');
@@ -709,7 +713,7 @@ txpsth = (0:Nbn-1)*binSz + timeLapse(1);
 focusWindow = [0, 30]*1e-3;
 focusIdx = txpsth >= focusWindow(1) & txpsth <= focusWindow(2);
 txfocus = txpsth(focusIdx);
-PSTH_raw = squeeze(sum(PSTH(modFlags(:,1),:,:),1));
+PSTH_raw = squeeze(sum(PSTH(modFlags(:,2),:,:),1));
 PSTH_trial = PSTH_raw./NaStack;
 PSTH_prob = PSTH_raw./sum(PSTH_raw,1);
 PSTH_all = cat(3, PSTH_raw, PSTH_trial, PSTH_prob);
