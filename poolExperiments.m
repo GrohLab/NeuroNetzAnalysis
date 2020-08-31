@@ -1,3 +1,4 @@
+clearvars
 %% Experiment pooling
 % Experiment folder search
 experimentDir = uigetdir('Z:\Jesus\LTP_Jesus_Emilio',...
