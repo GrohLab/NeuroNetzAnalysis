@@ -744,7 +744,7 @@ end
 psthFig = figure('Color', [1,1,1], 'Name', 'Condition PSTH comparison',...
     'Visible', 'off');
 txpsth = (0:Nbn-1)*binSz + timeLapse(1);
-focusWindow = [0, 30]*1e-3;
+focusWindow = [-2, 30]*1e-3;
 focusIdx = txpsth >= focusWindow(1) & txpsth <= focusWindow(2);
 txfocus = txpsth(focusIdx);
 PSTH_raw = squeeze(sum(PSTH(modFlags(:,2),:,:),1));
