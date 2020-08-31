@@ -782,13 +782,14 @@ for cax = 1:3
     end
 end
 axp(4) = subplot(4,1,4, 'Parent', psthFig);
-PSTH_diff = PSTH_prob(:,2) - PSTH_prob(:,1);
+PSTH_diff = (PSTH_trial(:,2) - PSTH_trial(:,1))./PSTH_trial(:,1);
 bar(axp(4), txfocus(PSTH_diff(focusIdx) > 0), PSTH_diff(PSTH_diff > 0 & focusIdx'),...
     'FaceColor', [51, 204, 51]/255, 'DisplayName', 'Potentiation'); hold on
 bar(axp(4), txfocus(PSTH_diff(focusIdx) <= 0), PSTH_diff(PSTH_diff <= 0 & focusIdx'),...
     'FaceColor', [204, 51, 0]/255, 'DisplayName', 'Depression');
 axp(4).Box = 'off';
 linkaxes(axp, 'x')
+legend show
 psthFig.Visible = 'on';
 psthFig = configureFigureToPDF(psthFig);
 psthFigFileName = sprintf('%s PSTH All conditions RW%.2f-%.2f ms',expName,...
