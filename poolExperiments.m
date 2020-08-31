@@ -442,7 +442,11 @@ end
 %% Temporal dynamics
 trigTms = cell2mat(arrayfun(@(x) x.Triggers(:,1), Conditions(chCond),...
     'UniformOutput', 0)')/fs;
-sumtac = @(x) squeeze(sum(sum(x,2),1));
+timesum = @(x) squeeze(sum(x,2));
+clsum = @(x) squeeze(sum(x,1));
+matsum = @(x) timesum(clsum(x));
+stackTx = (0:Nt-1)/fs + timeLapse(1);
+
 [~,cnd] = find(delayFlags);
 [~, tmOrdSubs] = sort(trigTms, 'ascend');
 cnd = cnd(tmOrdSubs); trialAx = trigTms(tmOrdSubs);
@@ -462,13 +466,24 @@ end
 modFlags = modFlags > 0;
 modFlags(:,2) = ~modFlags;
 cmap = lines(Nccond);
-cmap(CtrlCond,:) = ones(1,3)*1/3;
+cmap(CtrlCond,:) = ones(1,3)*1/3; cmap(:,:,2) = ones(Nccond,3)*0.7;
 tdFig = figure('Name', 'Temporal dynamics', 'Color', [1,1,1]);
-plotOpts = {'LineStyle', 'none', 'Marker', '.'};
-modLabel = {'Facilitation', 'Suppression'};
+plotOpts = {'LineStyle', 'none', 'Marker', '.', 'Color', 'DisplayName'};
+modLabel = {'Potentiation', 'Depression'};
 clrSat = 0.5;
 ax = gobjects(size(modFlags,2), 1);
-leyendas = {'Control','After Induction'};
+condLey = {'Control','After Induction'};
+respLey = {'Responsive', 'Non-responsive'};
+
+focusStep = 2;
+focusPeriods = (-2:focusStep:8)';
+focusPeriods(:,2) = focusPeriods + focusStep; focusPeriods = focusPeriods * 1e-3;
+Nfs = size(focusPeriods,1);
+% rates = cellfun(@(x) x/delta_t, Counts, 'UniformOutput', 0);
+% evokd = cat(2, rates{:,2});
+% spont = cat(2, rates{:,1});
+respIdx = wruIdx;
+popMeanResp = zeros(Nfs, sum(NaStack), 4);
 
 rates = cellfun(@(x) x/delta_t, Counts, 'UniformOutput', 0);
 evokd = cat(2, rates{:,2});
