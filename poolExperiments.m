@@ -329,6 +329,9 @@ for cexp = reshape(chExp, 1, [])
                     [~, nPos] = ismember(curVarNames, phyNames(varRow,:));
                     nPos = logical(nPos);
                     if any(nPos)
+                        fprintf(1, 'Changed %s to %s.\n',...
+                            clInfo.Properties.VariableNames{nPos},...
+                            popVarNames{cvn});
                         clInfo.Properties.VariableNames{nPos} =...
                             popVarNames{cvn};
                         continue
@@ -350,7 +353,7 @@ for cexp = reshape(chExp, 1, [])
             if numel(newVarNames) > 1
                 % If there are more than 1 variables to be included in the
                 % population cluster information
-                dbstop in poolExperiments at 315
+                fprintf(1, '%s \n', newVarNames{:})
             elseif numel(newVarNames) == 1 &&...
                     strcmpi(newVarNames, 'amplitude')
                 % If there is just one and that is 'amplitude' (very
