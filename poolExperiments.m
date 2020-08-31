@@ -485,24 +485,34 @@ Nfs = size(focusPeriods,1);
 respIdx = wruIdx;
 popMeanResp = zeros(Nfs, sum(NaStack), 4);
 
-rates = cellfun(@(x) x/delta_t, Counts, 'UniformOutput', 0);
-evokd = cat(2, rates{:,2});
-spont = cat(2, rates{:,1});
 for cmod = 1:size(modFlags,2)
     tcount = 1;
     ax(cmod) = subplot(size(modFlags,2),1,cmod,'Parent',tdFig);
     ax(cmod).NextPlot = 'add';
     for ccond = 1:Nccond
-        revk = evokd(~wruIdx,:);
         trSubs = tcount:sum(NaStack(1:ccond));
-        %[xmean, xconf] = expfit(...
-            %revk(modFlags(:,cmod), trSubs));
-        %xmean = mean(revk(modFlags(:,cmod), trSubs), 1);
-        xmean = mean(revk(:, trSubs), 1);
-        plot(ax(cmod), minutes(seconds(trialAx(trSubs))), xmean, 'LineStyle', 'none',...
-            'Marker', '.')
+        clMod = modFlags(:,cmod);
+        for cr = 1:2 % responsive and non-responsive
+            for cp = 1:Nfs % 'Micro' time windows
+                focusIdx = stackTx >= focusPeriods(cp,1) & stackTx <= focusPeriods(cp,2);
+                clCounts = timesum(...
+                    discStack( [false; respIdx], focusIdx, delayFlags(:,ccond)));
+                clMean = mean(clCounts(clMod,:),1); popMean = mean(clMean);
+                fprintf(1, 'Cell type: %d\n',[cr,ccond-1]*[1,2]')
+                popMeanResp(cp, trSubs, [cr,cmod-1]*[1,2]') = clMean;
+            end
+            dispName = [condLey{ccond}, ' ', respLey{cr}, ' (',...
+                num2str(popMean/diff(focusPeriod)), ' Hz)'];
+            plot(ax(cmod), minutes(seconds(trialAx(trSubs))),...
+                clMean/diff(focusPeriod), plotOpts{1:5}, cmap(ccond,:,cr),...
+                plotOpts{6}, dispName);
+            respIdx = ~respIdx;
+            clMod = true(sum(respIdx),1);
+        end
         tcount = 1 + sum(NaStack(1:ccond));
     end
+    cmap(ccond,:,1) = brighten(cmap(ccond,:,1), clrSat);
+    clrSat = -clrSat;
 end
 
 %% Firing rate distribution
