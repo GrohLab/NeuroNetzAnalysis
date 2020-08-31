@@ -373,6 +373,7 @@ for cexp = reshape(chExp, 1, [])
 end
 gclID = clInfoTotal{logical(clInfoTotal.ActiveUnit),'id'};
 Ncl = numel(gclID);
+Ne = size(discStack, 1);
 %% Population analysis
 figureDir = fullfile(experimentDir,'PopFigures\');
 if ~mkdir(figureDir)
@@ -432,8 +433,12 @@ filterIdx = true(Ne,1);
 if strcmpi(filtStr, 'filtered') && nnz(wruIdx)
     filterIdx = [true; wruIdx];
 end
+try
 clInfoTotal = addvars(clInfoTotal, false(size(clInfoTotal,1),1), 'NewVariableNames', 'Control'); 
 clInfoTotal{logical(clInfoTotal.ActiveUnit), 'Control'} = wruIdx;
+catch
+    fprintf('Reran, perhaps?\n')
+end
 %% Temporal dynamics
 trigTms = cell2mat(arrayfun(@(x) x.Triggers(:,1), Conditions(chCond),...
     'UniformOutput', 0)')/fs;
