@@ -474,27 +474,25 @@ clrSat = 0.5;
 ax = gobjects(size(modFlags,2), 1);
 condLey = {'Control','After Induction'};
 respLey = {'Responsive', 'Non-responsive'};
-
+% Time steps for the 3D PSTH in ms
 focusStep = 2;
 focusPeriods = (-2:focusStep:8)';
 focusPeriods(:,2) = focusPeriods + focusStep; focusPeriods = focusPeriods * 1e-3;
 Nfs = size(focusPeriods,1);
-% rates = cellfun(@(x) x/delta_t, Counts, 'UniformOutput', 0);
-% evokd = cat(2, rates{:,2});
-% spont = cat(2, rates{:,1});
 respIdx = wruIdx;
 popMeanResp = zeros(Nfs, sum(NaStack), 4);
 
-for cmod = 1:size(modFlags,2)
+for cmod = 1:size(modFlags,2) % Up- and down-modulation
     tcount = 1;
     ax(cmod) = subplot(size(modFlags,2),1,cmod,'Parent',tdFig);
     ax(cmod).NextPlot = 'add';
-    for ccond = 1:Nccond
+    for ccond = 1:Nccond % Cycling through the conditions (control and after-induction)
         trSubs = tcount:sum(NaStack(1:ccond));
         clMod = modFlags(:,cmod);
         for cr = 1:2 % responsive and non-responsive
             for cp = 1:Nfs % 'Micro' time windows
-                focusIdx = stackTx >= focusPeriods(cp,1) & stackTx <= focusPeriods(cp,2);
+                focusIdx = stackTx >= focusPeriods(cp,1) &...
+                    stackTx <= focusPeriods(cp,2);
                 clCounts = timesum(...
                     discStack( [false; respIdx], focusIdx, delayFlags(:,ccond)));
                 clMean = mean(clCounts(clMod,:),1); popMean = mean(clMean);
@@ -532,40 +530,6 @@ while ~all(~mod(NaStack, Ngr))
         return;
     end
 end
-
-for ccond = 1:Nccond
-    rates = cell2mat(cellfun(@(x) (x(wruIdx,:)./delta_t)', Counts(ccond,2),...
-        'UniformOutput', 0));
-    nates = cell2mat(cellfun(@(x) (x(~wruIdx,:)./delta_t)', Counts(ccond,2),...
-        'UniformOutput', 0));
-    % Reshaping the matrices for a group mean
-    % rates = squeeze(reshape(rates',size(rates,2),Ngr,[]));
-    % nates = squeeze(reshape(nates',size(nates,2),Ngr,[]));
-    expDurMin = minutes(seconds(trialAx(cnd == ccond)));
-    expDurMin = expDurMin(1:Ngr:end);
-    for cm = 1:size(modFlags,2)
-        ax(cm) = subplot(size(modFlags,2),1,cm, 'Parent', tdFig);
-        modfr = squeeze(mean(mean(rates(modFlags(:,cm),:,:),2),1));
-        moder = squeeze(std(std(rates(modFlags(:,cm),:,:),[],2),[],1));
-        plot(ax(cm), expDurMin, modfr, plotOpts{:}, 'Color', cmap(ccond,:),...
-            'DisplayName',sprintf('%s (%.2f Hz)',consCondNames{ccond},mean(modfr)))
-        hold(ax(cm),'on')
-        [~, yhat] = fit_poly(double(expDurMin), modfr, 1);
-        plot(ax(cm), expDurMin, yhat, 'LineWidth', 0.25,...
-            'Color', cmap(ccond,:), 'DisplayName','')
-        nrFr = squeeze(mean(mean(nates,2),1));
-        nrer = squeeze(std(std(nates,[],2),1));
-        plot(ax(cm), expDurMin, nrFr, plotOpts{:}, 'Color', [0.75, 0.75, 0.75],...
-            'DisplayName', sprintf('Non-responses (%.2f Hz)', mean(nrFr)))
-        [~, yhat] = fit_poly(double(expDurMin), nrFr, 1);
-        plot(ax(cm), expDurMin, yhat, 'LineWidth', 0.25,...
-            'Color', [0.9, 0.9, 0.9], 'DisplayName','')
-        cmap(ccond,:) = brighten(cmap(ccond,:), clrSat);
-        clrSat = -clrSat;
-    end
-end
-legend('show')
-linkaxes(ax, 'xy')
 %}
 
 %% Getting the relative spike times for the whisker responsive units (wru)
@@ -595,6 +559,7 @@ csvDir = fullfile(dataDir, 'SpikeTimes');
 if ~exist(csvDir,'dir')
     iOk = mkdir(csvDir);
     if ~iOk
+        fprintf(1, 'The ''Figure'' folder was not created!\n')
         fprintf(1, 'Please verify your writing permissions!\n')
     end
 end
