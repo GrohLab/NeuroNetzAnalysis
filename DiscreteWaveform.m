@@ -136,12 +136,37 @@ classdef (Abstract) DiscreteWaveform < GeneralWaveform
             % time for the step pulse train.
             Ipi = abs(diff(spkTimes));
             if ~exist('minIpi','var')
-                minIpi = mean(Ipi);
+                % minIpi = mean(Ipi);
+                minIpi = DiscreteWaveform.computeIpiThresh(Ipi);
             end
             Pks = Ipi < minIpi;
             Sps = DiscreteWaveform.addFst(~Pks,true);
             frstSpks = DiscreteWaveform.addLst(Sps(1:end-1) & Pks,false);
         end 
+        
+        function ipiThresh = computeIpiThresh(Ipi)
+            ipiThresh = mean(Ipi);
+            uIpi = uniquetol(round(Ipi,2));
+            uIpi_p = diff(uIpi);
+            zUip = abs(zscore(uIpi_p));
+            uIpi_d = uIpi_p/max(uIpi_p(zUip < 2));
+            if numel(uIpi) >= numel(Ipi)*0.1
+                % Continuous intervals
+                % To be implemented
+                fprintf(1, 'Continuous ')
+            else
+                % Discrete intervals
+                fprintf(1, 'Discrete ')
+                Ipi_p = abs(diff(Ipi));
+                tatGap = find(diff(uIpi) > 1,1);
+                ipiThresh = [max(Ipi(Ipi_p < 2/3e4)), uIpi(tatGap)] * ...
+                    [1-uIpi_d(tatGap); uIpi_d(tatGap)];
+                if any(ismember(uIpi, ipiThresh))
+                    ipiThresh = ipiThresh * 1.2;
+                end
+            end
+            fprintf(1, 'distribution of intervals\n')
+        end
     end
     
     %% Static private methods
