@@ -587,11 +587,14 @@ classdef ProtocolGetter < handle
         
         function [freqCond, fstSubs, pulsFreq] =...
                 extractFrequencyTrains(subs, fs)
+            
+            tms = subs(:,1)/fs;
+            pulsFreq = 1./diff(tms);
             % Logical index pointing at the first pulse of a frequency
             % train
-            fstSubs = StepWaveform.firstOfTrain(subs(:,1)/fs);
+            fstSubs = StepWaveform.firstOfTrain(tms);
             % Inverse of the time difference between pulses (frequency)
-            pulsFreq = 1./diff(subs(:,1)./fs);
+            
             freqCond = round(uniquetol(pulsFreq, 0.1/max(pulsFreq)), 1);
             freqCond = freqCond(freqCond >= 1); % Empty for no frequency
         end
