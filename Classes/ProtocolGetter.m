@@ -298,24 +298,6 @@ classdef ProtocolGetter < handle
                 end
                 fprintf(1, ' Hz)\n')
             end
-            % Laser
-            %{
-            coupFreq = zeros(size(obj.Edges(2)));
-            [lFreq, lFlags, lFreqs] = ProtocolGetter.extractFrequencyTrains(...
-                obj.Edges(2).Subs, obj.fs);
-            lTrainBodyFlags = ismembertol([0;lFreqs], lFreq, 0.01);
-            obj.Edges(2).Subs = obj.Edges(2).Subs(~lTrainBodyFlags,:);
-            lFlags(lTrainBodyFlags) = []; 
-            lFreqs(lTrainBodyFlags(1:end-1)) = [];
-            obj.Edges(2).Frequency = round(lFlags .* lFreqs,1);
-            obj.Edges(2).FreqValues = lFreq;
-            fprintf(1, 'Found %d frequencies for %s (', numel(lFreq),...
-                obj.Edges(2).Name)
-            for cf = 1:numel(lFreq) - 1
-                fprintf(1, '%.1f, ', lFreq(cf))
-            end
-            fprintf(1, '%.1f Hz)\n', lFreq(end))
-            %}
         end
         
         function obj = pairStimulus(obj)
