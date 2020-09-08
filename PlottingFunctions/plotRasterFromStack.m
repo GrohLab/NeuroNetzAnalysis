@@ -15,7 +15,7 @@ if ~exist('ax','var') || isempty(ax)
     figure('Name',['Raster Plot ', figTitle],'Color',[1,1,1]);
     AX_FLAG = false;
 end
-cmap = brighten(jet(Ne-1),-0.8);
+cmap = brighten(copper(Ne-1),-0.8);
 FIRST_FLAG = true;
 for cse = 2:Ne
     % For each spike train
