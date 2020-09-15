@@ -8,9 +8,8 @@ pts = pts - mean(pts);
 sig = cov(pts);
 % Compute the whitening matrix
 [E, D] = eig(sig);
-D = diag(diag(D).^-0.5);
+D = pinv(real(sqrt(D))); % 1/sqrt(D)
 Wd = E*D;
 % Apply the transformation
 ptsW = pts*Wd;
 end
-
