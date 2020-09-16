@@ -713,65 +713,74 @@ for ccond = 1:Nccond
 end
 
 %% Comparing the PSTHs for all conditions
-psthFig = figure('Color', [1,1,1], 'Name', 'Condition PSTH comparison',...
-    'Visible', 'off');
-txpsth = (0:Nbn-1)*binSz + timeLapse(1);
-focusWindow = [-2, 30]*1e-3;
+
+txpsth = (0:Nbn-1)*binSz + timeLapse(1) + 2.5e-3;
+focusWindow = [-5, 30]*1e-3;
 focusIdx = txpsth >= focusWindow(1) & txpsth <= focusWindow(2);
 txfocus = txpsth(focusIdx);
-PSTH_raw = squeeze(sum(PSTH(modFlags(:,2),:,:),1));
-PSTH_trial = PSTH_raw./NaStack;
-PSTH_prob = PSTH_raw./sum(PSTH_raw,1);
-PSTH_all = cat(3, PSTH_raw, PSTH_trial, PSTH_prob);
-axp = gobjects(3,1);
-subpltsTitles = {'PSTH for all conditions (trial-normalized)',...
-    'Cumulative density function', 'Cumulative sum for normalized spikes'};
-yaxsLbls = {'Spikes / Trials', 'Spike probability', 'Spike number'};
-for cax = 1:3
-    axp(cax) = subplot(4, 1, cax, 'Parent', psthFig, 'NextPlot', 'add');
-    for ccond = 1:Nccond
-        plotOpts = {'DisplayName', consCondNames{ccond}};
-        switch cax
-            case 1 % Plot the trial-normalized PSTH; page #2
-                plot(axp(cax), txfocus, PSTH_all(focusIdx,ccond,2),...
-                    plotOpts{:})
-            case 2 % Plot the cumulative probability function; page 3
-                PSTH_aux = PSTH_all(focusIdx, ccond, 3);
-                PSTH_aux = PSTH_aux / sum(PSTH_aux);
-                plot(axp(cax), txfocus, cumsum(PSTH_aux), plotOpts{:})
-            case 3 % Plot the cumulative sum for the mean spikes; page 2
-                plot(axp(cax), txfocus, ...
-                    cumsum(PSTH_all(focusIdx, ccond, 2)), plotOpts{:})
+modLabels = {'potentiated', 'depressed'};
+for cmod = 1:2
+    psthFig = figure('Color', [1,1,1], 'Name', 'Condition PSTH comparison',...
+        'Visible', 'off');
+    PSTH_raw = squeeze(sum(PSTH(modFlags(:,cmod),:,:),1));
+    PSTH_trial = PSTH_raw./(NaStack.*sum(modFlags(:,cmod)));
+    PSTH_prob = PSTH_raw./sum(PSTH_raw,1);
+    PSTH_all = cat(3, PSTH_raw, PSTH_trial, PSTH_prob);
+    axp = gobjects(3,1);
+    subpltsTitles = {sprintf('PSTH per condition, %s clusters',modLabels{cmod}),...
+        'Cumulative density function', 'Cumulative sum for normalized spikes'};
+    yaxsLbls = {'Spikes / (Trials * Cluster)', 'Spike probability',...
+        'Spike number'};
+    for cax = 1:3
+        axp(cax) = subplot(4, 1, cax, 'Parent', psthFig, 'NextPlot', 'add');
+        for ccond = 1:Nccond
+            plotOpts = {'DisplayName', consCondNames{ccond}};
+            switch cax
+                case 1 % Plot the trial-normalized PSTH; page #2
+                    plot(axp(cax), txfocus, PSTH_all(focusIdx,ccond,2),...
+                        plotOpts{:})
+                case 2 % Plot the cumulative probability function; page 3
+                    PSTH_aux = PSTH_all(focusIdx, ccond, 3);
+                    PSTH_aux = PSTH_aux / sum(PSTH_aux);
+                    plot(axp(cax), txfocus, cumsum(PSTH_aux), plotOpts{:})
+                case 3 % Plot the cumulative sum for the mean spikes; page 2
+                    plot(axp(cax), txfocus, ...
+                        cumsum(PSTH_all(focusIdx, ccond, 2)), plotOpts{:})
+            end
+        end
+        title(axp(cax), subpltsTitles{cax})
+        ylabel(axp(cax), yaxsLbls{cax})
+        if cax < 3
+            xticks(axp(cax), '')
+        else
+            xlabel(axp(cax), sprintf('Time_{%.2f ms} [s]', binSz*1e3))
+            legend(axp(cax), 'show', 'Location', 'best')
         end
     end
-    legend(axp(cax), 'show', 'Location', 'best')
-    title(axp(cax), subpltsTitles{cax})
-    ylabel(axp(cax), yaxsLbls{cax})
-    if cax < 3
-        xticks(axp(cax), '')
-    else
-        xlabel(axp(cax), sprintf('Time_{%.2f ms} [s]', binSz*1e3))
+    axp(4) = subplot(4,1,4, 'Parent', psthFig);
+    PSTH_diff = 100 * ((PSTH_prob(:,2)./PSTH_prob(:,1)) - 1);
+    bar(axp(4), txfocus(PSTH_diff(focusIdx) > 0), PSTH_diff(PSTH_diff > 0 & focusIdx'),...
+        'FaceColor', [51, 204, 51]/255, 'DisplayName', 'Potentiation'); hold on
+    bar(axp(4), txfocus(PSTH_diff(focusIdx) <= 0), PSTH_diff(PSTH_diff <= 0 & focusIdx'),...
+        'FaceColor', [204, 51, 0]/255, 'DisplayName', 'Depression');
+    axp(4).Box = 'off'; ylabel(axp(4), '%'); title(axp(4), 'Percentage of change')
+    xticks(axp(4),'')
+    linkaxes(axp, 'x')
+    legend show
+    psthFig.Visible = 'on';
+    psthFig = configureFigureToPDF(psthFig);
+    psthFigFileName = sprintf('%s PSTH RW%.2f-%.2f ms FW%.2f-%.2f ms %s clusters',expName,...
+        responseWindow*1e3, focusWindow*1e3, modLabels{cmod});
+    psthFigFileName = fullfile(figureDir,psthFigFileName);
+    if ~exist([psthFigFileName,'.pdf'], 'file')
+        print(psthFig, [psthFigFileName, '.pdf'],'-dpdf','-fillpage')
     end
-end
-axp(4) = subplot(4,1,4, 'Parent', psthFig);
-PSTH_diff = (PSTH_trial(:,2) - PSTH_trial(:,1))./PSTH_trial(:,1);
-bar(axp(4), txfocus(PSTH_diff(focusIdx) > 0), PSTH_diff(PSTH_diff > 0 & focusIdx'),...
-    'FaceColor', [51, 204, 51]/255, 'DisplayName', 'Potentiation'); hold on
-bar(axp(4), txfocus(PSTH_diff(focusIdx) <= 0), PSTH_diff(PSTH_diff <= 0 & focusIdx'),...
-    'FaceColor', [204, 51, 0]/255, 'DisplayName', 'Depression');
-axp(4).Box = 'off';
-linkaxes(axp, 'x')
-legend show
-psthFig.Visible = 'on';
-psthFig = configureFigureToPDF(psthFig);
-psthFigFileName = sprintf('%s PSTH All conditions RW%.2f-%.2f ms',expName,...
-    responseWindow*1e3);
-psthFigFileName = fullfile(figureDir,psthFigFileName);
-if ~exist([psthFigFileName,'.pdf'], 'file') 
-    print(psthFig, [psthFigFileName, '.pdf'],'-dpdf','-fillpage')
-end
-if ~exist([psthFigFileName,'.emf'], 'file')
-    print(psthFig, [psthFigFileName, '.emf'],'-dmeta')
+    if ~exist([psthFigFileName,'.emf'], 'file')
+        print(psthFig, [psthFigFileName, '.emf'],'-dmeta')
+    end
+    if ~exist([psthFigFileName,'.fig'], 'file')
+        savefig(psthFig, [psthFigFileName, '.fig'])
+    end
 end
 
 
