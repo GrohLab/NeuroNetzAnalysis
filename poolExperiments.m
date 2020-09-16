@@ -537,7 +537,6 @@ while ~all(~mod(NaStack, Ngr))
         return;
     end
 end
-%}
 
 %% Getting the relative spike times for the whisker responsive units (wru)
 % For each condition, the first spike of each wru will be used to compute
@@ -607,47 +606,52 @@ for ccond = 1:size(delayFlags,2)
     end
     relativeSpkTmsStruct(ccond).name = consCondNames{ccond};
     relativeSpkTmsStruct(ccond).SpikeTimes = condRelativeSpkTms{ccond};
-    %{
-    spikeTimesINRespWin = cellfun(cellLogicalIndexing,...
-        relativeSpikeTimes, respIdx, 'UniformOutput',false);
-    allSpikeTimes = cell2mat(spikeTimesINRespWin(:)');
-    condParams(:,:,ccond) = emforgmm(allSpikeTimes, M, 1e-6, 0);
-    condPDF(:,ccond) = genP_x(condParams(:,:,ccond), txpdf);
-    firstOrdStats(:,ccond) = [mean(allSpikeTimes), std(allSpikeTimes)];
-    hfig = figure('Visible', 'off'); h = histogram(allSpikeTimes, binAx,...
-        'Normalization', 'probability');
-    condHist(:,ccond) = h.Values;
-    close(hfig)
-    for ccl = 1:Nwru
-        frstSpikeFlag = ~cellfun(@isempty,spikeTimesINRespWin(ccl,:));
-        firstSpike(ccl,ccond) = std(...
-            cell2mat(spikeTimesINRespWin(ccl,frstSpikeFlag)));
-    end
-    %}
 end
 save(fullfile(csvDir,[expName,'_exportSpkTms.mat']),...
     'relativeSpkTmsStruct','configStructure')
 
-%% ISI cumulative fraction distribution
+%% ISI PDF & CDF
 binFig = figure('Visible','off');
-areaFig = figure('Visible','on');
-areaAx = axes('Parent', areaFig);
+areaFig = figure('Visible','on', 'Color', [1,1,1],'Name','ISI probability');
+areaAx = gobjects(2,1);
 lax = log(1/fs):0.2:log(0.03);
 % cmap = [0,0,102;... azul marino
 %     153, 204, 255]/255; % azul cielo
-cmap = lines(2);
-areaOpts = {'EdgeColor', 'none', 'FaceAlpha', 0.7, 'FaceColor'};
-for ccond = 1:Nccond
-    ISI = cellfun(@(x) diff(x(x >= 0 & x <= 0.03)), ...
-        relativeSpkTmsStruct(ccond).SpikeTimes(modFlags(:,1),:), 'UniformOutput', 0);
-    ISI_merge = [ISI{:}];
-    lISI = log(ISI_merge);
-    hisi = histogram(lISI, lax, 'Parent', binFig, 'DisplayStyle', 'stairs');
-    area(areaAx, lax(1:end-1), hisi.Values, areaOpts{:}, cmap(ccond,:));
-    
-    if ccond == 1
-        hold(binFig.Children, 'on'); hold(areaFig.Children, 'on');
+cmap = lines(Nccond);
+%areaOpts = {'EdgeColor', 'none', 'FaceAlpha', 0.3, 'FaceColor'};
+areaOpts = {'Color','LineStyle','--','LineWidth',1.5};
+ley = ["Potentiated", "Depressed"];
+isiPdf = zeros(length(lax)-1,2*Nccond);
+for cmod = 1:2 % Potentiated and depressed clusters
+    areaAx(cmod) = subplot(1,2,cmod,'Parent',areaFig);
+    Nccl = sum(modFlags(:,cmod));
+    for ccond = 1:Nccond
+        cnt = [cmod-1,ccond] * [2,1]';
+        ISI = cellfun(@(x) diff(x(x >= -0.035 & x <= 0)), ...
+            relativeSpkTmsStruct(ccond).SpikeTimes(modFlags(:,cmod),:),...
+            'UniformOutput', 0);
+        ISI_merge = [ISI{:}];
+        lISI = log(ISI_merge);
+        hisi = histogram(lISI, lax, 'Parent', binFig, 'DisplayStyle', 'stairs');
+        spkPerT_C = hisi.Values./(NaStack(ccond)*Nccl);
+        isiPdf(:,cnt) = spkPerT_C/sum(spkPerT_C);
+        plot(areaAx(cmod), 1e3*exp(lax(1:end-1)), isiPdf(:,cnt),...
+            areaOpts{1}, cmap(ccond,:), areaOpts{4:5});
+        if ccond == 1
+            hold(binFig.Children, 'on'); hold(areaAx(cmod), 'on');
+            areaAx(cmod).XAxis.Scale = 'log';
+            areaAx(cmod).XLabel.String = "ISI [ms]";
+            areaAx(cmod).YLabel.String = "ISI probability";
+        end
+        yyaxis(areaAx(cmod) ,'right')
+        
+        plot(areaAx(cmod), 1e3*exp(lax(1:end-1)), cumsum(isiPdf(:,cnt)),...
+            areaOpts{1}, cmap(ccond,:), areaOpts{2:3})
+        ylim(areaAx(cmod), [0,1]); areaAx(cmod).YAxis(2).Color = [0,0,0];
+        ylabel(areaAx(cmod), 'Cumulative probability'); 
+        yyaxis(areaAx(cmod) ,'left'); set(areaAx(cmod),'Box','off')
     end
+    title(areaAx(cmod), sprintf('ISI PDF for %s clusters',ley(cmod)));
 end
 hisi = hisi.Parent.Children;
 
