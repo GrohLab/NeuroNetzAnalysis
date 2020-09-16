@@ -440,9 +440,10 @@ filterIdx = true(Ne,1);
 if strcmpi(filtStr, 'filtered') && nnz(wruIdx)
     filterIdx = [true; wruIdx];
 end
+%% Add the response to the table
 try
-clInfoTotal = addvars(clInfoTotal, false(size(clInfoTotal,1),1), 'NewVariableNames', 'Control'); 
-clInfoTotal{logical(clInfoTotal.ActiveUnit), 'Control'} = wruIdx;
+    clInfoTotal = addvars(clInfoTotal, false(size(clInfoTotal,1),1), 'NewVariableNames', 'Control');
+    clInfoTotal{logical(clInfoTotal.ActiveUnit), 'Control'} = wruIdx;
 catch
     fprintf('Reran, perhaps?\n')
 end
@@ -452,7 +453,7 @@ trigTms = cell2mat(arrayfun(@(x) x.Triggers(:,1), Conditions(chCond),...
 timesum = @(x) squeeze(sum(x,2));
 clsum = @(x) squeeze(sum(x,1));
 matsum = @(x) timesum(clsum(x));
-stackTx = (0:Nt-1)/fs + timeLapse(1);
+stackTx = (0:Nt-1)/fs + timeLapse(1) + 2.5e-3;
 
 [~,cnd] = find(delayFlags);
 [~, tmOrdSubs] = sort(trigTms, 'ascend');
@@ -474,7 +475,7 @@ modFlags = modFlags > 0;
 modFlags(:,2) = ~modFlags;
 cmap = lines(Nccond);
 cmap(CtrlCond,:) = ones(1,3)*1/3; cmap(:,:,2) = ones(Nccond,3)*0.7;
-tdFig = figure('Name', 'Temporal dynamics', 'Color', [1,1,1]);
+
 plotOpts = {'LineStyle', 'none', 'Marker', '.', 'Color', 'DisplayName'};
 modLabel = {'Potentiation', 'Depression'};
 clrSat = 0.5;
@@ -482,59 +483,56 @@ ax = gobjects(size(modFlags,2), 1);
 condLey = {'Control','After Induction'};
 respLey = {'Responsive', 'Non-responsive'};
 % Time steps for the 3D PSTH in ms
-focusStep = 2;
-focusPeriods = (-2:focusStep:8)';
+focusStep = 2.5;
+focusPeriods = (-3:focusStep:18)';
 focusPeriods(:,2) = focusPeriods + focusStep; focusPeriods = focusPeriods * 1e-3;
 Nfs = size(focusPeriods,1);
-respIdx = wruIdx;
 popMeanResp = zeros(Nfs, sum(NaStack), 4);
-
-for cmod = 1:size(modFlags,2) % Up- and down-modulation
-    tcount = 1;
-    ax(cmod) = subplot(size(modFlags,2),1,cmod,'Parent',tdFig);
-    ax(cmod).NextPlot = 'add';
-    for ccond = 1:Nccond % Cycling through the conditions (control and after-induction)
-        trSubs = tcount:sum(NaStack(1:ccond));
-        clMod = modFlags(:,cmod);
-        for cr = 1:2 % responsive and non-responsive
-            for cp = 1:Nfs % 'Micro' time windows
-                focusIdx = stackTx >= focusPeriods(cp,1) &...
-                    stackTx <= focusPeriods(cp,2);
-                clCounts = timesum(...
-                    discStack( [false; respIdx], focusIdx, delayFlags(:,ccond)));
-                clMean = mean(clCounts(clMod,:),1); popMean = mean(clMean);
-                fprintf(1, 'Cell type: %d\n',[cr,ccond-1]*[1,2]')
-                popMeanResp(cp, trSubs, [cr,cmod-1]*[1,2]') = clMean;
+fws = 1:Nfs;
+auxOr = [false, true];
+for pfp = fws
+    tdFig = figure('Name', 'Temporal dynamics', 'Color', [1,1,1]);
+    for cmod = 1:size(modFlags,2) % Up- and down-modulation
+        tcount = 1;
+        ax(cmod) = subplot(size(modFlags,2),1,cmod,'Parent',tdFig);
+        ax(cmod).NextPlot = 'add';
+        title(ax(cmod), sprintf('%s',modLabel{cmod}));
+        
+        for ccond = 1:Nccond % Cycling through the conditions (control and after-induction)
+            trSubs = tcount:sum(NaStack(1:ccond));
+            clMod = modFlags(:,cmod);
+            for cr = 1:2 % responsive and non-responsive
+                respIdx = xor(H(:,cr), auxOr(cr)); % Negation of H(:,2)
+                for cp = 1:Nfs % 'Micro' time windows
+                    focusIdx = stackTx >= focusPeriods(cp,1) &...
+                        stackTx <= focusPeriods(cp,2);
+                    clCounts = timesum(...
+                        discStack( [false; respIdx], focusIdx, delayFlags(:,ccond)));
+                    clMean = mean(clCounts(clMod,:),1); popMean = mean(clMean);
+                    popMeanResp(cp, trSubs, [cr,cmod-1]*[1;2]) = clMean;
+                end
+                dispName = [condLey{ccond}, ' ', respLey{cr}, ' (',...
+                    num2str(popMean/(focusStep*1e-3)), ' Hz)'];
+                plot(ax(cmod), minutes(seconds(trialAx(trSubs))),...
+                    popMeanResp(pfp, trSubs, [cr,cmod-1]*[1,2]'),...
+                    plotOpts{1:5}, cmap(ccond,:,cr),...
+                    plotOpts{6}, dispName);
+                clMod = true(sum(respIdx),1);
             end
-            dispName = [condLey{ccond}, ' ', respLey{cr}, ' (',...
-                num2str(popMean/diff(focusPeriod)), ' Hz)'];
-            plot(ax(cmod), minutes(seconds(trialAx(trSubs))),...
-                clMean/diff(focusPeriod), plotOpts{1:5}, cmap(ccond,:,cr),...
-                plotOpts{6}, dispName);
-            respIdx = ~respIdx;
-            clMod = true(sum(respIdx),1);
+            tcount = 1 + sum(NaStack(1:ccond));
         end
-        tcount = 1 + sum(NaStack(1:ccond));
+        cmap(ccond,:,1) = brighten(cmap(ccond, :, 1), clrSat);
+        clrSat = -clrSat;
     end
-    cmap(ccond,:,1) = brighten(cmap(ccond,:,1), clrSat);
-    clrSat = -clrSat;
-end
-
-%% Firing rate distribution
-%{
-Ngr = pi;
-while ~all(~mod(NaStack, Ngr))
-    if Ngr ~= pi
-        fprintf(1, '%.2f is not a divisor of %s\b!\nTry again!\n',Ngr,...
-            sprintf('%d ',NaStack))
-    end
-    trialGroupChar = inputdlg('Trial grouping:','Trial grouping',[1,16],...
-        {num2str(Ngr)});
-    if str2double(trialGroupChar)
-        Ngr = str2double(trialGroupChar);
-    else
-        disp('Cancelling the execution of the pipeline\n')
-        return;
+    ylabel(ax(cmod), 'Spikes / Cluster'); xlabel(ax(cmod),...
+        sprintf('(%.1f - %.1f [ms]) Trial [min]',focusPeriods(pfp,:)*1e3))
+    linkaxes(ax,'xy')
+    tdFigName = string(sprintf('Temporal dynamics exps %sFW%.1f-%.1f ms',...
+        sprintf('%d ', chExp), focusPeriods(pfp,:)*1e3));
+    tempFigName = fullfile(figureDir, tdFigName);
+    figTdName = tempFigName + '.fig';
+    if ~exist(figTdName, 'file')
+        savefig(tdFig, figTdName);
     end
 end
 
