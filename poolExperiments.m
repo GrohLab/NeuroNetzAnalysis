@@ -157,7 +157,6 @@ for cexp = reshape(chExp, 1, [])
         end
     end
     gclID = sortedData(goods,1);
-    badsIdx = StepWaveform.subs2idx(bads,size(sortedData,1));
     % Logical spike trace for the first good cluster
     spkLog = StepWaveform.subs2idx(round(sortedData{goods(1),2}*fs),Ns);
     % Subscript column vectors for the rest good clusters
