@@ -653,7 +653,8 @@ for cmod = 1:2 % Potentiated and depressed clusters
     end
     title(areaAx(cmod), sprintf('ISI PDF for %s clusters',ley(cmod)));
 end
-hisi = hisi.Parent.Children;
+legend(areaAx(cmod),consCondNames)
+hisi = hisi.Parent.Children; linkaxes(areaAx,'xy')
 
 %% Ordering PSTH
 orderedStr = 'ID ordered';
@@ -694,7 +695,7 @@ for ccond = 1:Nccond
         orderedStr, filtStr);
     [PSTH(:,:,ccond), trig, sweeps] = getPSTH(discStack(filterIdx,:,:),...
         timeLapse, ~delayFlags(:,ccond), binSz, fs);
-    stims = mean(auxCStack(:,:,delayFlags(:,ccond)),3);
+    stims = mean(discStack(:,:,delayFlags(:,ccond)),3);
     stims = stims - median(stims,2);
     for cs = 1:size(stims,1)
         if abs(log10(var(stims(cs,:),[],2))) < 13
