@@ -269,6 +269,11 @@ for cexp = reshape(chExp, 1, [])
             Conditions(ccond).Triggers(:,1));
         counter2 = counter2 + 1;
     end
+    
+    % Getting the clusters' waveforms
+    sewf = getClusterWaveform(gclID, dataDir);
+    sewf(:,1) = cellfun(@(x) [sprintf('%d_',cexp), x], sewf(:,1),...
+        'UniformOutput', 0);
     %% Building the population stack
     NaNew = sum(auxDelayFlags,1);
     % Removing not considered conditions
@@ -288,7 +293,9 @@ for cexp = reshape(chExp, 1, [])
         cStack = auxCStack;
         clInfoTotal = clInfo;
         NaStack = NaNew;
+        popClWf = sewf;
     else
+        popClWf = cat(1, popClWf, sewf);
         % Homogenizing trial numbers
         if any(NaNew ~= NaStack)
             NaMin = min(NaStack, NaNew);
@@ -768,4 +775,9 @@ if ~exist([psthFigFileName,'.emf'], 'file')
 end
 
 
-%%
+%% Waveform analysis
+fprintf(1, 'This is the waveform analysis section\n');
+meanWf = cellfun(@(x) mean(x,2), popClWf(:,2),'UniformOutput', 0);
+meanWf = cat(2,meanWf{:}); featWf = getWaveformFeatures(meanWf, fs);
+wFeat = whitenPoints(featWf);
+
