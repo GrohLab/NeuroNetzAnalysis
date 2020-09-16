@@ -435,7 +435,7 @@ Nwru = nnz(wruIdx);
 
 fprintf('%d whisker responding clusters:\n', Nwru);
 fprintf('- %s\n',gclID{wruIdx})
-
+%% Filter responsive?
 filterIdx = true(Ne,1);
 if strcmpi(filtStr, 'filtered') && nnz(wruIdx)
     filterIdx = [true; wruIdx];
