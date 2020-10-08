@@ -273,6 +273,9 @@ for cexp = reshape(chExp, 1, [])
     sewf = getClusterWaveform(gclID, dataDir);
     sewf(:,1) = cellfun(@(x) [sprintf('%d_',cexp), x], sewf(:,1),...
         'UniformOutput', 0);
+    mswf = cellfun(@(x) mean(x,2), sewf(:,2),'UniformOutput', 0);
+    mswf = cat(2, mswf{:});
+    cwID = sewf(:,1);
     %% Building the population stack
     NaNew = sum(auxDelayFlags,1);
     % Removing not considered conditions
@@ -292,9 +295,11 @@ for cexp = reshape(chExp, 1, [])
         cStack = auxCStack;
         clInfoTotal = clInfo;
         NaStack = NaNew;
-        popClWf = sewf;
+        popClWf = mswf;
+        pcwID = cwID;
     else
-        popClWf = cat(1, popClWf, sewf);
+        popClWf = cat(2, popClWf, mswf);
+        pcwID = cat(1, pcwID, cwID);
         % Homogenizing trial numbers
         if any(NaNew ~= NaStack)
             NaMin = min(NaStack, NaNew);
@@ -459,7 +464,7 @@ stackTx = (0:Nt-1)/fs + timeLapse(1) + 2.5e-3;
 
 [~,cnd] = find(delayFlags);
 [~, tmOrdSubs] = sort(trigTms, 'ascend');
-cnd = cnd(tmOrdSubs); trialAx = trigTms(tmOrdSubs);
+cnd = cnd(tmOrdSubs); trialAx = minutes(seconds(trigTms(tmOrdSubs)));
 % Modulation: distance from the y=x line.
 try
     modFlags = sign(clInfoTotal{clInfoTotal.ActiveUnit &...
@@ -472,6 +477,15 @@ catch
     modFlags = sign(clInfoTotal{clInfoTotal.ActiveUnit &...
         clInfoTotal.Control, 'Modulation'}); 
 end
+% Group indeces
+modVal = clInfoTotal{clInfoTotal.ActiveUnit == 1, 'Modulation'};
+pruIdx = wruIdx & modVal > 0; % Potentiated responding
+druIdx = wruIdx & modVal <= 0; % Depressed responding
+nruIdx = ~any(H,2); % Non-responding what-so-ever
+nmuIdx = false(size(nruIdx)); % Non-responding nor modulating
+nmuIdx(nruIdx) = abs(zscore(modVal(nruIdx))) < 0.33; % With this criteria
+aruIdx = and(xor(H(:,1),H(:,2)),H(:,2)); % Response only A.-I.
+sruIdx = and(xor(H(:,1),H(:,2)),H(:,1)); % Stopped responding after A.-I.
 
 modFlags = modFlags > 0;
 modFlags(:,2) = ~modFlags;
@@ -515,7 +529,7 @@ for pfp = fws
                 end
                 dispName = [condLey{ccond}, ' ', respLey{cr}, ' (',...
                     num2str(popMean/(focusStep*1e-3)), ' Hz)'];
-                plot(ax(cmod), minutes(seconds(trialAx(trSubs))),...
+                plot(ax(cmod), trialAx(trSubs),...
                     popMeanResp(pfp, trSubs, [cr,cmod-1]*[1,2]'),...
                     plotOpts{1:5}, cmap(ccond,:,cr),...
                     plotOpts{6}, dispName);
@@ -537,7 +551,7 @@ for pfp = fws
         savefig(tdFig, figTdName);
     end
 end
-
+fprintf(1, 'Are there non-responsive, non-modulated clusters')
 %% Getting the relative spike times for the whisker responsive units (wru)
 % For each condition, the first spike of each wru will be used to compute
 % the standard deviation of it.
@@ -724,6 +738,7 @@ focusWindow = [-5, 30]*1e-3;
 focusIdx = txpsth >= focusWindow(1) & txpsth <= focusWindow(2);
 txfocus = txpsth(focusIdx);
 modLabels = {'potentiated', 'depressed'};
+%modLabels = {'non-responding','non-modulated'};
 for cmod = 1:2
     psthFig = figure('Color', [1,1,1], 'Name', 'Condition PSTH comparison',...
         'Visible', 'off');
