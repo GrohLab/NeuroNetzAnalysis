@@ -12,10 +12,10 @@ if length(x) == length(y)
     % Polynomial with positive exponent
     
     if m >= 1
-        M = ones(length(x),m+1);
-        for ex = 0:m
-            M(:,m+1-ex) = (x.^ex)';
+        if isrow(x)
+            x = x';
         end
+        M = x.^(m:-1:0);
         ft = pinv(M) * y';
         polft = zeros(size(x));
         for ex = m:-1:1
