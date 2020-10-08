@@ -791,7 +791,38 @@ end
 
 %% Waveform analysis
 fprintf(1, 'This is the waveform analysis section\n');
-meanWf = cellfun(@(x) mean(x,2), popClWf(:,2),'UniformOutput', 0);
-meanWf = cat(2,meanWf{:}); featWf = getWaveformFeatures(meanWf, fs);
-wFeat = whitenPoints(featWf);
-
+mg2db = @(x) 20*log10(abs(x)); [Nws, Ncw] = size(popClWf);
+Np = 2^(nextpow2(Nws)-1) - Nws/2; tx = (0:Nws-1)/fs;
+pwf_m = popClWf - mean(popClWf); pwf_w = pwf_m .* chebwin(Nws, 150);
+pwf_p = padarray(padarray(pwf_w, [floor(Np),0], 'pre'),...
+    [ceil(Np),0], 'post'); 
+ft = fftshift(fft(pwf_p)); dw = fs/size(ft,1); mg = mg2db(ft);
+ph = angle(ft); wx = (0:size(ft,1)-1)'*dw - fs/2;
+mg = mg(wx>=0,:); ph = ph(wx>=0,:); wx = wx(wx>=0);
+wcp = getWaveformCriticalPoints(mg, size(ft,1)/fs);
+featWf = getWaveformFeatures(pwf_p, fs);
+% meanWf = cellfun(@(x) mean(x,2), popClWf(:,2),'UniformOutput', 0);
+% meanWf = cat(2,meanWf{:}); featWf = getWaveformFeatures(meanWf, fs);
+% wFeat = whitenPoints(featWf);
+%% Adaptation
+dt = 1/8;
+onst = (0:7)'*dt;
+ofst = (0:7)'*dt + 0.05;
+onrpWins = [onst+5e-3, onst+3e-2];
+ofrpWins = [ofst+5e-3, ofst+3e-2];
+onrpIdx = txpsth >= onrpWins(:,1) & txpsth <= onrpWins(:,2);
+ofrpIdx = txpsth >= ofrpWins(:,1) & txpsth <= ofrpWins(:,2);
+ptsOn = zeros(size(onrpIdx,1),size(PSTH_prob,2),2); % time, magnitude
+ptsOf = ptsOn;
+for ccond = 1:size(PSTH_prob,2)
+    for crw = 1:size(onst,1)
+        [mg, tmSub] = max(PSTH_prob(onrpIdx(crw,:),ccond));
+        tmWinSub = find(onrpIdx(crw,:));
+        ptsOn(crw, ccond, 1) = txpsth(tmWinSub(tmSub));
+        ptsOn(crw, ccond, 2) = mg;
+        [mg, tmSub] = max(PSTH_prob(ofrpIdx(crw,:),ccond));
+        tmWinSub = find(ofrpIdx(crw,:));
+        ptsOf(crw, ccond, 1) = txpsth(tmWinSub(tmSub));
+        ptsOf(crw, ccond, 2) = mg;
+    end
+end
