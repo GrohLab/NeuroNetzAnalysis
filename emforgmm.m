@@ -5,6 +5,7 @@ function [params,threshold]=emforgmm(data,M,err,clin,varargin)
 % emforgmm(DATA,M,MU_1,SIG_1,...,MU_M,SIG_M) returns the parameters for M
 % gaussian models fitted for the DATA with user defined initialization as
 % MU_1, SIG_1,...,MU_M, SIG_M.
+% Emilio Isa?as-Camacho 2017
 %% Function initialization
 params = zeros(M,3);
 data = data(:);
@@ -131,26 +132,10 @@ params_init(:,2) = MN:(MX-MN)/M:MX-((MX-MN)/M);
 params_init(:,3) = rand(M,1)*DS;
 end
 
-function mu_new = updatemu(data,pik_mu,sum_pik_inv_mu)
-% Example for a vector sum: 'taking advantage of the CPU architecture'
-% suma1=0;
-% suma2=0;
-% suma3=0;
-% suma4=0;
-% for i=1:4:N-3
-%     suma1 = suma1 + (data(i) * pik_mu(i));
-%     suma2 = suma2 + (data(i+1) * pik_mu(i+1));
-%     suma3 = suma3 + (data(i+2) * pik_mu(i+2));
-%     suma4 = suma4 + (data(i+3) * pik_mu(i+3));
-% end
-% suma1 = suma1*sum_pik_inv_mu;
-% suma2 = suma2*sum_pik_inv_mu;
-% suma3 = suma3*sum_pik_inv_mu;
-% suma4 = suma4*sum_pik_inv_mu;
-% mu_new = suma1+suma2+suma3+suma4;
+function mu_new = updatemu(data, pik_mu, sum_pik_inv_mu)
 mu_new = (pik_mu*data)*sum_pik_inv_mu;
 end
 
-function sig_new = updatesig(data,mu_new,pik_sig,sum_pik_inv_sig)
+function sig_new = updatesig(data, mu_new, pik_sig, sum_pik_inv_sig)
 sig_new = (pik_sig * ((data - mu_new).^2)) * sum_pik_inv_sig;
 end
