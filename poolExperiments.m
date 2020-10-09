@@ -805,17 +805,46 @@ end
 
 
 %% Waveform analysis
+pltDot = {'LineStyle', 'none', 'Marker', '.', 'MarkerSize', 5};
 fprintf(1, 'This is the waveform analysis section\n');
 mg2db = @(x) 20*log10(abs(x)); [Nws, Ncw] = size(popClWf);
 Np = 2^(nextpow2(Nws)-1) - Nws/2; tx = (0:Nws-1)/fs;
 pwf_m = popClWf - mean(popClWf); pwf_w = pwf_m .* chebwin(Nws, 150);
 pwf_p = padarray(padarray(pwf_w, [floor(Np),0], 'pre'),...
-    [ceil(Np),0], 'post'); 
-ft = fftshift(fft(pwf_p)); dw = fs/size(ft,1); mg = mg2db(ft);
+    [ceil(Np),0], 'post'); pwf_n = pwf_p./max(abs(pwf_p));
+ltx = ((0:size(pwf_p,1)-1)' - size(pwf_n,1)/2)/fs;
+ft = fftshift(fft(pwf_n,[],1),1); dw = fs/size(ft,1); mg = mg2db(ft);
 ph = angle(ft); wx = (0:size(ft,1)-1)'*dw - fs/2;
-mg = mg(wx>=0,:); ph = ph(wx>=0,:); wx = wx(wx>=0);
-wcp = getWaveformCriticalPoints(mg, size(ft,1)/fs);
-featWf = getWaveformFeatures(pwf_p, fs);
+mg = mg(wx>=0,:); ph = ph(wx>=0,:); wx = wx(wx>=0); [~, mxWxSub] = max(mg);
+wcp = getWaveformCriticalPoints(mg, size(ft,1)/fs); 
+pwc = cellfun(@(x) x(1), wcp(:,1)); mxW = wx(mxWxSub);
+
+
+
+tcp = getWaveformCriticalPoints(pwf_n, fs);
+featWf = getWaveformFeatures(pwf_n, fs);
+params = emforgmm(log(featWf(:,1)), 3, 1e-7, 0);
+logDomain = (round(min(log(featWf(:,1)))*1.05,1):0.01:...
+    round(max(log(featWf(:,1)))*0.95,1))';
+p_x = genP_x(params, logDomain); 
+probCriticPts = getWaveformCriticalPoints(p_x', 100);
+probCriticPts = cellfun(@(x) x + logDomain(1), probCriticPts,...
+    'UniformOutput', 0); logThresh = probCriticPts{1,1}(2);
+time_wf = log(featWf(:,1)) > logThresh;
+
+
+[m, b] = lineariz(pwc, 1, -1); pwc_n = pwc*m + b;
+params_freq = emforgmm(pwc_n, 3, 1e-7, 0); wDomain = (-1.05:0.01:1.05)';
+p_wx = genP_x(params_freq, wDomain);
+probCriticPts_w = getWaveformCriticalPoints(p_wx', 100);
+probCriticPts_w = cellfun(@(x) x + wDomain(1), probCriticPts_w,...
+    'UniformOutput', 0); wThresh = probCriticPts_w{1,1}(2);
+freq_wf = pwc_n < wThresh;
+tf_groups = [...
+    ~time_wf & ~freq_wf,...
+    ~freq_wf & time_wf,...
+    freq_wf & ~time_wf,...
+    freq_wf & time_wf];
 % meanWf = cellfun(@(x) mean(x,2), popClWf(:,2),'UniformOutput', 0);
 % meanWf = cat(2,meanWf{:}); featWf = getWaveformFeatures(meanWf, fs);
 % wFeat = whitenPoints(featWf);
