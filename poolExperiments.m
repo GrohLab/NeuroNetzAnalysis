@@ -819,8 +819,6 @@ mg = mg(wx>=0,:); ph = ph(wx>=0,:); wx = wx(wx>=0); [~, mxWxSub] = max(mg);
 wcp = getWaveformCriticalPoints(mg, size(ft,1)/fs); 
 pwc = cellfun(@(x) x(1), wcp(:,1)); mxW = wx(mxWxSub);
 
-
-
 tcp = getWaveformCriticalPoints(pwf_n, fs);
 featWf = getWaveformFeatures(pwf_n, fs);
 params = emforgmm(log(featWf(:,1)), 3, 1e-7, 0);
@@ -831,7 +829,6 @@ probCriticPts = getWaveformCriticalPoints(p_x', 100);
 probCriticPts = cellfun(@(x) x + logDomain(1), probCriticPts,...
     'UniformOutput', 0); logThresh = probCriticPts{1,1}(2);
 time_wf = log(featWf(:,1)) > logThresh;
-
 
 [m, b] = lineariz(pwc, 1, -1); pwc_n = pwc*m + b;
 params_freq = emforgmm(pwc_n, 3, 1e-7, 0); wDomain = (-1.05:0.01:1.05)';
