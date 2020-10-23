@@ -47,6 +47,9 @@ ifVect = @(x) [x<N; x>=N];
 for cft = 1:ceil(Nfits)
     subEnd = initSubs(cft)+winSub-1;
     csubs = initSubs(cft):[subEnd, N] * ifVect(subEnd);
+    if isempty(csubs)
+        continue
+    end
     [mdl, yh] = fit_poly(x(csubs), y(csubs), n);
     
     yh = reshape(yh, 1*r + length(csubs)*c, 1*c + length(csubs)*r);
