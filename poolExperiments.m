@@ -127,7 +127,8 @@ for cexp = reshape(chExp, 1, [])
     %}
     %% Constructing the helper 'global' variables
     % Number of total samples
-    Ns = min(structfun(@numel,Triggers));
+    Ns = structfun(@numel,Triggers);
+    Ns = min(Ns(Ns>1));
     % Total duration of the recording
     Nt = Ns/fs;
     % Useless clusters (labeled as noise or they have very low firing rate)
@@ -278,6 +279,7 @@ for cexp = reshape(chExp, 1, [])
     cwID = sewf(:,1);
     %% Building the population stack
     NaNew = sum(auxDelayFlags,1);
+    spkSubs = cat(1,{round(sortedData{goods(1),2}*fs)}, spkSubs);
     % Removing not considered conditions
     if sum(NaNew) ~= NTa
         emtyRow = find(~sum(auxDelayFlags,2));
