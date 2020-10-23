@@ -106,6 +106,7 @@ end
 fsConv = fsLFP/fs;
 % Signal validation
 Ns = numel(varargin);
+sparseFlag = false;
 if Ns
     if Ns == 1
         [Nrow, Ncol] = size(varargin{1});
@@ -113,9 +114,10 @@ if Ns
             Ns = Nrow * (Nrow < Ncol) + Ncol * (Ncol < Nrow);
         end
     end
-    signalCheck = cellfun(@isnumeric,varargin);
-    signalCheck2 = cellfun(@length,varargin);
+    signalCheck = cellfun(@isnumeric, varargin);
+    signalCheck2 = cellfun(@length, varargin);
     signalCheck3 = cellfun(@iscell, varargin);
+    signalCheck4 = cellfun(@issparse, varargin);
     if any(signalCheck3)
         varargin = varargin{1};
         Ns = numel(varargin);
@@ -161,15 +163,21 @@ if Ns
             MAX_CONT_SAMP = signalCheck2(1);
         end
     end
-%     prevSamplesLFP = ceil(timeSpan(1) * fsLFP);
-%     postSamplesLFP = ceil(timeSpan(2) * fsLFP);
-%     NtLFP = prevSamplesLFP + postSamplesLFP + 1;
-%     continuouStack = zeros(Ns,NtLFP,Na,'single');
+    % prevSamplesLFP = ceil(timeSpan(1) * fsLFP);
+    % postSamplesLFP = ceil(timeSpan(2) * fsLFP);
+    % NtLFP = prevSamplesLFP + postSamplesLFP + 1;
+    % continuouStack = zeros(Ns,NtLFP,Na,'single');
+    if any(signalCheck4)
+        sparseFlag = true;
+    end
 end
 prevSamplesLFP = ceil(abs(timeSpan(1)) * fsLFP);
 postSamplesLFP = ceil(timeSpan(2) * fsLFP);
 NtLFP = prevSamplesLFP + postSamplesLFP + 1;
 continuouStack = zeros(Ns,NtLFP,Na,'single');
+if sparseFlag
+    fprintf(1,'Ideal case: sparse output\n');
+end
 %% Cutting the events into the desired segments.
 for cap = 1:Na
     % Considering the rising or the falling edge of the step function.
