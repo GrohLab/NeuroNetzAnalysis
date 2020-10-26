@@ -193,20 +193,27 @@ for cap = 1:Na
     % The segments should be in the range of the spike train.
     % Validations for the discrete stack
     spSeg = false(1,Nt);
-    if segmIdxs(1) >= 1 && segmIdxs(2) <= length(spT)
-        spSeg = spT(segmIdxs(1):segmIdxs(2));
-    elseif segmIdxs(1) <= 0
-        fprintf('The viewing window is out of the signal range.\n')
-        fprintf('%d samples required before the signal. Omitting...\n',...
-            segmIdxs(1))
-        segmIdxs(segmIdxs <= 0) = 1;
-        spSeg(Nt - segmIdxs(2) + 1:Nt) = spT(segmIdxs(1):segmIdxs(2));
-    else
-        fprintf('The viewing window is out of the signal range.\n')
-        fprintf('%d samples required after the signal. Omitting...\n',...
-            segmIdxs(2))
-        segmIdxs(segmIdxs > length(spT)) = length(spT);
-        spSeg(1:diff(segmIdxs)+1) = spT(segmIdxs(1):segmIdxs(2));
+    if numel(spT) ~= 1
+        if segmIdxs(1) >= 1 && segmIdxs(2) <= length(spT)
+            spSeg = spT(segmIdxs(1):segmIdxs(2));
+        elseif segmIdxs(1) <= 0
+            fprintf('The viewing window is out of the signal range.\n')
+            fprintf('%d samples required before the signal. Omitting...\n',...
+                segmIdxs(1))
+            segmIdxs(segmIdxs <= 0) = 1;
+            try
+                spSeg(Nt - segmIdxs(2) + 1:Nt) = spT(segmIdxs(1):segmIdxs(2));
+            catch
+                fprintf(1, 'Not enough samples given to create the trial %d\n',...
+                    cap)
+            end
+        else
+            fprintf('The viewing window is out of the signal range.\n')
+            fprintf('%d samples required after the signal. Omitting...\n',...
+                segmIdxs(2))
+            segmIdxs(segmIdxs > length(spT)) = length(spT);
+            spSeg(1:diff(segmIdxs)+1) = spT(segmIdxs(1):segmIdxs(2));
+        end
     end
     discreteStack(2,:,cap) = spSeg;
     % Find 'overlapping' events in time of interest
