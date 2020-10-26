@@ -1,8 +1,13 @@
-function [] = neuroCorr(spks, tmReach, binSz, fs)
+function [corrStackCells] = neuroCorr(spks, tmReach, binSz, fs)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
 % getStacks(spT,alignP,ONOFF,timeSpan,fs,fsLFP,consEvents,...)
-maxN = max(cellfun(@max, spks)) + round(tmReach * fs);
-corrStackCells = cellfun(@(x) squeeze(sum(getStacks(false(1,maxN), x, 'on',...
-    [-tmReach, tmReach], fs, fs, spks),3)), spks, 'UniformOutput', 0);
+corrStackCells = cell(length(spks),1); Ncl = length(spks);
+for ccl = 1:size(spks, 1)
+    corrStackCells(ccl) = {squeeze(sum(getStacks(false, spks{ccl}, 'on',...
+        [-tmReach, tmReach], fs, fs, spks(ccl+1:Ncl)),3))};
+    corrStackCells{ccl}(2,:) = [];
 end
+end
+% corrStackCells = cellfun(@(x) squeeze(sum(getStacks(false, x, 'on',...
+%     [-tmReach, tmReach], fs, fs, spks),3)), spks, 'UniformOutput', 0);
