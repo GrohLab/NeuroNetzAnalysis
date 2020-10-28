@@ -269,6 +269,33 @@ for cexp = reshape(chExp, 1, [])
             Conditions(ccond).Triggers(:,1));
         counter2 = counter2 + 1;
     end
+    NaNew = sum(auxDelayFlags,1);
+    
+    % All spikes in a cell format
+    spkSubs = cat(1, {round(sortedData{goods(1),2}*fs)}, spkSubs);
+    
+    % Autocorrelation for all active unit
+    autoCorr = @(x) neuroCorr(x, 0.1, 1, fs);
+    eaCorr = arrayfun(autoCorr, spkSubs, 'UniformOutput', 0);
+    eaCorr = cat(1, eaCorr{:}); eaCorr = cat(1, eaCorr{:});
+    eaCorr = sparse(eaCorr);
+    
+    % Computing the firing rate during the different conditions
+    NaCount = 1;
+    % Experiment firing rate and ISI per considered condition
+    efr = zeros(Ncl, size(consideredConditions,2), 'single');
+    eisi = cellfun(@(x) diff(x), spkSubs, 'UniformOutput', 0);
+    econdIsi = cell(Ncl, size(consideredConditions,2));
+    for ccond = consideredConditions
+        itiSub = mean(diff(Conditions(ccond).Triggers(:,1)));
+        consTime = [Conditions(ccond).Triggers(1,1) - round(itiSub/2),...
+            Conditions(ccond).Triggers(NaNew(NaCount),2) + round(itiSub/2)]...
+            ./fs;
+        [efr(:,NaCount),~, ~, econdIsi(:,NaCount)] =...
+            getSpontFireFreq(spkSubs, Conditions(ccond).Triggers,...
+            consTime, fs, delta_t + responseWindow(1));
+        NaCount = NaCount + 1;
+    end
     
     % Getting the clusters' waveforms
     sewf = getClusterWaveform(gclID, dataDir);
@@ -278,8 +305,6 @@ for cexp = reshape(chExp, 1, [])
     mswf = cat(2, mswf{:});
     cwID = sewf(:,1);
     %% Building the population stack
-    NaNew = sum(auxDelayFlags,1);
-    spkSubs = cat(1,{round(sortedData{goods(1),2}*fs)}, spkSubs);
     % Removing not considered conditions
     if sum(NaNew) ~= NTa
         emtyRow = find(~sum(auxDelayFlags,2));
@@ -299,7 +324,15 @@ for cexp = reshape(chExp, 1, [])
         NaStack = NaNew;
         popClWf = mswf;
         pcwID = cwID;
+        pfr = efr;
+        pisi = eisi;
+        paCorr = eaCorr;
+        pcondIsi = econdIsi;
     else
+        pfr = cat(1, pfr, efr);
+        pisi = cat(1, pisi, eisi);
+        paCorr = cat(1, paCorr, eaCorr);
+        pcondIsi = cat(1, pcondIsi, econdIsi);
         popClWf = cat(2, popClWf, mswf);
         pcwID = cat(1, pcwID, cwID);
         % Homogenizing trial numbers
