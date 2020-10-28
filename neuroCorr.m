@@ -7,7 +7,7 @@ zeroCorr = ceil(tmReach * fs) + 1;
 for ccl = 1:size(spks, 1)
     corrStackCells(ccl) = {squeeze(sum(getStacks(false, spks{ccl}, 'on',...
         [-tmReach, tmReach], fs, fs, spks(ccl+1:Ncl)),3))};
-    corrStackCells{ccl}(2,:) = []; corrStackCells{ccl}(:,zeroCorr) = 0;
+    corrStackCells{ccl}(2,:) = []; corrStackCells{ccl}(1,zeroCorr) = 0;
 end
 end
 % corrStackCells = cellfun(@(x) squeeze(sum(getStacks(false, x, 'on',...
