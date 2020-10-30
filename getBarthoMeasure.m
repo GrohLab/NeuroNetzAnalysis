@@ -16,8 +16,8 @@ for ccl = 1:Ncl
     [~, troughSub] = max(abs(ampCp{ccl}));
     [~, secPeakSub] = max(abs(ampCp{ccl}(troughSub+1:end)));
     if isempty(secPeakSub)
-        % We are in deep shit. We have to think of a math solution for the
-        % so called 'stable region' or 'period'.
+        % We have to think of a math solution for the so called 'stable
+        % region' or 'period'.
         fprintf(1, 'Cluster %d is a bitch\n', ccl)
         figure(ccl); plot(tx, mean_wf(:,ccl))
     end
