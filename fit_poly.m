@@ -19,6 +19,7 @@ if isnumeric(m)
 elseif ischar(m)
     switch m
         case 'e'
+            y(y==0) = y(y==0) + eps;
             [Yhat, mdl] = detrend_profile(1,x,log(y));
             rsq = goodnessFit([x',log(y)'],mdl);
             auxA = exp(mdl(2));
