@@ -29,7 +29,11 @@ for ccl = 1:Ncl
     end
     frstSub = find(halfFlags, 1, 'first');
     lstSub = find(halfFlags, 1, 'last');
-    bhad(ccl) = diff(tx([frstSub, lstSub]));
+    mdl = fit_poly(tx([frstSub-1, frstSub]), mean_wf([frstSub-1, frstSub],ccl),...
+        1); frstXg = (b50(ccl) - mdl(2))/mdl(1);
+    mdl = fit_poly(tx([lstSub-1, lstSub]), mean_wf([lstSub-1, lstSub],ccl),...
+        1); lstXg = (b50(ccl) - mdl(2))/mdl(1);
+    bhad(ccl) = lstXg - frstXg;
 end
 bm = [tpd, bhad];
 end
