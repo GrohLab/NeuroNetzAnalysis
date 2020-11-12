@@ -35,6 +35,11 @@ for cvn = 1:length(varNames)-1
     fprintf(fID, '%s\t', varNames(cvn));
 end
 fprintf(fID, '%s\n', varNames(cvn+1));
+% Nature of the variables
+numOrNot = varfun(@isnumeric, clInfo, 'OutputFormat','uniform');
+boolFlag = varfun(@islogical, clInfo, 'OutputFormat','uniform');
+numOrNot = numOrNot | boolFlag;
+
 % Write data
 [Ncl, Nv] = size(clInfo);
 for ccl = 1:Ncl
@@ -43,13 +48,22 @@ for ccl = 1:Ncl
         if cv == Nv
             sep = '\n';
         end
-        switch varNames(cv)
-            case {"id","KSLabel","group","NeuronType"}
-                fprintf(fID,['%s',sep],clInfo{ccl,cv}{1});
-            case "firing_rate"
-                fprintf(fID,['%f spk/s',sep],clInfo{ccl,cv});
-            otherwise
-                fprintf(fID,['%f',sep],clInfo{ccl,cv});
+        if numOrNot(cv)
+            % Numeric variable (logicals...)
+            switch varNames(cv)
+                case {"firing_rate","fr"}
+                    fprintf(fID,['%f spk/s',sep],clInfo{ccl,cv});
+                otherwise
+                    fprintf(fID,['%f',sep],clInfo{ccl,cv});
+            end
+        else
+            % Non-numeric variable (cell, categorical, string...)
+            switch varNames(cv)
+                case {"id","KSLabel","group","NeuronType"}
+                    fprintf(fID,['%s',sep],clInfo{ccl,cv}{1});
+                otherwise
+                    fprintf(fID,['%s',sep],clInfo{ccl,cv});
+            end
         end
     end
 end
