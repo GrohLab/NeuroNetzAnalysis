@@ -22,11 +22,11 @@ end
 % and triggers.
 expSubfix = fullfile(dataDir,expName);
 
-chanMap = readNPY(fullfile(dataDir,'channel_map.npy'));
-chanPos = readNPY(fullfile(dataDir,'channel_positions.npy'));
+% chanMap = readNPY(fullfile(dataDir,'channel_map.npy'));
+% chanPos = readNPY(fullfile(dataDir,'channel_positions.npy'));
 
-assignin('base','chanMap',chanMap)
-assignin('base','chanPos',chanPos)
+% assignin('base','chanMap',chanMap)
+% assignin('base','chanPos',chanPos)
 
 assignin('base','expSubfix',expSubfix)
 assignin('base','expName',expName)
