@@ -62,7 +62,13 @@ for ccl = 1:Ncl
                 case {"id","KSLabel","group","NeuronType"}
                     fprintf(fID,['%s',sep],clInfo{ccl,cv}{1});
                 otherwise
-                    fprintf(fID,['%s',sep],clInfo{ccl,cv});
+                    try
+                        fprintf(fID,['%s',sep],clInfo{ccl,cv});
+                    catch ME
+                        if strcmp(ME.identifier,'MATLAB:printf:invalidInputType')
+                            fprintf(fID,['%s',sep],clInfo{ccl,cv}{1});
+                        end
+                    end
             end
         end
     end
