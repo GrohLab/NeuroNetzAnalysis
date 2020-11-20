@@ -27,6 +27,8 @@ Nexp = numel(chExp);
 phyNames = ["ch","channel";...
     "sh", "shank";...
     "fr", "firing_rate"];
+% Function for performing ONLY autocorrelograms
+corrWin = 0.05;
 
 %% User controlling variables
 % Time lapse, bin size, and spontaneous and response windows
@@ -80,7 +82,7 @@ printOpts = {{'-dpdf','-fillpage'},'-dmeta'};
 cellLogicalIndexing = @(x,idx) x(idx);
 
 expCo = 1;
-%% Experiment loop 
+%% Experiment loop
 % For all the chosen experiments, perform the statistical test and save its
 % results, and extract the spike times for all clusters blending in the
 % trial information for a PDF calculation
@@ -131,6 +133,7 @@ for cexp = reshape(chExp, 1, [])
     Ns = min(Ns(Ns>1));
     % Total duration of the recording
     Nt = Ns/fs;
+    autoCorr = @(x) neuroCorr(x, corrWin, 1, fs);
     % Useless clusters (labeled as noise or they have very low firing rate)
     badsIdx = cellfun(@(x) x==3,sortedData(:,3));
     bads = find(badsIdx);
@@ -274,11 +277,24 @@ for cexp = reshape(chExp, 1, [])
     % All spikes in a cell format
     spkSubs = cat(1, {round(sortedData{goods(1),2}*fs)}, spkSubs);
     
-    % Autocorrelation for all active unit
-    autoCorr = @(x) neuroCorr(x, 0.1, 1, fs);
-    eaCorr = arrayfun(autoCorr, spkSubs, 'UniformOutput', 0);
-    eaCorr = cat(1, eaCorr{:}); eaCorr = cat(1, eaCorr{:});
+    % Autocorrelation for all active units
+    
+    corrFileName = fullfile(dataDir, '*_ccorr.mat');
+    corrFiles = dir(corrFileName); corrCorr =...
+        arrayfun(@(x) contains(x.name, sprintf('%.2f', corrWin*1e3)),...
+        corrFiles);
+    if ~isempty(corrFiles) && any(corrCorr)
+        load(fullfile(corrFiles(corrCorr).folder,corrFiles(corrCorr).name),...
+            'corrs')
+        eaCorr = cellfun(@(x) x(1,:), corrs, 'UniformOutput', 0);
+    else
+        eaCorr = arrayfun(autoCorr, spkSubs, 'UniformOutput', 0);
+        eaCorr = cat(1, eaCorr{:});
+    end
+    eaCorr = cat(1, eaCorr{:});
     eaCorr = sparse(eaCorr);
+%     % Computing the lag axis for the auto-correlograms
+%     b = -ceil(Ncrs/2)/fs; corrTx = (1:Ncrs)'/fs + b;
     
     % Computing the firing rate during the different conditions
     NaCount = 1;
