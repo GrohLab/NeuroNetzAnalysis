@@ -557,6 +557,8 @@ Nfs = size(focusPeriods,1);
 popMeanResp = zeros(Nfs, sum(NaStack), 4);
 fws = 1:Nfs;
 auxOr = [false, true];
+trialBin = 1;
+quartCuts = -log([4/3, 2, exp(1), 4]);
 for pfp = fws
     tdFig = figure('Name', 'Temporal dynamics', 'Color', [1,1,1]);
     for cmod = 1:size(modFlags,2) % Up- and down-modulation
@@ -566,7 +568,7 @@ for pfp = fws
         title(ax(cmod), sprintf('%s',modLabel{cmod}));
         
         for ccond = 1:Nccond % Cycling through the conditions (control and after-induction)
-            trSubs = tcount:sum(NaStack(1:ccond));
+            trSubs = tcount:trialBin:sum(NaStack(1:ccond));
             clMod = modFlags(:,cmod);
             for cr = 1:2 % responsive and non-responsive
                 respIdx = xor(H(:,cr), auxOr(cr)); % Negation of H(:,2)
@@ -575,11 +577,21 @@ for pfp = fws
                         stackTx <= focusPeriods(cp,2);
                     clCounts = timesum(...
                         discStack( [false; respIdx], focusIdx, delayFlags(:,ccond)));
-                    clMean = mean(clCounts(clMod,:),1); popMean = mean(clMean);
+                    %clMean = mean(clCounts(clMod,:),1); popMean = mean(clMean);
+                    clMean = zeros(NaStack(ccond)/trialBin,1);
+                    qTrial = zeros(NaStack(ccond)/trialBin,2);
+                    for cb = 1:NaStack(ccond)/trialBin
+                        trialSubs = [cb-1;cb]*trialBin + [1;0];
+                        figure('IntegerHandle',102,'Visible','off');
+                        h = histogram(clCounts(clMod,...
+                            trialSubs(1):trialSubs(2)), -0.5:10.5);
+                        expMdl = fit_poly(0:10, log10(h.BinCounts), 1);
+                        qVals = quartCuts./expMdl(1);
+                        clMean(cb) = qVals(3); qTrial(cb,:) = qVals([1,4]);
+                    end
                     popMeanResp(cp, trSubs, [cr,cmod-1]*[1;2]) = clMean;
                 end
-                dispName = [condLey{ccond}, ' ', respLey{cr}, ' (',...
-                    num2str(popMean/(focusStep*1e-3)), ' Hz)'];
+                dispName = [condLey{ccond}, ' ', respLey{cr}];
                 plot(ax(cmod), trialAx(trSubs),...
                     popMeanResp(pfp, trSubs, [cr,cmod-1]*[1,2]'),...
                     plotOpts{1:5}, cmap(ccond,:,cr),...
@@ -635,7 +647,8 @@ if ~exist(csvDir,'dir')
     end
 end
 for ccond = 1:size(delayFlags,2)
-    csvFileName = fullfile(csvDir,[expName,' ',consCondNames{ccond}, csvSubfx]);
+    csvFileName = fullfile(csvDir,[expName,' ', sprintf('%d ',chExp),...
+        consCondNames{ccond}, csvSubfx]);
     relativeSpikeTimes = getRasterFromStack(discStack,~delayFlags(:,ccond),...
         filterIdx(3:end), timeLapse, fs, true, false);
     relativeSpikeTimes(:,~delayFlags(:,ccond)) = [];
