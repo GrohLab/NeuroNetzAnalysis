@@ -726,7 +726,7 @@ for cmod = 1:2 % Potentiated and depressed clusters
         plot(areaAx(cmod), 1e3*exp(lax(1:end-1)), cumsum(isiPdf(:,cnt)),...
             areaOpts{1}, cmap(ccond,:), areaOpts{2:3})
         ylim(areaAx(cmod), [0,1]); areaAx(cmod).YAxis(2).Color = [0,0,0];
-        ylabel(areaAx(cmod), 'Cumulative probability'); 
+        ylabel(areaAx(cmod), 'Cumulative probability');
         yyaxis(areaAx(cmod) ,'left'); set(areaAx(cmod),'Box','off')
     end
     title(areaAx(cmod), sprintf('ISI PDF for %s clusters',ley(cmod)));
@@ -882,7 +882,7 @@ ltx = ((0:size(pwf_p,1)-1)' - size(pwf_n,1)/2)/fs;
 ft = fftshift(fft(pwf_n,[],1),1); dw = fs/size(ft,1); mg = mg2db(ft);
 ph = angle(ft); wx = (0:size(ft,1)-1)'*dw - fs/2;
 mg = mg(wx>=0,:); ph = ph(wx>=0,:); wx = wx(wx>=0); [~, mxWxSub] = max(mg);
-wcp = getWaveformCriticalPoints(mg, size(ft,1)/fs); 
+wcp = getWaveformCriticalPoints(mg, size(ft,1)/fs);
 pwc = cellfun(@(x) x(1), wcp(:,1)); mxW = wx(mxWxSub);
 
 tcp = getWaveformCriticalPoints(pwf_n, fs);
@@ -890,7 +890,7 @@ featWf = getWaveformFeatures(pwf_n, fs);
 params = emforgmm(log(featWf(:,1)), 3, 1e-7, 0);
 logDomain = (round(min(log(featWf(:,1)))*1.05,1):0.01:...
     round(max(log(featWf(:,1)))*0.95,1))';
-p_x = genP_x(params, logDomain); 
+p_x = genP_x(params, logDomain);
 probCriticPts = getWaveformCriticalPoints(p_x', 100);
 probCriticPts = cellfun(@(x) x + logDomain(1), probCriticPts,...
     'UniformOutput', 0); logThresh = probCriticPts{1,1}(2);
