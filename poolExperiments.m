@@ -558,7 +558,10 @@ popMeanResp = zeros(Nfs, sum(NaStack), 4);
 fws = 1:Nfs;
 auxOr = [false, true];
 trialBin = 1;
+Nas = [0;cumsum(NaStack)']./trialBin;
 quartCuts = -log([4/3, 2, exp(1), 4]);
+spkDomain = 0:15;
+spkBins = spkDomain(1) - 0.5:spkDomain(end) + 0.5;
 for pfp = fws
     tdFig = figure('Name', 'Temporal dynamics', 'Color', [1,1,1]);
     for cmod = 1:size(modFlags,2) % Up- and down-modulation
@@ -566,36 +569,66 @@ for pfp = fws
         ax(cmod) = subplot(size(modFlags,2),1,cmod,'Parent',tdFig);
         ax(cmod).NextPlot = 'add';
         title(ax(cmod), sprintf('%s',modLabel{cmod}));
-        
         for ccond = 1:Nccond % Cycling through the conditions (control and after-induction)
+            muTrSubs = Nas(ccond:ccond+1)+[1;0];
             trSubs = tcount:trialBin:sum(NaStack(1:ccond));
             clMod = modFlags(:,cmod);
             for cr = 1:2 % responsive and non-responsive
                 respIdx = xor(H(:,cr), auxOr(cr)); % Negation of H(:,2)
+                popIqrResp = zeros(Nfs, NaStack(ccond)/trialBin);
                 for cp = 1:Nfs % 'Micro' time windows
                     focusIdx = stackTx >= focusPeriods(cp,1) &...
                         stackTx <= focusPeriods(cp,2);
                     clCounts = timesum(...
                         discStack( [false; respIdx], focusIdx, delayFlags(:,ccond)));
-                    %clMean = mean(clCounts(clMod,:),1); popMean = mean(clMean);
-                    clMean = zeros(NaStack(ccond)/trialBin,1);
-                    qTrial = zeros(NaStack(ccond)/trialBin,2);
-                    for cb = 1:NaStack(ccond)/trialBin
-                        trialSubs = [cb-1;cb]*trialBin + [1;0];
-                        figure('IntegerHandle',102,'Visible','off');
-                        h = histogram(clCounts(clMod,...
-                            trialSubs(1):trialSubs(2)), -0.5:10.5);
-                        expMdl = fit_poly(0:10, log10(h.BinCounts), 1);
-                        qVals = quartCuts./expMdl(1);
-                        clMean(cb) = qVals(3); qTrial(cb,:) = qVals([1,4]);
-                    end
-                    popMeanResp(cp, trSubs, [cr,cmod-1]*[1;2]) = clMean;
+                    clMean = mean(clCounts(clMod,:),1); popMean = mean(clMean);
+                    sem = std(clCounts)./sqrt(size(clCounts,1));
+%                     clMean = zeros(NaStack(ccond)/trialBin,1);
+%                     qTrial = zeros(NaStack(ccond)/trialBin,3);
+%                     for cb = 1:NaStack(ccond)/trialBin
+%                         trialSubs = [cb-1, 1;cb, 0]*[trialBin;1];
+%                         histFig = figure('Visible','off');
+%                         h = histogram(clCounts(clMod,...
+%                             trialSubs(1):trialSubs(2)), spkBins);
+%                         auxY = log(h.BinCounts); 
+%                         if sum(~isinf(auxY)) < 2
+%                             % Would seem that just one bin is non-zero;
+%                             % presumably the zero-bin.
+%                             qVals = zeros(1,4);
+%                         else
+%                             expMdl = fit_poly(spkDomain, auxY, 1);
+%                             qVals = quartCuts./expMdl(1);
+%                         end
+%                         clMean(cb) = qVals(3); qTrial(cb,:) = qVals([1,2,4]);
+%                         close(histFig)
+%                     end
+%                     popMeanResp(cp,  muTrSubs(1):muTrSubs(2),...
+%                         [cr,cmod-1]*[1;2]) = clMean;
+%                     popIqrResp(cp, muTrSubs(1):muTrSubs(2)) = qTrial;
+                    popMeanResp(cp,  trSubs,...
+                        [cr,cmod-1]*[1;2]) = clMean;
+                    popIqrResp(cp, trSubs) = sem;%+ clMean;
                 end
+                
                 dispName = [condLey{ccond}, ' ', respLey{cr}];
-                plot(ax(cmod), trialAx(trSubs),...
-                    popMeanResp(pfp, trSubs, [cr,cmod-1]*[1,2]'),...
-                    plotOpts{1:5}, cmap(ccond,:,cr),...
-                    plotOpts{6}, dispName);
+                
+                errorbar(ax(cmod), trialAx(trSubs),...
+                     popMeanResp(pfp, trSubs, [cr,cmod-1]*[1,2]'), sem)
+                
+%                 plot(ax(cmod), trialAx(trSubs),...
+%                     popMeanResp(pfp, trSubs, [cr,cmod-1]*[1,2]'),...
+%                     plotOpts{1:5}, cmap(ccond,:,cr),...
+%                     plotOpts{6}, dispName);
+%                 plot(ax(cmod), trialAx(trSubs),...
+%                     popMeanResp(pfp, muTrSubs(1):muTrSubs(2),...
+%                     [cr,cmod-1]*[1;2]), 'Color', cmap(ccond,:,cr),...
+%                     'DisplayName', dispName);
+                
+%                 fill([trialAx(trSubs);flip(trialAx(trSubs))]',...
+%                     [popIqrResp(pfp, muTrSubs(1):muTrSubs(2),1),...
+%                     flip(popIqrResp(pfp, muTrSubs(1):muTrSubs(2)),2)],...
+%                     'b', 'FaceColor', cmap(ccond,:,cr),...
+%                     'EdgeColor','none','FaceAlpha',0.2)
                 clMod = true(sum(respIdx),1);
             end
             tcount = 1 + sum(NaStack(1:ccond));
@@ -604,10 +637,11 @@ for pfp = fws
         clrSat = -clrSat;
     end
     ylabel(ax(cmod), 'Spikes / Cluster'); xlabel(ax(cmod),...
-        sprintf('(%.1f - %.1f [ms]) Trial [min]',focusPeriods(pfp,:)*1e3))
+        sprintf('(%.1f - %.1f [ms]) Trial_{%d trials} [min]',...
+        focusPeriods(pfp,:)*1e3,trialBin))
     linkaxes(ax,'xy')
-    tdFigName = string(sprintf('Temporal dynamics exps %sFW%.1f-%.1f ms',...
-        sprintf('%d ', chExp), focusPeriods(pfp,:)*1e3));
+    tdFigName = string(sprintf('Temporal dynamics exps %sFW%.1f-%.1f ms TB %d trials (e, lines & shade)',...
+        sprintf('%d ', chExp), focusPeriods(pfp,:)*1e3, trialBin));
     tempFigName = fullfile(figureDir, tdFigName);
     figTdName = tempFigName + '.fig';
     if ~exist(figTdName, 'file')
