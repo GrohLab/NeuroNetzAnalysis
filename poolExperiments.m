@@ -770,50 +770,66 @@ save(fullfile(csvDir,[expName,'_exportSpkTms.mat']),...
     'relativeSpkTmsStruct','configStructure')
 
 %% ISI PDF & CDF
-binFig = figure('Visible','off');
 areaFig = figure('Visible','on', 'Color', [1,1,1],'Name','ISI probability');
 areaAx = gobjects(2,1);
-lax = log(1/fs):0.2:log(0.03);
+lDt = 0.01;
+logSpkHD = [-log10(2e3); log10(0.05)] + [-1;1]*(lDt/2); % 2000 = 1/0.0005
+logSpkEdges = logSpkHD(1):lDt:logSpkHD(2);logSpkDom = logSpkHD +...
+    [1;-1]*(lDt/2); logSpkDom = logSpkDom(1):lDt:logSpkDom(2);
+lgStTmAx = 10.^logSpkDom';
 % cmap = [0,0,102;... azul marino
 %     153, 204, 255]/255; % azul cielo
 cmap = lines(Nccond);
 %areaOpts = {'EdgeColor', 'none', 'FaceAlpha', 0.3, 'FaceColor'};
 areaOpts = {'Color','LineStyle','--','LineWidth',1.5};
 ley = ["Potentiated", "Depressed"];
-isiPdf = zeros(length(lax)-1,2*Nccond);
+isiPdf = zeros(length(logSpkDom),2*Nccond);
 for cmod = 1:2 % Potentiated and depressed clusters
     areaAx(cmod) = subplot(1,2,cmod,'Parent',areaFig);
     Nccl = sum(modFlags(:,cmod));
     for ccond = 1:Nccond
         cnt = [cmod-1,ccond] * [2,1]';
-        ISI = cellfun(@(x) diff(x(x >= -0.035 & x <= 0)), ...
+        ISI = cellfun(@(x) diff(x(x >= 0 & x <= 0.05)), ...
             relativeSpkTmsStruct(ccond).SpikeTimes(modFlags(:,cmod),:),...
             'UniformOutput', 0);
-        ISI_merge = [ISI{:}];
-        lISI = log(ISI_merge);
-        hisi = histogram(lISI, lax, 'Parent', binFig, 'DisplayStyle', 'stairs');
-        spkPerT_C = hisi.Values./(NaStack(ccond)*Nccl);
-        isiPdf(:,cnt) = spkPerT_C/sum(spkPerT_C);
-        plot(areaAx(cmod), 1e3*exp(lax(1:end-1)), isiPdf(:,cnt),...
+        ISIpc = arrayfun(@(x) cat(2, ISI{x,:}), (1:size(ISI,1))',...
+            'UniformOutput', 0);
+        hisi = cellfun(@(x) histcounts(log10(x), logSpkEdges), ISIpc,...
+            'UniformOutput', 0); 
+        hisi = cellfun(@(x) x/sum(x), hisi, 'UniformOutput', 0);
+        hisi = cat(1,hisi{:});
+        hisi = mean(hisi,1,'omitnan'); hisi = hisi./sum(hisi);
+        isiPdf(:,cnt) = hisi;
+        %ISI_merge = [ISI{:}];
+        %lISI = log10(ISI_merge);
+        %hisi = histcounts(lISI, logSpkEdges);
+        %spkPerT_C = hisi./(NaStack(ccond)*Nccl);
+        %isiPdf(:,cnt) = spkPerT_C/sum(spkPerT_C);
+        semilogx(areaAx(cmod), lgStTmAx, isiPdf(:,cnt),...
             areaOpts{1}, cmap(ccond,:), areaOpts{4:5});
         if ccond == 1
-            hold(binFig.Children, 'on'); hold(areaAx(cmod), 'on');
+            hold(areaAx(cmod), 'on');
             areaAx(cmod).XAxis.Scale = 'log';
             areaAx(cmod).XLabel.String = "ISI [ms]";
             areaAx(cmod).YLabel.String = "ISI probability";
         end
         yyaxis(areaAx(cmod) ,'right')
         
-        plot(areaAx(cmod), 1e3*exp(lax(1:end-1)), cumsum(isiPdf(:,cnt)),...
+        semilogx(areaAx(cmod), lgStTmAx, cumsum(isiPdf(:,cnt)),...
             areaOpts{1}, cmap(ccond,:), areaOpts{2:3})
         ylim(areaAx(cmod), [0,1]); areaAx(cmod).YAxis(2).Color = [0,0,0];
         ylabel(areaAx(cmod), 'Cumulative probability');
         yyaxis(areaAx(cmod) ,'left'); set(areaAx(cmod),'Box','off')
+        xticklabels(xticks*1e3)
     end
     title(areaAx(cmod), sprintf('ISI PDF for %s clusters',ley(cmod)));
+    grid(areaAx(cmod),'on')
 end
-legend(areaAx(cmod),consCondNames)
-hisi = hisi.Parent.Children; linkaxes(areaAx,'xy')
+legend(areaAx(cmod),consCondNames,'Location','best')
+linkaxes(areaAx,'xy')
+evokIsiFigPath = fullfile(figureDir, "Evoked ISI, potentiated & depressed" +...
+    " clusters, exp"+string(sprintf(' %d',chExp))+" LB 10^"+string(lDt));
+saveFigure(areaFig, evokIsiFigPath)
 
 %% Ordering PSTH
 orderedStr = 'ID ordered';
