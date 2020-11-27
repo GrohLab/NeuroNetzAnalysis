@@ -645,8 +645,57 @@ for pfp = fws
     end
 end
 fprintf(1, 'Are there non-responsive, non-modulated clusters\n')
+%% Comparing ISIs for different cluster groups
+% Logarithmic spacing for the histogram counts
+lDt = 0.01;
+logSpkHD = [-log10(2e3); 1] + [-1;1]*(lDt/2);
+logSpkEdges = logSpkHD(1):lDt:logSpkHD(2);logSpkDom = logSpkHD +...
+    [1;-1]*(lDt/2); logSpkDom = logSpkDom(1):lDt:logSpkDom(2);
+lgStTmAx = 10.^logSpkDom';
+% Potentiated (2), non-modulated (1), depressed (0) clusters'
+% classification
+modCat = categorical(...
+    sign(clInfoTotal{clInfoTotal.ActiveUnit == 1,'Modulation'}) + 1);
+modLey = ["depressed";"non-modulated";"potentiated"];
+% Conditions for the plot
+condLey = string(consCondNames)';
+respLey = ["responsive";"non-responsive"];
+% Responsive clusters in any condition (control AND after induction)
+respIdx = any(H,2);
+% respIdx = H(:,1); % Control only
+% respIdx = H(:,2); % After-induction only
+
+% Auxiliary variables for the loop
+htotal = zeros(length(logSpkDom),Nccond);
+isiFigs = gobjects(6,1);
+% Combinatorial loop
+for cr = 1:2 % Responsive and non-responsive
+    riveFlag = xor(respIdx,cr-1); % 0 passes, 1 negates
+    for cmod = 0:2 % depressed - non-modulalted - potentiated
+        lc = [cr-1,cmod+1] * [3;1];
+        modFlag = modCat == num2str(cmod);
+        isiFigs(lc) = figure('Color',[1,1,1]);
+        for ccond = 1:Nccond % Condition numbers
+            hcond = cellfun(@(x) histcounts(log10(x/fs), logSpkEdges),...
+                pcondIsi(riveFlag & modFlag, ccond), 'UniformOutput', 0);
+            hcond = cellfun(@(x) x./sum(x), hcond, 'UniformOutput', 0);
+            hcond = cat(1,hcond{:}); hcond = mean(hcond,1,'omitnan');
+            hcond = hcond./sum(hcond); htotal(:,ccond) = hcond;
+        end
+        ax = axes('Parent', isiFigs(lc));
+        semilogx(ax, lgStTmAx, cumsum(htotal));
+        xlim(ax,10.^logSpkHD); box(ax,'off'); grid('on'); 
+        xticklabels(ax, xticks(ax)*1e3); 
+        xlabel(ax,'Inter-spike interval [ms]'); 
+        ylabel('Cumulative probability');
+        title(ax, "Cumulative ISI: "+respLey(cr)+" & "+modLey(cmod+1))
+        legend(ax, condLey,'Location','best')
+        ciName = "Cumulative ISI, "+respLey(cr)+" & "+modLey(cmod+1) + ...
+            ", exp"+string(sprintf(' %d', chExp))+ " LB 10^"+string(lDt);
+        ciFilePath = fullfile(figureDir, ciName);
+        saveFigure(isiFigs(lc),ciFilePath);
+    end
 end
-fprintf(1, 'Are there non-responsive, non-modulated clusters')
 %% Getting the relative spike times for the whisker responsive units (wru)
 % For each condition, the first spike of each wru will be used to compute
 % the standard deviation of it.
