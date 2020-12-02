@@ -683,8 +683,8 @@ for cmod = 1:size(popMeanFreq,3)
         focusStep, trialBin));
 %     saveFigure(summFig, sumFigName, false);
 end
-fprintf(1, 'Are there non-responsive, non-modulated clusters\n')
-%% Comparing ISIs for different cluster groups
+
+%% Spontaneous ISIs for different cluster groups
 % Logarithmic spacing for the histogram counts
 lDt = 0.01;
 logSpkHD = [-log10(2e3); 1] + [-1;1]*(lDt/2);
@@ -703,6 +703,9 @@ respLey = ["responsive";"non-responsive"];
 respIdx = any(H,2);
 % respIdx = H(:,1); % Control only
 % respIdx = H(:,2); % After-induction only
+% % Responsive and TRN 
+% respIdx = any(H,2) &...
+%     string(clInfoTotal{clInfoTotal.ActiveUnit == 1, 'Region'}) == 'TRN';
 
 % Auxiliary variables for the loop
 htotal = zeros(length(logSpkDom),Nccond);
@@ -719,10 +722,14 @@ for cr = 1:2 % Responsive and non-responsive
                 pcondIsi(riveFlag & modFlag, ccond), 'UniformOutput', 0);
             hcond = cellfun(@(x) x./sum(x), hcond, 'UniformOutput', 0);
             hcond = cat(1,hcond{:}); hcond = mean(hcond,1,'omitnan');
+            if isempty(hcond)
+                fprintf(1, 'No spikes!\n')
+                continue
+            end
             hcond = hcond./sum(hcond); htotal(:,ccond) = hcond;
         end
         ax = axes('Parent', isiFigs(lc));
-        semilogx(ax, lgStTmAx, cumsum(htotal));
+        semilogx(ax, lgStTmAx, cumsum(htotal)); ylim(ax,[0,1]);
         xlim(ax,10.^logSpkHD); box(ax,'off'); grid('on'); 
         xticklabels(ax, xticks(ax)*1e3); 
         xlabel(ax,'Inter-spike interval [ms]'); 
@@ -805,14 +812,20 @@ for ccond = 1:size(delayFlags,2)
     relativeSpkTmsStruct(ccond).name = consCondNames{ccond};
     relativeSpkTmsStruct(ccond).SpikeTimes = condRelativeSpkTms{ccond};
 end
-save(fullfile(csvDir,[expName,'_exportSpkTms.mat']),...
-    'relativeSpkTmsStruct','configStructure')
+spkFileName =...
+    sprintf('%s exps%s RW%.2f - %.2f ms SW%.2f - %.2f ms %s exportSpkTms.mat',...
+    expName, sprintf(' %d',chExp), responseWindow*1e3, spontaneousWindow*1e3,...
+    Conditions(chCond).name);
+if ~exist(spkFileName,'file')
+    save(fullfile(csvDir, spkFileName), 'relativeSpkTmsStruct',...
+        'configStructure')
+end
 
 %% ISI PDF & CDF
 areaFig = figure('Visible','on', 'Color', [1,1,1],'Name','ISI probability');
 areaAx = gobjects(2,1);
 lDt = 0.01;
-logSpkHD = [-log10(2e3); log10(0.05)] + [-1;1]*(lDt/2); % 2000 = 1/0.0005
+logSpkHD = [-log10(1e3); log10(0.05)] + [-1;1]*(lDt/2); % 2000 = 1/0.0005
 logSpkEdges = logSpkHD(1):lDt:logSpkHD(2);logSpkDom = logSpkHD +...
     [1;-1]*(lDt/2); logSpkDom = logSpkDom(1):lDt:logSpkDom(2);
 lgStTmAx = 10.^logSpkDom';
@@ -940,6 +953,7 @@ focusIdx = txpsth >= focusWindow(1) & txpsth <= focusWindow(2);
 txfocus = txpsth(focusIdx);
 modLabels = {'potentiated', 'depressed'};
 %modLabels = {'non-responding','non-modulated'};
+lnClr = lines(Nccond);
 for cmod = 1:2
     psthFig = figure('Color', [1,1,1], 'Name', 'Condition PSTH comparison',...
         'Visible', 'off');
@@ -947,38 +961,43 @@ for cmod = 1:2
     PSTH_trial = PSTH_raw./(NaStack.*sum(modFlags(:,cmod)));
     PSTH_prob = PSTH_raw./sum(PSTH_raw,1);
     PSTH_all = cat(3, PSTH_raw, PSTH_trial, PSTH_prob);
-    axp = gobjects(3,1);
+    axp = gobjects(4,1);
     subpltsTitles = {sprintf('PSTH per condition, %s clusters',modLabels{cmod}),...
         'Cumulative density function', 'Cumulative sum for normalized spikes'};
     yaxsLbls = {'Spikes / (Trials * Cluster)', 'Spike probability',...
         'Spike number'};
     for cax = 1:3
-        axp(cax) = subplot(4, 1, cax, 'Parent', psthFig, 'NextPlot', 'add');
+        axp(cax) = subplot(2, 2, cax, 'Parent', psthFig, 'NextPlot', 'add');
         for ccond = 1:Nccond
-            plotOpts = {'DisplayName', consCondNames{ccond}};
+            plotOpts = {'DisplayName', consCondNames{ccond},'Color',...
+                lnClr(ccond,:), 'LineStyle','-.'};
             switch cax
                 case 1 % Plot the trial-normalized PSTH; page #2
                     plot(axp(cax), txfocus, PSTH_all(focusIdx,ccond,2),...
-                        plotOpts{:})
+                        plotOpts{1:4})
                 case 2 % Plot the cumulative probability function; page 3
                     PSTH_aux = PSTH_all(focusIdx, ccond, 3);
-                    PSTH_aux = PSTH_aux / sum(PSTH_aux);
-                    plot(axp(cax), txfocus, cumsum(PSTH_aux), plotOpts{:})
+                    PSTH_aux = PSTH_aux./sum(PSTH_aux);
+                    plot(axp(cax), txfocus, PSTH_aux, plotOpts{1:4})
+                    yyaxis(axp(cax), 'right'); plot(axp(cax), txfocus,...
+                        cumsum(PSTH_aux), plotOpts{:}) 
+                    ylim(axp(cax), [0,1]); ylabel(axp(cax),...
+                        'Cumulative probability'); set(axp(cax).YAxis(2),...
+                        'Color',0.2*ones(3,1))
+                    yyaxis(axp(cax), 'left'); 
                 case 3 % Plot the cumulative sum for the mean spikes; page 2
                     plot(axp(cax), txfocus, ...
-                        cumsum(PSTH_all(focusIdx, ccond, 2)), plotOpts{:})
+                        cumsum(PSTH_all(focusIdx, ccond, 2)), plotOpts{1:4})
             end
         end
         title(axp(cax), subpltsTitles{cax})
         ylabel(axp(cax), yaxsLbls{cax})
-        if cax < 3
-            xticks(axp(cax), '')
-        else
+        if cax == 3
             xlabel(axp(cax), sprintf('Time_{%.2f ms} [s]', binSz*1e3))
             legend(axp(cax), 'show', 'Location', 'best')
         end
     end
-    axp(4) = subplot(4,1,4, 'Parent', psthFig);
+    axp(4) = subplot(2,2,4, 'Parent', psthFig);
     PSTH_diff = 100 * ((PSTH_prob(:,2)./PSTH_prob(:,1)) - 1);
     bar(axp(4), txfocus(PSTH_diff(focusIdx) > 0), PSTH_diff(PSTH_diff > 0 & focusIdx'),...
         'FaceColor', [51, 204, 51]/255, 'DisplayName', 'Potentiation'); hold on
