@@ -505,7 +505,7 @@ try
 catch
     fprintf('Reran, perhaps?\n')
 end
-%% Temporal dynamics
+%% Reponse dynamics
 trigTms = cell2mat(arrayfun(@(x) x.Triggers(:,1), Conditions(chCond),...
     'UniformOutput', 0)')/fs;
 timesum = @(x) squeeze(sum(x,2));
@@ -523,8 +523,10 @@ try
 catch
     clInfoTotal = addvars(clInfoTotal, zeros(size(clInfoTotal,1),1),...
         'NewVariableNames', 'Modulation');
-    clInfoTotal{logical(clInfoTotal.ActiveUnit),'Modulation'} =...
-        Results(1).Activity(2).Direction;
+    clInfoTotal{clInfoTotal.ActiveUnit==1,'Modulation'} =... Thalamus
+       Results(1).Activity(2).Direction;
+    %clInfoTotal{clInfoTotal.ActiveUnit==1,'Modulation'} =... Cortex with laser
+    %    Results.Activity(1).Direction;
     modFlags = sign(clInfoTotal{clInfoTotal.ActiveUnit &...
         clInfoTotal.Control, 'Modulation'});
 end
@@ -535,6 +537,7 @@ druIdx = wruIdx & modVal <= 0; % Depressed responding
 nruIdx = ~any(H,2); % Non-responding what-so-ever
 nmuIdx = false(size(nruIdx)); % Non-responding nor modulating
 nmuIdx(nruIdx) = abs(zscore(modVal(nruIdx))) < 0.33; % With this criteria
+% Thalamus
 aruIdx = and(xor(H(:,1),H(:,2)),H(:,2)); % Response only A.-I.
 sruIdx = and(xor(H(:,1),H(:,2)),H(:,1)); % Stopped responding after A.-I.
 
@@ -542,6 +545,11 @@ modFlags = modFlags > 0;
 modFlags(:,2) = ~modFlags;
 cmap = lines(Nccond);
 cmap(CtrlCond,:) = ones(1,3)*1/3; cmap(:,:,2) = ones(Nccond,3)*0.7;
+
+% modFlags = false(size(modFlags));
+% modVals_rt = clInfoTotal(clInfoTotal.ActiveUnit == 1 & clInfoTotal.Control, 'Modulation');
+% trnFlag = string(clInfoTotal{clInfoTotal.ActiveUnit == 1 & clInfoTotal.Control,'Region'}) == 'TRN';
+% modFlags(trnFlag,:) = [modVals_rt(trnFlag),-modVals_rt(trnFlag)] > 0;
 
 plotOpts = {'LineStyle', 'none', 'Marker', '.', 'Color', 'DisplayName'};
 modLabel = {'Potentiation', 'Depression'};
@@ -556,7 +564,7 @@ focusPeriods(:,2) = focusPeriods + focusStep; focusPeriods = focusPeriods * 1e-3
 Nfs = size(focusPeriods,1);
 fws = 1:Nfs;
 auxOr = [false, true];
-trialBin = 15;
+trialBin = 1;
 Nas = [0;cumsum(NaStack)']./trialBin;
 quartCuts = -log([4/3, 2, exp(1), 4]);
 spkDomain = 0:15;
@@ -598,8 +606,9 @@ for pfp = fws
                 end
                 dispName = [condLey{ccond}, ' ', respLey{cr}];
                 errorbar(ax(cmod), trialAx(trSubs),...
-                    popMeanResp(pfp, muTrSubs(1):muTrSubs(2),rsSel),...
-                    popErr(pfp, muTrSubs(1):muTrSubs(2),rsSel),...
+                    popMeanResp(pfp, muTrSubs(1):muTrSubs(2),rsSel)./...
+                    (focusStep * 1e-3), popErr(pfp, muTrSubs(1):...
+                    muTrSubs(2),rsSel)./(focusStep * 1e-3),...
                     'Color', cmap(ccond,:,cr), 'DisplayName', dispName,...
                     'LineWidth',0.1)
                 clMod = true(sum(respIdx),1);
@@ -613,8 +622,8 @@ for pfp = fws
         plot(trialAx(1:trialBin:sum(NaStack)),...
             popMeanResp(pfp,:,[cmod,1]*[2;-1]), 'LineStyle', 'none',...
             'Color',[0.7,0.7,0.7]);
-        ax(cmod).YAxis(2).Limits = ax(cmod).YAxis(1).Limits;
-        tpMlt = floor(ax(cmod).YAxis(1).Limits(2)/ctMu);
+        ax(cmod).YAxis(2).Limits = ax(cmod).YAxis(1).Limits*focusStep*1e-3;
+        tpMlt = floor(ax(cmod).YAxis(2).Limits(2)/ctMu);
         yticks(ax(cmod),ctMu*(1:tpMlt)'); yticklabels(num2str((1:tpMlt)'))
         set(get(ax(cmod),'YAxis'),'Color',[0.4,0.4,0.45]);
         if cmod == 1
@@ -625,23 +634,17 @@ for pfp = fws
         cmap(ccond,:,1) = brighten(cmap(ccond, :, 1), clrSat);
         clrSat = -clrSat;
     end
-    ylabel(ax(cmod), 'Spikes / Cluster'); xlabel(ax(cmod),...
+    ylabel(ax(cmod), 'Spikes / Time window [Hz]'); xlabel(ax(cmod),...
         sprintf('(%.1f - %.1f [ms]) Trial_{%d trials} [min]',...
         focusPeriods(pfp,:)*1e3,trialBin))
 %     linkaxes(ax,'xy')
-    tdFigName = string(sprintf('Temporal dynamics exps %sFW%.1f-%.1f ms TB %d trials (prop, lines & bars)',...
+    tdFigName = string(...
+        sprintf('Temporal dynamics exps %sFW%.1f-%.1f ms TB %d trials (f, prop, lines & bars)',...
         sprintf('%d ', chExp), focusPeriods(pfp,:)*1e3, trialBin));
     tempFigName = fullfile(figureDir, tdFigName);
-    figTdName = tempFigName + '.fig';
-    if ~exist(tempFigName + '.fig', 'file')
-        savefig(tdFig, figTdName);
-    end
-    configureFigureToPDF(tdFig);
-    if ~exist(tempFigName + '.pdf', 'file')
-        print(tdFig, tempFigName + '.pdf','-dpdf','-fillpage');
-    end
-    if ~exist(tempFigName + '.emf', 'file')
-        print(tdFig, tempFigName + '.emf','-dmeta');
+    saveFigure(tdFig, tempFigName);
+end
+
     end
 end
 fprintf(1, 'Are there non-responsive, non-modulated clusters\n')
