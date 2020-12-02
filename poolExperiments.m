@@ -645,7 +645,43 @@ for pfp = fws
     saveFigure(tdFig, tempFigName);
 end
 
+%% 3D Visualization of the spiking dynamics
+redundantFlag = false(size(popMeanResp,3),1);
+lvls = 128;
+redundantFlag(2) = length(redundantFlag)==4;
+popMeanResp(:,:,redundantFlag) = [];
+popMeanFreq = popMeanResp./(focusStep * 1e-3);
+srfOp = {'FaceColor','interp','EdgeColor','none'};
+tpVal = range(popMeanFreq(:));
+NaCum = [0;cumsum(NaStack)'];
+% Colormap for all modulated neurons
+clrMap = jet(lvls); [m, b] = lineariz([0;tpVal],lvls,1);
+[Ntw, Nbt, Nmn] = size(popMeanFreq);
+clrSheet = clrMap(round(popMeanFreq*m + b),1:3);
+clrSheet = reshape(clrSheet, Ntw, Nbt, Nmn, 3);
+modLey = ["potentiated";"depressed";"non-responding"];
+for cmod = 1:size(popMeanFreq,3)
+    summFig = figure('Color', [1,1,1], 'Colormap', clrMap);
+    ax = axes('Parent', summFig, 'NextPlot', 'add'); caxis([0, tpVal]);
+    for ccond = 1:Nccond
+        muTrEdges = Nas(ccond:ccond+1)+[1;0];
+        muTrSubs = muTrEdges(1):muTrEdges(2);
+        trEdges = NaCum(ccond:ccond+1)+[1;0];
+        trSubs = trEdges(1):trialBin:trEdges(2);
+        clrSheetSq = squeeze(clrSheet(:,muTrSubs,cmod,:));
+        surf(trialAx(trSubs), 1e3*focusPeriods(:,1), popMeanFreq(:,...
+            muTrSubs, cmod), clrSheetSq, srfOp{:}, 'Parent', ax); 
     end
+    cbOut = colorbar('Parent', summFig); cbOut.Label.String = ...
+        'Response [Hz]';box(ax,'off'); grid(ax,'on');
+    xlabel(ax, 'Trial time [min]'); ylabel(ax, 'Within-trial time [ms]');
+    zlabel(ax, 'Spike / within-trial window [Hz]'); title(ax, sprintf(...
+        '%s clusters', capitalizeFirst(modLey(cmod))))
+    sumFigName = fullfile(figureDir,...
+        sprintf('Spike-dynamics 3D %s exp%s FP%.2f - %.2f ms FW%.2f ms TB %d trial(s)',...
+        modLey(cmod), sprintf(' %d', chExp), focusPeriods([1,end])*1e3,...
+        focusStep, trialBin));
+%     saveFigure(summFig, sumFigName, false);
 end
 fprintf(1, 'Are there non-responsive, non-modulated clusters\n')
 %% Comparing ISIs for different cluster groups
