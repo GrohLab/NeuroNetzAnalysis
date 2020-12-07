@@ -564,7 +564,7 @@ focusPeriods(:,2) = focusPeriods + focusStep; focusPeriods = focusPeriods * 1e-3
 Nfs = size(focusPeriods,1);
 fws = 1:Nfs;
 auxOr = [false, true];
-trialBin = 1;
+trialBin = 10;
 Nas = [0;cumsum(NaStack)']./trialBin;
 quartCuts = -log([4/3, 2, exp(1), 4]);
 spkDomain = 0:15;
@@ -585,6 +585,7 @@ for pfp = fws
             for cr = 1:2 % responsive and non-responsive
                 rsSel = [cr,cmod-1]*[1;2];
                 respIdx = xor(H(:,cr), auxOr(cr)); % Negation of H(:,2)
+                %respIdx = xor(any(H,2), auxOr(cr)); % Negation of H(:,2)
                 popErr = zeros(Nfs, NaStack(ccond)/trialBin);
                 for cp = 1:Nfs % 'Micro' time windows
                     focusIdx = stackTx >= focusPeriods(cp,1) &...
@@ -662,7 +663,9 @@ clrSheet = reshape(clrSheet, Ntw, Nbt, Nmn, 3);
 modLey = ["potentiated";"depressed";"non-responding"];
 for cmod = 1:size(popMeanFreq,3)
     summFig = figure('Color', [1,1,1], 'Colormap', clrMap);
-    ax = axes('Parent', summFig, 'NextPlot', 'add'); caxis([0, tpVal]);
+    ax = axes('Parent', summFig, 'NextPlot', 'add','Clipping','off',...
+        'View',[-37.5, 30]);
+    caxis([0, tpVal]);
     for ccond = 1:Nccond
         muTrEdges = Nas(ccond:ccond+1)+[1;0];
         muTrSubs = muTrEdges(1):muTrEdges(2);
@@ -673,15 +676,18 @@ for cmod = 1:size(popMeanFreq,3)
             muTrSubs, cmod), clrSheetSq, srfOp{:}, 'Parent', ax); 
     end
     cbOut = colorbar('Parent', summFig); cbOut.Label.String = ...
-        'Response [Hz]';box(ax,'off'); grid(ax,'on');
-    xlabel(ax, 'Trial time [min]'); ylabel(ax, 'Within-trial time [ms]');
-    zlabel(ax, 'Spike / within-trial window [Hz]'); title(ax, sprintf(...
+        'Response [Hz]';box(ax,'off'); grid(ax,'on'); 
+    xlim(ax, trialAx([NaCum(1)+1, NaCum(Nccond+1)])); ylim(ax,...
+        focusPeriods([1,end],1)*1e3); xlabel(ax, 'Trial time [min]'); 
+    ylabel(ax, 'Within-trial time [ms]'); zlabel(ax,...
+        'Spike / within-trial window [Hz]'); title(ax, sprintf(...
         '%s clusters', capitalizeFirst(modLey(cmod))))
     sumFigName = fullfile(figureDir,...
         sprintf('Spike-dynamics 3D %s exp%s FP%.2f - %.2f ms FW%.2f ms TB %d trial(s)',...
         modLey(cmod), sprintf(' %d', chExp), focusPeriods([1,end])*1e3,...
         focusStep, trialBin));
-%     saveFigure(summFig, sumFigName, false);
+    summFig.PaperOrientation = 'landscape'; summFig.PaperType = 'A4';
+    saveFigure(summFig, sumFigName, false);
 end
 
 %% Spontaneous ISIs for different cluster groups
@@ -709,6 +715,7 @@ respIdx = any(H,2);
 
 % Auxiliary variables for the loop
 htotal = zeros(length(logSpkDom),Nccond);
+totalErr = htotal;
 isiFigs = gobjects(6,1);
 % Combinatorial loop
 for cr = 1:2 % Responsive and non-responsive
@@ -721,7 +728,9 @@ for cr = 1:2 % Responsive and non-responsive
             hcond = cellfun(@(x) histcounts(log10(x/fs), logSpkEdges),...
                 pcondIsi(riveFlag & modFlag, ccond), 'UniformOutput', 0);
             hcond = cellfun(@(x) x./sum(x), hcond, 'UniformOutput', 0);
-            hcond = cat(1,hcond{:}); hcond = mean(hcond,1,'omitnan');
+            hcond = cat(1,hcond{:}); totalErr(:,ccond) =...
+                std(hcond,'omitnan');%./sqrt(sum(~emptFlag));
+            hcond = mean(hcond,1,'omitnan');
             if isempty(hcond)
                 fprintf(1, 'No spikes!\n')
                 continue
@@ -730,6 +739,10 @@ for cr = 1:2 % Responsive and non-responsive
         end
         ax = axes('Parent', isiFigs(lc));
         semilogx(ax, lgStTmAx, cumsum(htotal)); ylim(ax,[0,1]);
+        ax.NextPlot = 'add'; ax.ColorOrderIndex = 1; 
+        semilogx(ax, lgStTmAx, cumsum(htotal) + totalErr,'LineStyle',':')
+        ax.ColorOrderIndex = 1; semilogx(ax, lgStTmAx, cumsum(htotal) -...
+            totalErr,'LineStyle',':')
         xlim(ax,10.^logSpkHD); box(ax,'off'); grid('on'); 
         xticklabels(ax, xticks(ax)*1e3); 
         xlabel(ax,'Inter-spike interval [ms]'); 
@@ -1008,83 +1021,75 @@ for cmod = 1:2
     linkaxes(axp, 'x')
     legend show
     psthFig.Visible = 'on';
-    psthFig = configureFigureToPDF(psthFig);
-    psthFigFileName = sprintf('%s %sPSTH RW%.2f-%.2f ms FW%.2f-%.2f ms %s clusters',...
-        expName, sprintf('%d ',chExp), responseWindow*1e3,...
-        focusWindow*1e3, modLabels{cmod});
+    %psthFig = configureFigureToPDF(psthFig);
+    psthFigFileName = sprintf('%s %sPSTH %sRW%.2f-%.2f ms FW%.2f-%.2f ms %s clusters',...
+        expName, sprintf('%d ',chExp), sprintf('%s ',string(consCondNames)),...
+        responseWindow*1e3, focusWindow*1e3, modLabels{cmod});
     psthFigFileName = fullfile(figureDir,psthFigFileName);
-    if ~exist([psthFigFileName,'.pdf'], 'file')
-        print(psthFig, [psthFigFileName, '.pdf'],'-dpdf','-fillpage')
-    end
-    if ~exist([psthFigFileName,'.emf'], 'file')
-        print(psthFig, [psthFigFileName, '.emf'],'-dmeta')
-    end
-    if ~exist([psthFigFileName,'.fig'], 'file')
-        savefig(psthFig, [psthFigFileName, '.fig'])
-    end
+    saveFigure(psthFig, string(psthFigFileName))
 end
 
 
 %% Waveform analysis
-pltDot = {'LineStyle', 'none', 'Marker', '.', 'MarkerSize', 5};
-fprintf(1, 'This is the waveform analysis section\n');
-mg2db = @(x) 20*log10(abs(x)); [Nws, Ncw] = size(popClWf);
-Np = 2^(nextpow2(Nws)-1) - Nws/2; tx = (0:Nws-1)/fs;
-pwf_m = popClWf - mean(popClWf); pwf_w = pwf_m .* chebwin(Nws, 150);
-pwf_p = padarray(padarray(pwf_w, [floor(Np),0], 'pre'),...
-    [ceil(Np),0], 'post'); pwf_n = pwf_p./max(abs(pwf_p));
-ltx = ((0:size(pwf_p,1)-1)' - size(pwf_n,1)/2)/fs;
-ft = fftshift(fft(pwf_n,[],1),1); dw = fs/size(ft,1); mg = mg2db(ft);
-ph = angle(ft); wx = (0:size(ft,1)-1)'*dw - fs/2;
-mg = mg(wx>=0,:); ph = ph(wx>=0,:); wx = wx(wx>=0); [~, mxWxSub] = max(mg);
-wcp = getWaveformCriticalPoints(mg, size(ft,1)/fs);
-pwc = cellfun(@(x) x(1), wcp(:,1)); mxW = wx(mxWxSub);
-
-tcp = getWaveformCriticalPoints(pwf_n, fs);
-featWf = getWaveformFeatures(pwf_n, fs);
-params = emforgmm(log(featWf(:,1)), 3, 1e-7, 0);
-logDomain = (round(min(log(featWf(:,1)))*1.05,1):0.01:...
-    round(max(log(featWf(:,1)))*0.95,1))';
-p_x = genP_x(params, logDomain);
-probCriticPts = getWaveformCriticalPoints(p_x', 100);
-probCriticPts = cellfun(@(x) x + logDomain(1), probCriticPts,...
-    'UniformOutput', 0); logThresh = probCriticPts{1,1}(2);
-time_wf = log(featWf(:,1)) > logThresh;
-
-[m, b] = lineariz(pwc, 1, -1); pwc_n = pwc*m + b;
-params_freq = emforgmm(pwc_n, 3, 1e-7, 0); wDomain = (-1.05:0.01:1.05)';
-p_wx = genP_x(params_freq, wDomain);
-probCriticPts_w = getWaveformCriticalPoints(p_wx', 100);
-probCriticPts_w = cellfun(@(x) x + wDomain(1), probCriticPts_w,...
-    'UniformOutput', 0); wThresh = probCriticPts_w{1,1}(2);
-freq_wf = pwc_n < wThresh;
-tf_groups = [...
-    ~time_wf & ~freq_wf,...
-    ~freq_wf & time_wf,...
-    freq_wf & ~time_wf,...
-    freq_wf & time_wf];
-% meanWf = cellfun(@(x) mean(x,2), popClWf(:,2),'UniformOutput', 0);
-% meanWf = cat(2,meanWf{:}); featWf = getWaveformFeatures(meanWf, fs);
-% wFeat = whitenPoints(featWf);
-%% Adaptation
-dt = 1/8;
-onst = (0:7)'*dt;
-ofst = (0:7)'*dt + 0.05;
-onrpWins = [onst+5e-3, onst+3e-2];
-ofrpWins = [ofst+5e-3, ofst+3e-2];
-onrpIdx = txpsth >= onrpWins(:,1) & txpsth <= onrpWins(:,2);
-ofrpIdx = txpsth >= ofrpWins(:,1) & txpsth <= ofrpWins(:,2);
-ptsOn = zeros(size(onrpIdx,1),size(PSTH_prob,2),2); % time, magnitude
-ptsOf = ptsOn;
-for ccond = 1:size(PSTH_prob,2)
-    for crw = 1:size(onst,1)
-        [mg, tmSub] = max(PSTH_prob(onrpIdx(crw,:),ccond));
-        tmWinSub = find(onrpIdx(crw,:));
-        ptsOn(crw, ccond, 1) = txpsth(tmWinSub(tmSub));
-        ptsOn(crw, ccond, 2) = mg;
-        [mg, tmSub] = max(PSTH_prob(ofrpIdx(crw,:),ccond));
-        tmWinSub = find(ofrpIdx(crw,:));
-        ptsOf(crw, ccond, 1) = txpsth(tmWinSub(tmSub));
-        ptsOf(crw, ccond, 2) = mg;
-    end
-end
+% pltDot = {'LineStyle', 'none', 'Marker', '.', 'MarkerSize', 5};
+% fprintf(1, 'This is the waveform analysis section\n');
+% mg2db = @(x) 20*log10(abs(x)); [Nws, Ncw] = size(popClWf);
+% Np = 2^(nextpow2(Nws)-1) - Nws/2; tx = (0:Nws-1)/fs;
+% pwf_m = popClWf - mean(popClWf); pwf_w = pwf_m .* chebwin(Nws, 150);
+% pwf_p = padarray(padarray(pwf_w, [floor(Np),0], 'pre'),...
+%     [ceil(Np),0], 'post'); pwf_n = pwf_p./max(abs(pwf_p));
+% ltx = ((0:size(pwf_p,1)-1)' - size(pwf_n,1)/2)/fs;
+% ft = fftshift(fft(pwf_n,[],1),1); dw = fs/size(ft,1); mg = mg2db(ft);
+% ph = angle(ft); wx = (0:size(ft,1)-1)'*dw - fs/2;
+% mg = mg(wx>=0,:); ph = ph(wx>=0,:); wx = wx(wx>=0); [~, mxWxSub] = max(mg);
+% wcp = getWaveformCriticalPoints(mg, size(ft,1)/fs);
+% pwc = cellfun(@(x) x(1), wcp(:,1)); mxW = wx(mxWxSub);
+% 
+% tcp = getWaveformCriticalPoints(pwf_n, fs);
+% featWf = getWaveformFeatures(pwf_n, fs);
+% params = emforgmm(log(featWf(:,1)), 3, 1e-7, 0);
+% logDomain = (round(min(log(featWf(:,1)))*1.05,1):0.01:...
+%     round(max(log(featWf(:,1)))*0.95,1))';
+% p_x = genP_x(params, logDomain);
+% probCriticPts = getWaveformCriticalPoints(p_x', 100);
+% probCriticPts = cellfun(@(x) x + logDomain(1), probCriticPts,...
+%     'UniformOutput', 0); logThresh = probCriticPts{1,1}(2);
+% time_wf = log(featWf(:,1)) > logThresh;
+% 
+% [m, b] = lineariz(pwc, 1, -1); pwc_n = pwc*m + b;
+% params_freq = emforgmm(pwc_n, 3, 1e-7, 0); wDomain = (-1.05:0.01:1.05)';
+% p_wx = genP_x(params_freq, wDomain);
+% probCriticPts_w = getWaveformCriticalPoints(p_wx', 100);
+% probCriticPts_w = cellfun(@(x) x + wDomain(1), probCriticPts_w,...
+%     'UniformOutput', 0); wThresh = probCriticPts_w{1,1}(2);
+% freq_wf = pwc_n < wThresh;
+% tf_groups = [...
+%     ~time_wf & ~freq_wf,...
+%     ~freq_wf & time_wf,...
+%     freq_wf & ~time_wf,...
+%     freq_wf & time_wf];
+% % meanWf = cellfun(@(x) mean(x,2), popClWf(:,2),'UniformOutput', 0);
+% % meanWf = cat(2,meanWf{:}); featWf = getWaveformFeatures(meanWf, fs);
+% % wFeat = whitenPoints(featWf);
+% %% Adaptation
+% dt = 1/8;
+% onst = (0:7)'*dt;
+% ofst = (0:7)'*dt + 0.05;
+% onrpWins = [onst+5e-3, onst+3e-2];
+% ofrpWins = [ofst+5e-3, ofst+3e-2];
+% onrpIdx = txpsth >= onrpWins(:,1) & txpsth <= onrpWins(:,2);
+% ofrpIdx = txpsth >= ofrpWins(:,1) & txpsth <= ofrpWins(:,2);
+% ptsOn = zeros(size(onrpIdx,1),size(PSTH_prob,2),2); % time, magnitude
+% ptsOf = ptsOn;
+% for ccond = 1:size(PSTH_prob,2)
+%     for crw = 1:size(onst,1)
+%         [mg, tmSub] = max(PSTH_prob(onrpIdx(crw,:),ccond));
+%         tmWinSub = find(onrpIdx(crw,:));
+%         ptsOn(crw, ccond, 1) = txpsth(tmWinSub(tmSub));
+%         ptsOn(crw, ccond, 2) = mg;
+%         [mg, tmSub] = max(PSTH_prob(ofrpIdx(crw,:),ccond));
+%         tmWinSub = find(ofrpIdx(crw,:));
+%         ptsOf(crw, ccond, 1) = txpsth(tmWinSub(tmSub));
+%         ptsOf(crw, ccond, 2) = mg;
+%     end
+% end
