@@ -87,7 +87,14 @@ end
 prevSamples = ceil(abs(timeSpan(1)) * fs);
 postSamples = ceil(timeSpan(2) * fs);
 Nt = prevSamples + postSamples + 1;
-discreteStack = false(2+Ne,Nt,Na);
+try
+    discreteStack = false(2+Ne,Nt,Na);
+catch
+    fprintf(1,'The requested array size exceeds the free RAM memory.\n')
+    fprintf(1,'Please, make note of where this message appeared.\n')
+    discreteStack = [];
+    return;
+end
 % Creation of the logical spike train
 if isnumeric(spT) && ~sum(round(spT) - spT) && nnz(spT) == max(size(spT))
     mxS = spT(end) + Nt;
