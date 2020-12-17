@@ -1072,25 +1072,25 @@ end
 % % meanWf = cellfun(@(x) mean(x,2), popClWf(:,2),'UniformOutput', 0);
 % % meanWf = cat(2,meanWf{:}); featWf = getWaveformFeatures(meanWf, fs);
 % % wFeat = whitenPoints(featWf);
-% %% Adaptation
-% dt = 1/8;
-% onst = (0:7)'*dt;
-% ofst = (0:7)'*dt + 0.05;
-% onrpWins = [onst+5e-3, onst+3e-2];
-% ofrpWins = [ofst+5e-3, ofst+3e-2];
-% onrpIdx = txpsth >= onrpWins(:,1) & txpsth <= onrpWins(:,2);
-% ofrpIdx = txpsth >= ofrpWins(:,1) & txpsth <= ofrpWins(:,2);
-% ptsOn = zeros(size(onrpIdx,1),size(PSTH_prob,2),2); % time, magnitude
-% ptsOf = ptsOn;
-% for ccond = 1:size(PSTH_prob,2)
-%     for crw = 1:size(onst,1)
-%         [mg, tmSub] = max(PSTH_prob(onrpIdx(crw,:),ccond));
-%         tmWinSub = find(onrpIdx(crw,:));
-%         ptsOn(crw, ccond, 1) = txpsth(tmWinSub(tmSub));
-%         ptsOn(crw, ccond, 2) = mg;
-%         [mg, tmSub] = max(PSTH_prob(ofrpIdx(crw,:),ccond));
-%         tmWinSub = find(ofrpIdx(crw,:));
-%         ptsOf(crw, ccond, 1) = txpsth(tmWinSub(tmSub));
-%         ptsOf(crw, ccond, 2) = mg;
-%     end
-% end
+%% Adaptation
+dt = 1/8;
+onst = (0:7)'*dt;
+ofst = (0:7)'*dt + 0.05;
+onrpWins = [onst+5e-3, onst+3e-2];
+ofrpWins = [ofst+5e-3, ofst+3e-2];
+onrpIdx = txpsth >= onrpWins(:,1) & txpsth <= onrpWins(:,2);
+ofrpIdx = txpsth >= ofrpWins(:,1) & txpsth <= ofrpWins(:,2);
+ptsOn = zeros(size(onrpIdx,1),size(PSTH_prob,2),2); % time, magnitude
+ptsOf = ptsOn;
+for ccond = 1:size(PSTH_prob,2)
+    for crw = 1:size(onst,1)
+        [mg, tmSub] = max(PSTH_prob(onrpIdx(crw,:),ccond));
+        tmWinSub = find(onrpIdx(crw,:));
+        ptsOn(crw, ccond, 1) = txpsth(tmWinSub(tmSub));
+        ptsOn(crw, ccond, 2) = mg;
+        [mg, tmSub] = max(PSTH_prob(ofrpIdx(crw,:),ccond));
+        tmWinSub = find(ofrpIdx(crw,:));
+        ptsOf(crw, ccond, 1) = txpsth(tmWinSub(tmSub));
+        ptsOf(crw, ccond, 2) = mg;
+    end
+end
