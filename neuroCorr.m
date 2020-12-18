@@ -8,15 +8,21 @@ for ccl = 1:size(spks, 1)
     corrStackCells(ccl) = {squeeze(sum(getStacks(false, spks{ccl}, 'on',...
         [-tmReach, tmReach], fs, fs, spks(ccl+1:Ncl)),3))};
     if isempty(corrStackCells{ccl})
-        Ne = size(ccl+1:Ncl,2); Nt = 2*ceil(tmReach*fs) + 1;
-        fprintf(1, 'Decreasing the number of spikes for cluster %d\n',ccl)
-        m = memory; Nspks = m.MaxPossibleArrayBytes / ((2+Ne) * Nt);
-        Nspks_old = size(spks{ccl},1);
-        fprintf(1, 'From %d to %d\n', Nspks_old, Nspks)
-        randSubs = sort(randperm(Nspks_old, round(Nspks))); 
-        spks{ccl} = spks{ccl}(randSubs);
-        corrStackCells(ccl) = {squeeze(sum(getStacks(false, spks{ccl}, 'on',...
-            [-tmReach, tmReach], fs, fs, spks(ccl+1:Ncl)),3))};
+        Ne = size(ccl+1:Ncl,2); Nt = 2*ceil(tmReach*fs) + 1; 
+        auxArray = zeros(Ne+2,Nt); m = memory; 
+        Nspks = round((m.MaxPossibleArrayBytes * 0.9) / ((2+Ne) * Nt));
+        Nspks_old = size(spks{ccl},1); spkProp = Nspks/Nspks_old;
+        init = [(0:spkProp:1)';1]; edgeSubs = round(init * Nspks_old);
+        fprintf(1, 'Separating the spikes in batches...\n')
+        for csSet = 1:ceil(1/spkProp)
+            fprintf(1,'Processing %d batch\n', csSet)
+            ssSubs = (edgeSubs(csSet) + 1):edgeSubs(csSet + 1);
+            auxArray = auxArray + squeeze(sum(getStacks(false,...
+                spks{ccl}(ssSubs), 'on', [-tmReach, tmReach], fs, fs,...
+                spks(ccl+1:Ncl)),3));
+        end
+        corrStackCells{ccl} = auxArray;
+        fprintf(1, 'Done!\n')
     end
     corrStackCells{ccl}(2,:) = []; corrStackCells{ccl}(1,zeroCorr) = 0;
 end
