@@ -58,8 +58,7 @@ Nch = double(getLastCell(textscan(ln,'%s = %d'))-1);
 necessaryFiles = {fullfile(dataDir, 'channel_map.npy');...
     fullfile(dataDir, 'spike_templates.npy');...
     fullfile(dataDir, 'spike_clusters.npy')};
-allOk = [exist(necessaryFiles{1},'file'), exist(necessaryFiles{2},'file'),...
-    exist(necessaryFiles{3},'file')];
+allOk = cellfun(@(x) exist(x,'file'), necessaryFiles);
 if ~all(allOk)
     fprintf(1,'The following files were not found:\n')
     for cf = find(~allOk)
