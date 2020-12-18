@@ -159,7 +159,11 @@ classdef (Abstract) DiscreteWaveform < GeneralWaveform
                 fprintf(1, 'Discrete ')
                 Ipi_p = abs(diff(Ipi));
                 tatGap = find(diff(uIpi) > 1,1);
-                ipiThresh = [max(Ipi(Ipi_p < 2/3e4)), uIpi(tatGap)] * ...
+                mxIpi = max(Ipi(Ipi_p < 2/3e4));
+                if isempty(mxIpi)
+                    mxIpi = 0;
+                end
+                ipiThresh = [mxIpi, uIpi(tatGap)] * ...
                     [1-uIpi_d(tatGap); uIpi_d(tatGap)];
                 if any(ismember(uIpi, ipiThresh))
                     ipiThresh = ipiThresh * 1.2;
