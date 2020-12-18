@@ -271,7 +271,7 @@ classdef ProtocolGetter < handle
             %and saves the position and frequency of the train.
             % Whisker, piezo, mechanical
             for cst = 1:size(obj.Edges, 2)
-                coupFreq = zeros(size(obj.Edges(cst).Subs));
+                coupFreq = 0;
                 % Frequencies found (wFreq), First pulse of the trains
                 % (wFlags), and frequency by pulse (wFreqs)
                 [wFreq, wFlags, wFreqs] = ProtocolGetter.extractFrequencyTrains(...
