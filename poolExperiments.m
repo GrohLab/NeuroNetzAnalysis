@@ -135,12 +135,9 @@ for cexp = reshape(chExp, 1, [])
     Nt = Ns/fs;
     autoCorr = @(x) neuroCorr(x, corrWin, 1, fs);
     % Useless clusters (labeled as noise or they have very low firing rate)
-    badsIdx = cellfun(@(x) x==3,sortedData(:,3));
-    bads = find(badsIdx);
-    totSpkCount = cellfun(@numel,sortedData(:,2));
-    clusterSpikeRate = totSpkCount/Nt;
-    silentUnits = clusterSpikeRate < 0.1;
-    bads = union(bads,find(silentUnits));
+    badsIdx = cellfun(@(x) x==3, sortedData(:,3)); bads = find(badsIdx);
+    silentUnits = cellfun(@(x) (numel(x)/Nt) < 0.1, sortedData(:,2));
+    bads = union(bads, find(silentUnits));
     goods = setdiff(1:size(sortedData,1),bads);
     badsIdx = badsIdx | silentUnits;
     if ~any(ismember(clInfo.Properties.VariableNames,'ActiveUnit'))
@@ -436,7 +433,7 @@ for cexp = reshape(chExp, 1, [])
         clInfoTotal = cat(1, clInfoTotal, clInfo);
     end
 end
-gclID = clInfoTotal{logical(clInfoTotal.ActiveUnit),'id'};
+gclID = clInfoTotal{clInfoTotal.ActiveUnit == 1,'id'};
 Ncl = numel(gclID);
 Ne = size(discStack, 1);
 %% Population analysis
