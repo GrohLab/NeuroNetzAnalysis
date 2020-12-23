@@ -385,11 +385,11 @@ for cexp = reshape(chExp, 1, [])
         % Are the names which are missing a user addition or a phy update?
         for mn = missingNames
             addnv = true;
-            phyFlag = contains(phyNames, mn, 'IgnoreCase', 1);
+            phyFlag = ismember(phyNames, mn);
             if any(phyFlag(:)) % Is this name a phy update?
                 addnv = false;
                 varSub = (1:size(phyFlag,1))*any(phyFlag, 2); % Which variable
-                phyVer = any(phyFlag, 1)*[-1;2];
+                phyVer = any(phyFlag, 1)*[1;2];
                 fprintf(1, 'Substitution of %s for %s\n',...
                     phyNames(varSub, 3-phyVer), phyNames(varSub, phyVer));
                 posInCur = strcmp(curVarNames, phyNames(varSub, 3-phyVer));
