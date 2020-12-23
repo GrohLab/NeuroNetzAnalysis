@@ -653,10 +653,10 @@ redundantFlag(2) = length(redundantFlag)==4;
 popMeanResp(:,:,redundantFlag) = [];
 popMeanFreq = popMeanResp./(focusStep * 1e-3);
 srfOp = {'FaceColor','interp','EdgeColor','none'};
-tpVal = range(popMeanFreq(:));
+tpVal = max(popMeanFreq(:));
 NaCum = [0;cumsum(NaStack)'];
 % Colormap for all modulated neurons
-clrMap = jet(lvls); [m, b] = lineariz([0;tpVal],lvls,1);
+clrMap = jet(lvls); [m, b] = lineariz([0;tpVal], lvls, 1);
 [Ntw, Nbt, Nmn] = size(popMeanFreq);
 clrSheet = clrMap(round(popMeanFreq*m + b),1:3);
 clrSheet = reshape(clrSheet, Ntw, Nbt, Nmn, 3);
