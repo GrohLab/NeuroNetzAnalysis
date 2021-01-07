@@ -25,6 +25,7 @@ for cis = 1:Ns
     mdls(cis,:) = coeffvalues(fitObj); r2(cis) = gof.rsquare;
     % Quartiles cut for exponential distribution (25, 50, 63.21, 75)
     quartFlags = ics(cis,:) >= quartCut;
+    quartFlags(~any(quartFlags,2),1) = true;
     [qSubs, ~] = find(diff(quartFlags'));
     il = arrayfun(@(x) fit_poly(shTx(x:x+1), ics(cis,x:x+1), 1), qSubs,...
         'UniformOutput', 0);il = cat(2,il{:});
