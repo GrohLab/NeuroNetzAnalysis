@@ -561,7 +561,7 @@ focusPeriods(:,2) = focusPeriods + focusStep; focusPeriods = focusPeriods * 1e-3
 Nfs = size(focusPeriods,1);
 fws = 1:Nfs;
 auxOr = [false, true];
-trialBin = 10;
+trialBin = 1;
 Nas = [0;cumsum(NaStack)']./trialBin;
 quartCuts = -log([4/3, 2, exp(1), 4]);
 spkDomain = 0:15;
