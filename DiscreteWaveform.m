@@ -145,31 +145,42 @@ classdef (Abstract) DiscreteWaveform < GeneralWaveform
         end 
         
         function ipiThresh = computeIpiThresh(Ipi)
-            ipiThresh = mean(Ipi);
-            uIpi = uniquetol(round(Ipi,2));
-            uIpi_p = diff(uIpi);
-            zUip = abs(zscore(uIpi_p));
-            uIpi_d = uIpi_p/max(uIpi_p(zUip < 2));
-            if numel(uIpi) >= numel(Ipi)*0.1
-                % Continuous intervals
-                % To be implemented
-                fprintf(1, 'Continuous ')
-            else
+            [binCenters, binEdges, lData] = prepareLogBinEdges(Ipi, 128);
+            pCount = histcounts(lData, binEdges);
+            if nnz(pCount)/numel(pCount) < 0.5
                 % Discrete intervals
                 fprintf(1, 'Discrete ')
-                Ipi_p = abs(diff(Ipi));
-                tatGap = find(diff(uIpi) > 1,1);
-                mxIpi = max(Ipi(Ipi_p < 2/3e4));
-                if isempty(mxIpi)
-                    mxIpi = 0;
-                end
-                ipiThresh = [mxIpi, uIpi(tatGap)] * ...
-                    [1-uIpi_d(tatGap); uIpi_d(tatGap)];
-                if any(ismember(uIpi, ipiThresh))
-                    ipiThresh = ipiThresh * 1.2;
-                end
+                ipiThresh = 10^max(binEdges([0,(pCount.*binCenters)] < 0));
+            else
+                % Continuous (spikes)
+                fprintf(1, 'Continuous ')
             end
             fprintf(1, 'distribution of intervals\n')
+%             ipiThresh = mean(Ipi);
+%             uIpi = uniquetol(round(Ipi,2));
+%             uIpi_p = diff(uIpi);
+%             zUip = abs(zscore(uIpi_p));
+%             uIpi_d = uIpi_p/max(uIpi_p(zUip < 2));
+%             if numel(uIpi) >= numel(Ipi)*0.1
+%                 % Continuous intervals
+%                 % To be implemented
+%                 fprintf(1, 'Continuous ')
+%             else
+%                 % Discrete intervals
+%                 fprintf(1, 'Discrete ')
+%                 Ipi_p = abs(diff(Ipi));
+%                 tatGap = find(diff(uIpi) > 1,1);
+%                 mxIpi = max(Ipi(Ipi_p < 2/3e4));
+%                 if isempty(mxIpi)
+%                     mxIpi = 0;
+%                 end
+%                 ipiThresh = [mxIpi, uIpi(tatGap)] * ...
+%                     [1-uIpi_d(tatGap); uIpi_d(tatGap)];
+%                 if any(ismember(uIpi, ipiThresh))
+%                     ipiThresh = ipiThresh * 1.2;
+%                 end
+%             end
+%             fprintf(1, 'distribution of intervals\n')
         end
     end
     
