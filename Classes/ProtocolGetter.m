@@ -346,12 +346,14 @@ classdef ProtocolGetter < handle
             % or the other delays.
             lsDel = false(length(timeDelay),Ndel);
             Ncond = numel(obj.Conditions);
+            tol = (1e-4)/max(timeDelay);
             for cdl = 1:Ndel
                 % Starting from the last condition on
                 fprintf(1,' %.1f',delays(cdl)*1e3)
                 % Assign the boolean membership
-                lsDel(:,cdl) = ismembertol(log10(timeDelay),log10(delays(cdl)),...
-                    abs(0.01/log10(max(delays))));
+                % lsDel(:,cdl) = ismembertol(log10(timeDelay),log10(delays(cdl)),...
+                %     abs(0.01/log10(max(delays))));
+                lsDel(:, cdl) = ismembertol(timeDelay, delays(cdl), tol);
                 % Create the name of the condition
                 obj.Conditions(Ncond + cdl).name = sprintf('Delay %0.3f s',...
                     delays(cdl));
