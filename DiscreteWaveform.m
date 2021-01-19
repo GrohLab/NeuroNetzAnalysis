@@ -138,6 +138,9 @@ classdef (Abstract) DiscreteWaveform < GeneralWaveform
             if ~exist('minIpi','var')
                 % minIpi = mean(Ipi);
                 minIpi = DiscreteWaveform.computeIpiThresh(Ipi);
+                if isempty(minIpi)
+                    minIpi = 1;
+                end
             end
             Pks = Ipi < minIpi;
             Sps = DiscreteWaveform.addFst(~Pks,true);
