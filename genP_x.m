@@ -1,5 +1,6 @@
 function [ p_x, origSum ] = genP_x( params, x_axis)
 %genP_x Generates the estimated pdf for the data from emforgmm
+%   [ p_x, origSum ] = genP_x( params, x_axis)
 [M,~] = size(params);
 if iscolumn(x_axis)
     x_axis = x_axis';

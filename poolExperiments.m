@@ -515,7 +515,8 @@ stackTx = (0:Nt-1)/fs + timeLapse(1) + 2.5e-3;
 
 [~,cnd] = find(delayFlags);
 [~, tmOrdSubs] = sort(trigTms, 'ascend');
-cnd = cnd(tmOrdSubs); trialAx = minutes(seconds(trigTms(tmOrdSubs)));
+cnd = cnd(tmOrdSubs(1:length(cnd))); 
+trialAx = minutes(seconds(trigTms(tmOrdSubs)));
 % Modulation: distance from the y=x line.
 try
     modFlags = sign(clInfoTotal{clInfoTotal.ActiveUnit &...
@@ -564,7 +565,7 @@ focusPeriods(:,2) = focusPeriods + focusStep; focusPeriods = focusPeriods * 1e-3
 Nfs = size(focusPeriods,1);
 fws = 1:Nfs;
 auxOr = [false, true];
-trialBin = 1;
+trialBin = 10;
 Nas = [0;cumsum(NaStack)']./trialBin;
 quartCuts = -log([4/3, 2, exp(1), 4]);
 spkDomain = 0:15;
@@ -594,7 +595,7 @@ for pfp = fws
                         focusIdx, delayFlags(:,ccond)));
                     clCounts_resh = reshape(clCounts(clMod,:), sum(clMod),...
                         trialBin, NaStack(ccond)/trialBin);
-                    clMean = squeeze(mean(mean(clCounts_resh,2)));
+                    clMean = squeeze(mean(mean(clCounts_resh,2,'omitnan')));
                     if trialBin > 1
                         sem = squeeze(std(std(clCounts_resh,0,2)))./...
                             sqrt(sum(respIdx));
@@ -686,7 +687,7 @@ for cmod = 1:size(popMeanFreq,3)
         sprintf('Spike-dynamics 3D %s exp%s FP%.2f - %.2f ms FW%.2f ms TB %d trial(s)',...
         modLey(cmod), sprintf(' %d', chExp), focusPeriods([1,end])*1e3,...
         focusStep, trialBin));
-    summFig.PaperOrientation = 'landscape'; summFig.PaperType = 'A4';
+    summFig.PaperType = 'A4';
     saveFigure(summFig, sumFigName, false);
 end
 
@@ -714,16 +715,16 @@ respIdx = any(H,2);
 %     string(clInfoTotal{clInfoTotal.ActiveUnit == 1, 'Region'}) == 'TRN';
 
 % Auxiliary variables for the loop
-htotal = zeros(length(logSpkDom),Nccond);
-totalErr = htotal;
 isiFigs = gobjects(6,1);
 % Combinatorial loop
 for cr = 1:2 % Responsive and non-responsive
-    riveFlag = xor(respIdx,cr-1); % 0 passes, 1 negates
+    riveFlag = xor(respIdx, cr-1); % 0 passes, 1 negates    
     for cmod = 0:2 % depressed - non-modulalted - potentiated
         lc = [cr-1,cmod+1] * [3;1];
         modFlag = modCat == num2str(cmod);
         isiFigs(lc) = figure('Color',[1,1,1]);
+        htotal = zeros(length(logSpkDom),Nccond);
+        totalErr = htotal;
         for ccond = 1:Nccond % Condition numbers
             hcond = cellfun(@(x) histcounts(log10(x/fs), logSpkEdges),...
                 pcondIsi(riveFlag & modFlag, ccond), 'UniformOutput', 0);
@@ -827,9 +828,9 @@ for ccond = 1:size(delayFlags,2)
     relativeSpkTmsStruct(ccond).SpikeTimes = condRelativeSpkTms{ccond};
 end
 spkFileName =...
-    sprintf('%s exps%s RW%.2f - %.2f ms SW%.2f - %.2f ms %s exportSpkTms.mat',...
+    sprintf('%s exps%s RW%.2f - %.2f ms SW%.2f - %.2f ms VW%.2f - %.2f ms %s exportSpkTms.mat',...
     expName, sprintf(' %d',chExp), responseWindow*1e3, spontaneousWindow*1e3,...
-    Conditions(chCond).name);
+    timeLapse*1e3, Conditions(chCond).name);
 if ~exist(spkFileName,'file')
     save(fullfile(csvDir, spkFileName), 'relativeSpkTmsStruct',...
         'configStructure')
@@ -865,7 +866,9 @@ for cmod = 1:2 % Potentiated and depressed clusters
         hisi = cellfun(@(x) x/sum(x), hisi, 'UniformOutput', 0);
         hisi = cat(1,hisi{:});
         hisi = mean(hisi,1,'omitnan'); hisi = hisi./sum(hisi);
-        isiPdf(:,cnt) = hisi;
+        if ~isempty(hisi)
+            isiPdf(:,cnt) = hisi;
+        end
         %ISI_merge = [ISI{:}];
         %lISI = log10(ISI_merge);
         %hisi = histcounts(lISI, logSpkEdges);
