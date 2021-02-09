@@ -1,7 +1,9 @@
 function timePts = getWaveformCriticalPoints(avWaves, fs)
 % GETWAVEFORMCRITICALPOINTS returns the time points for which the first and
 % second derivatives of the signal equals zero for the minima and/or maxima
-% and the inflection points.
+% and the inflection points for a matrix NxM where N is the numbe of
+% samples and M the number of signals.
+%        timePts = getWaveformCriticalPoints(avWaves, fs)
 
 dw = diff(avWaves, 1, 1);
 ddw = diff(avWaves, 2, 1);
