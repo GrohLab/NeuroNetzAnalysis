@@ -16,13 +16,13 @@ end
 ics = double(1 - cumsum(signMat(:,wIdx)./wSum,2));
 % Quartile cuts
 % quartCut = exp(-log([4/3, 2, exp(1), 4]))';
-% Proportion cuts 5, 25, 50, 75, 95
-quartCut = [3.8;3;2;4*exp(-1);1;1/80]/4; 
+% Proportion cuts (5, 25, 50, 63.21, 75, 95)
+quartCut = [3.8;3;2;4*exp(-1);1;1/5]/4; 
 % Exponential analysis for the auto-correlograms
 mdls = zeros(Ns,2); r2 = zeros(Ns,1); qVals = zeros(Ns,length(quartCut));
 for cis = 1:Ns
     % Exponential fit for the inverted cumsum
-    [fitObj, gof] = fit(shTx, ics(cis,:)', 'exp1');
+    [fitObj, gof] = fit(shTx, ics(cis,:)', 'exp1', "Display", "off");
     mdls(cis,:) = coeffvalues(fitObj); r2(cis) = gof.rsquare;
     % Quartiles cut for exponential distribution (5, 25, 50, 63.21, 75, 95)
     quartFlags = ics(cis,:) >= quartCut;
