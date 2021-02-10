@@ -525,11 +525,16 @@ if ~isempty(structAns)
     structString = structAns{:};
 end
 title(sfrAx, ttlString);
-saveFigure(sfrFig, fullfile(figureDir, ttlString)); 
-
+saveFigure(sfrFig, fullfile(figureDir, ttlString)); clearvars sfr*;
+%% Modulation distribution
+psr = pfr(:,2)./pfr(:,1); Nlb = 64;
+[binCents, binEdges, logData, ts] = prepareLogBinEdges(psr, Nlb);
+binCounts = histcounts(logData, binEdges, 'Normalization', 'probability');
 sdFig = figure('Name','Spontaneous fr proportion','Color',[1,1,1]);
+sdAx = axes('Parent', sdFig, 'NextPlot', 'add');
+sdDist = semilogx(sdAx,10.^binCents, binCounts); sdAx.XAxis.Scale = "log";
+grid(sdAx, 'on'); [~, ~, qVals, qDiff] = exponentialSpread
 
-clearvars sfr*;
 %% Add the response to the table
 try
     clInfoTotal = addvars(clInfoTotal, false(size(clInfoTotal,1),1), 'NewVariableNames', 'Control');
