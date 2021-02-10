@@ -498,6 +498,38 @@ filterIdx = true(Ne,1);
 if strcmpi(filtStr, 'filtered') && nnz(wruIdx)
     filterIdx = [true; wruIdx];
 end
+%% Spontaneous firing rate with a bigger window
+mltpl = 5;
+sfrMdl = fit_poly(pfr(:,1), pfr(:,2), 1);
+xyLims = ceil(max(pfr,[],1)./mltpl)*mltpl;
+yeqxOpts = {'LineStyle','--','Color',[0.7,0.7,0.7],'DisplayName','y = x'};
+ptOpts = {'LineStyle',':','Color','k',...
+    'DisplayName',sprintf('Population trend (%.1fx%+.2f)',sfrMdl)};
+scatOpts = {'MarkerEdgeColor', 'k', 'Marker', '.'};
+sfrFig = figure('Name','Spontaneous firing rate','Color',[1,1,1]);
+sfrAx = axes('Parent',sfrFig,'NextPlot','add');
+yeqxLine = line(sfrAx, [0;min(xyLims)], [0;min(xyLims)], yeqxOpts{:});
+scPts = scatter(sfrAx, pfr(:,1), pfr(:,2), scatOpts{:});
+text(sfrAx, double(pfr(:,1)), double(pfr(:,2)), gclID, 'FontSize', 9)
+axis(sfrAx,[0,xyLims(1),0,xyLims(2)],'square'); grid(sfrAx,'on'); 
+grid(sfrAx, 'minor'); ptLine = line(sfrAx,[0;xyLims(1)],...
+    [0;xyLims(1)]*sfrMdl(1) + sfrMdl(2), ptOpts{:});
+legend(sfrAx, [yeqxLine, ptLine]);
+xlabel(sprintf('%s_{fr} [Hz]',Conditions(cchCond(1)).name));
+ylabel(sprintf('%s_{fr} [Hz]',Conditions(cchCond(2)).name));
+ttlString = sprintf('Spontaneous firing rate %s vs. %s', ...
+        Conditions(cchCond).name);
+structAns = inputdlg('What structure are you looking at?','Structure');
+if ~isempty(structAns)
+    ttlString = cat(2,ttlString, sprintf(' (%s)', structAns{:}));
+    structString = structAns{:};
+end
+title(sfrAx, ttlString);
+saveFigure(sfrFig, fullfile(figureDir, ttlString)); 
+
+sdFig = figure('Name','Spontaneous fr proportion','Color',[1,1,1]);
+
+clearvars sfr*;
 %% Add the response to the table
 try
     clInfoTotal = addvars(clInfoTotal, false(size(clInfoTotal,1),1), 'NewVariableNames', 'Control');
