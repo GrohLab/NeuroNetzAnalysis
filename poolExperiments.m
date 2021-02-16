@@ -518,26 +518,68 @@ legend(sfrAx, [yeqxLine, ptLine]);
 xlabel(sprintf('%s_{fr} [Hz]',Conditions(cchCond(1)).name));
 ylabel(sprintf('%s_{fr} [Hz]',Conditions(cchCond(2)).name));
 ttlString = sprintf('Spontaneous firing rate %s vs. %s', ...
-        Conditions(cchCond).name);
+        Conditions(cchCond).name); ttlFile = cat(2, ttlString, ...
+        sprintf(' %d', chExp));
 structAns = inputdlg('What structure are you looking at?','Structure');
 if ~isempty(structAns)
     ttlString = cat(2,ttlString, sprintf(' (%s)', structAns{:}));
-    structString = structAns{:};
+    ttlFile = cat(2, ttlFile, sprintf(' (%s)', structAns{:}));
+    structString = structAns{:}; 
 end
-title(sfrAx, ttlString);
-saveFigure(sfrFig, fullfile(figureDir, ttlString)); clearvars sfr*;
-%% Modulation distribution
-psr = pfr(:,2)./pfr(:,1); Nlb = 64;
+title(sfrAx, ttlString); 
+saveFigure(sfrFig, fullfile(figureDir, ttlFile)); clearvars sfr*;
+%% Spontaneous modulation distribution
+% Proportion or ratio between conditions and number of bins (Nlb)
+psr = double(pfr(:,2)./pfr(:,1)); Nlb = 64;
+% Color map for the areas under the quartiles
+qCMap = [224, 231, 250; 123, 152, 234; 21, 50, 132];
+qCMap = cat(1, qCMap, flip(qCMap(1:2,:),1))./255;
+% Computing logarithmic histogram
 [binCents, binEdges, logData, ts] = prepareLogBinEdges(psr, Nlb);
 binCounts = histcounts(logData, binEdges, 'Normalization', 'probability');
 sdFig = figure('Name','Spontaneous fr proportion','Color',[1,1,1]);
 sdAx = axes('Parent', sdFig, 'NextPlot', 'add');
-sdDist = semilogx(sdAx,10.^binCents, binCounts); sdAx.XAxis.Scale = "log";
-grid(sdAx, 'on'); [~, ~, qVals, qDiff] = exponentialSpread
-
+sdOpts = {"LineStyle","--","Color",qCMap(2,:),"LineWidth",0.5};
+sdDist = semilogx(sdAx,10.^binCents, binCounts, sdOpts{:});
+sdAx.XAxis.Scale = "log"; xticklabels(sdAx, xticks(sdAx))
+% Computing the quartiles
+grid(sdAx, 'on'); [~, ~, qVals, ~] =...
+    exponentialSpread(binCounts, binCents, binCents([1,end]));
+% Depicting the area under first, second & third, and fourth quartile
+qVals10 = double(10.^[binCents(1), qVals([1,2,5,6]), binCents(Nlb)]); 
+binCents10 = double(10.^binCents); binCtsQV = interp1(binCents10,...
+    binCounts, qVals10);
+sdaOpts = {"FaceAlpha", 0.6, "EdgeColor", "none", "FaceColor"};
+for cq = 1:length(qVals10)-1
+    qIdx = binCents10 >= qVals10(cq) & binCents10 <= qVals10(cq+1);
+    area(sdAx, [qVals10(cq), binCents10(qIdx), qVals10(cq+1)],...
+        [binCtsQV(cq), binCounts(qIdx), binCtsQV(cq+1)], sdaOpts{:},...
+        qCMap(cq,:));
+end
+% Median , mean, and mode markers
+[~, mxQSub] = max(binCounts); mLabels = ["Median","Mean","Mode"];
+triM = 10.^[qVals(3), mean(logData), binCents(mxQSub)]; 
+triBCts = interp1(binCents10, binCounts, triM); mCMap = flip(hsv(3),1);
+for cm = 1:length(triM)
+    line(sdAx, repmat(triM(cm),2,1), [0; triBCts(cm)],...
+        "Color", mCMap(cm,:), "DisplayName", mLabels(cm)+" "+triM(cm))
+end
+triMLines = get(sdAx, 'Children');
+ttlString = sprintf('Proportional change distribution %s ÷ %s',...
+    Conditions(flip(cchCond)).name);
+ttlFile = cat(2, ttlString, sprintf(' %d', chExp));
+if exist('structString','var')
+    ttlString = cat(2, ttlString, sprintf(' (%s)', structString));
+    ttlFile = cat(2, ttlFile, sprintf(' (%s)', structString));
+end
+legend(sdAx, triMLines(1:length(triM))); title(sdAx, ttlString)
+xlabel(sdAx, sprintf('%s multiplier to get %s fr', Conditions(cchCond).name))
+ylabel(sdAx, "Population proportion"); saveFigure(sdFig,...
+    fullfile(figureDir, ttlFile))
 %% Add the response to the table
 try
-    clInfoTotal = addvars(clInfoTotal, false(size(clInfoTotal,1),1), 'NewVariableNames', 'Control');
+    clInfoTotal = addvars(clInfoTotal, false(size(clInfoTotal,1),1),...
+        'NewVariableNames', 'Control');
     clInfoTotal{logical(clInfoTotal.ActiveUnit), 'Control'} = wruIdx;
 catch
     fprintf('Reran, perhaps?\n')
