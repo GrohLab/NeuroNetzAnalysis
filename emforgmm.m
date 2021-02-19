@@ -5,7 +5,7 @@ function [params,threshold]=emforgmm(data,M,err,clin,varargin)
 % emforgmm(DATA,M,MU_1,SIG_1,...,MU_M,SIG_M) returns the parameters for M
 % gaussian models fitted for the DATA with user defined initialization as
 % MU_1, SIG_1,...,MU_M, SIG_M.
-% Emilio Isa?as-Camacho 2017
+% Emilio Isa?as-Camacho @ Neuro-photonics WroschLab 2017
 %% Function initialization
 params = zeros(M,3);
 data = data(:);
