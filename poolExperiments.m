@@ -565,7 +565,7 @@ for cm = 1:length(triM)
         "Color", mCMap(cm,:), "DisplayName", mLabels(cm)+" "+triM(cm))
 end
 triMLines = get(sdAx, 'Children');
-ttlString = sprintf('Proportional change distribution %s ÷ %s',...
+ttlString = sprintf('Proportional change distribution %s ? %s',...
     Conditions(flip(cchCond)).name);
 ttlFile = cat(2, ttlString, sprintf(' %d', chExp));
 if exist('structString','var')
@@ -576,6 +576,33 @@ legend(sdAx, triMLines(1:length(triM))); title(sdAx, ttlString)
 xlabel(sdAx, sprintf('%s multiplier to get %s fr', Conditions(cchCond).name))
 ylabel(sdAx, "Population proportion"); saveFigure(sdFig,...
     fullfile(figureDir, ttlFile))
+%% Modulation index
+frNbin = 32; 
+evFr = cellfun(@(x) mean(x,2)./diff(responseWindow), Counts(2,:),...
+    'UniformOutput', 0); evFr = cat(2, evFr{:}); snr = evFr./pfr;
+if ~exist('structString','var')
+    structStruct = [];
+    structAns = inputdlg('What structure are you looking at?','Structure');
+    if ~isempty(structAns)
+        structString = structAns{:};
+    end
+end
+mdOpts = {figureDir, chExp, structString};
+MIh(:,1) = modulationDist(pfr, frNbin, 'Spontaneous modulation index',...
+        mdOpts{:}); 
+MIh(:,2) = modulationDist(evFr, frNbin, 'Evoked modulation index', mdOpts{:});
+ttls = "SNR modulation"; ttls(2) = ttls(1) + " responsive";
+ttls(3) = ttls(1) + " non-responsive"; ci = 1; SNR = zeros(frNbin, 3);
+ttls = ttls.cellstr;
+for cr = [true(size(H,1),1), any(H,2), ~any(H,2)]
+    SNR(:,ci) = modulationDist(snr(cr,:), frNbin, ttls{ci}, mdOpts{:}); 
+    ci = ci + 1;
+end
+% sfrBPAx = axes('Parent', sfrFig, 'Position', [0.13, 0.8, 0.775, 0.2],...
+%     'Box','off', 'Color', 'none');
+% boxplot(sfrBPAx, MI, 'Orientation', 'horizontal', 'Symbol', '.',...
+%     'Notch', 'on'); sfrBPAx.Visible = 'off'; 
+% linkaxes([sfrAx, sfrBPAx], 'x');
 %% Add the response to the table
 try
     clInfoTotal = addvars(clInfoTotal, false(size(clInfoTotal,1),1),...
