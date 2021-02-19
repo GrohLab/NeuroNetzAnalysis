@@ -5,35 +5,53 @@ function timePts = getWaveformCriticalPoints(avWaves, fs)
 % samples and M the number of signals.
 %        timePts = getWaveformCriticalPoints(avWaves, fs)
 
-dw = diff(avWaves, 1, 1);
-ddw = diff(avWaves, 2, 1);
+% Zero-crossing variables
+% [dw, zcIdx, zcSubs, zcN, zcSel] = computeDerivativePoints(avWaves, 1);
+[dw, ~, zcSubs, ~, zcSel] = computeDerivativePoints(avWaves, 1);
+% Fiducial point variables
+% [ddw, fpIdx, fpSubs, fpN, fpSel] = computeDerivativePoints(avWaves, 2);
+[ddw, ~, fpSubs, ~, fpSel] = computeDerivativePoints(avWaves, 2);
 dt = 1/fs;
 [Nt, Ncl] = size(avWaves);
 tx = (0:Nt-1)/fs;
 timePts = cell(Ncl,2);
 for ccl = 1:Ncl
-    zcIdx = diff(sign(dw(:,ccl))) ~= 0;
-    fpIdx = diff(sign(ddw(:,ccl))) ~= 0;
-    zcSubs = find(zcIdx);
-    fpSubs = find(fpIdx);
-    xz = zeros(numel(zcSubs),1);
-    for czc = 1:numel(zcSubs)
-        lnIdx = zcSubs(czc):zcSubs(czc)+1;
-        mdl = fit_poly(tx(lnIdx), dw(lnIdx, ccl), 1);
-        xz(czc) = -mdl(2)/mdl(1) + dt/2;
-    end
-    
-    fp = zeros(numel(fpSubs),1);
-    for cfp = 1:numel(fpSubs)
-        lnIdx = fpSubs(cfp):fpSubs(cfp)+1;
-        mdl = fit_poly(tx(lnIdx), ddw(lnIdx, ccl), 1);
-        fp(cfp) = -mdl(2)/mdl(1) + dt;
-    end
+    %{
+%     lnIdx = arrayfun(@(x) x:x+1, zcSubs(zcSel(ccl)+1:zcSel(ccl+1)),...
+%         funOpts{:});
+%     dMdl = cellfun(@(x) fit_poly(tx(x), dw(x,ccl), 1), lnIdx, funOpts{:});
+%     xz = cellfun(@(x) (-x(2)/x(1)) + dt/2, dMdl);
+    %}
+    xz = computeZeroCrossings(dt, ccl, zcSel, zcSubs, dw, tx, 1);
+    fp = computeZeroCrossings(dt, ccl, fpSel, fpSubs, ddw, tx, 2);
+%{
+%     fp = zeros(fpN(ccl),1);
+%     for cfp = 1:numel(fpSubs)
+%         lnIdx = fpSubs(cfp):fpSubs(cfp)+1;
+%         mdl = fit_poly(tx(lnIdx), ddw(lnIdx, ccl), 1);
+%         fp(cfp) = -mdl(2)/mdl(1) + dt;
+%     end
 %     lmt = abs(median(devs(ccl,:)));
 %     xzImp = abs(interpolateTimeSeries(tx, devs(ccl,:), xz)) > lmt;
 %     fpImp = abs(interpolateTimeSeries(tx, devs(ccl,:), fp)) > lmt;
+%}
     timePts(ccl,:) = {xz, fp};
 end
 
 
+end
+
+function [dw, dIdx, dSubs, dN, dSel] = computeDerivativePoints(...
+    signalMatrix, dOrder)
+dw = diff(signalMatrix, dOrder, 1); dIdx = diff(sign(dw),1,1) ~= 0;
+[dSubs,~] = find(dIdx); dN = sum(dIdx,1); dSel = [0,cumsum(dN)];
+end
+
+function zCrossings = computeZeroCrossings(dt, ci, dSel, dSubs, dw, tx,...
+    dOrder)
+funOpts = {'UniformOutput', 0};
+lnIdx = arrayfun(@(x) x:x+1, dSubs(dSel(ci)+1:dSel(ci+1)), funOpts{:});
+dMdl = cellfun(@(x) fit_poly(tx(x), dw(x,ci), 1), lnIdx, funOpts{:});
+dBase = mod(dOrder,2) + 1;
+zCrossings = cellfun(@(x) (-x(2)/x(1)) + dt/dBase, dMdl);
 end
