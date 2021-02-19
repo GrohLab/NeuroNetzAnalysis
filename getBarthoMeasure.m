@@ -1,5 +1,5 @@
 function [bm] = getBarthoMeasure(mean_wf, fs)
-%getBarthoMeasure computes the features of the Barth? 2014 paper based on
+%getBarthoMeasure computes the features of the Bartho 2014 paper based on
 %the waveform.
 %   Detailed explanation goes here
 
