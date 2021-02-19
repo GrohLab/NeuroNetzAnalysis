@@ -3,8 +3,8 @@ function [firingRatePerCluster, deltaTrigTimeSum, sponSpks, sponIsi] =...
 %GETSPONTFIREFREQ computes the firing rate outside of the specified
 %triggers leaving a time buffer around the pulse. 
 %
-%   [firingRatePerCluster, deltaTrigTime] = getSpontFireFreq(spks, trigs,
-%                                                           fs, bufTime)
+%   [firingRatePerCluster, deltaTrigTime, sponSpks, sponIsi] = 
+%                       getSpontFireFreq(spks, trigs, fs, bufTime)
 %
 %   INPUTS:
 %       spks - spike times or subscripts for each cluster in a cell array
@@ -25,7 +25,7 @@ function [firingRatePerCluster, deltaTrigTimeSum, sponSpks, sponIsi] =...
 %                  triggers in trigs.
 %       sponIsi - a cell array with the inter-spike intervals for the
 %                 spontaneous spikes.
-% Emilio Isa?as-Camacho @GrohLab 2020
+% Emilio Isaias-Camacho @GrohLab 2020
 
 spksFlag =...
     cellfun(@(x) round(x./fs) > consTime(1) & round(x./fs) <= consTime(2),...
