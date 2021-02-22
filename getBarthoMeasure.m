@@ -24,6 +24,7 @@ for ccl = 1:Ncl
         % region' or 'period'.
         fprintf(1, 'Cluster %d is a bitch\n', ccl)
         figure(ccl); plot(tx, mean_wf(:,ccl))
+        continue;
     end
     tpd(ccl) = diff(tcp{ccl,1}([troughSub, troughSub+secPeakSub]));
     if ampCp{ccl}(troughSub) > 0
