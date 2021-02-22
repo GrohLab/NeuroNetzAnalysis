@@ -4,6 +4,10 @@ function [bm] = getBarthoMeasure(mean_wf, fs)
 %   Detailed explanation goes here
 
 [Nt, Ncl] = size(mean_wf);
+% Window multiplication to ensure we look at the center part of the
+% waveform
+winMult = hann(Nt)'; 
+mean_wf = mean_wf .* winMult';
 
 tx = (0:Nt-1)'./fs - Nt/(2*fs);
 tcp = getWaveformCriticalPoints(mean_wf, fs);
