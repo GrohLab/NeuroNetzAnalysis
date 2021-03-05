@@ -214,19 +214,26 @@ pcFeat = readNPY(fullfile(dataDir, 'pc_features.npy'));
 pcInd = readNPY(fullfile(dataDir, 'pc_feature_ind.npy'));
 spkSubs = cellfun(@(x) round(x.*fs),sortedData(clSub,2),...
     'UniformOutput',false);
-% [ch2read, readOrder, repeatChs] = unique(ch2read);
+[chs2read, readOrder, repeatChs] = unique(ch2read);
 fID = fopen(fullfile(dataDir, binFile.name), 'r');
 cchan = 1;
 % Main loop
-while ~feof(fID) && cchan <= numel(clusterID)
+while ~feof(fID) && cchan <= size(chs2read,1)
     % Computing the location of the channel features
     pcIdx = ch2read(cchan) == chanMap(pcInd(clTempSubs{cchan}+1,:)+1);
     clFeat = pcFeat(spkIdx(:,cchan), :, pcIdx);
     fprintf(1,'Reading channel %d ',ch2read(cchan))
     % Jumping to the channel
     fseek(fID, 2*(ch2read(cchan)), 'bof');
+    % Getting all clusters from the considered channel
+    clustChanIdx = ch2read == chs2read(cchan); Nccl = sum(clustChanIdx);
+    Nspks = cellfun(@(x) size(x,1), spkSubs(clustChanIdx));
+    spkLbls = arrayfun(@(x) x*ones(Nspks(x),1), 1:Nccl,...
+        'UniformOutput', 0); spkLbls = cat(1, spkLbls{:});
+    chSpks = [cat(1, spkSubs{clustChanIdx}), spkLbls];
+    [ordSpks, spkOrd] = sort(chSpks(:,1), 'ascend');
     % Computing the distance from spike to spike
-    spkDists = [spkSubs{cchan}(1);diff(spkSubs{cchan})];
+    spkDists = [ordSpks(1);diff(ordSpks)];
     fprintf(1,'looking for cluster %s...', clusterID{cchan})
     % Allocating space for the spikes
     waveform = zeros(spikeWaveTime, numel(spkSubs{cchan}));
