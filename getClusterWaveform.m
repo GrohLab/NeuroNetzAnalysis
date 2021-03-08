@@ -190,8 +190,9 @@ end
 function clWaveforms =...
     fetchWaveforms_fromBin(dataDir, clusterID,...
     chanMap, Nch, clSub, clTempSubs, spkIdx, ch2read)
+afOpt = {'UniformOutput', 0};
 %% Reading the binary file
-clWaveforms = cell(numel(clusterID),3);
+clWaveforms = cell(numel(clusterID),2);
 % Determinig the spike times for the given clusters
 spikeFile = dir(fullfile(dataDir,'*_all_channels.mat'));
 if ~isempty(spikeFile)
@@ -210,19 +211,20 @@ if isempty(binFile)
     fprintf(1,'\n');
     return
 end
-pcFeat = readNPY(fullfile(dataDir, 'pc_features.npy'));
-pcInd = readNPY(fullfile(dataDir, 'pc_feature_ind.npy'));
+% pcFeat = readNPY(fullfile(dataDir, 'pc_features.npy'));
+% pcInd = readNPY(fullfile(dataDir, 'pc_feature_ind.npy'));
 spkSubs = cellfun(@(x) round(x.*fs),sortedData(clSub,2),...
     'UniformOutput',false);
-[chs2read, readOrder, repeatChs] = unique(ch2read);
+% [chs2read, readOrder, repeatChs] = unique(ch2read);
+chs2read = unique(ch2read);
 fID = fopen(fullfile(dataDir, binFile.name), 'r');
 cchan = 1;
 % Main loop
 while ~feof(fID) && cchan <= size(chs2read,1)
     % Computing the location of the channel features
-    pcIdx = ch2read(cchan) == chanMap(pcInd(clTempSubs{cchan}+1,:)+1);
-    clFeat = pcFeat(spkIdx(:,cchan), :, pcIdx);
-    fprintf(1,'Reading channel %d ',ch2read(cchan))
+    % pcIdx = ch2read(cchan) == chanMap(pcInd(clTempSubs{cchan}+1,:)+1);
+    % clFeat = pcFeat(spkIdx(:,cchan), :, pcIdx);
+    fprintf(1,'Reading channel %d ',chs2read(cchan))
     % Jumping to the channel
     fseek(fID, 2*(ch2read(cchan)), 'bof');
     % Getting all clusters from the considered channel
@@ -234,13 +236,13 @@ while ~feof(fID) && cchan <= size(chs2read,1)
     [ordSpks, spkOrd] = sort(chSpks(:,1), 'ascend');
     % Computing the distance from spike to spike
     spkDists = [ordSpks(1);diff(ordSpks)];
-    fprintf(1,'looking for cluster %s...', clusterID{cchan})
+    fprintf(1,'looking for cluster%s...', sprintf(' %s', clusterID{clustChanIdx}))
     % Allocating space for the spikes
-    waveform = zeros(spikeWaveTime, numel(spkSubs{cchan}));
+    waveform = zeros(spikeWaveTime, sum(Nspks), 'single');
     %fig = figure('Color',[1,1,1],'Visible', 'off');
     %ax = axes('Parent', fig); ax.NextPlot = 'add';
     %subSet = 1:floor(numel(spkDists)*0.1);
-    for cspk = 1:numel(spkSubs{cchan})
+    for cspk = 1:sum(Nspks)
         % Jumping to 1 ms before the time when the spike occured
         fseek(fID, 2*((Nch+1)*(spkDists(cspk) - spikeSamples)), 'cof');
         % Reading the waveform
@@ -259,7 +261,8 @@ while ~feof(fID) && cchan <= size(chs2read,1)
         %    end
     end
     fprintf(1,' done!\n')
-    clWaveforms(cchan,:) = [clusterID(cchan), {waveform}, {clFeat}];
+    clWaveforms(clustChanIdx,:) = [clusterID(clustChanIdx),...
+        arrayfun(@(x) waveform(:,spkOrd(chSpks(:,2) == x)), (1:Nccl)', afOpt{:})];
     cchan = cchan + 1;
     frewind(fID);
     %fig.Visible = 'on';
