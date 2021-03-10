@@ -24,9 +24,9 @@ folderSub = find(folderFlag);
 chExp = folderSub(fSel);
 Nexp = numel(chExp);
 % Auxiliary variable for the phy multiple updates
-phyNames = ["ch","channel";...
-    "sh", "shank";...
-    "fr", "firing_rate"];
+% phyNames = ["ch","channel";...
+%     "sh", "shank";...
+%     "fr", "firing_rate"];
 % Function for performing ONLY autocorrelograms
 corrWin = 0.05;
 
@@ -375,62 +375,63 @@ for cexp = reshape(chExp, 1, [])
         discStack = cat(1, discStack, auxDStack);
         cStack = cat(1, cStack, auxCStack);
         %% Homogenizing the cluster information
-        popVarNames = clInfoTotal.Properties.VariableNames;
-        curVarNames = clInfo.Properties.VariableNames;
-        Npv = numel(popVarNames); Ncv = numel(curVarNames);
-        curInPopFlags = ismember(popVarNames, curVarNames);
-        % Modifying the current cluster info to match the population table
-        missingInCurSub = find(~curInPopFlags);
-        missingNames = popVarNames(missingInCurSub);
-        % Are the names which are missing a user addition or a phy update?
-        for mn = missingNames
-            addnv = true;
-            phyFlag = ismember(phyNames, mn);
-            if any(phyFlag(:)) % Is this name a phy update?
-                addnv = false;
-                varSub = (1:size(phyFlag,1))*any(phyFlag, 2); % Which variable
-                phyVer = any(phyFlag, 1)*[1;2];
-                fprintf(1, 'Substitution of %s for %s\n',...
-                    phyNames(varSub, 3-phyVer), phyNames(varSub, phyVer));
-                posInCur = strcmp(curVarNames, phyNames(varSub, 3-phyVer));
-                if any(posInCur)
-                    clInfo.Properties.VariableNames(posInCur) =...
-                        cellstr(phyNames(varSub, phyVer));
-                else
-                    fprintf(1, 'No substitution, rather ')
-                    addnv = true;
-                end
-            end
-            if addnv% or a user added variable
-                fprintf(1, 'Adding %s to the current table\n', mn{1});
-                tempTable = groupsummary(clInfoTotal, mn);
-                [~, mstSub] = sortrows(tempTable, 'GroupCount', 'descend');
-                fillVal = tempTable{mstSub(1),mn};
-                clInfo = addvars(clInfo, repmat(fillVal, size(clInfo,1), 1),...
-                    'NewVariableNames', mn);
-            end
-        end
-        curVarNames = clInfo.Properties.VariableNames;
-        [~, popInCurSubs] = ismember(popVarNames, curVarNames);
-        % Modifying the population cluster info to match the current table
-        missingInPopSubs = setdiff(1:Ncv, popInCurSubs);
-        missingNames = curVarNames(missingInPopSubs);
-        % I'm assuming that the missing variables are only user added
-        % names.
-        for mn = missingNames
-            fprintf(1, 'Adding %s to the population table\n', mn{1});
-            tempTable = groupsummary(clInfo, mn);
-            [~, mstSub] = sortrows(tempTable, 'GroupCount', 'descend');
-            fillVal = tempTable{mstSub(1),mn};
-            clInfoTotal = addvars(clInfoTotal, repmat(fillVal, size(clInfoTotal,1),1),...
-                'NewVariableNames', mn);
-        end
-        popVarNames = clInfoTotal.Properties.VariableNames;
-        [curInPopFlags, popInCurSubs] = ismember(popVarNames, curVarNames);
-        if ~all(curInPopFlags) || ~isempty(setdiff(1:Ncv, popInCurSubs))
-            fprintf(1, 'Predicting an error!\n')
-        end
-        clInfoTotal = cat(1, clInfoTotal, clInfo);
+        clInfoTotal = joinClInfoTbls(clInfoTotal, clInfo);
+%         popVarNames = clInfoTotal.Properties.VariableNames;
+%         curVarNames = clInfo.Properties.VariableNames;
+%         Npv = numel(popVarNames); Ncv = numel(curVarNames);
+%         curInPopFlags = ismember(popVarNames, curVarNames);
+%         % Modifying the current cluster info to match the population table
+%         missingInCurSub = find(~curInPopFlags);
+%         missingNames = popVarNames(missingInCurSub);
+%         % Are the names which are missing a user addition or a phy update?
+%         for mn = missingNames
+%             addnv = true;
+%             phyFlag = ismember(phyNames, mn);
+%             if any(phyFlag(:)) % Is this name a phy update?
+%                 addnv = false;
+%                 varSub = (1:size(phyFlag,1))*any(phyFlag, 2); % Which variable
+%                 phyVer = any(phyFlag, 1)*[1;2];
+%                 fprintf(1, 'Substitution of %s for %s\n',...
+%                     phyNames(varSub, 3-phyVer), phyNames(varSub, phyVer));
+%                 posInCur = strcmp(curVarNames, phyNames(varSub, 3-phyVer));
+%                 if any(posInCur)
+%                     clInfo.Properties.VariableNames(posInCur) =...
+%                         cellstr(phyNames(varSub, phyVer));
+%                 else
+%                     fprintf(1, 'No substitution, rather ')
+%                     addnv = true;
+%                 end
+%             end
+%             if addnv% or a user added variable
+%                 fprintf(1, 'Adding %s to the current table\n', mn{1});
+%                 tempTable = groupsummary(clInfoTotal, mn);
+%                 [~, mstSub] = sortrows(tempTable, 'GroupCount', 'descend');
+%                 fillVal = tempTable{mstSub(1),mn};
+%                 clInfo = addvars(clInfo, repmat(fillVal, size(clInfo,1), 1),...
+%                     'NewVariableNames', mn);
+%             end
+%         end
+%         curVarNames = clInfo.Properties.VariableNames;
+%         [~, popInCurSubs] = ismember(popVarNames, curVarNames);
+%         % Modifying the population cluster info to match the current table
+%         missingInPopSubs = setdiff(1:Ncv, popInCurSubs);
+%         missingNames = curVarNames(missingInPopSubs);
+%         % I'm assuming that the missing variables are only user added
+%         % names.
+%         for mn = missingNames
+%             fprintf(1, 'Adding %s to the population table\n', mn{1});
+%             tempTable = groupsummary(clInfo, mn);
+%             [~, mstSub] = sortrows(tempTable, 'GroupCount', 'descend');
+%             fillVal = tempTable{mstSub(1),mn};
+%             clInfoTotal = addvars(clInfoTotal, repmat(fillVal, size(clInfoTotal,1),1),...
+%                 'NewVariableNames', mn);
+%         end
+%         popVarNames = clInfoTotal.Properties.VariableNames;
+%         [curInPopFlags, popInCurSubs] = ismember(popVarNames, curVarNames);
+%         if ~all(curInPopFlags) || ~isempty(setdiff(1:Ncv, popInCurSubs))
+%             fprintf(1, 'Predicting an error!\n')
+%         end
+%         clInfoTotal = cat(1, clInfoTotal, clInfo);
     end
 end
 gclID = clInfoTotal{clInfoTotal.ActiveUnit == 1,'id'};
@@ -565,7 +566,7 @@ for cm = 1:length(triM)
         "Color", mCMap(cm,:), "DisplayName", mLabels(cm)+" "+triM(cm))
 end
 triMLines = get(sdAx, 'Children');
-ttlString = sprintf('Proportional change distribution %s ? %s',...
+ttlString = sprintf('Proportional change distribution %s & %s',...
     Conditions(flip(cchCond)).name);
 ttlFile = cat(2, ttlString, sprintf(' %d', chExp));
 if exist('structString','var')
