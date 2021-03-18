@@ -672,13 +672,14 @@ focusPeriods(:,2) = focusPeriods + focusStep; focusPeriods = focusPeriods * 1e-3
 Nfs = size(focusPeriods,1);
 fws = 1:Nfs;
 auxOr = [false, true];
-trialBin = 10;
+trialBin = 1;
 Nas = [0;cumsum(NaStack)']./trialBin;
 quartCuts = -log([4/3, 2, exp(1), 4]);
 spkDomain = 0:15;
 spkBins = spkDomain(1) - 0.5:spkDomain(end) + 0.5;
 popMeanResp = zeros(Nfs, Nas(end), 4);
 popErr = zeros(Nfs, Nas(end), 4);
+auxResp = [H(:,1), ~any(H,2)];
 for pfp = fws
     tdFig = figure('Name', 'Temporal dynamics', 'Color', [1,1,1]);
     for cmod = 1:size(modFlags,2) % Up- and down-modulation
@@ -692,7 +693,8 @@ for pfp = fws
             clMod = modFlags(:,cmod);
             for cr = 1:2 % responsive and non-responsive
                 rsSel = [cr,cmod-1]*[1;2];
-                respIdx = xor(H(:,cr), auxOr(cr)); % Negation of H(:,2)
+                respIdx = auxResp(:,cr);
+                %respIdx = xor(H(:,1), auxOr(cr)); % Negation of H(:,2)
                 %respIdx = xor(any(H,2), auxOr(cr)); % Negation of H(:,2)
                 popErr = zeros(Nfs, NaStack(ccond)/trialBin);
                 for cp = 1:Nfs % 'Micro' time windows
@@ -720,7 +722,7 @@ for pfp = fws
                     muTrSubs(2),rsSel)./(focusStep * 1e-3),...
                     'Color', cmap(ccond,:,cr), 'DisplayName', dispName,...
                     'LineWidth',0.1)
-                clMod = true(sum(respIdx),1);
+                clMod = true(sum(auxResp(:,2)),1);
             end   
             tcount = 1 + sum(NaStack(1:ccond));
         end
