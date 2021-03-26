@@ -9,9 +9,9 @@ if ~exist(saveDir,'dir')
     fprintf(1, 'Trying to create it... ');
     [mkOk, ~, ~] = mkdir(saveDir);
     if mkOk
-        fprintf(1, ' success!\n');
+        fprintf(1, 'success!\n');
     else
-        fprintf(1, ' failed. Returning...\n');
+        fprintf(1, 'failed. Returning...\n');
         return
     end
 end
