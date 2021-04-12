@@ -45,7 +45,7 @@ else
         timeLapse = str2num(inputdlg('Please provide the time window [s]:',...
             'Time window',[1, 30], '-0.1, 0.1'));
         if isnan(timeLapse) || isempty(timeLapse)
-            fprintf(1,'Cancelling...')
+            fprintf(1,'Cancelling... \n')
             return
         end
     end
@@ -376,6 +376,7 @@ for cexp = reshape(chExp, 1, [])
         cStack = cat(1, cStack, auxCStack);
         %% Homogenizing the cluster information
         clInfoTotal = joinClInfoTbls(clInfoTotal, clInfo);
+        %{
 %         popVarNames = clInfoTotal.Properties.VariableNames;
 %         curVarNames = clInfo.Properties.VariableNames;
 %         Npv = numel(popVarNames); Ncv = numel(curVarNames);
@@ -432,6 +433,7 @@ for cexp = reshape(chExp, 1, [])
 %             fprintf(1, 'Predicting an error!\n')
 %         end
 %         clInfoTotal = cat(1, clInfoTotal, clInfo);
+        %}
     end
 end
 gclID = clInfoTotal{clInfoTotal.ActiveUnit == 1,'id'};
@@ -663,7 +665,7 @@ plotOpts = {'LineStyle', 'none', 'Marker', '.', 'Color', 'DisplayName'};
 modLabel = {'Potentiation', 'Depression'};
 clrSat = 0.5;
 ax = gobjects(size(modFlags,2), 1);
-condLey = {'Control','After Induction'};
+condLey = consCondNames;
 respLey = {'Responsive', 'Non-responsive'};
 % Time steps for the 3D PSTH in ms
 focusStep = 2.5;
@@ -672,14 +674,21 @@ focusPeriods(:,2) = focusPeriods + focusStep; focusPeriods = focusPeriods * 1e-3
 Nfs = size(focusPeriods,1);
 fws = 1:Nfs;
 auxOr = [false, true];
-trialBin = 1;
-Nas = [0;cumsum(NaStack)']./trialBin;
-quartCuts = -log([4/3, 2, exp(1), 4]);
+trialBin = 10;
+Nas = [0;cumsum(NaStack./trialBin)'];
 spkDomain = 0:15;
 spkBins = spkDomain(1) - 0.5:spkDomain(end) + 0.5;
-popMeanResp = zeros(Nfs, Nas(end), 4);
-popErr = zeros(Nfs, Nas(end), 4);
+
+
+resTotalTrial = mod(sum(NaStack),trialBin);
+resTrialPerCond = mod(NaStack, trialBin);
+
+trialsPerCond = floor(NaStack./trialBin);
+NaCs = [0;cumsum(trialsPerCond(:))];
+% popMeanResp = nan(Nfs, floor(Nas(end)), 4);
+popMeanResp = nan(Nfs, sum(trialsPerCond), 4);
 auxResp = [H(:,1), ~any(H,2)];
+
 for pfp = fws
     tdFig = figure('Name', 'Temporal dynamics', 'Color', [1,1,1]);
     for cmod = 1:size(modFlags,2) % Up- and down-modulation
@@ -687,32 +696,40 @@ for pfp = fws
         ax(cmod) = subplot(size(modFlags,2),1,cmod,'Parent',tdFig);
         ax(cmod).NextPlot = 'add';
         title(ax(cmod), sprintf('%s',modLabel{cmod}));
+        trSubsTotal = zeros(sum(trialsPerCond),1);
         for ccond = 1:Nccond % Cycling through the conditions (control and after-induction)
-            muTrSubs = Nas(ccond:ccond+1)+[1;0];
-            trSubs = tcount:trialBin:sum(NaStack(1:ccond));
+            % muTrSubs = Nas(ccond:ccond+1)+[1;0];
+            % muTrSubs = [ceil(Nas(ccond)+1);floor(Nas(ccond+1))];
+            muTrSubs = NaCs(ccond:ccond+1)+[1;0];
+            % trSubs = tcount:trialBin:sum(NaStack(1:ccond));
+            trSubs = tcount:trialBin:muTrSubs(2)*trialBin;
             clMod = modFlags(:,cmod);
             for cr = 1:2 % responsive and non-responsive
                 rsSel = [cr,cmod-1]*[1;2];
                 respIdx = auxResp(:,cr);
                 %respIdx = xor(H(:,1), auxOr(cr)); % Negation of H(:,2)
                 %respIdx = xor(any(H,2), auxOr(cr)); % Negation of H(:,2)
-                popErr = zeros(Nfs, NaStack(ccond)/trialBin);
+                popErr = nan(Nfs, trialsPerCond(ccond));
                 for cp = 1:Nfs % 'Micro' time windows
+                    % Mean count for selected conditions
                     focusIdx = stackTx >= focusPeriods(cp,1) &...
                         stackTx <= focusPeriods(cp,2);
                     clCounts = timesum( discStack( [false; respIdx],...
                         focusIdx, delayFlags(:,ccond)));
-                    clCounts_resh = reshape(clCounts(clMod,:), sum(clMod),...
-                        trialBin, NaStack(ccond)/trialBin);
+                    clCounts_resh = reshape(clCounts(clMod, ...
+                        1:NaStack(ccond)-resTrialPerCond(ccond)),...
+                        sum(clMod), trialBin, trialsPerCond(ccond));
                     clMean = squeeze(mean(mean(clCounts_resh,2,'omitnan')));
+                    popMeanResp(cp,  muTrSubs(1):muTrSubs(2),...
+                        rsSel) = clMean;
+                    
+                    % Error per mean
                     if trialBin > 1
-                        sem = squeeze(std(std(clCounts_resh,0,2)))./...
+                        sem = squeeze(std(std(clCounts_resh,0,2,'omitnan')))./...
                             sqrt(sum(respIdx));
                     else
                         sem = std(clCounts(clMod,:))./sqrt(sum(respIdx));
                     end
-                    popMeanResp(cp,  muTrSubs(1):muTrSubs(2),...
-                        rsSel) = clMean;
                     popErr(cp, muTrSubs(1):muTrSubs(2),rsSel) = sem;
                 end
                 dispName = [condLey{ccond}, ' ', respLey{cr}];
@@ -721,18 +738,24 @@ for pfp = fws
                     (focusStep * 1e-3), popErr(pfp, muTrSubs(1):...
                     muTrSubs(2),rsSel)./(focusStep * 1e-3),...
                     'Color', cmap(ccond,:,cr), 'DisplayName', dispName,...
-                    'LineWidth',0.1)
+                    'LineWidth',0.1, 'LineStyle', ':', 'Marker', '.')
                 clMod = true(sum(auxResp(:,2)),1);
-            end   
-            tcount = 1 + sum(NaStack(1:ccond));
+            end
+            trSubsTotal(muTrSubs(1):muTrSubs(2)) = trSubs;
+            tcount = 1 + sum(NaStack(1:ccond));% + resTrialPerCond(ccond);
         end
-        
-        ctMu = mean(popMeanResp(pfp, (Nas(1)+1):Nas(2), [cmod,1]*[2;-1]));
-        aiMu = mean(popMeanResp(pfp, (Nas(2)+1):Nas(3), [cmod,1]*[2;-1]));
+        ctMu = mean(popMeanResp(pfp, (NaCs(1)+1):NaCs(2), [cmod,1]*[2;-1]));
+        if ~ctMu
+            ctMu = 1;
+        end
+        aiMu = mean(popMeanResp(pfp, (NaCs(2)+1):NaCs(3), [cmod,1]*[2;-1]));
+        if ~aiMu 
+            aiMu = 1;
+        end
         yyaxis(ax(cmod), 'right')
-        plot(trialAx(1:trialBin:sum(NaStack)),...
-            popMeanResp(pfp,:,[cmod,1]*[2;-1]), 'LineStyle', 'none',...
-            'Color',[0.7,0.7,0.7]);
+        % plot(trialAx(1:trialBin:sum(NaStack)),...
+        plot(trialAx(trSubsTotal), popMeanResp(pfp,:,[cmod,1]*[2;-1]),...
+            'LineStyle', 'none', 'Color',[0.7,0.7,0.7]);
         ax(cmod).YAxis(2).Limits = ax(cmod).YAxis(1).Limits*focusStep*1e-3;
         tpMlt = floor(ax(cmod).YAxis(2).Limits(2)/ctMu);
         yticks(ax(cmod),ctMu*(1:tpMlt)'); yticklabels(num2str((1:tpMlt)'))
@@ -747,11 +770,14 @@ for pfp = fws
     end
     ylabel(ax(cmod), 'Spikes / Time window [Hz]'); xlabel(ax(cmod),...
         sprintf('(%.1f - %.1f [ms]) Trial_{%d trials} [min]',...
-        focusPeriods(pfp,:)*1e3,trialBin))
+        focusPeriods(pfp,:)*1e3, trialBin))
 %     linkaxes(ax,'xy')
     tdFigName = string(...
         sprintf('Temporal dynamics exps %sFW%.1f-%.1f ms TB %d trials (f, prop, lines & bars)',...
         sprintf('%d ', chExp), focusPeriods(pfp,:)*1e3, trialBin));
+    if ~isempty(dirNames)
+        tdFigName = tdFigName + " sf-" + dirNames{subFoldSel};
+    end
     tempFigName = fullfile(figureDir, tdFigName);
     saveFigure(tdFig, tempFigName);
 end
@@ -764,7 +790,7 @@ popMeanResp(:,:,redundantFlag) = [];
 popMeanFreq = popMeanResp./(focusStep * 1e-3);
 srfOp = {'FaceColor','interp','EdgeColor','none'};
 tpVal = max(popMeanFreq(:));
-NaCum = [0;cumsum(NaStack)'];
+NaCum = [0;cumsum(NaStack(:))];
 % Colormap for all modulated neurons
 clrMap = jet(lvls); [m, b] = lineariz([0;tpVal], lvls, 1);
 [Ntw, Nbt, Nmn] = size(popMeanFreq);
@@ -776,10 +802,11 @@ for cmod = 1:size(popMeanFreq,3)
     ax = axes('Parent', summFig, 'NextPlot', 'add','Clipping','off',...
         'View',[-37.5, 30]);
     caxis([0, tpVal]);
+    tcount = 1;
     for ccond = 1:Nccond
-        muTrEdges = Nas(ccond:ccond+1)+[1;0];
+        muTrEdges = NaCs(ccond:ccond+1)+[1;0];
         muTrSubs = muTrEdges(1):muTrEdges(2);
-        trEdges = NaCum(ccond:ccond+1)+[1;0];
+        trEdges = NaCum(ccond:ccond+1)+[1;0]+[resTrialPerCond(ccond);0];
         trSubs = trEdges(1):trialBin:trEdges(2);
         clrSheetSq = squeeze(clrSheet(:,muTrSubs,cmod,:));
         surf(trialAx(trSubs), 1e3*focusPeriods(:,1), popMeanFreq(:,...
@@ -796,6 +823,10 @@ for cmod = 1:size(popMeanFreq,3)
         sprintf('Spike-dynamics 3D %s exp%s FP%.2f - %.2f ms FW%.2f ms TB %d trial(s)',...
         modLey(cmod), sprintf(' %d', chExp), focusPeriods([1,end])*1e3,...
         focusStep, trialBin));
+    if numel(chExp) == 1 && ~isempty(dirNames)
+        sumFigName = cat(2, sumFigName,...
+            sprintf(' sf-%s', dirNames{subFoldSel}));
+    end
     summFig.PaperType = 'A4';
     saveFigure(summFig, sumFigName, false);
 end
@@ -862,6 +893,9 @@ for cr = 1:2 % Responsive and non-responsive
         ciName = "Cumulative ISI, "+respLey(cr)+" & "+modLey(cmod+1) + ...
             ", exp"+string(sprintf(' %d', chExp))+ " LB 10^"+string(lDt);
         ciFilePath = fullfile(figureDir, ciName);
+        if numel(chExp) == 1 && ~isempty(dirNames)
+            ciFilePath = ciFilePath + ' sf-' + dirNames{subFoldSel};
+        end
         saveFigure(isiFigs(lc),ciFilePath);
     end
 end
@@ -884,8 +918,8 @@ firstOrdStats = zeros(2,Nccond);
 condParams = zeros(M,3,Nccond);
 txpdf = responseWindow(1):1/fs:responseWindow(2);
 condPDF = zeros(numel(txpdf),Nccond);
-csvSubfx = sprintf(' SW%.1f-%.1f ms RW%.1f-%.1f ms VW%.1f-%.1f ms.csv',...
-    spontaneousWindow*1e3, responseWindow*1e3, timeLapse*1e3);
+csvSubfx = sprintf(' SW%.1f-%.1f ms RW%.1f-%.1f ms VW%.1f-%.1f ms (%s).csv',...
+    spontaneousWindow*1e3, responseWindow*1e3, timeLapse*1e3, filtStr);
 existFlag = false;
 condRelativeSpkTms = cell(Nccond,1);
 relativeSpkTmsStruct = struct('name',{},'SpikeTimes',{});
@@ -923,6 +957,10 @@ for ccond = 1:size(delayFlags,2)
         fprintf(fID,'%s, %s\n','Cluster ID','Relative spike times [ms]');
     end
     rsclSub = find(filterIdx(2:end))-1;
+    % If a subcript is zero, don't substract.
+    if any(~rsclSub)
+        rsclSub = rsclSub + 1;
+    end
     for cr = 1:size(relativeSpikeTimes, 1)
         clSpkTms(cr) = {sort(cell2mat(relativeSpikeTimes(cr,:)))};
         if fID > 2
@@ -937,9 +975,9 @@ for ccond = 1:size(delayFlags,2)
     relativeSpkTmsStruct(ccond).SpikeTimes = condRelativeSpkTms{ccond};
 end
 spkFileName =...
-    sprintf('%s exps%s RW%.2f - %.2f ms SW%.2f - %.2f ms VW%.2f - %.2f ms %s exportSpkTms.mat',...
+    sprintf('%s exps%s RW%.2f - %.2f ms SW%.2f - %.2f ms VW%.2f - %.2f ms %s (%s) exportSpkTms.mat',...
     expName, sprintf(' %d',chExp), responseWindow*1e3, spontaneousWindow*1e3,...
-    timeLapse*1e3, Conditions(chCond).name);
+    timeLapse*1e3, Conditions(chCond).name, filtStr);
 if ~exist(spkFileName,'file')
     save(fullfile(csvDir, spkFileName), 'relativeSpkTmsStruct',...
         'configStructure')
@@ -1139,6 +1177,9 @@ for cmod = 1:2
         expName, sprintf('%d ',chExp), sprintf('%s ',string(consCondNames)),...
         responseWindow*1e3, focusWindow*1e3, modLabels{cmod});
     psthFigFileName = fullfile(figureDir,psthFigFileName);
+    if numel(chExp) == 1 && ~isempty(dirNames)
+       psthFigFileName = string(psthFigFileName) + " sf-" + dirNames{subFoldSel};
+    end
     saveFigure(psthFig, string(psthFigFileName))
 end
 
@@ -1185,6 +1226,7 @@ end
 % % meanWf = cat(2,meanWf{:}); featWf = getWaveformFeatures(meanWf, fs);
 % % wFeat = whitenPoints(featWf);
 %% Adaptation
+if diff(timeLapse) > 0.5
 dt = 1/8;
 onst = (0:7)'*dt;
 ofst = (0:7)'*dt + 0.05;
@@ -1205,4 +1247,8 @@ for ccond = 1:size(PSTH_prob,2)
         ptsOf(crw, ccond, 1) = txpsth(tmWinSub(tmSub));
         ptsOf(crw, ccond, 2) = mg;
     end
+end
+
+else
+    
 end
