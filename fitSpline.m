@@ -1,4 +1,4 @@
-function [yhat, mdls] = fitSpline(x, y, n, winSz, ovrlap)
+function [yhat, mdls] = fitSpline(x, y, n, winSz, ovrlap, verbose)
 %FITSPLINE Fits an nth order piece-wise polynomial to the given signal y to
 %the values inside the given window size winSz and overlapping the fittings
 %ovrlap percentage (0-1)
@@ -24,15 +24,24 @@ if winSz >= max(x)
         max(x))
     winSz = max(x); ovrlap = 0;
 end
-if n >= 1 
-    fprintf(1, 'Fitting a polynomial of %d degree...\n', round(n))
+
+if ~exist('verbose', 'var')
+    verbose = 0;
+end
+
+if n >= 1
+    if verbose
+        fprintf(1, 'Fitting a spline with plynomials of %d degree... ',...
+            round(n))
+    end
+    n = round(n);
 else
-    warning('''n'' should be a positive integer')
+    fprintf(2, '''n'' should be a positive integer! ')
     fprintf(1,'Setting ''n'' to 1...\n')
     n = 1;
 end
 if ovrlap >= 1 || ovrlap < 0
-    warning('The overlap should be a number greater or equal to zero and smaller than one!')
+    fprintf(2,'The overlap should be a number greater or equal to zero and smaller than one!\n')
     fprintf(1,'Setting the overlap to 35%%\n')
     ovrlap = 0.35;
 end
@@ -51,7 +60,11 @@ for cft = 1:ceil(Nfits)
         continue
     end
     [mdl, yh] = fit_poly(x(csubs), y(csubs), n);
-    
+    if all(isnan(mdl))
+        fprintf(2,'Required %dth order polynomial, given %d points!\n',...
+            n, numel(csubs));
+        continue
+    end
     yh = reshape(yh, 1*r + length(csubs)*c, 1*c + length(csubs)*r);
     mdls(:,cft) = mdl;
     ovrEnd = initSubs(cft)+ovrSub-1;
@@ -63,5 +76,8 @@ for cft = 1:ceil(Nfits)
         sum(cat(dimy, yhat(coSubs).*avWeights,...
         yh(1:ovrSub).*flip(avWeights)), dimy, 'omitnan');
     yhat(csubs) = yh;
+end
+if verbose
+    fprintf(1, 'Done!\n')
 end
 end
