@@ -1,4 +1,4 @@
-function timePts = getWaveformCriticalPoints(avWaves, fs)
+function [timePts, xslope] = getWaveformCriticalPoints(avWaves, fs)
 % GETWAVEFORMCRITICALPOINTS returns the time points for which the first and
 % second derivatives of the signal equals zero for the minima and/or maxima
 % and the inflection points for a matrix NxM where N is the numbe of
@@ -15,6 +15,7 @@ dt = 1/fs;
 [Nt, Ncl] = size(avWaves);
 tx = (0:Nt-1)/fs;
 timePts = cell(Ncl,2);
+xslope = timePts;
 for ccl = 1:Ncl
     %{
 %     lnIdx = arrayfun(@(x) x:x+1, zcSubs(zcSel(ccl)+1:zcSel(ccl+1)),...
@@ -22,8 +23,8 @@ for ccl = 1:Ncl
 %     dMdl = cellfun(@(x) fit_poly(tx(x), dw(x,ccl), 1), lnIdx, funOpts{:});
 %     xz = cellfun(@(x) (-x(2)/x(1)) + dt/2, dMdl);
     %}
-    xz = computeZeroCrossings(dt, ccl, zcSel, zcSubs, dw, tx, 1);
-    fp = computeZeroCrossings(dt, ccl, fpSel, fpSubs, ddw, tx, 2);
+    [xz, xzs] = computeZeroCrossings(dt, ccl, zcSel, zcSubs, dw, tx, 1);
+    [fp, fps] = computeZeroCrossings(dt, ccl, fpSel, fpSubs, ddw, tx, 2);
 %{
 %     fp = zeros(fpN(ccl),1);
 %     for cfp = 1:numel(fpSubs)
@@ -36,6 +37,7 @@ for ccl = 1:Ncl
 %     fpImp = abs(interpolateTimeSeries(tx, devs(ccl,:), fp)) > lmt;
 %}
     timePts(ccl,:) = {xz, fp};
+    xslope(ccl,:) = {xzs, fps};
 end
 
 
@@ -47,11 +49,12 @@ dw = diff(signalMatrix, dOrder, 1); dIdx = diff(sign(dw),1,1) ~= 0;
 [dSubs,~] = find(dIdx); dN = sum(dIdx,1); dSel = [0,cumsum(dN)];
 end
 
-function zCrossings = computeZeroCrossings(dt, ci, dSel, dSubs, dw, tx,...
-    dOrder)
+function [zCrossings, zxSlopeDir] =...
+    computeZeroCrossings(dt, ci, dSel, dSubs, dw, tx, dOrder)
 funOpts = {'UniformOutput', 0};
 lnIdx = arrayfun(@(x) x:x+1, dSubs(dSel(ci)+1:dSel(ci+1)), funOpts{:});
 dMdl = cellfun(@(x) fit_poly(tx(x), dw(x,ci), 1), lnIdx, funOpts{:});
 dBase = mod(dOrder,2) + 1;
 zCrossings = cellfun(@(x) (-x(2)/x(1)) + dt/dBase, dMdl);
+zxSlopeDir = cellfun(@(x) sign(x(1)), dMdl);
 end
