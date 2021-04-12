@@ -18,8 +18,8 @@ function [yhat, mdls] = fitSpline(x, y, n, winSz, ovrlap, verbose)
 %           number of fittings done.
 % Emilio Isa?as-Camacho @ GrohLab 2020
 N = length(x);r = isrow(y); c = iscolumn(y);
-if winSz >= max(x)
-    fprintf(1, 'Window is bigger than the signal!\n')
+if winSz >= abs(max(x)-min(x))
+    fprintf(2, 'Window is bigger than the signal!\n')
     fprintf(1, 'Setting the window size to the complete signal length (%d)',...
         max(x))
     winSz = max(x); ovrlap = 0;
