@@ -154,8 +154,10 @@ classdef (Abstract) DiscreteWaveform < GeneralWaveform
         end 
         
         function ipiThresh = computeIpiThresh(Ipi)
-            [binCenters, binEdges, lData] = prepareLogBinEdges(Ipi, 128);
+            funOpts = {'UniformOutput', false};
+            [binCenters, binEdges, lData, ts] = prepareLogBinEdges(Ipi, 128);
             pCount = histcounts(lData, binEdges);
+            mu = mean(pCount); sig = std(pCount);
             if nnz(pCount)/numel(pCount) < 0.5
                 % Discrete intervals
                 fprintf(1, 'Discrete ')
