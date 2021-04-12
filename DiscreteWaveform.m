@@ -157,6 +157,30 @@ classdef (Abstract) DiscreteWaveform < GeneralWaveform
             else
                 % Continuous (spikes)
                 fprintf(1, 'Continuous ')
+                % Fitting a spline to smooth the sampling artifacts.
+                spl = fitSpline(binCenters, pCount, 2,...
+                    range(binCenters)/9, 1/3);
+                % Getting the critical points of the smoothed PDF
+                [crPts, crPtSl] = getWaveformCriticalPoints(spl(:), 1/ts);
+                crPts = cellfun(@(x) x + binCenters(1), crPts, funOpts{:});
+                % Interpolating the 'y' values of the critical points
+                yCrPt = cellfun(@(x) interp1(binCenters, spl, x), crPts,...
+                    funOpts{:});
+                % Sorting the peaks amplitude to get the tallest crossing
+                % at least 1 standard deviation
+                [lmm, peakOrd] = sort(crPtSl{1}.*yCrPt{1}, 'ascend');
+                pdfPeak = abs(lmm(lmm < 0) - mu)/sig > 1;
+                Ng = sum(pdfPeak);
+                % if there are more than 1 peak, chances are that the
+                % distribution is bimodal.
+                if Ng > 1
+                    % Search for the valley between the peaks
+                    
+                else
+                    % Search for an ISI value or return 1 millisecond
+                    ipiThresh = 1e-3;
+                end
+                
             end
             fprintf(1, 'distribution of intervals\n')
 %             ipiThresh = mean(Ipi);
