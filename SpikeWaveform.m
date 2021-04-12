@@ -6,17 +6,15 @@ classdef SpikeWaveform < DiscreteWaveform
         % Multi or difficult spikes using Ultra Mega Sort 2000:
         UMSdata (1,1) UMSDataLoader;
         Bursts = BurstTrain();
-        
-    end
-    properties
         Triggers
     end
+    
     properties (Dependent)
         NumberOfSpikes;
     end
     properties (GetAccess = 'private',SetAccess = 'private')
         NormThreshold = [];
-        MinISI (1,1) double = 1e-3;          % 1 ms
+        MinISI (1,1) double = 1*GeneralWaveform.m;   % 1 ms
     end
     methods
         function obj = SpikeWaveform(data, samplingFreq, units, title)
