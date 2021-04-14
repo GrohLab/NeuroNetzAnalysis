@@ -40,8 +40,8 @@ tmWinMS = PSTHstruct.TimeAxis([1,Nbin])*1e3;
 natFig = figure(figOpts{:}); natAx = gobjects(Ncond+1,1);
 natP = {'Parent', natFig};
 % Plotting the mean PSTH for all conditions at the bottom of the figure
-condPsth = squeeze(mean(PSTHstruct.LogPSTH,1)); 
-condPsth = condPsth./sum(condPsth);
+condPsth = squeeze(mean(PSTHstruct.LogPSTH,1,'omitnan')); 
+condPsth = condPsth./sum(condPsth,'omitnan');
 logMeanEdges = [2,1; 3,0]*[Ncond;1];
 natAx(Ncond + 1) = subplot(3, Ncond, expSubs(logMeanEdges), natP{:});
 semilogx(natAx(Ncond + 1), PSTHstruct.TimeAxis*1e3, condPsth);
