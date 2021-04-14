@@ -2,12 +2,13 @@ function [PSTHstruct] = getLogTimePSTH(relSpkTms, responseFlags, varargin)
 %LOGTIMEPSTH creates the PSTH in log time in between a given time window
 %using the relative spike times structure and boolean flags to identify
 %responsive clusters.
-%   [outputArg1] = logTimePSTH(relSpkTms, tmWin, fs, Nbin, verbose)
+%   [outputArg1] = logTimePSTH(relSpkTms, tmWin, Name, Value)
 %   INPUTS:
 %       relSpkTms - structure array with 'name' and 'SpikeTimes' as fields.
 %                   Produced in DE_Jittering and poolExperiments scripts.
 %       responseFlags - NTclx1 logical vector identifying which clusters
 %                       are responding to the stimulus.
+%       NAME  -- VALUE
 %       tmWin - 2 element vector containing time window edges for
 %               considering the log-PSTH. Warning! The minimal value cannot
 %               be lower or equal than zero. Log(0) = -inf. Default 1 to 50
@@ -17,6 +18,7 @@ function [PSTHstruct] = getLogTimePSTH(relSpkTms, responseFlags, varargin)
 %              Default 64.
 %       *verbose - [optional] logical flag to activate (1) or deactive (0 -
 %                  default)
+%       *Offset - [optional] shift in time in seconds for the spikes.
 %   OUTPUTS:
 %       PSTHstruct - structure with 'LogPSTH' which is a  Cl x Nbin x Cd
 %       matrix containing the activity for Cl clusters, Nbin bins, and Cd
@@ -48,6 +50,7 @@ defVerbose = false;
 checkVerbose = @(x) all([numel(x) == 1, isnumeric(x) | islogical(x)]);
 
 defOffset = 0;
+checkOffset = @(x) all([isnumeric(x), ~isnan(x), ~isinf(x)]);
 
 p.addRequired('relSpkTms', checkSpkStruct);
 p.addRequired('responseFlags', checkResponseFlag);
@@ -55,7 +58,7 @@ p.addParameter('tmWin', defTmWin, checkTmWin);
 p.addParameter('fs', defFs, checkFs);
 p.addParameter('Nbin', defNbin, checkNbin);
 p.addOptional('verbose', defVerbose, checkVerbose);
-p.addOptional('Offset', defOffset, @isnumeric);
+p.addOptional('Offset', defOffset, checkOffset);
 
 p.KeepUnmatched = true;
 
