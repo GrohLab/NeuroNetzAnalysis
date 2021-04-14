@@ -10,13 +10,14 @@ p = inputParser;
 % Required arguments auxiliary function and variables
 pfn = ["LogPSTH", "Log10TimeAxis", "TimeAxis", "ConditionNames",...
     "DeltaLogStep"];
-checkStruct = @(x) any([isstruct(x), isfield(x, pfn)]);
+checkStruct = @(x) all([isstruct(x), isfield(x, pfn)]);
 
 % Required parameters
 % none so far
 
 % Optional parameters
-% none so far, maybe ordering?
+% none so far, maybe ordering or selecting different dimensions from the
+% matrix (specific clusters and or conditions?)
 
 p.addRequired('PSTHstruct', checkStruct);
 
@@ -28,36 +29,75 @@ PSTHstruct = p.Results.PSTHstruct;
 
 %% Auxiliary variables
 expSubs = @(x) x(1):x(2);
-% PSTH per condition
+fnOpts = {'UniformOutput',false};
+figOpts = {'Visible','off','Color','w'};
+getMI = @(x, d) diff(x,1,d)./sum(x,d,'omitnan');
+
 [Ncl, Nbin, Ncond] = size(PSTHstruct.LogPSTH);
+tmWinMS = PSTHstruct.TimeAxis([1,Nbin])*1e3;
+
+%% Figure and axes for displaying PSTHs per condition
+natFig = figure(figOpts{:}); natAx = gobjects(Ncond+1,1);
+natP = {'Parent', natFig};
+% Plotting the mean PSTH for all conditions at the bottom of the figure
 condPsth = squeeze(mean(PSTHstruct.LogPSTH,1)); 
 condPsth = condPsth./sum(condPsth);
-
-% Comparison between conditions
-permCond = nchoosek(1:Ncond,2); Nperm = size(permCond,1);
-% Figure for displaying PSTHs per condition
-natFig = figure('Visible','off'); natAx = gobjects(Ncond+1,1);
-
 logMeanEdges = [2,1; 3,0]*[Ncond;1];
-natAx(Ncond + 1) = subplot(3, Ncond, expSubs(logMeanEdges));
-semilogx(natAx(Ncond + 1), PSTHstruct.TimeAxis, condPsth); 
+natAx(Ncond + 1) = subplot(3, Ncond, expSubs(logMeanEdges), natP{:});
+semilogx(natAx(Ncond + 1), PSTHstruct.TimeAxis*1e3, condPsth);
 legend(natAx(Ncond + 1), PSTHstruct.ConditionNames.cellstr);
-xticklabels(natAx(Ncond + 1), xticks(natAx(Ncond + 1))*1e3);
-xlim(natAx(Ncond + 1), PSTHstruct.TimeAxis([1,Nbin]));
+xticklabels(natAx(Ncond + 1), xticks(natAx(Ncond + 1)));
+xlim(natAx(Ncond + 1), tmWinMS); box(natAx(Ncond + 1), 'off');
+% Plotting PSTH per cluster
 for ccond = 1:Ncond
     imgMat = [ccond, 0; ccond, Ncond];
-    natAx(ccond) = subplot(3, Ncond, imgMat * [1;1]); 
+    natAx(ccond) = subplot(3, Ncond, imgMat * [1;1], natP{:}); 
     imagesc(natAx(ccond), 'XData', PSTHstruct.Log10TimeAxis, 'YData', 1:Ncl,...
         'CData', PSTHstruct.LogPSTH(:,:,ccond));
     xticklabels(natAx(ccond), 10.^(xticks(natAx(ccond))+3));
     title(natAx(ccond), PSTHstruct.ConditionNames(ccond));
-    ylim(natAx(ccond), [1, Ncl])
+    ylim(natAx(ccond), [1, Ncl]); box(natAx(ccond), 'off');
 end
+ylabel(natAx(1), 'Clusters')
 arrayfun(@(x) xlim(x, PSTHstruct.Log10TimeAxis([1,Nbin])), natAx(1:Ncond));
+arrayfun(@(x) set(x.YAxis, 'Visible', 'off'),...
+    natAx(setdiff(1:(Ncond + 1), [1, Ncond + 1])), fnOpts{:});
 natFig.Visible = 'on';
-% Figure for displaying a comparison between condition permutations
-permFig = figure('Visible','off');
 
-
+%% Figure for displaying a comparison between condition permutations
+if Ncond > 1
+    posBar = {'FaceColor', 'g', 'EdgeColor', 'none'};
+    negBar = {'FaceColor', 'r', 'EdgeColor', 'none'};
+    permFig = figure(figOpts{:}); permP = {'Parent', permFig};
+    % Comparison between conditions
+    permCond = nchoosek(1:Ncond,2); Nperm = size(permCond,1);
+    prmAx = gobjects(Nperm*2,1);
+    tx = PSTHstruct.Log10TimeAxis;
+    for cperm = 1:Nperm
+        % MI per cluster
+        imgMat = [cperm, 0; cperm, Nperm];
+        prmAx(cperm) = subplot(3, Nperm, imgMat * [1;1], permP{:});
+        cMI = getMI(PSTHstruct.LogPSTH(:,:,permCond(cperm,:)),3);
+        cMI(isnan(cMI)) = 0; 
+        imagesc(prmAx(cperm), 'XData', tx, 'YData', 1:Ncl, 'CData', cMI);
+        colormap(prmAx(cperm), traffic(101)); ylim(prmAx(cperm), [1,Ncl]);
+        title(prmAx(cperm), sprintf('%s vs %s', ...
+            PSTHstruct.ConditionNames(permCond(cperm,[2,1]))))
+        % MI per condition all clusters
+        prmAx(cperm+1) = subplot(3, Nperm, [2, cperm]*[Nperm;1], permP{:});
+        condMI = getMI(condPsth(:,permCond(cperm,:)),2);
+        condMI(isnan(condMI)) = 0;
+        bar(prmAx(cperm+1), tx(condMI>0), condMI(condMI>0), posBar{:});
+        set(prmAx(cperm+1),'NextPlot','add');
+        bar(prmAx(cperm+1), tx(condMI<=0), condMI(condMI<=0), negBar{:});
+        xticklabels
+    end
+    ylabel(prmAx(1), 'Clusters')
+    arrayfun(@(x) xlim(x, PSTHstruct.Log10TimeAxis([1,Nbin])), prmAx(1:Nperm*2));
+    arrayfun(@(x) set(x.XAxis,'Visible','off'), prmAx(1:2:Nperm*2));
+    arrayfun(@(x) set(x.YAxis,'Visible','off'), prmAx(3:2:Nperm*2));
+    arrayfun(@(x) box(x, 'off'), prmAx);
+    permFig.Visible = 'on';
+end
 end
 
