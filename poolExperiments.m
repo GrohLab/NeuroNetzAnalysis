@@ -581,7 +581,8 @@ ylabel(sdAx, "Population proportion"); saveFigure(sdFig,...
     fullfile(figureDir, ttlFile))
 %% Modulation index
 frNbin = 32; 
-evFr = cellfun(@(x) mean(x,2)./diff(responseWindow), Counts(2,:),...
+
+evFr = cellfun(@(x) mean(x,2)./diff(responseWindow), Counts(:,2),...
     'UniformOutput', 0); evFr = cat(2, evFr{:}); snr = evFr./pfr;
 if ~exist('structString','var')
     structStruct = [];
@@ -591,6 +592,7 @@ if ~exist('structString','var')
     end
 end
 mdOpts = {figureDir, chExp, structString};
+
 MIh(:,1) = modulationDist(pfr, frNbin, 'Spontaneous modulation index',...
         mdOpts{:}); 
 MIh(:,2) = modulationDist(evFr, frNbin, 'Evoked modulation index', mdOpts{:});
