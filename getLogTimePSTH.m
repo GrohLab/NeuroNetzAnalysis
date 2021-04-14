@@ -35,17 +35,17 @@ checkResponseFlag = @(x) any([size(x,1) == size(relSpkTms(1).SpikeTimes,1),...
     isnumeric(x) | islogical(x)]);
 % Required parameters
 defTmWin = [0.001, 0.05];
-checkTmWin = @(x) any([x > 0, diff(x) > 0, numel(x) == 2]);
+checkTmWin = @(x) all([x > 0, diff(x) > 0, numel(x) == 2]);
 
 defFs = 1/33.3e-6;
-checkFs = @(x) any([isnumeric(x), x>0]);
+checkFs = @(x) all([isnumeric(x), x>0]);
 
 defNbin = 64;
-checkNbin = @(x) any([isnumeric(x), x>1]);
+checkNbin = @(x) all([isnumeric(x), x>1]);
 
 % Optional parameter
 defVerbose = false;
-checkVerbose = @(x) any([numel(x) == 1, isnumeric(x) | islogical(x)]);
+checkVerbose = @(x) all([numel(x) == 1, isnumeric(x) | islogical(x)]);
 
 defOffset = 0;
 
@@ -91,9 +91,9 @@ if verbose
     fprintf(1, 'Starting main loop... ')
 end
 for ccond = 1:Ncond
-    spkTms = arrayfun(@(x) cat(2, relSpkTms(ccond).SpikeTimes{x,:}),...
+    spkTms = arrayfun(@(x) cat(2, relSpkTms(ccond).SpikeTimes{x,:})+ofst,...
         (1:sum(responseFlags))', fnOpts{:});
-    spkTms = cellfun(@(x) x(x > tmWin(1) & x <= tmWin(2))+ofst, spkTms,...
+    spkTms = cellfun(@(x) x(x > tmWin(1) & x <= tmWin(2)), spkTms,...
         fnOpts{:});
     binCount = cellfun(@(x) histcounts(log10(x), binEdges, hstOpts{:}),...
         spkTms, fnOpts{:}); binCount = cat(1, binCount{:});
