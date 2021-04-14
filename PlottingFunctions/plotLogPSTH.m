@@ -48,6 +48,9 @@ semilogx(natAx(Ncond + 1), PSTHstruct.TimeAxis*1e3, condPsth);
 legend(natAx(Ncond + 1), PSTHstruct.ConditionNames.cellstr);
 xticklabels(natAx(Ncond + 1), xticks(natAx(Ncond + 1)));
 xlim(natAx(Ncond + 1), tmWinMS); box(natAx(Ncond + 1), 'off');
+xlabel(natAx(Ncond + 1), 'Log time [ms]'); ylabel(natAx(Ncond + 1),...
+    'Firing probability [p(spike|bin)]')
+xtks = xticks(natAx(Ncond + 1));
 % Plotting PSTH per cluster
 for ccond = 1:Ncond
     imgMat = [ccond, 0; ccond, Ncond];
@@ -57,6 +60,8 @@ for ccond = 1:Ncond
     xticklabels(natAx(ccond), 10.^(xticks(natAx(ccond))+3));
     title(natAx(ccond), PSTHstruct.ConditionNames(ccond));
     ylim(natAx(ccond), [1, Ncl]); box(natAx(ccond), 'off');
+    xticks(natAx(ccond), log10(xtks)-3); 
+    xticklabels(natAx(ccond), 10.^(xticks+3))
 end
 ylabel(natAx(1), 'Clusters')
 arrayfun(@(x) xlim(x, PSTHstruct.Log10TimeAxis([1,Nbin])), natAx(1:Ncond));
@@ -90,13 +95,16 @@ if Ncond > 1
         bar(prmAx(cperm+1), tx(condMI>0), condMI(condMI>0), posBar{:});
         set(prmAx(cperm+1),'NextPlot','add');
         bar(prmAx(cperm+1), tx(condMI<=0), condMI(condMI<=0), negBar{:});
-        xticklabels
+        xticks(prmAx(cperm+1), log10(xtks)-3); 
+        xticklabels(prmAx(cperm+1), 10.^(xticks+3))
     end
     ylabel(prmAx(1), 'Clusters')
     arrayfun(@(x) xlim(x, PSTHstruct.Log10TimeAxis([1,Nbin])), prmAx(1:Nperm*2));
     arrayfun(@(x) set(x.XAxis,'Visible','off'), prmAx(1:2:Nperm*2));
     arrayfun(@(x) set(x.YAxis,'Visible','off'), prmAx(3:2:Nperm*2));
     arrayfun(@(x) box(x, 'off'), prmAx);
+    legend(prmAx(Nperm*2), {'Potentiation','Depression'})
+    ylabel(prmAx(2), 'Modulation Index')
     permFig.Visible = 'on';
 end
 end
