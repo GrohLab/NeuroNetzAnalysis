@@ -143,7 +143,16 @@ if ~isempty(waveFile)
         % Assigning the clusters from the cell-array
         clOutput(reqOrdSub <= Nstcl,:) = clWaveforms;
         % Assigning the clusters from the bin file
-        clOutput(reqOrdSub > Nstcl,:) = cl_fromBin;
+        switch size(cl_fromBin,2)
+            case 3
+                clOutput(reqOrdSub > Nstcl,:) = cl_fromBin;
+            case 2
+                clOutput(reqOrdSub > Nstcl,1:2) = cl_fromBin;
+            otherwise
+                if ~isempty(cl_fromBin)
+                    fprintf(2, 'Something went wrong! Please verify file!\n')
+                end
+        end
         % Re-assigning the variable names
         clWaveforms = clOutput;
         save(waveFileName, 'clWaveforms','-append')
