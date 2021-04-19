@@ -128,11 +128,19 @@ for cexp = reshape(chExp, 1, [])
     end
     %}
     %% Constructing the helper 'global' variables
+    if (fs - (1/33.3e-6)) > 1
+        fprintf(2, '%.3f kHz different sampling frequency!\n', fs/1e3);
+        [~, cfld] = fileparts(dataDir);
+        fprintf(2, 'Skipping %s\n', cfld);
+        continue
+    end
     % Number of total samples
     Ns = structfun(@numel,Triggers);
     Ns = min(Ns(Ns>1));
     % Total duration of the recording
     Nt = Ns/fs;
+    
+
     autoCorr = @(x) neuroCorr(x, corrWin, 1, fs);
     % Useless clusters (labeled as noise or they have very low firing rate)
     badsIdx = cellfun(@(x) x==3, sortedData(:,3)); bads = find(badsIdx);
@@ -357,7 +365,12 @@ for cexp = reshape(chExp, 1, [])
                 trigSubset{cc} = sort(randsample(NaMax(cc),NaMin(cc)));
                 if NaStack(cc) == NaMin(cc)
                     tLoc = find(auxDelayFlags(:,cc));
-                    tSubs = tLoc(trigSubset{cc});
+                    try
+                        tSubs = tLoc(trigSubset{cc});
+                    catch
+                        trigSubset{cc} = sort(randsample(numel(tLoc),NaMin(cc)));
+                        tSubs = tLoc(trigSubset{cc});
+                    end
                     auxDelayFlags(setdiff(tLoc,tSubs),:) = [];
                     auxDStack(:,:,setdiff(tLoc,tSubs)) = [];
                     auxCStack(:,:,setdiff(tLoc,tSubs)) = [];
@@ -370,6 +383,34 @@ for cexp = reshape(chExp, 1, [])
                     NaStack(cc) = NaNew(cc);
                 end
             end
+        end
+        
+        % When the stacks have different order for different conditions
+        if nnz(size(auxDelayFlags) - size(delayFlags))
+            [ntrials, nconds] = size(delayFlags);
+            [nctrials, ncconds] = size(auxDelayFlags);
+            fprintf(1,'There are more trials in ')
+            if ntrials > nctrials
+                fprintf(1, 'DelayFlags\n')
+                
+            else
+                fprintf(1, 'AuxDelayFlags\n')
+                emptyADFFlag = ~any(auxDelayFlags,2);
+                if (nctrials - sum(emptyADFFlag)) ~= ntrials
+                    fprintf(1, 'The populated trials are different in ')
+                    fprintf(1, 'each delayFlag matrix!!\n')
+                end
+                auxDelayFlags(emptyADFFlag,:) = [];
+                auxDStack(:,:,emptyADFFlag) = [];
+                auxCStack(:,:,emptyADFFlag) = [];
+            end
+        end
+        if nnz(auxDelayFlags - delayFlags)
+            [stOrd, ~] = find(delayFlags);
+            [astOrd , ~] = find(auxDelayFlags);
+            auxDStack(:,:,stOrd) = auxDStack(:,:,astOrd);
+            cStack(:,:,stOrd) = cStack(:,:,astOrd);
+            auxDelayFlags(stOrd,:) = auxDelayFlags(astOrd,:);
         end
         auxDStack(1,:,:) = [];
         discStack = cat(1, discStack, auxDStack);
@@ -777,7 +818,7 @@ for pfp = fws
     tdFigName = string(...
         sprintf('Temporal dynamics exps %sFW%.1f-%.1f ms TB %d trials (f, prop, lines & bars)',...
         sprintf('%d ', chExp), focusPeriods(pfp,:)*1e3, trialBin));
-    if ~isempty(dirNames)
+    if ~isempty(dirNames) && exist('subFoldSel','var')
         tdFigName = tdFigName + " sf-" + dirNames{subFoldSel};
     end
     tempFigName = fullfile(figureDir, tdFigName);
@@ -825,7 +866,7 @@ for cmod = 1:size(popMeanFreq,3)
         sprintf('Spike-dynamics 3D %s exp%s FP%.2f - %.2f ms FW%.2f ms TB %d trial(s)',...
         modLey(cmod), sprintf(' %d', chExp), focusPeriods([1,end])*1e3,...
         focusStep, trialBin));
-    if numel(chExp) == 1 && ~isempty(dirNames)
+    if numel(chExp) == 1 && ~isempty(dirNames) && exist('subFoldSel','var')
         sumFigName = cat(2, sumFigName,...
             sprintf(' sf-%s', dirNames{subFoldSel}));
     end
