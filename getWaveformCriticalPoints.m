@@ -3,7 +3,7 @@ function [timePts, xslope] = getWaveformCriticalPoints(avWaves, fs)
 % second derivatives of the signal equals zero for the minima and/or maxima
 % and the inflection points for a matrix NxM where N is the numbe of
 % samples and M the number of signals.
-%        timePts = getWaveformCriticalPoints(avWaves, fs)
+%        [timePts, xslope] = getWaveformCriticalPoints(avWaves, fs)
 
 % Zero-crossing variables
 % [dw, zcIdx, zcSubs, zcN, zcSel] = computeDerivativePoints(avWaves, 1);
