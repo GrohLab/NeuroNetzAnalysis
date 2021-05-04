@@ -307,12 +307,13 @@ for cexp = reshape(chExp, 1, [])
     efr = zeros(Ncl, size(consideredConditions,2), 'single');
     eisi = cellfun(@(x) diff(x), spkSubs, 'UniformOutput', 0);
     econdIsi = cell(Ncl, size(consideredConditions,2));
+    econdSpks = econdIsi;
     for ccond = consideredConditions
         itiSub = mean(diff(Conditions(ccond).Triggers(:,1)));
         consTime = [Conditions(ccond).Triggers(1,1) - round(itiSub/2),...
             Conditions(ccond).Triggers(NaNew(NaCount),2) + round(itiSub/2)]...
             ./fs;
-        [efr(:,NaCount),~, ~, econdIsi(:,NaCount)] =...
+        [efr(:,NaCount),~, econdSpks(:,NaCount), econdIsi(:,NaCount)] =...
             getSpontFireFreq(spkSubs, Conditions(ccond).Triggers,...
             consTime, fs, delta_t + responseWindow(1));
         NaCount = NaCount + 1;
@@ -349,11 +350,13 @@ for cexp = reshape(chExp, 1, [])
         pisi = eisi;
         paCorr = eaCorr;
         pcondIsi = econdIsi;
+        pcondSpks = econdSpks;
     else
         pfr = cat(1, pfr, efr);
         pisi = cat(1, pisi, eisi);
         paCorr = cat(1, paCorr, eaCorr);
         pcondIsi = cat(1, pcondIsi, econdIsi);
+        pcondSpks = cat(1, pcondSpks, econdSpks);
         popClWf = cat(2, popClWf, mswf);
         pcwID = cat(1, pcwID, cwID);
         % Homogenizing trial numbers
