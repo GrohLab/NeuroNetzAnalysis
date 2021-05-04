@@ -1,38 +1,79 @@
-function [params,threshold]=emforgmm(data,M,err,clin,varargin)
+function [params,threshold]=emforgmm(data, M, varargin)
 %% EMFORGMM Uses the expectation-maximitation algorithm fit M gaussians.
 % emforgmm(DATA,M) returns the parameters for M gaussian models fitted for
 % the DATA with random initialization.
 % emforgmm(DATA,M,MU_1,SIG_1,...,MU_M,SIG_M) returns the parameters for M
 % gaussian models fitted for the DATA with user defined initialization as
 % MU_1, SIG_1,...,MU_M, SIG_M.
-% Emilio Isa?as-Camacho @ Neuro-photonics WroschLab 2017
+% Emilio Isaias-Camacho @ Neuro-photonics WroschLab 2017
+
+%% Parse inputs
+
+p = inputParser;
+
+defErr = 1e-7;
+checkErr = @(x) all([~isempty(x), isnumeric(x), log10(x) < -1, numel(x) == 1]);
+
+defClin = false;
+checkClin = @(x) all([isnumeric(x)|islogical(x), numel(x) == 1, x >= 0]);
+
+defVerb = false;
+checkVerb = @(x) all([isnumeric(x)|islogical(x), numel(x) == 1, x >= 0]);
+if ~isempty(data)
+    defInitGuess = [ones(M,1)./M,...
+        mean(data(:))*ones(M,1)-rand(M,1)*std(data(:)),...
+        std(data(:)) + rand(M,1)*range(data(:))];
+else
+    params = nan(1,3);
+    return
+end
+checkInitGuess = @(x) all([isnumeric(x), size(x,2) == 3 && size(x,1) == M]);
+
+p.addRequired('data', @isnumeric);
+p.addRequired('M', @isPositiveIntegerValuedNumeric);
+p.addParameter('err', defErr, checkErr);
+p.addParameter('clin', defClin, checkClin);
+p.addOptional('initGuess', defInitGuess, checkInitGuess);
+p.addOptional('verbose', defVerb, checkVerb);
+
+
+p.parse(data, M, varargin{:})
+
+data = p.Results.data;
+M = p.Results.M;
+epsilon = p.Results.err;
+clin = p.Results.clin;
+verbose = p.Results.verbose;
+params = p.Results.initGuess;
+
 %% Function initialization
-params = zeros(M,3);
+% params = zeros(M,3);
 data = data(:);
 Maux = M;
 MX = max(data)-std(data);
 MN = min(data)+std(data);
 data = sort(data(:),'ascend');
-if isempty(varargin)
-    params = random_init_params(M,MX,MN,std(data));
-elseif length(varargin) == 2*M
-    %% User defined initialization
-    for l=1:M
-        params(l,2) = varargin{l*2-1};
-        params(l,3) = varargin{l*2};
-    end
-else
-    error(['Initialization for the variables is not correct.',...
-        ' Make sure that the mean and variance are set for all gaussians'])
-end
+% if isempty(varargin)
+%     params = random_init_params(M,MX,MN,std(data));
+% elseif length(varargin) == 2*M
+%     %% User defined initialization
+%     for l=1:M
+%         params(l,2) = varargin{l*2-1};
+%         params(l,3) = varargin{l*2};
+%     end
+% else
+%     error(['Initialization for the variables is not correct.',...
+%         ' Make sure that the mean and variance are set for all gaussians'])
+% end
+% 
+% if ~exist('verbose','var')
+%     verbose = true;
+% end
+
 % ALPHA
-params(:,1) = 1/M * ones(M,1);
+% params(:,1) = 1/M * ones(M,1);
 MAXREP = 513;
-if exist('err','var')
-    epsilon = err;
-else
-    epsilon = 1e-7;
-end
+
 N = length(data);
 N_inv = 1/N;
 sqerr = 1;
@@ -41,7 +82,9 @@ gauss_l = zeros(M,N);
 px_l = gauss_l;
 pik = px_l;
 L_old = 0;
-h = waitbar(0,'Estimating GMM');
+if verbose
+    h = waitbar(0,'Estimating GMM');
+end
 %% Starting EM for GMM
 while j <= MAXREP && sqerr > epsilon
     params_old = params;
@@ -68,7 +111,9 @@ while j <= MAXREP && sqerr > epsilon
                 isinf(params(l,2)) || isinf(params(l,3))
 %             If the estimation results in a zero, the GMM will be reduced
 %             to M - 1.
+            if verbose
             warning(['Deleting one component. Keeping ',num2str(M-1)])
+            end
             params(l,:)=[];
             params_old(l,:)=[];
             sum_pik_inv(l) = [];
@@ -78,7 +123,9 @@ while j <= MAXREP && sqerr > epsilon
             if M == 0
                 params_old = random_init_params(Maux,MX,MN,std(data));
                 params = params_old;
+                if verbose
                 disp('All parameters were deleted. Re-estimating...')
+                end
                 M = Maux;
                 l = 1;
                 break;
@@ -96,14 +143,22 @@ while j <= MAXREP && sqerr > epsilon
     if isnan(L_old )
         params_old = random_init_params(M,MX,MN,std(data));
         j = 1;
-        disp('Calculation error! Restarting the process')
+        if verbose
+            disp('Calculation error! Restarting the process')
+        end
     end
-    waitbar(sqerr\epsilon,h)
+    if verbose
+        waitbar(sqerr\epsilon,h)
+    end
     j = j+1;
 end
-close(h)
+if verbose
+    close(h)
+end
 likelihood = sum(p_xhat)*N_inv;
-display(['Final likelihood: ',num2str(likelihood)])
+if verbose
+    display(['Final likelihood: ',num2str(likelihood)])
+end
 % Selecting those parameters with a contibution bigger than 1% but
 % constrainting that at least the 99% is kept.
 if clin || likelihood < 0
