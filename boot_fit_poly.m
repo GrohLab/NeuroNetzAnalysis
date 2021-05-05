@@ -1,4 +1,4 @@
-function [wmdl, mserr_fin] = boot_fit_poly(pts, n, ptsPer, it)
+function [wmdl, mserr_fin, cmdl] = boot_fit_poly(pts, n, ptsPer, it)
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
 Npts = size(pts,1);
