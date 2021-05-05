@@ -16,6 +16,6 @@ mw = 1./(mserr.*sum(1./mserr)); wmdl = cmdl*mw;
 end
 
 function [err, mserr] = logCostFunction(pts, mdl, n)
-err = log(abs(pts(:,2) - pts(:,1).^(n:-1:0) * mdl) + 1);
+err = log(abs(pts(:,2) - (pts(:,1).^(n:-1:0)) * mdl) + 1);
 mserr = (err'*err)/size(pts,1);
 end
