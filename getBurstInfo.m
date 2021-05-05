@@ -23,8 +23,8 @@ p = inputParser;
 checkFs = @(x) all([isnumeric(x), numel(x) == 1, x > 0]);
 
 defNbin = 128;
-checkNbin = @(x) all([isnumeric(x), numel(x) == 1, (round(x) - x) == 0,...
-    x > 0]);
+checkNbin = @(x) all([isnumeric(x), numel(x) == 1,...
+    isPositiveIntegerValuedNumeric(x)]);
 
 defMxDom = 1e3;
 checkMxDom = @(x) all([isnumeric(x), 1/fs < x, x > 0, numel(x) == 1]);
