@@ -1,6 +1,30 @@
 function [fanoPerCondition, tmAx] = computeFanoFactor(relSpkTms, binSize, varargin)
 %COMPUTEFANOFACTOR estimates the intertrial variability for all given
-%clusters.
+%clusters. Required arguments relative spike times structure, and bin size.
+%
+%   [fanoPerCondition, tmAx] = computeFanoFactor(relSpkTms, binSize)
+%   [fanoPerCondition, tmAx] = computeFanoFactor(relSpkTms, binSize, Name, Value)
+%
+%   INPUTS:
+%       relSpkTms - 1xC structure array containing 'name' and 'SpikeTimes'
+%                   as fields
+%       binSize - scalar value specifying the bin size in seconds.
+%   ----------------------------------------------------------------------
+%   Name-value pairs:
+%       'timeWindow' - 1x2 array specifying the lower and upper limits for
+%                      binning the given data. [-0.1, 0.1] by default
+%       'kernelLength' - scalar value specifying the desired kernel
+%                        duration in seconds. 0.01 s (10 ms) by default
+%       'kernel' - function_handler specifying the window type to convolve
+%                  the spike counts. %rectwin% by default.
+%       'kernelParameters' - Cell array containing the special parameters
+%                            for the selected 'kernel'. 
+%       'verbose' - logical flag activating user communication. Default
+%                   false
+%   OUTPUTS:
+%       fanoPerCondition - 1xC cell array containing a NxB matrix with the
+%                          fano factor per cluster per bin.
+%       tmAx - 1xB array containing the bin centers.
 %   Emilio Isa?as-Camacho @GrohLab
 
 %% Parsing inputs
@@ -24,8 +48,8 @@ checkKern = @(x) all([isa(x, 'function_handle'),...
 
 defKernSpecial = {};
 
-defAdjustTmWinFlag = false;
-checkAdjustFlag = @(x) all([isnumeric(x) | islogical(x), numel(x) == 1]);
+% defAdjustTmWinFlag = false;
+% checkAdjustFlag = @(x) all([isnumeric(x) | islogical(x), numel(x) == 1]);
 
 defVerbose = false;
 checkVerbose = @(x) all([isnumeric(x) | islogical(x), numel(x) == 1]);
@@ -37,7 +61,7 @@ p.addParameter('timeWindow', defTmWin, checkTmWin);
 p.addParameter('kernelLength', defKernelLength, checkKernLen);
 p.addParameter('kernel', defKernel, checkKern);
 p.addParameter('kernelParameters', defKernSpecial, @iscell);
-p.addParameter('adjustTime', defAdjustTmWinFlag, checkAdjustFlag);
+
 
 p.addOptional('verbose', defVerbose, checkVerbose);
 
@@ -51,7 +75,6 @@ tmWin = p.Results.timeWindow;
 kernLen = p.Results.kernelLength;
 kernfun = p.Results.kernel;
 kernParams = p.Results.kernelParameters;
-adjustFlag = p.Results.adjustTime;
 verb = p.Results.verbose;
 
 fnOpts = {'UniformOutput', false};
