@@ -1,7 +1,21 @@
 function [CV2, CVsqr, brstIdx, threshPrCl] =...
     getBurstInfo(spkSubs, fs, varargin)
-%UNTITLED Summary of this function goes here
-%   Detailed explanation goes here
+%GETBURSTINFO estimates the threshold for bursts and tonic spikes and
+%computes the coefficient of variation and the coefficient of variation
+%squared for the given clusters. It requires the spike subscrits and the
+%sampling frequency, and a series of name-value pair arguments.
+%   [CV2, CVsqr, brstIdx, threshPrCl] = getBurstInfo(spkSubs, fs)
+%   INPUTS:
+%       spkSubs - Nx1 cell array containing the spike times for N clusters
+%                 in indeces
+%       fs - scalar stating the sampling frequency for the provided spikes
+% -------------------------------------------------------------------------
+%   Name-Value input arguments:
+%       'Nbin' - scalar describing the number of bins used for computing
+%                the log10 inter-spike interval (ISI) histogram. 128 by
+%                default
+%       'MxDom' - upper limit for the ISI histogram. 1000 s by default.
+%Emilio Isaias-Camacho @GrohLab 2021
 
 %% Parsing input
 p = inputParser;
