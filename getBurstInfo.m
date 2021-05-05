@@ -104,46 +104,37 @@ threshPrCl = zeros(Ncl,1); brstIdx = threshPrCl;
         end
     end
 
-for ccl = 1:Ncl
-    % If no valley was found, I'm assuming no bursts
-    if ~valleyFlag(ccl)
-        % If only one valley was found, select it as the threshold
-        if Nvls(ccl) == 1 
-            threshPrCl(ccl) = evaluateAndAssignThreshVal(isiVls{ccl});
-        else
-            % If more valleys were found, take a look at the peaks
-            % If there was only one peak, take the lowest valley
-            if Npks(ccl) == 1
-                %[~, lowestValley] = min(isiVVl{ccl});
-                %threshPrCl(ccl) = isiVls{ccl}(lowestValley);
-                threshPrCl(ccl) = getLowestValley(isiVls{ccl}, isiVVl{ccl});
-            else
-                % Check the location of the valleys w.r.t. the peaks
-                vallBetwnPksFlag = isiVls{ccl} < isiPks{ccl}';
-                vall2right = sum(vallBetwnPksFlag);
-                pks2right = sum(vallBetwnPksFlag,2);
-                % If a valley to the left of the first peak is found, take
-                % it as the threshold
-                if vall2right(1) == 1
-                    threshPrCl(ccl) = evaluateAndAssignThreshVal(isiVls{ccl}(1));
-                elseif vall2right(1) > 1
-                    bf1PkSub = pks2right == Npks(ccl);
-                    threshPrCl(ccl) =...
-                        getLowestValley(isiVls{ccl}(bf1PkSub),...
-                        isiVVl{ccl}(bf1PkSub));
-                else
-                    if vall2right(2) == 1
-                        threshPrCl(ccl) = evaluateAndAssignThreshVal(isiVls{ccl}(1));
-                    else
-                        bf1PkSub = pks2right == Npks(ccl) - 1;
-                        threshPrCl(ccl) =...
-                            getLowestValley(isiVls{ccl}(bf1PkSub),...
-                            isiVVl{ccl}(bf1PkSub));
-                    end
-                end
-            end
-        end
+    function [vall2r, pks2r] = getValleyPosRelative2Peaks()
+        vallBetwnPksFlag = isiVls{ccl} < isiPks{ccl}';
+        vall2r = sum(vallBetwnPksFlag);
     end
+
+    function vallCandidates = getValleyTempodalSimilarity(loc, TmCloseness)
+        tmSep = diff(10.^loc);
+        simFlag = tmSep < TmCloseness;
+        vallCandidates = [true; simFlag];
+    end
+
+for ccl = 1:Ncl
+    % Take the only valley
+    if Nvls(ccl) == 1
+        threshPrCl(ccl) = evaluateAndAssignThreshVal(isiVls{ccl});
+    % More than 1 valley, take peaks as reference
+    elseif Nvls(ccl) > 1
+        % If peaks exist:
+        consValls = true(Nvls(ccl),1); 
+        if Npks(ccl) > 0
+            % Compare relative positions agains peaks
+            vall2l = getValleyPosRelative2Peaks();
+            vallCollectionSubs = find(vall2l, 1, 'first');
+            consValls(vall2l(vallCollectionSubs)+1:Nvls(ccl)) = false;
+        end
+        vallCandFlag = getValleyTempodalSimilarity(isiVls{ccl}(consValls),...
+            2e-2);
+        threshPrCl(ccl) = getLowestValley(isiVls{ccl}(vallCandFlag),...
+            isiVVl{ccl}(vallCandFlag));
+    end % Nvls(ccl) == 1 elseif Nvls(ccl) > 1 
+        
     if threshPrCl(ccl) < 0
         frstBrstSpk = retMps{ccl}(:,1) > threshPrCl(ccl) &...
             retMps{ccl}(:,2) < threshPrCl(ccl);
