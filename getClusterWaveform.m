@@ -50,10 +50,20 @@ clusterID = unique(clusterID);
 % Reading the cluster summary
 clTable = getClusterInfo(fullfile(dataDir, 'cluster_info.tsv'));
 % % Reading the channel map
-fP = fopen(fullfile(dataDir,'params.py'),'r');
-fgetl(fP);
-ln = fgetl(fP);
-fclose(fP);
+try
+    fP = fopen(fullfile(dataDir,'params.py'),'r');
+    fgetl(fP);
+    ln = fgetl(fP);
+    fclose(fP);
+catch
+    fprintf(2, 'There''s no params.py file in this folder.\n')
+    fprintf(1, 'Perhaps you joined 2 or more simultaneously recorded areas?\n')
+    fprintf(1, 'Try joining all_channels.mat files and place it in this folder\n')
+    fprintf(1, 'It is also likely that there''s no .bin file to read the waveforms from.\n')
+    fprintf(1, 'For now, this function cannot continue\n')
+    return
+end
+
 Nch = double(getLastCell(textscan(ln,'%s = %d'))-1);
 necessaryFiles = {fullfile(dataDir, 'channel_map.npy');...
     fullfile(dataDir, 'spike_templates.npy');...
