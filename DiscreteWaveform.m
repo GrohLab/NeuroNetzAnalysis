@@ -44,15 +44,7 @@ classdef (Abstract) DiscreteWaveform < GeneralWaveform
         
         % Get the first event of a train
         function fot = get.FirstOfTrain(obj)
-            fs = obj.SamplingFreq;
-            try
-                % In case of stepWaveform
-                trigs = obj.subTriggers;
-            catch
-                % In case of spikeWaveform
-                trigs = obj.Data(:);
-            end
-            evntTms = trigs(:,1)./fs;
+            evntTms = obj.loadTimeData();
             if ~isnan(obj.MinIEI)
                 fot = DiscreteWaveform.firstOfTrain(evntTms,obj.MinIEI);
             else
@@ -64,9 +56,7 @@ classdef (Abstract) DiscreteWaveform < GeneralWaveform
         
         % Get the last event of a train
         function lot = get.LastOfTrain(obj)
-            fs = obj.SamplingFreq;
-            trigs = obj.Triggers;
-            evntTms = flip(trigs(:,1))./fs;
+            evntTms = flip(obj.loadTimeData());
             if ~isempty(obj.MinIEI)
                 lot = flip(DiscreteWaveform.firstOfTrain(evntTms,obj.MinIEI));
             else
@@ -92,6 +82,18 @@ classdef (Abstract) DiscreteWaveform < GeneralWaveform
             feSubs = find(fot);
             leSubs = find(lot);
             d = abs(feSubs-leSubs)./obj.SamplingFreq;
+        end
+        
+        function tdTms = loadTimeData(obj)
+            fs = obj.SamplingFreq;
+            try
+                % In case of stepWaveform
+                trigs = obj.subTriggers;
+            catch
+                % In case of spikeWaveform
+                trigs = obj.Data(:);
+            end
+            tdTms = trigs(:,1)./fs;
         end
     end
     
@@ -137,7 +139,7 @@ classdef (Abstract) DiscreteWaveform < GeneralWaveform
         end
         
         % Get the first true value of a logic pulse
-        function [frstSpks, minIpi] = firstOfTrain(spkTimes, minIpi)
+        function [frstSpks, minIpi, Pks, Sps] = firstOfTrain(spkTimes, minIpi)
             % OUTPUTS a logical index for the edges which are the first in
             % time for the step pulse train.
             Ipi = abs(diff(spkTimes));
