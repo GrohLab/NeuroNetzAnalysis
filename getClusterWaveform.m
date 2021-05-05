@@ -96,7 +96,7 @@ for ccl = 1:numel(clusterID)
     clTempSubs{ccl} = mode(spkTmls(spkIdx(:,ccl)));
 end
 missClustFlag = ~any(clIdx,1);
-if ~all(~missClustFlag)    
+if ~all(~missClustFlag)
     fprintf(1,'Some of the given clusters do not exist in this experiment\n')
     fprintf(1,'Clusters not found:\n')
     fprintf(1,'%s\n', clusterID{missClustFlag})
@@ -111,7 +111,7 @@ if ~all(~missClustFlag)
         fprintf(1,'No valid cluster ID provided!\n')
         return
     end
-end    
+end
 clusterID(missClustFlag) = [];
 clIdx(:,missClustFlag) = [];
 spkIdx(:, missClustFlag) = [];
@@ -173,7 +173,7 @@ else
     % Naming the waveform file
     binFile = dir(fullfile(dataDir,'*.bin'));
     smrxFile = dir(fullfile(dataDir, '*.smrx'));
-    if numel(binFile) == 1 
+    if numel(binFile) == 1
         % As the binary file
         [~,baseName] = fileparts(fullfile(binFile.folder,binFile.name));
     elseif numel(smrxFile) == 1
