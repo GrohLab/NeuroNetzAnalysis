@@ -7,6 +7,7 @@ function [CV2, CVsqr, bIdx, gen_bTheta,...
 %condArray, the spike times in indeces in spkSubs, and the sampling
 %frequency in fs.
 %   ? = compareFiringModes(condArray, spkSubs, fs)
+%   ? = compareFiringModes(condArray, spkSubs, fs, Name-Value)
 %Emilio Isaias-Camacho @GrohLab 2021
 %% Parsing inupts
 p = inputParser;
