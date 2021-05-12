@@ -40,7 +40,7 @@ fnOpts = {'UniformOutput', false};
 
 [Tot_CV2, Tot_CVsqr, Tot_bIdx, Tot_bTheta] = getBurstInfo(spkSubs, fs);
 genericTheta = nanmean(Tot_bTheta(Tot_bTheta < -2)); gen_bTheta = Tot_bTheta;
-gen_bTheta(Tot_bTheta < log10(2)-2) = genericTheta;
+gen_bTheta(Tot_bTheta > log10(2)-2) = genericTheta;
 
 Ncond = size(condArray(:),1);
 Ncl = size(spkSubs(:),1);
