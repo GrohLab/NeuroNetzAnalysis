@@ -1,11 +1,11 @@
-function [frHist, frCents, structString] =...
+function [frHist, frCents, structString, MI] =...
     modulationDist(fr, frNbin, figTtl, figDir, chExp, structString)
 %MODULATIONDIST provides the modulation distribution for the given Nx2
 %firing frequency matrix. It returns the histogram for the given bins and
 %the center for each bin.
 %       [frHist, frCents] = modulationDist(fr, frNbin, figTtl, figDir, *chExp)
 %   INTPUS:
-%       fr - Nx2 matrix containing the firing frequency of N clusters with
+%       fr - NxC matrix containing the firing frequency of N clusters with
 %            the first column being the control condition and the second
 %            being the treatment conditions.
 %       frNbin - number of bins for the distribution
@@ -19,6 +19,8 @@ function [frHist, frCents, structString] =...
 %                modulation index
 %       frCents - 1xfrNbin vector representing the bin centers for the
 %                 histogram.
+%       structString - string as user input
+%       MI - NxK array containing the modulation index per combinatorial
 %   Modulation Index:
 %        $MI = \frac{T - C}{T + C}$
 %
@@ -87,7 +89,9 @@ if ~exist('structString','var')
 end
 ttlString = cat(2,ttlString, sprintf(' (%s)', structString));
 ttlFile = cat(2, ttlFile, sprintf(' (%s)', structString));
-legend(sfrAx, triMLines(1:length(triM))); title(sfrAx, ttlString)
+lgnd = legend(sfrAx, triMLines(1:length(triM)),'Location', 'best'); 
+lgnd.Box = 'off';
+title(sfrAx, ttlString)
 xlabel(sfrAx, 'Modulation index (MI)');ylabel(sfrAx, "Population proportion");
 saveFigure(sfrFig, fullfile(figDir, ttlFile));
 end
