@@ -84,12 +84,11 @@ isiVVl = arrayfun(@(x) interp1(isiCent, pxMat(x,:), isiVls{x}), (1:Ncl)', fnOpts
 
 retMps = cellfun(@(x) log10(cat(2, x(1:end-1), x(2:end))), isiTms, fnOpts{:});
 Npks = cellfun(@numel, isiPks);
-
+Nvls = cellfun(@numel, isiVls);
 [CV2, CVsqr] = cellfun(@getCVsfromISIs, isiTms);
 
 %%
 % No easy way out... looping per cluster
-valleyFlag = cellfun(@isempty, isiVls); Nvls = cellfun(@numel, isiVls);
 threshPrCl = zeros(Ncl,1); brstIdx = threshPrCl;
 
     function thresh = getLowestValley(loc, val)
@@ -104,7 +103,7 @@ threshPrCl = zeros(Ncl,1); brstIdx = threshPrCl;
         end
     end
 
-    function [vall2r, pks2r] = getValleyPosRelative2Peaks()
+    function vall2r = getValleyPosRelative2Peaks()
         vallBetwnPksFlag = isiVls{ccl} < isiPks{ccl}';
         vall2r = sum(vallBetwnPksFlag);
     end
