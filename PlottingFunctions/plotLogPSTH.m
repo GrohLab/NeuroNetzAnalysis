@@ -9,7 +9,7 @@ p = inputParser;
 
 % Required arguments auxiliary function and variables
 pfn = ["LogPSTH", "Log10TimeAxis", "TimeAxis", "ConditionNames",...
-    "DeltaLogStep"];
+    "DeltaLogStep", "Normalization"];
 checkStruct = @(x) all([isstruct(x), isfield(x, pfn)]);
 
 % Required parameters
@@ -36,38 +36,62 @@ getMI = @(x, d) diff(x,1,d)./sum(x,d,'omitnan');
 [Ncl, Nbin, Ncond] = size(PSTHstruct.LogPSTH);
 tmWinMS = PSTHstruct.TimeAxis([1,Nbin])*1e3;
 
+
 %% Figure and axes for displaying PSTHs per condition
 natFig = figure(figOpts{:}); natAx = gobjects(Ncond+1,1);
 natP = {'Parent', natFig};
 % Plotting the mean PSTH for all conditions at the bottom of the figure
 condPsth = squeeze(mean(PSTHstruct.LogPSTH, 1, 'omitnan')); 
-condPsth = condPsth./sum(condPsth, 'omitnan');
+if strcmpi(PSTHstruct.Normalization, 'prob')
+    % Probability
+    condPsth = condPsth./sum(condPsth, 'omitnan');
+%     cbLabel = 'Probability';
+else
+    % Firing rate with inhomogenous bin sizes
+    [~, lgEdg] = prepareLogBinEdges(PSTHstruct.TimeAxis([1,Nbin]), Nbin);
+    tmBinWdth = (diff(10.^lgEdg(:)));
+    condPsth = condPsth./tmBinWdth;
+%     PSTHstruct.LogPSTH = PSTHstruct.LogPSTH.*reshape(condPsth, [1, Nbin, Ncond]);
+%     PSTHstruct.LogPSTH = PSTHstruct.LogPSTH./tmBinWdth';
+%     cbLabel = 'Firing rate [Hz]';
+end
 logMeanEdges = [2,1; 3,0]*[Ncond;1];
 natAx(Ncond + 1) = subplot(3, Ncond, expSubs(logMeanEdges), natP{:});
 semilogx(natAx(Ncond + 1), PSTHstruct.TimeAxis*1e3, condPsth);
 xticklabels(natAx(Ncond + 1), xticks(natAx(Ncond + 1)));
 xlim(natAx(Ncond + 1), tmWinMS); xlabel(natAx(Ncond + 1), 'Log time [ms]');
-ylabel(natAx(Ncond + 1), 'Firing probability [p(spike|bin)]')
-xtks = xticks(natAx(Ncond + 1)); yyaxis(natAx(Ncond + 1), 'right');
-natAx(Ncond + 1).ColorOrder = lines(Ncond);
-natAx(Ncond + 1).LineStyleOrder = '--';
-semilogx(natAx(Ncond + 1), PSTHstruct.TimeAxis*1e3, cumsum(condPsth));
+if strcmpi(PSTHstruct.Normalization, 'prob')
+    ylabel(natAx(Ncond + 1), 'Firing probability [p(spike|bin)]')
+    yyaxis(natAx(Ncond + 1), 'right');
+    natAx(Ncond + 1).ColorOrder = lines(Ncond);
+    natAx(Ncond + 1).LineStyleOrder = '--';
+    semilogx(natAx(Ncond + 1), PSTHstruct.TimeAxis*1e3, cumsum(condPsth));
+    natAx(Ncond + 1).YAxis(2).Color = [0.3,0.3,0.3];
+else
+    ylabel(natAx(Ncond + 1), 'Firing rate [Hz]')
+end
+xtks = xticks(natAx(Ncond + 1)); 
 legend(natAx(Ncond + 1), PSTHstruct.ConditionNames.cellstr, 'Location', 'best');
-box(natAx(Ncond + 1), 'off'); natAx(Ncond + 1).YAxis(2).Color = [0.3,0.3,0.3];
+box(natAx(Ncond + 1), 'off'); 
 % Plotting PSTH per cluster
-tx = PSTHstruct.Log10TimeAxis;
+tx = PSTHstruct.Log10TimeAxis; mxClr = max(PSTHstruct.LogPSTH(:));
+% clrMp = flip(gray(2^8));
 for ccond = 1:Ncond
     imgMat = [ccond, 0; ccond, Ncond];
     natAx(ccond) = subplot(3, Ncond, imgMat * [1;1], natP{:}); 
     imagesc(natAx(ccond), 'XData', tx, 'YData', 1:Ncl,...
-        'CData', PSTHstruct.LogPSTH(:,:,ccond));
+        'CData', PSTHstruct.LogPSTH(:,:,ccond),[0, mxClr]);
+%     colormap(natAx(ccond), clrMp)
     xticklabels(natAx(ccond), 10.^(xticks(natAx(ccond))+3));
     title(natAx(ccond), PSTHstruct.ConditionNames(ccond));
     ylim(natAx(ccond), [1, Ncl]); box(natAx(ccond), 'off');
     xticks(natAx(ccond), log10(xtks)-3); 
     xticklabels(natAx(ccond), 10.^(xticks+3))
 end
-ylabel(natAx(1), 'Clusters')
+ylabel(natAx(1), 'Clusters'); 
+% cb = colorbar(natAx(ccond), 'Location', 'west', 'Color', [0.8,0.8,0.8],...
+%     'Limits', [0, max(condPsth(:))]);
+% cb.Label.String = cbLabel;
 arrayfun(@(x) xlim(x, PSTHstruct.Log10TimeAxis([1,Nbin])), natAx(1:Ncond));
 arrayfun(@(x) set(x.YAxis, 'Visible', 'off'),...
     natAx(setdiff(1:(Ncond + 1), [1, Ncond + 1])), fnOpts{:});
