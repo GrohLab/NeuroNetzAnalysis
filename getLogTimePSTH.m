@@ -19,6 +19,9 @@ function [PSTHstruct] = getLogTimePSTH(relSpkTms, responseFlags, varargin)
 %       *verbose - [optional] logical flag to activate (1) or deactive (0 -
 %                  default)
 %       *Offset - [optional] shift in time in seconds for the spikes.
+%       *normalization - [optional] string stating if the cluster-wise
+%                        normalization should be in 'probability' or in
+%                        firing rate ('fr'). 'probability' by default.
 %   OUTPUTS:
 %       PSTHstruct - structure with 'LogPSTH' which is a  Cl x Nbin x Cd
 %       matrix containing the activity for Cl clusters, Nbin bins, and Cd
@@ -45,6 +48,9 @@ checkFs = @(x) all([isnumeric(x), x>0]);
 defNbin = 64;
 checkNbin = @(x) all([isnumeric(x), x>1]);
 
+defNorm = 'prob';
+checkNorm = @(x) all([ischar(x), any(strcmpi(x, {'prob', 'fr'}))]);
+
 % Optional parameter
 defVerbose = false;
 checkVerbose = @(x) all([numel(x) == 1, isnumeric(x) | islogical(x)]);
@@ -57,6 +63,7 @@ p.addRequired('responseFlags', checkResponseFlag);
 p.addParameter('tmWin', defTmWin, checkTmWin);
 p.addParameter('fs', defFs, checkFs);
 p.addParameter('Nbin', defNbin, checkNbin);
+p.addParameter('normalization', defNorm, checkNorm);
 p.addOptional('verbose', defVerbose, checkVerbose);
 p.addOptional('Offset', defOffset, checkOffset);
 
@@ -71,14 +78,20 @@ fs = p.Results.fs;
 Nbin = p.Results.Nbin;
 verbose = p.Results.verbose;
 ofst = p.Results.Offset;
-
+normStr = p.Results.normalization;
 if verbose
     fprintf(1, 'logPSTH from %.3f to %.3f ms with %d bins\n',...
         tmWin*1e3, Nbin)
 end
 %% Auxiliary variables
 fnOpts = {'UniformOutput', false};
-hstOpts = {'Normalization','probability'};
+if strcmpi(normStr, 'prob')
+    hstOpts = {'Normalization','probability'};
+    divsr = ones(1, size(relSpkTms(:),1));
+else
+    hstOpts = {'Normalization','count'};
+    divsr = arrayfun(@(x) size(x.SpikeTimes,2), relSpkTms);
+end
 Ncond = numel(relSpkTms);
 conditionNames = arrayfun(@(x) x.name, relSpkTms, fnOpts{:});
 [binCenters, binEdges, ~, deltaLogT] = prepareLogBinEdges(tmWin, Nbin);
@@ -105,9 +118,11 @@ for ccond = 1:Ncond
         fprintf(1, '%s processed, ', conditionNames{ccond})
     end
 end
+logPSTH = logPSTH./reshape(divsr, [1, 1, Ncond]);
+
 PSTHstruct = struct('LogPSTH',logPSTH, 'Log10TimeAxis', binCenters,...
     'TimeAxis', 10.^binCenters, 'ConditionNames', string(conditionNames),...
-    'DeltaLogStep', deltaLogT);
+    'DeltaLogStep', deltaLogT, 'Normalization', normStr);
 if verbose
     fprintf(1, ' done!\n')
 end
