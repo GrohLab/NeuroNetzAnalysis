@@ -20,20 +20,57 @@ ics = double(1 - cumsum(signMat(:,wIdx)./wSum,2));
 quartCut = [3.8;3;2;4*exp(-1);1;1/5]/4; 
 % Exponential analysis for the auto-correlograms
 mdls = zeros(Ns,2); r2 = zeros(Ns,1); qVals = zeros(Ns,length(quartCut));
+% Function to fit
+sigFun = @(u,v,x) (-1 ./ (1 + exp(-u*(x + v)))) + 1;
+ft = fittype(sigFun,'coefficients',{'u','v'},'independent',{'x'});
+ftOps = fitoptions(ft); 
+ftOps = fitoptions(ftOps,...
+    'Lower', [0, -Inf],...
+    'Upper', [Inf, 0],...
+    'Robust', 'Bisquare',...
+    'StartPoint', [1e3, -6e-3],...
+    'Display', 'off');
+st = fittype('SmoothingSpline'); % Empirical finding of the smoothing parameter
+stOps = fitoptions(st); stOps = fitoptions(stOps, 'SmoothingParam',1-10^-9.9);
 for cis = 1:Ns
     % Exponential fit for the inverted cumsum
-    [fitObj, gof] = fit(shTx, ics(cis,:)', 'exp1', 'Display', 'off');
-    mdls(cis,:) = coeffvalues(fitObj); r2(cis) = gof.rsquare;
-    % Quartiles cut for exponential distribution (5, 25, 50, 63.21, 75, 95)
-    quartFlags = ics(cis,:) >= quartCut;
-    quartFlags(~any(quartFlags,2),1) = true;
-    [qSubs, ~] = find(diff(quartFlags'));
-    il = arrayfun(@(x) fit_poly(shTx(x:x+1), ics(cis,x:x+1), 1), qSubs,...
-        'UniformOutput', 0);il = cat(2,il{:});
-    if isempty(il)
-        continue
+    if zSum(cis)
+        
+        [stObj, stGof] = fit(shTx, ics(cis,:)', st, stOps);
+        r2(cis) = stGof.rsquare;
+        smthCumResp = feval(stObj, shTx)';
+        quartFlags = smthCumResp >= quartCut;
+        quartFlags(~any(quartFlags,2),1) = true;
+        %[qSubs, ~] = find(diff(quartFlags'));
+        qSubs = arrayfun(@(x) find(diff(quartFlags(x,:)'),1,'first'),...
+            (1:size(quartFlags,1))');
+        %il = arrayfun(@(x) fit_poly(shTx(x:x+1), ics(cis,x:x+1), 1), qSubs,...
+        %    'UniformOutput', 0);il = cat(2,il{:});
+        il = arrayfun(@(x) fit_poly(shTx(x:x+1), smthCumResp(x:x+1), 1), qSubs,...
+            'UniformOutput', 0);il = cat(2,il{:});
+        if ~isempty(il) && size(il,2) == 6 && all(il(1,:) > 0)
+            qVals(cis,:) = (quartCut' - il(2,:))./il(1,:);
+            continue
+        end
+        % [fitObj, gof] = fit(shTx, ics(cis,:)', 'exp1', 'Display', 'off');
+        [fitObj, gof] = fit(shTx, ics(cis,:)', ft, ftOps);
+        mdls(cis,:) = coeffvalues(fitObj); r2(cis) = gof.rsquare;
+        % Quartiles cut for exponential distribution (5, 25, 50, 63.21, 75, 95)
+        % quartFlags = ics(cis,:) >= quartCut;
+        smthCumResp = feval(fitObj, tx)';
+        quartFlags = smthCumResp >= quartCut;
+        quartFlags(~any(quartFlags,2),1) = true;
+        [qSubs, ~] = find(diff(quartFlags'));
+        %[~, qSubs] = find(quartFlags,6,'last');
+        %il = arrayfun(@(x) fit_poly(shTx(x:x+1), ics(cis,x:x+1), 1), qSubs,...
+        %    'UniformOutput', 0);il = cat(2,il{:});
+        il = arrayfun(@(x) fit_poly(tx(x:x+1), smthCumResp(x:x+1), 1), qSubs,...
+            'UniformOutput', 0);il = cat(2,il{:});
+        if isempty(il)
+            continue
+        end
+        qVals(cis,:) = (quartCut' - il(2,:))./il(1,:);
     end
-    qVals(cis,:) = (quartCut' - il(2,:))./il(1,:);
 end
 qDiff = diff(qVals(:,[1,4]),1,2);
 end
