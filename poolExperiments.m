@@ -351,6 +351,7 @@ for cexp = reshape(chExp, 1, [])
         paCorr = eaCorr;
         pcondIsi = econdIsi;
         pcondSpks = econdSpks;
+        pSpkSubs = spkSubs;
     else
         pfr = cat(1, pfr, efr);
         pisi = cat(1, pisi, eisi);
@@ -359,6 +360,7 @@ for cexp = reshape(chExp, 1, [])
         pcondSpks = cat(1, pcondSpks, econdSpks);
         popClWf = cat(2, popClWf, mswf);
         pcwID = cat(1, pcwID, cwID);
+        pSpkSubs = cat(1, pSpkSubs, spkSubs);
         % Homogenizing trial numbers
         if any(NaNew ~= NaStack)
             NaMin = min(NaStack, NaNew);
@@ -579,9 +581,10 @@ if ~exist('structString','var')
 end
 mdOpts = {figureDir, chExp, structString};
 
-MIh(:,1) = modulationDist(pfr, frNbin, 'Spontaneous modulation index',...
-        mdOpts{:}); 
-MIh(:,2) = modulationDist(evFr, frNbin, 'Evoked modulation index', mdOpts{:});
+[MIh(:,1), ~, ~, MIspon] = modulationDist(pfr, frNbin,...
+    'Spontaneous modulation index', mdOpts{:}); 
+[MIh(:,2), ~, ~, MIevok] = modulationDist(evFr, frNbin,...
+    'Evoked modulation index', mdOpts{:});
 ttls = "SNR modulation"; ttls(2) = ttls(1) + " responsive";
 ttls(3) = ttls(1) + " non-responsive"; ci = 1; SNR = zeros(frNbin, 3);
 ttls = ttls.cellstr;
