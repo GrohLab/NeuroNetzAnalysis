@@ -5,9 +5,34 @@ function [CV2, CVsqr, bIdx, gen_bTheta,...
 %block or trial by trial for the given spikes. The function requires the
 %structure array conditions with 'name' and 'Triggers' (and 'Stimulus') in
 %condArray, the spike times in indeces in spkSubs, and the sampling
-%frequency in fs.
-%   ? = compareFiringModes(condArray, spkSubs, fs)
-%   ? = compareFiringModes(condArray, spkSubs, fs, Name-Value)
+%frequency in fs. It returns the coefficient of variation, CV^2, burst
+%index, and the used threshold for each cluster in each condition (per
+%block or trial) and regardless of the conditions.
+%   [CV2, CVsqr, bIdx, bTh] = compareFiringModes(condArray, spkSubs, fs)
+%   compareFiringModes(condArray, spkSubs, fs, Name-Value)
+%
+%   INPUTS:
+%       condArray - vector array with C elements for the considered
+%                   conditions to look at.
+%       spkSubs - vector cell array with N elements each containing the
+%                 spike subscripts representing the time of occurrance.
+%       fs - scalar indicating the sampling frequency for the given spikes
+%   NAME-VALUE:
+%       *inBlock - [optional] boolean flag indicating if the conditions
+%                   were in a block or in as independent and interleaved
+%                   trials. (default: block).
+%       *verbose - [optional] boolean flag indicating if the function
+%                   should display messages to the user
+%   OUTPUTS:
+%       CV2, CVsqr, bIdx, bTh - NxC matrices containing 3 measurements for
+%                               N neurons and C conditions, and the
+%                               considered threshold: coefficient of
+%                               variation, CV^2, burst index (burst
+%                               proportion), and maximum inter-spike
+%                               interval to consider a putative burst.
+%       totCV2, totCVsqr, totbIdx - Nx1 matrices containing  measurements
+%                                   for N neurons in general.
+
 %Emilio Isaias-Camacho @GrohLab 2021
 %% Parsing inupts
 p = inputParser;
