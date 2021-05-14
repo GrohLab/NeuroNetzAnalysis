@@ -1,4 +1,4 @@
-function [p_f] = getResponseProbability(relSpkTms,respWin,varargin)
+function [p_f, pEvok, pSpon] = getResponseProbability(relSpkTms,respWin,varargin)
 %GETRESPONSEPROBABILITY The trial is classified as responsive (true) when
 %the spiking activity within the response window exceeds the spiking
 %activity in the spontaneous window
@@ -22,6 +22,10 @@ function [p_f] = getResponseProbability(relSpkTms,respWin,varargin)
 %   OUTPUT:
 %       p_f - NxC array with the probability of response for each neuron N
 %             and condition C. 
+%       pSpon - NxC arraz with the probability of spiking occurrances
+%               within the spontaneous window
+%       pEvok - NxC array with the probability of spiking occurrances
+%               within the response window
 %Emilio Isaias-Camacho @ GrohLab 2021
 
 %% Parse inputs
@@ -99,6 +103,12 @@ p_f =...
     psthPerCluster_perTrial, fnOpts{:});
 % Define a function that gets the mean spiking activity in a given window
 getSpikingActivityIn = @(x, tw) mean(x(:, psthtx >= tw(1) & psthtx <= tw(2)),2);
+pSpon = cellfun(@(y) cellfun(@(x)...
+    mean(getSpikingActivityIn(x,sponWin) > 0), y), p_f, fnOpts{:});
+pSpon = cat(2, pSpon{:});
+pEvok = cellfun(@(y) cellfun(@(x)...
+    mean(getSpikingActivityIn(x,respWin) > 0), y), p_f, fnOpts{:});
+pEvok = cat(2, pEvok{:});
 p_f = cellfun(@(y) cellfun(@(x)...
     mean(getSpikingActivityIn(x,respWin)...
     > getSpikingActivityIn(x,sponWin)), y), p_f, fnOpts{:});
