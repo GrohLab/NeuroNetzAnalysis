@@ -71,7 +71,8 @@ else
     ylabel(natAx(Ncond + 1), 'Firing rate [Hz]')
 end
 xtks = xticks(natAx(Ncond + 1)); 
-legend(natAx(Ncond + 1), PSTHstruct.ConditionNames.cellstr, 'Location', 'best');
+lgnd = legend(natAx(Ncond + 1), PSTHstruct.ConditionNames.cellstr);
+lgnd.Location = 'best'; lgnd.Box = 'off';
 box(natAx(Ncond + 1), 'off'); 
 % Plotting PSTH per cluster
 tx = PSTHstruct.Log10TimeAxis; mxClr = max(PSTHstruct.LogPSTH(:));
@@ -95,6 +96,7 @@ ylabel(natAx(1), 'Clusters');
 arrayfun(@(x) xlim(x, PSTHstruct.Log10TimeAxis([1,Nbin])), natAx(1:Ncond));
 arrayfun(@(x) set(x.YAxis, 'Visible', 'off'),...
     natAx(setdiff(1:(Ncond + 1), [1, Ncond + 1])), fnOpts{:});
+arrayfun(@(x) set(x,'Color','none'), natAx);
 natFig.Visible = 'on';
 figs(1) = natFig;
 %% Figure for displaying a comparison between condition permutations
@@ -123,6 +125,7 @@ if Ncond > 1
         bar(prmAx(miSpSub), tx(condMI>0), condMI(condMI>0), posBar{:});
         set(prmAx(miSpSub),'NextPlot','add');
         bar(prmAx(miSpSub), tx(condMI<=0), condMI(condMI<=0), negBar{:});
+        set(prmAx(miSpSub),'Color','none');
         xticks(prmAx(miSpSub), log10(xtks)-3); 
         xticklabels(prmAx(miSpSub), 10.^(xticks+3))
     end
@@ -132,7 +135,8 @@ if Ncond > 1
     arrayfun(@(x) set(x.YAxis,'Visible','off'), prmAx(2:Nperm));
     arrayfun(@(x) box(x, 'off'), prmAx);
     linkaxes(prmAx, 'x'); linkaxes(prmAx(Nperm+1:Nperm*2), 'xy')
-    legend(prmAx(Nperm*2), {'Potentiation','Depression'}, 'Location', 'best')
+    lgnd = legend(prmAx(Nperm*2), {'Potentiation','Depression'});
+    lgnd.Location = 'best'; lgnd.Box = 'off';
     ylabel(prmAx(Nperm+1), 'Modulation Index')
     permFig.Visible = 'on';
     figs(2) = permFig;
