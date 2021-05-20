@@ -549,7 +549,7 @@ for cq = 1:length(qVals10)-1
 end
 % Median , mean, and mode markers
 [~, mxQSub] = max(binCounts); mLabels = ["Median","Mean","Mode"];
-triM = 10.^[qVals(3), mean(logData), binCents(mxQSub)]; 
+triM = 10.^[qVals(3), nanmean(logData), binCents(mxQSub)]; 
 triBCts = interp1(binCents10, binCounts, triM); mCMap = flip(hsv(3),1);
 for cm = 1:length(triM)
     line(sdAx, repmat(triM(cm),2,1), [0; triBCts(cm)],...
@@ -563,15 +563,16 @@ if exist('structString','var')
     ttlString = cat(2, ttlString, sprintf(' (%s)', structString));
     ttlFile = cat(2, ttlFile, sprintf(' (%s)', structString));
 end
-legend(sdAx, triMLines(1:length(triM))); title(sdAx, ttlString)
+lgnd = legend(sdAx, triMLines(1:length(triM))); title(sdAx, ttlString)
+lgnd.Box = 'off'; lgnd.Location = 'best';
 xlabel(sdAx, sprintf('%s multiplier to get %s fr', Conditions(cchCond).name))
 ylabel(sdAx, "Population proportion"); saveFigure(sdFig,...
-    fullfile(figureDir, ttlFile))
+    fullfile(figureDir, ttlFile),1)
 %% Modulation index
 frNbin = 32; 
 
 evFr = cellfun(@(x) mean(x,2)./diff(responseWindow), Counts(:,2),...
-    'UniformOutput', 0); evFr = cat(2, evFr{:}); snr = evFr./pfr;
+    'UniformOutput', 0); evFr = cat(2, evFr{:}); SNr = evFr./pfr;
 if ~exist('structString','var')
     structStruct = [];
     structAns = inputdlg('What structure are you looking at?','Structure');
@@ -589,7 +590,8 @@ ttls = "SNR modulation"; ttls(2) = ttls(1) + " responsive";
 ttls(3) = ttls(1) + " non-responsive"; ci = 1; SNR = zeros(frNbin, 3);
 ttls = ttls.cellstr;
 for cr = [true(size(H,1),1), any(H,2), ~any(H,2)]
-    SNR(:,ci) = modulationDist(snr(cr,:), frNbin, ttls{ci}, mdOpts{:}); 
+    [SNR(:,ci),~,~,MIsnr] = modulationDist(SNr(cr,:), frNbin,...
+        ttls{ci}, mdOpts{:}); 
     ci = ci + 1;
 end
 % sfrBPAx = axes('Parent', sfrFig, 'Position', [0.13, 0.8, 0.775, 0.2],...
@@ -1149,7 +1151,8 @@ for cmod = 1:2
         ylabel(axp(cax), yaxsLbls{cax})
         if cax == 3
             xlabel(axp(cax), sprintf('Time_{%.2f ms} [s]', binSz*1e3))
-            legend(axp(cax), 'show', 'Location', 'best')
+            lgnd = legend(axp(cax), 'show'); 
+            set(lgnd, 'Location', 'best', 'Box', 'off')
         end
     end
     axp(4) = subplot(2,2,4, 'Parent', psthFig);
@@ -1159,15 +1162,14 @@ for cmod = 1:2
     bar(axp(4), txfocus(PSTH_diff(focusIdx) <= 0), PSTH_diff(PSTH_diff <= 0 & focusIdx'),...
         'FaceColor', [204, 51, 0]/255, 'DisplayName', 'Depression');
     axp(4).Box = 'off'; ylabel(axp(4), '%'); title(axp(4), 'Percentage of change')
-    xticks(axp(4),'')
-    linkaxes(axp, 'x')
-    legend show
-    psthFig.Visible = 'on';
+    xticks(axp(4),''); linkaxes(axp, 'x'); lgnd = legend(axp(4),'show'); 
+    lgnd.Box = 'off'; lgnd.Location = 'best';  psthFig.Visible = 'on';
     %psthFig = configureFigureToPDF(psthFig);
     psthFigFileName = sprintf('%s %sPSTH %sRW%.2f-%.2f ms FW%.2f-%.2f ms %s clusters',...
         expName, sprintf('%d ',chExp), sprintf('%s ',string(consCondNames)),...
         responseWindow*1e3, focusWindow*1e3, modLabels{cmod});
     psthFigFileName = fullfile(figureDir,psthFigFileName);
+    arrayfun(@(x) set(x, 'Color', 'none'), axp)
     if numel(chExp) == 1 && ~isempty(dirNames)
        psthFigFileName = string(psthFigFileName) + " sf-" + dirNames{subFoldSel};
     end
