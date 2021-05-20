@@ -68,7 +68,7 @@ for cmi = 1:size(MI,2)
     end
     % Median , mean, and mode markers
     [~, mxQSub] = max(frHist); mLabels = ["Median","Mean","Mode"];
-    triM = [sfrQV(3), mean(MI,'omitnan'), frCents(mxQSub)];
+    triM = [sfrQV(3), mean(MI(:,cmi),'omitnan'), frCents(mxQSub)];
     triBCts = interp1(binCents10, frHist, triM); mCMap = flip(hsv(3),1);
     triMLines = gobjects(size(triM,2),1);
     for cm = 1:length(triM)
@@ -89,8 +89,8 @@ if ~exist('structString','var')
 end
 ttlString = cat(2,ttlString, sprintf(' (%s)', structString));
 ttlFile = cat(2, ttlFile, sprintf(' (%s)', structString));
-lgnd = legend(sfrAx, triMLines(1:length(triM)),'Location', 'best'); 
-lgnd.Box = 'off';
+lgnd = legend(sfrAx, triMLines(1:length(triM))); 
+lgnd.Box = 'off'; lgnd.Location = 'best';
 title(sfrAx, ttlString)
 xlabel(sfrAx, 'Modulation index (MI)');ylabel(sfrAx, "Population proportion");
 saveFigure(sfrFig, fullfile(figDir, ttlFile));
