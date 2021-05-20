@@ -48,7 +48,7 @@ for cis = 1:Ns
         %    'UniformOutput', 0);il = cat(2,il{:});
         il = arrayfun(@(x) fit_poly(shTx(x:x+1), smthCumResp(x:x+1), 1), qSubs,...
             'UniformOutput', 0);il = cat(2,il{:});
-        if ~isempty(il) && size(il,2) == 6 && all(il(1,:) > 0)
+        if ~isempty(il) && size(il,2) == 6 && all(il(1,:) < 0)
             qVals(cis,:) = (quartCut' - il(2,:))./il(1,:);
             continue
         end
