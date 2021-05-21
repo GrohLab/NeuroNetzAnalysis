@@ -41,6 +41,7 @@ for cis = 1:Ns
         smthCumResp = feval(stObj, shTx)';
         quartFlags = smthCumResp >= quartCut;
         quartFlags(~any(quartFlags,2),1) = true;
+        quartFlags(all(quartFlags,2),end) = false;
         %[qSubs, ~] = find(diff(quartFlags'));
         qSubs = arrayfun(@(x) find(diff(quartFlags(x,:)'),1,'first'),...
             (1:size(quartFlags,1))');
@@ -60,6 +61,7 @@ for cis = 1:Ns
         smthCumResp = feval(fitObj, tx)';
         quartFlags = smthCumResp >= quartCut;
         quartFlags(~any(quartFlags,2),1) = true;
+        quartFlags(all(quartFlags,2),end) = false;
         [qSubs, ~] = find(diff(quartFlags'));
         %[~, qSubs] = find(quartFlags,6,'last');
         %il = arrayfun(@(x) fit_poly(shTx(x:x+1), ics(cis,x:x+1), 1), qSubs,...
