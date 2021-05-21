@@ -34,7 +34,7 @@ st = fittype('SmoothingSpline'); % Empirical finding of the smoothing parameter
 stOps = fitoptions(st); stOps = fitoptions(stOps, 'SmoothingParam',1-10^-9.9);
 for cis = 1:Ns
     % Exponential fit for the inverted cumsum
-    if zSum(cis)
+    if zSum(cis) && ~any(isnan(ics(cis,:)))
         
         [stObj, stGof] = fit(shTx, ics(cis,:)', st, stOps);
         r2(cis) = stGof.rsquare;
