@@ -1,8 +1,8 @@
 function [respOnset, qVals, fspkPcond] = getResponseOnset(relSpkTms, respTmWin,...
     varargin)
-%UNTITLED Summary of this function goes here
+%GETRESPONSEONSET 
 %   Detailed explanation goes here
-
+%Emilio Isaias-Camacho @GrohLab 2021
 %% Parsing inputs
 p = inputParser;
 % Required arguments
