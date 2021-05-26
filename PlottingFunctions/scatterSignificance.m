@@ -5,8 +5,9 @@ function [Figs, Results] =...
 
 
 meanfr = cellfun(@(x) mean(x,2)/Delta_t, Counts, 'UniformOutput', false);
-mxfr = cellfun(@(x) max(x),meanfr);
+mxfr = cellfun(@max, meanfr);
 mxfr = round(mxfr*1.15, -1);
+% mxfr = max(mxfr);
 if ~min(mxfr(:))
     mxfr(mxfr==0) = 10;
 end
@@ -54,9 +55,12 @@ for cr = 1:Nr
         grid(ax(csp), 'on');
         text(ax(csp), xaxis, yaxis, clID)
         grid(ax(csp), 'minor'); axis('square'); 
-        axis(ax(csp), [0, mxfr(cond1,aslSubX), 0, mxfr(cond1,aslSubY)]);
-        ax(csp).NextPlot = 'add';
         axMx = max(mxfr(cond1,aslSubX),mxfr(cond2,aslSubY));
+        % axis(ax(csp), [0, mxfr(cond1,aslSubX), 0, mxfr(cond1,aslSubY)]);
+        axis(ax(csp), [0, axMx, 0, axMx]);
+        % axis(ax(csp), [0, mxfr(cond1), 0, mxfr(cond1)]);
+        ax(csp).NextPlot = 'add';
+        % axMx = max(mxfr(cond1),mxfr(cond2));
         line(ax(csp), 'XData', [0, axMx],...
             'YData', [0, axMx],...
             'Color', [0.8, 0.8, 0.8], 'LineStyle', '--',...
@@ -80,7 +84,8 @@ for cr = 1:Nr
             Figs(cr).OuterPosition =...
                 [Figs(cr).OuterPosition(1:2), 0.5344, 0.4275];
         end
-        legend(ax(csp-1),'show','Location','best')
+        lgnd = legend(ax(csp-1),'show'); lgnd.Box = 'off'; 
+        lgnd.Location = 'best';
     end
 end
 set(Figs,'Visible','on')
