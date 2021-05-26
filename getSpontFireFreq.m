@@ -26,22 +26,23 @@ function [firingRatePerCluster, deltaTrigTimeSum, sponSpks, sponIsi] =...
 %       sponIsi - a cell array with the inter-spike intervals for the
 %                 spontaneous spikes.
 % Emilio Isaias-Camacho @GrohLab 2020
+fnOpts = {'UniformOutput', false};
 
 spksFlag =...
     cellfun(@(x) round(x./fs) > consTime(1) & round(x./fs) <= consTime(2),...
-    spks, 'UniformOutput', 0);
-isi = cellfun(@diff, spks, 'UniformOutput', 0);
-consSpks = cellfun(@(x,y) x(y), spks, spksFlag, 'UniformOutput', 0);
-consIsi = cellfun(@(x,y) x(y(1:end-1)), isi, spksFlag, 'UniformOutput', 0);
+    spks, fnOpts{:});
+isi = cellfun(@diff, spks, fnOpts{:});
+consSpks = cellfun(@(x,y) x(y), spks, spksFlag, fnOpts{:});
+consIsi = cellfun(@(x,y) x(y(1:end-1)), isi, spksFlag, fnOpts{:});
 compareTimes =@(x) arrayfun(@(z) any(trigs(:,1) < z &...
     trigs(:,2)+(bufTime*fs) >= z), x);
-evokSpksFlags = cellfun(@(x) compareTimes(x), consSpks, 'UniformOutput', 0);
+evokSpksFlags = cellfun(@(x) compareTimes(x), consSpks, fnOpts{:});
 NSpkSpont = cellfun(@(x) sum(~x), evokSpksFlags);
 trigs = trigs(trigs(:,2) <= round(consTime(2) * fs),:);
 deltaTrigTimeSum = sum([trigs(:,1); round(consTime(2) * fs)] -...
     [round(consTime(1) * fs); trigs(:,2)])/fs;
 firingRatePerCluster = NSpkSpont./deltaTrigTimeSum;
-sponSpks = cellfun(@(x,y) x(~y), consSpks, evokSpksFlags, 'UniformOutput', 0);
+sponSpks = cellfun(@(x,y) x(~y), consSpks, evokSpksFlags, fnOpts{:});
 sponIsi = cellfun(@(x,y) x(~y(1:numel(x))), consIsi, evokSpksFlags,...
-    'UniformOutput', 0);
+    fnOpts{:});
 end
