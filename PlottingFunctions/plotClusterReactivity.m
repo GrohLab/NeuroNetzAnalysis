@@ -99,7 +99,7 @@ ax2.XLim = [timeLapse(1), timeLapse(2)];
 ax2.Box = 'off';
 ax2.ClippingStyle = 'rectangle';
 
-legend(ax2,'show','Location','best')
+lgnd = legend(ax2,'show'); set(lgnd, 'Location','best', 'Box', 'off');
 linkaxes([ax1,ax2],'x')
 title(ax1,[expName,sprintf(' %d trials',sweeps)])
 
@@ -124,8 +124,7 @@ if fthAxFlag
             ax3.NextPlot = 'add';
         end
     end
-    legend(ax3,'show','Location','best')
-
+    lgnd = legend(ax3,'show'); set(lgnd, 'Location', 'best', 'Box', 'off');
     ax3.Box = 'off';
     ax3.XLim = [timeLapse(1), timeLapse(2)];
     ax3.XAxis.Visible = 'off';
