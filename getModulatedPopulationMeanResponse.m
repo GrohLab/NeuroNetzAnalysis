@@ -59,7 +59,9 @@ rconfidence = cellfun(@(x)...
     arrayfun(@(y) y.paramci, x, fnOpts{:}),...
     poissonDistributions, fnOpts{:}); 
 rconfidence = cellfun(@(x) cat(2, x{:}), rconfidence, fnOpts{:});
-popResponse = struct('Mean', rlambda, 'Confidence', rconfidence);
+ffact = cellfun(@(x) var(x,'omitnan')./mean(x,'omitnan'), spkCount, fnOpts{:});
+popResponse = struct('Mean', rlambda, 'Confidence', rconfidence,...
+    'FanoFactor',ffact);
 
 end
 
