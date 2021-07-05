@@ -308,6 +308,7 @@ for cexp = reshape(chExp, 1, [])
     eisi = cellfun(@(x) diff(x), spkSubs, 'UniformOutput', 0);
     econdIsi = cell(Ncl, size(consideredConditions,2));
     econdSpks = econdIsi;
+    trainDuration = 1;
     for ccond = consideredConditions
         itiSub = mean(diff(Conditions(ccond).Triggers(:,1)));
         consTime = [Conditions(ccond).Triggers(1,1) - round(itiSub/2),...
@@ -315,7 +316,7 @@ for cexp = reshape(chExp, 1, [])
             ./fs;
         [efr(:,NaCount),~, econdSpks(:,NaCount), econdIsi(:,NaCount)] =...
             getSpontFireFreq(spkSubs, Conditions(ccond).Triggers,...
-            consTime, fs, delta_t + responseWindow(1));
+            consTime, fs, trainDuration + delta_t + responseWindow(1));
         NaCount = NaCount + 1;
     end
     
@@ -490,7 +491,7 @@ if strcmpi(filtStr, 'filtered') && nnz(wruIdx)
     filterIdx = [true; wruIdx];
 end
 %% Spontaneous firing rate with a bigger window
-mltpl = 5;
+mltpl = 10;
 sfrMdl = fit_poly(pfr(:,1), pfr(:,2), 1);
 xyLims = ceil(max(pfr,[],1)./mltpl)*mltpl;
 yeqxOpts = {'LineStyle','--','Color',[0.7,0.7,0.7],'DisplayName','y = x'};
