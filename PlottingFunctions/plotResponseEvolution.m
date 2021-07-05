@@ -7,7 +7,8 @@ function evolutionFigures = plotResponseEvolution(popResponse, varargin)
 
 p = inputParser;
 % Required arguments
-checkPopResponse = @(x) all([isstruct(x), isfield(x,{'Mean','Confidence'})]);
+checkPopResponse = @(x) all([isstruct(x),...
+    isfield(x,{'Mean','Confidence','FanoFactor'})]);
 % Parameters
 % Response/considered window duration
 defRespWinDelta = 1; % seconds
@@ -70,15 +71,17 @@ axOpts = {'NextPlot','add','Color','none','Box','off'};
 expSubs = @(x) x(1):x(2);
 [Ncond, Nmod] = size(popResponse); evolutionFigures = gobjects(Nmod,1);
 muTrace = arrayfun(@(x) movmean(x.Mean, trialSmooth)./winDelta,...
-    popResponse, fnOpts{:});
+    popResponse, fnOpts{:}); 
 confTrace = arrayfun(@(x) movmean(x.Confidence, trialSmooth, 2)./winDelta,...
     popResponse, fnOpts{:});
 mxAx = cellfun(@(x) max(x(2,:),[],2), confTrace);
 mxAx = max(mxAx(:)); ax = gobjects(2,Nmod); mxAx = ceil(mxAx/10)*10;
 histOpts = {'BinLimits', [0,mxAx],'BinWidth',2.5,...
     'Normalization','probability','EdgeColor','none',...
-    'Orientation','horizontal'};
-trigTmsSubs = [[0;NcondTrials(1:Ncond-1,1)]+1,cumsum(NcondTrials(:,1))];
+    'Orientation','horizontal'}; 
+mxH = cellfun(@(x) max(histcounts(x, histOpts{1:6})), muTrace);
+mxH = ceil(max(mxH(:))*1e2)/1e2;
+trigTmsSubs = [[0;cumsum(NcondTrials(1:Ncond-1,1))]+1,cumsum(NcondTrials(:,1))];
 xlabString = "Experimental time ";
 if inMinFlag
     xlabString = xlabString + "[min]";
@@ -87,6 +90,16 @@ else
 end
 strFrmt = 'Evolution for %s clusters'; 
 clusterModName = ["potentiated";"depressed"];
+permSubs = nchoosek(1:Ncond,2); Nperm = size(permSubs,1);
+pM = arrayfun(@(x)...
+    arrayfun(@(y) ranksum(muTrace{permSubs(y,:),x}), (1:Nperm)'),...
+    1:Nmod, fnOpts{:});
+while iscell(pM)
+    pM = cat(2, pM{:});
+end
+mednMds = cellfun(@median, muTrace); signClrMap = [0.2*ones(1,3);0.8,0.17,0.05];
+mednLnsX = mxH:mxH*0.08:mxH*(0.1*(Nperm -1)+1);
+mxH = mednLnsX(end);
 %% Plotting loop
 for cmod = 1:Nmod
     evolutionFigures(cmod) = figure('Color','w','Visible','on');
@@ -117,7 +130,15 @@ for cmod = 1:Nmod
     % Histogram axis
     ax(2,cmod) = subplot(1,6,6,axOpts{:}); arrayfun(@(c)...
         histogram(ax(2,cmod), muTrace{c,cmod}, histOpts{:}), 1:Ncond);
-    ylim(ax(2,cmod), [0,mxAx]); set(get(ax(2,cmod),'YAxis'),'Visible','off')
+    axis(ax(2,cmod), [0,mxH,0,mxAx]); set(get(ax(2,cmod),'YAxis'),'Visible','off')
+    % Plot significance on the y-distributions
+    plot(ax(2,cmod),[zeros(1,Ncond);mxH*ones(1,Ncond)],...
+        mednMds(:,cmod)'.*ones(2,Ncond),'LineStyle', '--',...
+        'Color',0.55*ones(1,3))
+    arrayfun(@(r) plot(ax(2,cmod), repmat(mednLnsX(r),2,1),...
+        mednMds(permSubs(r,:),cmod),...
+        'Color', signClrMap([1,2]*[pM(r,cmod)>0.05;pM(r,cmod)<0.05],:),...
+        'Marker','+','UserData', pM(r,cmod),'LineWidth',1), 1:Nperm)
     xlabel(ax(2,cmod), 'Response proportion')
 end
 
