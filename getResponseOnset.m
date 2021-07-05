@@ -50,9 +50,15 @@ psthOpts = {'BinLimits',tmWin,'BinWidth',bnSz};
 % Bin width for calculating the weighted average first spike.
 frstSpkBnSz = 7.5e-4;
 % Histogam options for the first spike histogram
-fskOpts = {'Normalization','probability','BinWidth', frstSpkBnSz}; % 0.75 ms
+fskOpts = {'Normalization','probability','BinWidth', frstSpkBnSz,... 0.75 ms
+    'BinLimits', tmWin}; % 
 % Number of clusters
 Ncl = size(relSpkTms(1).SpikeTimes,1);
+% -- First spike auxiliary variables --
+% Number of conditions
+Ncond = size(relSpkTms(:),1);
+permSubs = nchoosek(1:Ncond, 2);
+Nperm = size(permSubs, 1);
 
 %% Getting the response onset per cluster
 % Concatenating all spikes from all trials per cluster per condition
@@ -107,17 +113,20 @@ clFspk = cellfun(@(x)...
     cellfun(@(y) histcounts(y, fskOpts{:}), x, fnOpts{:}),...
     clFspk, fnOpts{:});
 bnCent = cellfun(@(x)...
-    cellfun(@(y) (y(1)+(frstSpkBnSz/2)):frstSpkBnSz:(y(end)-(frstSpkBnSz/2)),...
-    x, fnOpts{:}),bnEdg, fnOpts{:});
+    cellfun(@(y) y(1:end-1)+diff(y)./2, x, fnOpts{:}),bnEdg, fnOpts{:});
+clearvars('bnEdg');
+while iscell(bnCent)
+    bnCent = bnCent{1};
+end
 % Computing the dot product for weighted average for the first spike
 fspkPcond = cellfun(@(x,y)...
-    cellfun(@(u,v) u*v', x, y, fnOpts{:}),...
-    fspkHist, bnCent, fnOpts{:});
+    cellfun(@(u) u*bnCent', x, fnOpts{:}), fspkHist, fnOpts{:});
 % Removing nans and empty 
 fspkPcond = cellfun(@(x)...
     cellfun(@(y) sum(y,'omitnan'),x , fnOpts{:}),...
     fspkPcond, fnOpts{:});
 % Rearranging the results
 fspkPcond = cellfun(@(x) cat(1,x{:}), fspkPcond, fnOpts{:});
+fspkPcond = cat(2, fspkPcond{:});
 end
 
