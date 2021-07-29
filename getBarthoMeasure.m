@@ -1,6 +1,6 @@
 function [bm] = getBarthoMeasure(mean_wf, fs)
 %getBarthoMeasure computes the features of the Bartho 2014 paper based on
-%the waveform.
+%the waveform. With some additional measures: peak-asymmetry.
 %   Detailed explanation goes here
 
 [Nt, Ncl] = size(mean_wf);
@@ -14,11 +14,21 @@ tcp = getWaveformCriticalPoints(mean_wf, fs);
 tcp = cellfun(@(x) x - Nt/(2*fs), tcp, 'UniformOutput', 0);
 b50 = min(mean_wf) + range(mean_wf)./2;
 ampCp = cell(Ncl,1);
-tpd = zeros(Ncl,1); bhad = tpd;
+tpd = nan(Ncl,1); bhad = tpd; asym = nan(Ncl,1);
 for ccl = 1:Ncl
     ampCp(ccl) = {interp1(tx, mean_wf(:,ccl), tcp{ccl,1}, 'spline')};
     [~, troughSub] = max(abs(ampCp{ccl}));
     [~, secPeakSub] = max(abs(ampCp{ccl}(troughSub+1:end)));
+    % Calculating the z-score for the found peaks
+    zPeaks = (ampCp{ccl} - mean(mean_wf(:,ccl)))/std(mean_wf(:,ccl)); 
+    zigFlags = abs(zPeaks) >= 1; zigPeaks = zPeaks(zigFlags);
+    if sum(zigFlags) == 3
+        % Looking at 'M'-shape waveforms with three critical points
+        asym(ccl) = diff(zigPeaks([1,3]))/max(zigPeaks([1,3]));
+    elseif sum(zigFlags) == 2
+        % Looking at 'N'-shape waveforms with two critical points
+        asym(ccl) = sign(diff(zigPeaks));
+    end
     if isempty(secPeakSub)
         % We have to think of a math solution for the so called 'stable
         % region' or 'period'.
@@ -47,7 +57,7 @@ for ccl = 1:Ncl
         1); lstXg = (b50(ccl) - mdl(2))/mdl(1);
     bhad(ccl) = lstXg - frstXg;
 end
-bm = [tpd, bhad];
+bm = [tpd, bhad, asym];
 end
 
 %     if tcp{ccl, troughSub} - Ncl/(2 * fs) > 0
