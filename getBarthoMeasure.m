@@ -27,14 +27,21 @@ for ccl = 1:Ncl
         continue;
     end
     tpd(ccl) = diff(tcp{ccl,1}([troughSub, troughSub+secPeakSub]));
-    if ampCp{ccl}(troughSub) > 0
-        halfFlags = mean_wf(:,ccl) >= b50(ccl);
-    else
-        halfFlags = mean_wf(:,ccl) <= b50(ccl);
+    % if ampCp{ccl}(troughSub) > 0
+    halfFlags = mean_wf(:,ccl) >= b50(ccl);
+    %else
+    %    halfFlags = mean_wf(:,ccl) <= b50(ccl);
+    %end
+    % halfFlags = mean_wf(:,ccl) >= b50(ccl);
+    threshCross = diff(halfFlags);
+    if sum(threshCross < 0) > 1
+        fprintf(2, 'Cluster %d has wobbles\nDon''t know how to deal with this\n', ccl)
+        fprintf(2, 'Skipping it...\n')
+        continue
     end
-    frstSub = find(halfFlags, 1, 'first');
-    lstSub = find(halfFlags, 1, 'last');
-    mdl = fit_poly(tx([frstSub-1, frstSub]), mean_wf([frstSub-1, frstSub],ccl),...
+    frstSub = find(threshCross, 1, 'first');
+    lstSub = find(threshCross, 1, 'last');
+    mdl = fit_poly(tx([frstSub, frstSub+1]), mean_wf([frstSub, frstSub+1],ccl),...
         1); frstXg = (b50(ccl) - mdl(2))/mdl(1);
     mdl = fit_poly(tx([lstSub-1, lstSub]), mean_wf([lstSub-1, lstSub],ccl),...
         1); lstXg = (b50(ccl) - mdl(2))/mdl(1);
