@@ -3,11 +3,36 @@ iOk = false;
 binFiles = dir(fullfile(dataDir,'*.bin'));
 smrxFiles = dir(fullfile(dataDir,'*.smrx'));
 try
-[~,expName,~] = fileparts( binFiles(1).name);
+    answ = 1;
+    if numel(binFiles) > 1
+        initVal = find(arrayfun(@(x) contains(x.name,...
+            'medianfiltered', 'IgnoreCase', 1), binFiles));
+        [answ, iOk] = listdlg('ListString', arrayfun(@(x) x.name, binFiles,...
+            'UniformOutput', 0),'SelectionMode','single',...
+            'InitialValue',initVal);
+        if ~iOk
+            fprintf(1,'Cancelling...\n');
+            return
+        end
+    end
+    [~,expName,~] = fileparts(binFiles(answ).name);
+        
 catch
     fprintf(1,'No binary file in the folder!\n')
     try
-       [~,expName,~] = fileparts( smrxFiles(1).name); 
+        answ = 1;
+        if numel(smrxFiles) > 1
+            initVal = find(arrayfun(@(x) contains(x.name,...
+                'medianfiltered', 'IgnoreCase', 1), smrxFiles));
+            [answ, iOk] = listdlg('ListString', arrayfun(@(x) x.name, smrxFiles,...
+                'UniformOutput', 0),'SelectionMode','single',...
+                'InitialValue',initVal);
+            if ~iOk
+                fprintf(1,'Cancelling...\n');
+                return
+            end
+        end
+       [~,expName,~] = fileparts( smrxFiles(answ).name); 
     catch
         fprintf(1,'No smrx file in the folder either!\n')
         forthAns =...
@@ -64,7 +89,8 @@ try
     load([expSubfix,'_all_channels.mat'],'sortedData')
 catch
     try
-        importPhyFiles(dataDir);
+        [~, filename] = fileparts(expSubfix);
+        importPhyFiles(dataDir, filename);
     catch
         fprintf(1,'Error importing the phy files into Matlab format\n')
         return
