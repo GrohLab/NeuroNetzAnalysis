@@ -23,8 +23,6 @@ function [ sortedData ] = ...
 
 MX_CLSS = 3;
 % Take Kilosort Data and create *all_channels.map for further analysis
-addpath(genpath('C:\Users\NeuroNetz\Documents\npy-matlab')) % path to npy-matlab
-addpath(genpath('C:\Users\NeuroNetz\Documents\GitHub\NeuroNetzAnalysis')) % path to readTSV
 
 % What is your outputfile called
 if ~exist('outputName','var') || isempty(outputName)
