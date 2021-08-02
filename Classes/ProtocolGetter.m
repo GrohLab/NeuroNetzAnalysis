@@ -93,6 +93,8 @@ classdef ProtocolGetter < handle
                         ' file?'],binBaseNames{1});
                     mm = questdlg(mergeQuest,...
                         'Merged?','Yes','No','Yes');
+                    % Auxiliary variable for awaken experiments
+                    binRecordFile = 1;
                     if strcmpi(mm,'yes')
                         % Which smrx files were used
                         obj.ismerged = true;
@@ -187,11 +189,34 @@ classdef ProtocolGetter < handle
                                     return
                                 end
                             end
+                        else
+                            % Didn't record with Spike2, but with other
+                            % program directly to bin (most likely)
+                            awakeAns = questdlg(['Did you convert an SMRX',...
+                                ' file to binary?'],'SMRX used?',...
+                                'Yes','No','No');
+                            if strcmpi(awakeAns,'Yes')
+                                fprintf(1,['Couldn''t figure out which ',...
+                                    'file is the original nor the trigger!',...
+                                    ' Cannot continue...\nNo object created!\n'])
+                            end
+                            obj.awaken = true;
+                            if Nb > 1
+                                [binRecordFile, iOk] = listdlg('ListString',...
+                                    binBaseNames, 'SelectionMode', 'multiple');
+                                if ~iOk
+                                    fprintf(1, 'Cancelling...\nNo object created!\n')
+                                end
+                            end
                         end
                     end
-                    binFile = binBaseNames{1} + ".bin";
+                    binFile = binBaseNames{binRecordFile} + ".bin";
                 end
-                obj.fileOrder = string(smrxBaseNames) + ".smrx";
+                if obj.awaken
+                    obj.fileOrder = string(binBaseNames{binRecordFile}) + ".bin";
+                else
+                    obj.fileOrder = string(smrxBaseNames) + ".smrx";
+                end
             else
                 % Likely single file transformation
                 binFile = binBaseNames{1} + ".bin";
