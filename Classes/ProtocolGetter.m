@@ -377,7 +377,7 @@ classdef ProtocolGetter < handle
             delays = 10.^uniquetol(log10(timeDelay),0.01/log10(max(abs(timeDelay))));
             % Removing delays that are greater than 1 second.
             delays(delays > 1) = [];
-            if std(delays.*1e3) < 1
+            if std(delays.*1e3) < (1*~obj.awaken + 20*obj.awaken)
                 % Validation for similarity between the delays. If the
                 % standard deviation of the delays is smaller than 1 ms,
                 % then it is very likely that there are no protocolled
@@ -392,7 +392,7 @@ classdef ProtocolGetter < handle
             % or the other delays.
             lsDel = false(length(timeDelay),Ndel);
             Ncond = numel(obj.Conditions);
-            tol = (1e-4)/max(timeDelay);
+            tol = (1e-4*~obj.awaken + 2e-2*obj.awaken)/max(timeDelay);
             for cdl = 1:Ndel
                 % Starting from the last condition on
                 fprintf(1,' %.1f',delays(cdl)*1e3)
