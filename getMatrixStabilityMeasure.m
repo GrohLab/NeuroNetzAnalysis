@@ -25,5 +25,3 @@ firingMdl = cat(2,firingMdl{:}); firingMdl = firingMdl';
 % stableCluster = arrayfun(@(x,y) all([x >= 1, abs(y) < 5e-3]), vmr, firingMdl(:,1));
 stableCluster = arrayfun(@(y) abs(y) < slopeRange, firingMdl(:,1));
 end
-
-    
