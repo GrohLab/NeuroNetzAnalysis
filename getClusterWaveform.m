@@ -52,7 +52,7 @@ clTable = getClusterInfo(fullfile(dataDir, 'cluster_info.tsv'));
 % % Reading the channel map
 try
     fP = fopen(fullfile(dataDir,'params.py'),'r');
-    fgetl(fP);
+    fname = fgetl(fP); fname = strsplit(fname, '= '); fname = fname{2};
     ln = fgetl(fP);
     fclose(fP);
 catch
@@ -236,7 +236,22 @@ spkSubs = cellfun(@(x) round(x.*fs),sortedData(clSub,2),...
     'UniformOutput',false);
 % [chs2read, readOrder, repeatChs] = unique(ch2read);
 chs2read = unique(ch2read);
-fID = fopen(fullfile(dataDir, binFile.name), 'r');
+answ = 1; 
+if numel(binFile) > 1
+    [answ, iOk] = listdlg(...
+        'ListString', arrayfun(@(x) x.name, binFile,'UniformOutput', 0),...
+        'SelectionMode', 'single');
+    if ~iOk
+        strAns = questdlg('Are you sure you want to cancel?','Quit?',...
+            'Yes','No','No');
+        if strcmpi(strAns,'Yes')
+            fprintf(1, 'Quitting!\n')
+            return
+        end
+        answ = 1;
+    end
+end
+fID = fopen(fullfile(dataDir, binFile(answ).name), 'r');
 cchan = 1;
 % Main loop
 while ~feof(fID) && cchan <= size(chs2read,1)
