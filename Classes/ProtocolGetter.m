@@ -231,16 +231,21 @@ classdef ProtocolGetter < handle
             if obj.awaken
                 fprintf(1,'Reading BIN file:\n');
                 trigFile = dir(fullfile(obj.dataDir,'TriggerSignals*.bin'));
-                if ~isempty(trigFile)
+                baseName = strsplit(obj.BinFile,'.bin'); baseName = baseName(1);
+                condSigFile = fullfile(obj.dataDir,string(baseName)+"_AwakeCondSig.mat");
+                if ~isempty(trigFile) && ~exist(condSigFile,'file')
                     fID = fopen(fullfile(trigFile.folder,trigFile.name),'r');
                     trig = fread(fID, Inf, 'uint16'); [~] = fclose(fID);
-                    trig = reshape(trig, 2, []); trig = trig - 2^15;
-                    trig = int16(trig); trig = trig - median(trig, 2);
-                    trig(1,:) = -trig(1,:);
-                    baseName = strsplit(obj.BinFile,'.bin'); baseName = baseName(1);
-                    condSigFile = fullfile(obj.dataDir,string(baseName)+"_AwakeCondSig.mat");
-                    save(condSigFile, 'trig'); obj.condSigFiles = condSigFile;
+                    trig = reshape(trig, 2, []); trig = trig - median(trig, 2);
+                    trig = int16(trig); 
+                    trig(1,:) = -trig(1,:);                    
+                    save(condSigFile, 'trig'); 
+                else
+                    fprintf(2,['Either there''s a problem with the trigger',...
+                        ' file or the AwakeCondSig file exists\n'])
+                    fprintf(2,'No file saved!\n')
                 end
+                obj.condSigFiles = condSigFile;
             else
                 fprintf(1,'Reading SMRX files:\n')
                 Ns = size(obj.fileOrder,1);
