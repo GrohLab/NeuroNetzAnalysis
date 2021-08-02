@@ -263,37 +263,52 @@ classdef ProtocolGetter < handle
             %GETSIGNALEDGES looks into the _condSig files and searches for
             %whisker, laser, and lfp channels for then concatenate the edge
             %samples.
-            mStimStruct = struct();
-            for csf = 1:size(obj.condSigFiles,1)
-                % Load the channel variables
-                stimSig = load(...
-                    fullfile(obj.dataDir,obj.condSigFiles(csf)));
-                fields = fieldnames(stimSig);
-                % Identify who is who
-                [idMat, titles, headers] =...
-                    ProtocolGetter.searchIDFromSignals(stimSig);
-                headers = string(headers);
-                % Variable assignment
-                stSgStruct = ProtocolGetter.assign2StimulationSignals(...
-                    stimSig, idMat, titles, fields);
-                wHead = stimSig.(headers(idMat(:,1)));
-                try
-                    eHead = stimSig.(headers(idMat(:,3)));
-                    stSgStruct = ProtocolGetter.correctLFPLength(...
-                        stSgStruct, wHead, eHead);
-                catch
-                    fprintf(1, 'No LFP in the current experiment!\n')
+            
+            if obj.awaken
+                % TODO: Implement the protocol getter for the awake
+                % recordings.
+                for csf = 1:size(obj.condSigFiles,1)
+                    trig = load(obj.condSigFiles(csf)); trig = trig.trig;
+                    % Hard coded for now: puff signal is the first index
+                    Triggers = struct('Whisker', trig(1,:), 'Laser', trig(2,:));
+                    [wSub, lSub] = ProtocolGetter.extractSignalEdges(Triggers, obj.fs);
+                    obj.Edges(1).Name = 'Puff'; obj.Edges(1).Subs = wSub;
+                    obj.Edges(2).Name = 'Laser'; obj.Edges(2).Subs = lSub;
+                    obj.Triggers = Triggers;
                 end
-                mStimStruct = catStruct(mStimStruct, stSgStruct);
-            end
-            obj.Triggers = mStimStruct;
-            % Extract signal edges
-            [wSubs, lSubs] = ProtocolGetter.extractSignalEdges(mStimStruct,...
-                obj.fs);
-            subs = {wSubs,lSubs};
-            for cstr = 1:2
-                obj.Edges(cstr).Name = titles{idMat(:,cstr)};
-                obj.Edges(cstr).Subs = subs{cstr};
+            else
+                mStimStruct = struct();
+                for csf = 1:size(obj.condSigFiles,1)
+                    % Load the channel variables
+                    stimSig = load(...
+                        fullfile(obj.dataDir,obj.condSigFiles(csf)));
+                    fields = fieldnames(stimSig);
+                    % Identify who is who
+                    [idMat, titles, headers] =...
+                        ProtocolGetter.searchIDFromSignals(stimSig);
+                    headers = string(headers);
+                    % Variable assignment
+                    stSgStruct = ProtocolGetter.assign2StimulationSignals(...
+                        stimSig, idMat, titles, fields);
+                    wHead = stimSig.(headers(idMat(:,1)));
+                    try
+                        eHead = stimSig.(headers(idMat(:,3)));
+                        stSgStruct = ProtocolGetter.correctLFPLength(...
+                            stSgStruct, wHead, eHead);
+                    catch
+                        fprintf(1, 'No LFP in the current experiment!\n')
+                    end
+                    mStimStruct = catStruct(mStimStruct, stSgStruct);
+                end
+                obj.Triggers = mStimStruct;
+                % Extract signal edges
+                [wSubs, lSubs] = ProtocolGetter.extractSignalEdges(mStimStruct,...
+                    obj.fs);
+                subs = {wSubs,lSubs};
+                for cstr = 1:2
+                    obj.Edges(cstr).Name = titles{idMat(:,cstr)};
+                    obj.Edges(cstr).Subs = subs{cstr};
+                end
             end
             function mStimStruct = catStruct(mStimStruct, stSgStruct)
                 fns = string(fieldnames(mStimStruct));
