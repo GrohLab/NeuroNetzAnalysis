@@ -15,7 +15,8 @@ classdef ProtocolGetter < handle
         BinFile string = "";
     end
     
-    properties % To set the get access to protected
+    properties (SetAccess = 'private',GetAccess = 'protected')
+        awaken logical = false;
     end
     
     methods
