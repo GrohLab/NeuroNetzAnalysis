@@ -227,16 +227,31 @@ classdef ProtocolGetter < handle
         
         function obj = getConditionSignals(obj)
             %GETCONDITIONSIGNALS extracts the condition signals from the
-            %SMRX files.
-            fprintf(1,'Reading SMRX files:\n')
-            Ns = size(obj.fileOrder,1);
-            for csf = 1:Ns
-                fprintf(1,'%s\n',obj.fileOrder(csf));
-                fID = fopen(fullfile(obj.dataDir, obj.fileOrder(csf)),'r');
-                getConditionSignalsBF(fID);
+            %SMRX files or from the TriggerSignals*.bin file.
+            if obj.awaken
+                fprintf(1,'Reading BIN file:\n');
+                trigFile = dir(fullfile(obj.dataDir,'TriggerSignals*.bin'));
+                if ~isempty(trigFile)
+                    fID = fopen(fullfile(trigFile.folder,trigFile.name),'r');
+                    trig = fread(fID, Inf, 'uint16'); [~] = fclose(fID);
+                    trig = reshape(trig, 2, []); trig = trig - 2^15;
+                    trig = int16(trig); trig = trig - median(trig, 2);
+                    trig(1,:) = -trig(1,:);
+                    baseName = strsplit(obj.BinFile,'.bin'); baseName = baseName(1);
+                    condSigFile = fullfile(obj.dataDir,string(baseName)+"_AwakeCondSig.mat");
+                    save(condSigFile, 'trig'); obj.condSigFiles = condSigFile;
+                end
+            else
+                fprintf(1,'Reading SMRX files:\n')
+                Ns = size(obj.fileOrder,1);
+                for csf = 1:Ns
+                    fprintf(1,'%s\n',obj.fileOrder(csf));
+                    fID = fopen(fullfile(obj.dataDir, obj.fileOrder(csf)),'r');
+                    getConditionSignalsBF(fID);
+                end
+                obj.condSigFiles = extractBefore(obj.fileOrder,".smrx") +...
+                    "_CondSig.mat";
             end
-            obj.condSigFiles = extractBefore(obj.fileOrder,".smrx") +...
-                "_CondSig.mat";
         end
         
         function obj = getSignalEdges(obj)
