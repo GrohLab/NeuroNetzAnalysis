@@ -72,7 +72,7 @@ else
 end
 xtks = xticks(natAx(Ncond + 1)); 
 lgnd = legend(natAx(Ncond + 1), PSTHstruct.ConditionNames.cellstr);
-lgnd.Location = 'best'; lgnd.Box = 'off';
+set(lgnd,'Location','best','Box','off');
 box(natAx(Ncond + 1), 'off'); 
 % Plotting PSTH per cluster
 tx = PSTHstruct.Log10TimeAxis; mxClr = max(PSTHstruct.LogPSTH(:));
