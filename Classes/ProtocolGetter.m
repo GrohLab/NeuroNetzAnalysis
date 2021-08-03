@@ -658,7 +658,7 @@ classdef ProtocolGetter < handle
             fstSubs = StepWaveform.firstOfTrain(tms);
             % Inverse of the time difference between pulses (frequency)
             
-            freqCond = round(uniquetol(pulsFreq, 0.1/max(pulsFreq)), 1);
+            freqCond = round(uniquetol(pulsFreq, 0.2/max(pulsFreq)), 1);
             freqCond = freqCond(freqCond >= 1); % Empty for no frequency
         end
         
