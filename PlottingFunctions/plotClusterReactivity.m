@@ -31,7 +31,7 @@ function fig =...
 clr = defineColorForStimuli(IDe);
 
 fthAxFlag = false;
-if ~exist('stims','var')
+if ~exist('stims','var') || isempty(stims)
     totlX = 4;
 elseif ~isempty(stims)
     fthAxFlag = true;
