@@ -336,7 +336,10 @@ classdef ProtocolGetter < handle
                 % Frequencies found (wFreq), First pulse of the trains
                 % (wFlags), and frequency by pulse (wFreqs)
                 [wFreq, wFlags, wFreqs] = ProtocolGetter.extractFrequencyTrains(...
-                    obj.Edges(cst).Subs, obj.fs);
+                    obj.Edges(cst).Subs, obj.fs); 
+                if obj.awaken && any(wFreq == 1)
+                    wFreq(wFreq == 1) = [];
+                end
                 wTrainBodyFlags = ismembertol([0;wFreqs], wFreq, 0.01);
                 obj.Edges(cst).Subs = obj.Edges(cst).Subs(~wTrainBodyFlags,:);
                 wFlags(wTrainBodyFlags) = [];
