@@ -379,6 +379,8 @@ classdef ProtocolGetter < handle
             validateFreq = @(idx, bf, subOrd, freqs)...
                 nnz(fetchSubs(idx, bf, subOrd, freqs));
             removeZeros = @(x) x(x~=0);
+            % Verify whether the experiment contains frequencies
+            freqExpFlag = [~isempty(wFreq), ~isempty(lFreq)];
             for ccon = 1:size(obj.Edges,2)  %#ok<*FXUP>
                 obj.Conditions(ccon).name = [obj.Edges(ccon).Name, 'All'];
                 obj.Conditions(ccon).Triggers = obj.Edges(ccon).Subs;
@@ -421,14 +423,45 @@ classdef ProtocolGetter < handle
                 % Create the name of the condition
                 obj.Conditions(Ncond + cdl).name = sprintf('Delay %0.3f s',...
                     delays(cdl));
-                % Verify if the selected subscripts are pulse trains 
+                % Does this experiment contain any frequency?
+                if any(freqExpFlag)
+                    % Yes, this experiment contains frequency
+                    delLFreqs = []; delWFreqs = []; cdFreqL = []; 
+                    cdFreqW = cdFreqL;
+                    % Is it the laser that contains frequency
+                    % And which frequencies are involved in the current
+                    % delay (cdl)??
+                    if freqExpFlag(2)
+                        % Yes, the laser contains frequency. 
+                        cdFreqL = fetchSubs(cdl, lsDel, lSubOrd, lFreqs);
+                        cdLFreqs = uniquetol(cdFreqL, 0.2/max(lFreqs));
+                    end
+                    % Is it the whisker (or other) that contains frequency?
+                    if freqExpFlag(1)
+                        % Yes, the whisker (other) contains frequency
+                        cdFreqW = fetchSubs(cdl, lsDel, wSubOrd, wFreqs);
+                        cdWFreqs = uniquetol(cdFreqW, 0.2/max(wFreqs));
+                    end
+                    % Looping through the frequencies and assigning their
+                    % membership
+                    
+                else
+                    % No, no frequency at all. Using the boolean membership
+                    % to find the subscripts that belong to the current
+                    % condition.
+                    obj.Conditions(Ncond + cdl).Triggers =...
+                    fetchSubs(cdl, lsDel, wSubOrd, wSub);
+                end
+                
+                % Verify if the selected subscripts are pulse trains
+                
                 if (all(wFreqs) || all(lFreqs)) &&...
                         ((validateFreq(cdl, lsDel, lSubOrd, lFreqs) ||...
                         validateFreq(cdl, lsDel, wSubOrd, wFreqs)))
-                    delLFreqs = removeZeros(unique(...
-                        fetchSubs(cdl, lsDel, lSubOrd, lFreqs)));
-                    delWFreqs = removeZeros(unique(...
-                        fetchSubs(cdl, lsDel, wSubOrd, wFreqs)));
+                    % Verifying the existing frequencies in each condition
+                    % signal; existing within the given delay
+                    
+                    
                     for cdf = 1:length(delLFreqs)
                         obj.Conditions(Ncond + cdl).name =...
                             [obj.Conditions(Ncond + cdl).name,...
@@ -447,10 +480,8 @@ classdef ProtocolGetter < handle
                     end
                     continue
                 end
-                % Use the boolean membership to find the subscripts that
-                % belong to the current condition.
-                obj.Conditions(Ncond + cdl).Triggers =...
-                    fetchSubs(cdl, lsDel, wSubOrd, wSub);
+                
+                
                 %  wSub(sort(wSubOrd(lsDel(:,cdl))),:); Line before
             end
             Ncond = numel(obj.Conditions);
