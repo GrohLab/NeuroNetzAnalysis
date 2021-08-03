@@ -338,6 +338,14 @@ else
     
 end
 contSigSeg = zeros(Ns,Nt,'single');
+
+noSigFlag = cellfun(@(x) isempty(x), signalCell);
+if all(noSigFlag)
+    return
+else
+    signalCell(noSigFlag) = [];
+end
+
 Subs = Idxs;
 if Idxs(1) >= 1 && Idxs(2) <= N
     SegSubs = 1:Nt;
@@ -348,7 +356,8 @@ else
     Subs(Idxs > N) = N;
     SegSubs = 1:diff(Subs)+1;
 end
-signalSegments = getSignalSegments(signalCell, Subs);
+%signalSegments = getSignalSegments(signalCell, Subs);
+signalSegments = getSignalSegments();
 signalMat = cell2mat(signalSegments);
 if Ns == size(signalMat,1)
     if ~issparse(signalMat)
@@ -359,31 +368,41 @@ if Ns == size(signalMat,1)
 else
     contSigSeg(:,SegSubs) = cell2mat(signalSegments');
 end
+
+    %function sigSeg = getSignalSegments(signalCell,Subs)
+    function sigSeg = getSignalSegments()
+        
+        % Transpose column vectors
+        transpSign = cellfun(@iscolumn, signalCell);
+        
+        if any(transpSign)
+            try
+                signalCell(transpSign) =...
+                    {signalCell{transpSign}'};
+            catch
+                auxSegm = cellfun(@transpose,signalCell(transpSign),...
+                    'UniformOutput',false);
+                signalCell(transpSign) = auxSegm;
+            end
+        end
+        
+        % Equalize data type (position)
+
+        try
+            sigSeg =...
+                cellfun(...
+                @(x) x(:,round((Subs(1):Subs(2)))),...
+                signalCell, 'UniformOutput', false);
+        catch ME
+            fprintf('The is an issue with the continuous cell array.\n')
+            fprintf('Worth debugging!\n')
+            disp(ME.getReport)
+            dbstop in getStacks at 378
+        end
+
 end
 
-function sigSeg = getSignalSegments(signalCell,Idxs)
-Ns = numel(signalCell);
-if Ns == 1
-    [Nrow, Ncol] = size(signalCell{1});
-    if (Nrow ~= 1 && Ncol > Nrow) || (Ncol ~= 1 && Nrow > Ncol)
-        Ns = Nrow * (Nrow < Ncol) + Ncol * (Ncol < Nrow);
-    end
-end
-
-% Transpose column vectors
-transpSign = cellfun(@iscolumn, signalCell);
-
-if any(transpSign)
-    try
-        signalCell(~transpSign) =...
-            {signalCell{~transpSign}'};
-    catch
-        auxSegm = cellfun(@transpose,signalCell(~transpSign),...
-            'UniformOutput',false);
-        signalCell(~transpSign) = auxSegm;
-    end
-end
-
+        %{
 % % Equalize data type
 % clss = cellfun(@class, signalCell, 'UniformOutput', false);
 % if numel(unique(clss)) > 1
@@ -392,18 +411,7 @@ end
 %     signalCell(diffTypeFlag) =...
 %         cellfun(@double, signalCell(diffTypeFlag), 'UniformOutput', false);
 % end
-
-try
-    sigSeg =...
-        cellfun(...
-        @(x) x(:,round((Idxs(1):Idxs(2)))),...
-        signalCell, 'UniformOutput', false);
-catch ME
-    fprintf('The is an issue with the continuous cell array.\n')
-    fprintf('Worth debugging!\n')
-    disp(ME.getReport)
-    dbstop in getStacks at 378
-end
+        %}
 
 end
 
