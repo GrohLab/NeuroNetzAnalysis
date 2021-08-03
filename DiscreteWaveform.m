@@ -163,7 +163,8 @@ classdef (Abstract) DiscreteWaveform < GeneralWaveform
             if nnz(pCount)/numel(pCount) < 0.5
                 % Discrete intervals
                 fprintf(1, 'Discrete ')
-                ipiThresh = 10.^max(binEdges([0,(pCount.*binCenters)] < 0));
+                % ipiThresh = 10.^max(binEdges([0,(pCount.*binCenters)] < 0));
+                ipiThresh = 10.^max(binEdges([(pCount.*binCenters), 0] < 0));
             else
                 % Continuous (spikes)
                 fprintf(1, 'Continuous ')
