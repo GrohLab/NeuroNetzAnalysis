@@ -425,8 +425,8 @@ classdef ProtocolGetter < handle
                 if any(freqExpFlag)
                     % Yes, this experiment contains frequency
                     cdFreqL = zeros(sum(lsDel(:,cdl)),1); delLFreqs = []; 
-                    cdFreqW = cdFreqL; delWFreqs = []; 
-                    fqDel = zeros(size(lsDel,1),1);
+                    cdFreqW = cdFreqL; delWFreqs = []; cdWFreqs = [];
+                    fqDel = zeros(size(lsDel,1),1); cdLFreqs = [];
                     % Is it the laser that contains frequency?
                     % And which frequencies are involved in the current
                     % delay (cdl)??
@@ -445,31 +445,30 @@ classdef ProtocolGetter < handle
                     pairedFreqs = uniquetol([cdFreqL, cdFreqW],...
                         0.2/max([lFreqs; wFreqs]), 'ByRows', 1);
                     [~, fqPairs] = ismembertol([cdFreqL, cdFreqW],...
-                        pairedFreqs, 0.2/max([lFreqs,wFreqs]),'ByRows', 1);
+                        pairedFreqs, 0.2/max([lFreqs;wFreqs]),'ByRows', 1);
                     %This might be buggy
                     fqDel(lsDel(:,cdl)) = fqPairs;
+                    % Looping through the frequencies and assigning their
+                    % membership
                     for cps = 1:size(pairedFreqs,1)
                         fqFlags = fqDel == cps; 
                         cpFqs = pairedFreqs(cps,:);
-                        obj.Conditions(Ncond + cdl + cps).name =...
-                            string(sprintf('Delay %0.3f s', delays(cdl)));
-                        if cqFqs(1) % Laser 
-                            obj.Conditions(Ncond + cdl + cps).name =...
-                                [obj.Conditions(Ncond + cdl + cps).name,...
-                                sprintf(' + L%.1f', cqFqs(1))];
+                        obj.Conditions(Ncond + cdl + cps - 1).name =...
+                            sprintf('Delay %0.3f s', delays(cdl));
+                        if cpFqs(1) % Laser 
+                            obj.Conditions(Ncond + cdl + cps - 1).name =...
+                                [obj.Conditions(Ncond + cdl + cps - 1).name,...
+                                sprintf(' + L%.1f', cpFqs(1))];
                         end
-                        if cqFqs(2) % Whisker
-                            obj.Conditions(Ncond + cdl + cps).name =...
-                                [obj.Conditions(Ncond + cdl + cps).name,...
-                                sprintf(' + W%.1f', cqFqs(2))];
+                        if cpFqs(2) % Whisker
+                            obj.Conditions(Ncond + cdl + cps - 1).name =...
+                                [obj.Conditions(Ncond + cdl + cps - 1).name,...
+                                sprintf(' + W%.1f', cpFqs(2))];
                         end
                         fqDelFlags = fqDel ~= 0;
-                        obj.Conditions(Ncond + cdl + cps).Triggers = ...
+                        obj.Conditions(Ncond + cdl + cps - 1).Triggers = ...
                             dlSubs(fqPairs == cps);
                     end
-                    % Looping through the frequencies and assigning their
-                    % membership
-                    
                 else
                     % No, no frequency at all. Using the boolean membership
                     % to find the subscripts that belong to the current
@@ -480,37 +479,6 @@ classdef ProtocolGetter < handle
                     obj.Conditions(Ncond + cdl).Triggers =...
                         fetchSubs(cdl, lsDel, wSubOrd, wSub);
                 end
-                
-                % Verify if the selected subscripts are pulse trains
-                
-                if (all(wFreqs) || all(lFreqs)) &&...
-                        ((validateFreq(cdl, lsDel, lSubOrd, lFreqs) ||...
-                        validateFreq(cdl, lsDel, wSubOrd, wFreqs)))
-                    % Verifying the existing frequencies in each condition
-                    % signal; existing within the given delay
-                    
-                    
-                    for cdf = 1:length(delLFreqs)
-                        obj.Conditions(Ncond + cdl).name =...
-                            [obj.Conditions(Ncond + cdl).name,...
-                            sprintf(' + L%.1f',delLFreqs(cdf))];
-                    end
-                    allDelays = sort(wSubOrd(lsDel(:,cdl)));
-                    for cdf = 0:length(delWFreqs)-1
-                        % Adding different frequencies for the given delay
-                        freqSubIdx = ismember(allDelays,...
-                            find(ismember(wFreqs,delWFreqs(cdf+1))));
-                        obj.Conditions(Ncond + cdl + cdf).Triggers = ...
-                            wSub(allDelays(freqSubIdx),:);
-                        obj.Conditions(Ncond + cdl + cdf).name =...
-                            [sprintf('Delay %0.3f s', delays(cdl)),...
-                            sprintf(' + W%.1f',delWFreqs(cdf+1))];
-                    end
-                    continue
-                end
-                
-                
-                %  wSub(sort(wSubOrd(lsDel(:,cdl))),:); Line before
             end
             Ncond = numel(obj.Conditions);
             fprintf(1, ' ms\n')
