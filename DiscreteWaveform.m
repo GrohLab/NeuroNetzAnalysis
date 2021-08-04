@@ -160,11 +160,16 @@ classdef (Abstract) DiscreteWaveform < GeneralWaveform
             [binCenters, binEdges, lData, ts] = prepareLogBinEdges(Ipi, 128);
             pCount = histcounts(lData, binEdges);
             mu = mean(pCount); sig = std(pCount);
-            if nnz(pCount)/numel(pCount) < 0.5
+            populatedBins = pCount ~= 0;
+            if sum(populatedBins)/numel(pCount) < 0.5
                 % Discrete intervals
                 fprintf(1, 'Discrete ')
+                [~, bigGap] = max(diff(binEdges(populatedBins)));
+                populatedSubs = find(populatedBins);
+                ipiMdl = round(populatedSubs([bigGap, bigGap+1])*[0.33;0.67]);
                 % ipiThresh = 10.^max(binEdges([0,(pCount.*binCenters)] < 0));
-                ipiThresh = 10.^max(binEdges([(pCount.*binCenters), 0] < 0));
+                ipiThresh = 10.^mean([binCenters(ipiMdl),...
+                    max(binEdges([(pCount.*binCenters), 0] < 0))]);
             else
                 % Continuous (spikes)
                 fprintf(1, 'Continuous ')
