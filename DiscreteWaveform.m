@@ -168,7 +168,7 @@ classdef (Abstract) DiscreteWaveform < GeneralWaveform
             end
             Pks = flip(Ipi) < minIpi;
             Sps = DiscreteWaveform.addFst(~Pks,true);
-            frstSpks = DiscreteWaveform.addLst(Sps(1:end-1) & Pks,false);
+            frstSpks = flip(DiscreteWaveform.addLst(Sps(1:end-1) & Pks,false));
         end 
         
         function ipiThresh = computeIpiThresh(Ipi)

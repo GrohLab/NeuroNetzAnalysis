@@ -81,7 +81,7 @@ lstbst = arrayfun(getLstBstPerCluster, spkSubs, gen_bTheta, fnOpts{:});
 % Counting spikes per burst
 fstSpk = cellfun(@find, brsts, fnOpts{:});
 lstSpk = cellfun(@find, lstbst, fnOpts{:});
-bCounts = brsts;
+bCounts = cellfun(@double, brsts, fnOpts{:});
 for ccl = 1:Ncl
     bCounts{ccl}(brsts{ccl}) = (lstSpk{ccl} - fstSpk{ccl}) + 1;
 end
