@@ -1,5 +1,5 @@
-function [CV2, CVsqr, bIdx, gen_bTheta,...
-    Tot_CV2, Tot_CVsqr, Tot_bIdx, Tot_bTheta] =...
+function [CV2, CVsqr, bIdx, gen_bTheta, brstPack,...
+    Tot_CV2, Tot_CVsqr, Tot_bIdx, Tot_bTheta, bCounts] =...
     compareFiringModes(condArray, spkSubs, fs, varargin)
 %COMPAREFIRINGMODES computes the burst index per condition either in a
 %block or trial by trial for the given spikes. The function requires the
@@ -71,9 +71,21 @@ gen_bTheta(Tot_bTheta > log10(2)-2) = genericTheta;
 
 Ncond = size(condArray(:),1);
 Ncl = size(spkSubs(:),1);
-
+% First spike in a burst
 getBurstsPerCluster = @(x, y) DiscreteWaveform.firstOfTrain(x{:}./fs, 10.^y);
 [brsts, ~, ~, sps] = arrayfun(getBurstsPerCluster, spkSubs, gen_bTheta, fnOpts{:});
+% Last spike in a burst
+getLstBstPerCluster = @(x, y) DiscreteWaveform.lastOfTrain(x{:}./fs, 10.^y);
+lstbst = arrayfun(getLstBstPerCluster, spkSubs, gen_bTheta, fnOpts{:});
+
+% Counting spikes per burst
+fstSpk = cellfun(@find, brsts, fnOpts{:});
+lstSpk = cellfun(@find, lstbst, fnOpts{:});
+bCounts = cellfun(@double, brsts, fnOpts{:});
+for ccl = 1:Ncl
+    bCounts{ccl}(brsts{ccl}) = (lstSpk{ccl} - fstSpk{ccl}) + 1;
+end
+% Tonic spikes (or with greater ISI than the threshold)
 tnics = cellfun(@(x,y) xor(x,y), brsts, sps, fnOpts{:});
 
 spkTms = cellfun(@(x) x./fs, spkSubs, fnOpts{:});
@@ -84,16 +96,18 @@ if verbose
 end
 
 if blkFlag
-    [CV2, CVsqr, bIdx] = compareConditionsInBlock();
+    [CV2, CVsqr, bIdx, brstPack] = compareConditionsInBlock();
 else
     % not implemented yet
 end
 
-    function [CV2, CVsqr, bIdx] = compareConditionsInBlock()
+    function [CV2, CVsqr, bIdx, brstPack] = compareConditionsInBlock()
         CV2 = zeros(Ncl, Ncond);
         CVsqr = CV2;
         bIdx = CV2;
         condSum = @(x,y) sum(x(y));
+        brstPack = cell(Ncl, Ncond);
+        sliceLogicalTrace = @(x,y) x(y);
         for ccond = 1:Ncond
             % Getting the first trigger point and the last for the
             % considered condition in the array
@@ -103,11 +117,14 @@ end
                 spkSubs, fnOpts{:});
             brstsPerCluster = cellfun(condSum, brsts, condBlockFlags, fnOpts{:});
             tnicsPerCluster = cellfun(condSum, tnics, condBlockFlags, fnOpts{:});
+            brstPack(:,ccond) = cellfun(sliceLogicalTrace, bCounts,...
+                condBlockFlags, fnOpts{:});
             bIdx(:, ccond) = cellfun(@(x,y) x/(x+y),...
                 brstsPerCluster, tnicsPerCluster);
             [CV2(:, ccond), CVsqr(:, ccond)] =...
                 cellfun(@(x,y) getCVsfromISIs(x(y(1:numel(x)))), isiTms, condBlockFlags);
         end
+        brstPack = cellfun(@(x) x(x~=0), brstPack, fnOpts{:});
     end
 
 end

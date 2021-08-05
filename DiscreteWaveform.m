@@ -155,6 +155,22 @@ classdef (Abstract) DiscreteWaveform < GeneralWaveform
             frstSpks = DiscreteWaveform.addLst(Sps(1:end-1) & Pks,false);
         end 
         
+        function [frstSpks, minIpi, Pks, Sps] = lastOfTrain(spkTimes, minIpi)
+            % OUTPUTS a logical index for the edges which are the first in
+            % time for the step pulse train.
+            Ipi = abs(diff(spkTimes));
+            if ~exist('minIpi','var')
+                % minIpi = mean(Ipi);
+                minIpi = DiscreteWaveform.computeIpiThresh(Ipi);
+                if isempty(minIpi)
+                    minIpi = 1;
+                end
+            end
+            Pks = flip(Ipi) < minIpi;
+            Sps = DiscreteWaveform.addFst(~Pks,true);
+            frstSpks = flip(DiscreteWaveform.addLst(Sps(1:end-1) & Pks,false));
+        end 
+        
         function ipiThresh = computeIpiThresh(Ipi)
             funOpts = {'UniformOutput', false};
             [binCenters, binEdges, lData, ts] = prepareLogBinEdges(Ipi, 128);

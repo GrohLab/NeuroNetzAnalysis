@@ -108,7 +108,7 @@ threshPrCl = zeros(Ncl,1); brstIdx = threshPrCl;
         vall2r = sum(vallBetwnPksFlag);
     end
 
-    function vallCandidates = getValleyTempodalSimilarity(loc, TmCloseness)
+    function vallCandidates = getValleyTemporalSimilarity(loc, TmCloseness)
         tmSep = diff(10.^loc);
         simFlag = tmSep < TmCloseness;
         vallCandidates = [true; simFlag];
@@ -128,7 +128,7 @@ for ccl = 1:Ncl
             vallCollectionSubs = find(vall2l, 1, 'first');
             consValls(vall2l(vallCollectionSubs)+1:Nvls(ccl)) = false;
         end
-        vallCandFlag = getValleyTempodalSimilarity(isiVls{ccl}(consValls),...
+        vallCandFlag = getValleyTemporalSimilarity(isiVls{ccl}(consValls),...
             2e-2);
         threshPrCl(ccl) = getLowestValley(isiVls{ccl}(vallCandFlag),...
             isiVVl{ccl}(vallCandFlag));
