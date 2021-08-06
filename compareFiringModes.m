@@ -1,5 +1,5 @@
 function [CV2, CVsqr, bIdx, gen_bTheta, brstPack,...
-    Tot_CV2, Tot_CVsqr, Tot_bIdx, Tot_bTheta, bCounts] =...
+    Tot_CV2, Tot_CVsqr, Tot_bIdx, Tot_bTheta, bCounts, totEvents] =...
     compareFiringModes(condArray, spkSubs, fs, varargin)
 %COMPAREFIRINGMODES computes the burst index per condition either in a
 %block or trial by trial for the given spikes. The function requires the
@@ -73,20 +73,20 @@ Ncond = size(condArray(:),1);
 Ncl = size(spkSubs(:),1);
 % First spike in a burst
 getBurstsPerCluster = @(x, y) DiscreteWaveform.firstOfTrain(x{:}./fs, 10.^y);
-[brsts, ~, ~, sps] = arrayfun(getBurstsPerCluster, spkSubs, gen_bTheta, fnOpts{:});
+[brsts, ~, ~, totEvents] = arrayfun(getBurstsPerCluster, spkSubs, gen_bTheta, fnOpts{:});
 % Last spike in a burst
 getLstBstPerCluster = @(x, y) DiscreteWaveform.lastOfTrain(x{:}./fs, 10.^y);
 lstbst = arrayfun(getLstBstPerCluster, spkSubs, gen_bTheta, fnOpts{:});
 
 % Counting spikes per burst
-fstSpk = cellfun(@find, brsts, fnOpts{:});
-lstSpk = cellfun(@find, lstbst, fnOpts{:});
+fstSub = cellfun(@find, brsts, fnOpts{:});
+lstSub = cellfun(@find, lstbst, fnOpts{:});
 bCounts = cellfun(@double, brsts, fnOpts{:});
 for ccl = 1:Ncl
-    bCounts{ccl}(brsts{ccl}) = (lstSpk{ccl} - fstSpk{ccl}) + 1;
+    bCounts{ccl}(brsts{ccl}) = (lstSub{ccl} - fstSub{ccl}) + 1;
 end
 % Tonic spikes (or with greater ISI than the threshold)
-tnics = cellfun(@(x,y) xor(x,y), brsts, sps, fnOpts{:});
+tnics = cellfun(@(x,y) xor(x,y), brsts, totEvents, fnOpts{:});
 
 spkTms = cellfun(@(x) x./fs, spkSubs, fnOpts{:});
 isiTms = cellfun(@(x) diff(x), spkTms, fnOpts{:});
