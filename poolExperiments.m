@@ -883,7 +883,7 @@ for cr = 1:2 % Responsive and non-responsive
         xlabel(ax,'Inter-spike interval [ms]'); 
         ylabel('Cumulative probability');
         title(ax, "Cumulative ISI: "+respLey(cr)+" & "+modLey(cmod+1))
-        legend(ax, condLey,'Location','best')
+        lgnd = legend(ax, condLey); set(lgnd, 'Location','best', 'Box', 'off');
         ciName = "Cumulative ISI, "+respLey(cr)+" & "+modLey(cmod+1) + ...
             ", exp"+string(sprintf(' %d', chExp))+ " LB 10^"+string(lDt);
         ciFilePath = fullfile(figureDir, ciName);
