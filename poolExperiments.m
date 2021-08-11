@@ -666,12 +666,12 @@ condLey = consCondNames;
 respLey = {'Responsive', 'Non-responsive'};
 % Time steps for the 3D PSTH in ms
 focusStep = 2.5;
-focusPeriods = (-3:focusStep:18)';
+focusPeriods = (-3:focusStep:25)';
 focusPeriods(:,2) = focusPeriods + focusStep; focusPeriods = focusPeriods * 1e-3;
 Nfs = size(focusPeriods,1);
 fws = 1:Nfs;
 auxOr = [false, true];
-trialBin = 10;
+trialBin = 1;
 Nas = [0;cumsum(NaStack./trialBin)'];
 spkDomain = 0:15;
 spkBins = spkDomain(1) - 0.5:spkDomain(end) + 0.5;
