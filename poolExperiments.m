@@ -650,8 +650,8 @@ modFlags(:,2) = ~modFlags;
 cmap = lines(Nccond);
 cmap(CtrlCond,:) = ones(1,3)*1/3; cmap(:,:,2) = ones(Nccond,3)*0.7;
 
-signMod = Results(1).Activity(2).Pvalues < 0.05;
-potFlag = MIevok > 0;
+signMod = Results(1).Activity(2).Pvalues < 0.05; signMod(~wruIdx) = [];
+potFlag = MIevok > 0; potFlag(~wruIdx) = [];
 
 % modFlags = false(size(modFlags));
 % modVals_rt = clInfoTotal(clInfoTotal.ActiveUnit == 1 & clInfoTotal.Control, 'Modulation');
@@ -701,7 +701,7 @@ for pfp = fws
             % trSubs = tcount:trialBin:sum(NaStack(1:ccond));
             trSubs = tcount:trialBin:muTrSubs(2)*trialBin;
             % clMod = modFlags(:,cmod);
-            clMod = xor(signMod & potFlags,cmod-1);
+            clMod = signMod & xor(potFlag,cmod-1);
             for cr = 1:2 % responsive and non-responsive
                 rsSel = [cr,cmod-1]*[1;2];
                 respIdx = auxResp(:,cr);
