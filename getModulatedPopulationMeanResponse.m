@@ -1,4 +1,4 @@
-function popResponse = getModulatedPopulationMeanResponse(spkCount, rmdFlag)
+function popResponse = getModulatedPopulationMeanResponse(spkCount, rmdFlag, varargin)
 %getModulatedPopulationMeanResponse uses the counts and flags to retrieve
 %the modulated clusters from the given counts.
 %       popResponse = getModulatedPopulationMeanResponse(spkCount, rmdFlag)
@@ -17,6 +17,7 @@ function popResponse = getModulatedPopulationMeanResponse(spkCount, rmdFlag)
 p = inputParser;
 
 checkFlags = @(x) all([isnumeric(x) | islogical(x), size(x,2) == 3]);
+
 
 p.addRequired('spkCount',@iscell);
 p.addRequired('rmdFlag',checkFlags);
