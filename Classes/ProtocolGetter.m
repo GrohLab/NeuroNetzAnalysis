@@ -451,7 +451,7 @@ classdef ProtocolGetter < handle
                     % Looping through the frequencies and assigning their
                     % membership
                     for cps = 1:size(pairedFreqs,1)
-                        fqFlags = fqDel == cps; 
+                        % fqFlags = fqDel == cps; 
                         cpFqs = pairedFreqs(cps,:);
                         obj.Conditions(Ncond + cdl + cps - 1).name =...
                             sprintf('Delay %0.3f s', delays(cdl));
@@ -465,7 +465,7 @@ classdef ProtocolGetter < handle
                                 [obj.Conditions(Ncond + cdl + cps - 1).name,...
                                 sprintf(' + W%.1f', cpFqs(2))];
                         end
-                        fqDelFlags = fqDel ~= 0;
+                        % fqDelFlags = fqDel ~= 0;
                         obj.Conditions(Ncond + cdl + cps - 1).Triggers = ...
                             dlSubs(fqPairs == cps);
                     end
