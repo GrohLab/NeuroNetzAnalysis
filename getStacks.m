@@ -400,6 +400,18 @@ end
             dbstop in getStacks at 378
         end
 
+<<<<<<< Updated upstream
+=======
+if any(transpSign)
+    try
+        signalCell(transpSign) =...
+            {signalCell{transpSign}'};
+    catch
+        auxSegm = cellfun(@transpose,signalCell(transpSign),...
+            'UniformOutput',false);
+        signalCell(transpSign) = auxSegm;
+    end
+>>>>>>> Stashed changes
 end
 
         %{
