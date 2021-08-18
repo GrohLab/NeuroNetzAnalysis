@@ -650,6 +650,9 @@ modFlags(:,2) = ~modFlags;
 cmap = lines(Nccond);
 cmap(CtrlCond,:) = ones(1,3)*1/3; cmap(:,:,2) = ones(Nccond,3)*0.7;
 
+signMod = Results(1).Activity(2).Pvalues < 0.05; signMod(~wruIdx) = [];
+potFlag = MIevok > 0; potFlag(~wruIdx) = [];
+
 % modFlags = false(size(modFlags));
 % modVals_rt = clInfoTotal(clInfoTotal.ActiveUnit == 1 & clInfoTotal.Control, 'Modulation');
 % trnFlag = string(clInfoTotal{clInfoTotal.ActiveUnit == 1 & clInfoTotal.Control,'Region'}) == 'TRN';
@@ -663,12 +666,12 @@ condLey = consCondNames;
 respLey = {'Responsive', 'Non-responsive'};
 % Time steps for the 3D PSTH in ms
 focusStep = 2.5;
-focusPeriods = (-3:focusStep:18)';
+focusPeriods = (-3:focusStep:25)';
 focusPeriods(:,2) = focusPeriods + focusStep; focusPeriods = focusPeriods * 1e-3;
 Nfs = size(focusPeriods,1);
 fws = 1:Nfs;
 auxOr = [false, true];
-trialBin = 10;
+trialBin = 1;
 Nas = [0;cumsum(NaStack./trialBin)'];
 spkDomain = 0:15;
 spkBins = spkDomain(1) - 0.5:spkDomain(end) + 0.5;
@@ -697,7 +700,8 @@ for pfp = fws
             muTrSubs = NaCs(ccond:ccond+1)+[1;0];
             % trSubs = tcount:trialBin:sum(NaStack(1:ccond));
             trSubs = tcount:trialBin:muTrSubs(2)*trialBin;
-            clMod = modFlags(:,cmod);
+            % clMod = modFlags(:,cmod);
+            clMod = signMod & xor(potFlag,cmod-1);
             for cr = 1:2 % responsive and non-responsive
                 rsSel = [cr,cmod-1]*[1;2];
                 respIdx = auxResp(:,cr);
