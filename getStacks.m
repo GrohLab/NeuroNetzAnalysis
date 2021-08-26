@@ -399,8 +399,8 @@ end
             disp(ME.getReport)
             dbstop in getStacks at 378
         end
-
-end
+   
+    end
 
         %{
 % % Equalize data type
