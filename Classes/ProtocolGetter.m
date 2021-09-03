@@ -388,7 +388,7 @@ classdef ProtocolGetter < handle
             % Finding the time difference between every pulse in two
             % signals
             mxPulses = min(size(lSub,1),size(wSub,1));
-            if isempty(lSub) && isempty(wSub)
+            if ~isempty(lSub) && ~isempty(wSub)
                 dm = distmatrix(lSub(:,1)/obj.fs,wSub(:,1)/obj.fs);
                 [strDelay, whr] = sort(dm(:),'ascend');
                 [lSubOrd, wSubOrd] = ind2sub(size(dm),whr(1:mxPulses));
@@ -468,7 +468,7 @@ classdef ProtocolGetter < handle
                             end
                             % fqDelFlags = fqDel ~= 0;
                             obj.Conditions(Ncond + cdl + cps - 1).Triggers = ...
-                                dlSubs(fqPairs == cps);
+                                dlSubs(fqPairs == cps,:);
                         end
                     else
                         % No, no frequency at all. Using the boolean membership
