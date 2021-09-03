@@ -241,9 +241,9 @@ classdef ProtocolGetter < handle
                     trig(1,:) = -trig(1,:);                    
                     save(condSigFile, 'trig'); 
                 else
-                    fprintf(2,['Either there''s a problem with the trigger',...
+                    fprintf(1,['Either there''s a problem with the trigger',...
                         ' file or the AwakeCondSig file exists\n'])
-                    fprintf(2,'No file saved!\n')
+                    fprintf(1,'No file saved!\n')
                 end
                 obj.condSigFiles = condSigFile;
             else
