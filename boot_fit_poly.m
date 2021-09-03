@@ -11,8 +11,12 @@ for cit = 1:it
     [inlnit(:,cit), mserr(cit)] = meansqrerr(pts, cmdl(:, cit), n, th);
 end
 consensus = mean(inlnit,2) > 0.99;
-wmdl = fit_poly(pts(consensus, 1), pts(consensus, 2), n);
-inln = meansqrerr(pts, wmdl, n, th);
+if sum(consensus) ~= 0
+    wmdl = fit_poly(pts(consensus, 1), pts(consensus, 2), n);
+    inln = meansqrerr(pts, wmdl, n, th);
+else
+    % Implement something when there is no consensus.
+end
 end
 
 function [inln, mserr] = meansqrerr(pts, mdl, n, th)
