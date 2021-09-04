@@ -17,7 +17,7 @@ if sum(consensus)
 else
     fprintf(1, 'There was no consensus for the given points and parameters')
     fprintf(1, '! No model estimated!\nReturning the voting per point\n')
-    wmdl = zeros(n-1,1); inln = mean(inlnin,2);
+    wmdl = zeros(n-1,1); inln = mean(inlnit,2);
     % Implement something when there is no consensus.
 end
 end
