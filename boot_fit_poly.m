@@ -11,10 +11,13 @@ for cit = 1:it
     [inlnit(:,cit), mserr(cit)] = meansqrerr(pts, cmdl(:, cit), n, th);
 end
 consensus = mean(inlnit,2) > 0.99;
-if sum(consensus) ~= 0
+if sum(consensus)
     wmdl = fit_poly(pts(consensus, 1), pts(consensus, 2), n);
     inln = meansqrerr(pts, wmdl, n, th);
 else
+    fprintf(1, 'There was no consensus for the given points and parameters')
+    fprintf(1, '! No model estimated!\nReturning the voting per point\n')
+    wmdl = zeros(n-1,1); inln = mean(inlnin,2);
     % Implement something when there is no consensus.
 end
 end
