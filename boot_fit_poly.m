@@ -2,7 +2,7 @@ function [wmdl, inln] = boot_fit_poly(pts, n, ptsPer, it, th)
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
 Npts = size(pts,1);
-cpts = round(Npts * ptsPer);
+cpts = ceil(Npts * ptsPer);
 mserr = zeros(it,1); cmdl = zeros(n+1, it);
 inlnit = false(size(pts,1), it);
 for cit = 1:it
