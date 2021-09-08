@@ -26,7 +26,6 @@ p.parse(spkCount, rmdFlag);
 
 spkCount = p.Results.spkCount;
 rmdFlag = p.Results.rmdFlag;
-
 %% Validation for agrument interaction
 fnOpts = {'UniformOutput',false}; 
 popResponse = struct('Mean',[],'Confidence',[]);
@@ -61,8 +60,9 @@ rconfidence = cellfun(@(x)...
     poissonDistributions, fnOpts{:}); 
 rconfidence = cellfun(@(x) cat(2, x{:}), rconfidence, fnOpts{:});
 ffact = cellfun(@(x) var(x,'omitnan')./mean(x,'omitnan'), spkCount, fnOpts{:});
+% Standard error of the mean
+sem = cellfun(@(x,y) sqrt(x./size(y,1)), rlambda, modSpks, fnOpts{:});
 popResponse = struct('Mean', rlambda, 'Confidence', rconfidence,...
-    'FanoFactor',ffact);
-
+    'FanoFactor',ffact,'SEM', sem);
 end
 
