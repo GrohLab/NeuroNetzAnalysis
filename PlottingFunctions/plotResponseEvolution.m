@@ -8,7 +8,7 @@ function evolutionFigures = plotResponseEvolution(popResponse, varargin)
 p = inputParser;
 % Required arguments
 checkPopResponse = @(x) all([isstruct(x),...
-    isfield(x,{'Mean','Confidence','FanoFactor'})]);
+    isfield(x,{'Mean','Confidence','FanoFactor','SEM'})]);
 % Parameters
 % Response/considered window duration
 defRespWinDelta = 1; % seconds
@@ -26,12 +26,17 @@ defTrialNum = 1;
 defInMins = false;
 checkInMins = @(x) all([isnumeric(x) | islogical(x), numel(x) == 1]);
 
+% Error plotting
+defError = 'Confidence';
+checkError = @(x) any(strcmpi(x,{'Confidence','SEM'}));
+
 p.addRequired('popResponse', checkPopResponse);
 p.addParameter('windowDuration', defRespWinDelta, checkRespWinDelta);
 %p.addParameter('samplingFrequency', defFs, checkSampFreq);
 p.addParameter('triggerTimes', defTrigs, checkTriggers);
 p.addParameter('trialBin', defTrialNum, @isPositiveIntegerValuedNumeric)
 p.addOptional('inMinutes', defInMins, checkInMins);
+p.addOptional('error', defError, checkError);
 
 p.parse(popResponse, varargin{:})
 
@@ -41,6 +46,7 @@ winDelta = p.Results.windowDuration;
 trigTms = p.Results.triggerTimes;
 trialSmooth = p.Results.trialBin;
 inMinFlag = p.Results.inMinutes;
+errPlot = p.Results.error;
 %% Validation for argument interactions
 % Number of times per trigger 
 Ntrigs = numel(trigTms);
@@ -64,17 +70,24 @@ elseif Ntrigs == 0
     trigTms = 1:NpopTrials(1);
 end
 
-
 %%  Auxiliary variables
 fnOpts = {'UniformOutput', false};
 axOpts = {'NextPlot','add','Color','none','Box','off'};
 expSubs = @(x) x(1):x(2);
 [Ncond, Nmod] = size(popResponse); evolutionFigures = gobjects(Nmod,1);
 muTrace = arrayfun(@(x) movmean(x.Mean, trialSmooth)./winDelta,...
-    popResponse, fnOpts{:}); 
-confTrace = arrayfun(@(x) movmean(x.Confidence, trialSmooth, 2)./winDelta,...
     popResponse, fnOpts{:});
-mxAx = cellfun(@(x) max(x(2,:),[],2), confTrace);
+switch errPlot
+    case {'Confidence','confidence'}
+        confTrace =...
+            arrayfun(@(x) movmean(x.Confidence, trialSmooth, 2)./winDelta,...
+            popResponse, fnOpts{:});
+    case {'SEM','sem'}
+        confTrace =...
+            arrayfun(@(x) movmean(x.Mean+[x.SEM;-x.SEM], trialSmooth, 2)./winDelta,...
+            popResponse, fnOpts{:});
+end
+mxAx = cellfun(@(x) max(x(:)), confTrace);
 mxAx = max(mxAx(:)); ax = gobjects(2,Nmod); mxAx = ceil(mxAx/10)*10;
 histOpts = {'BinLimits', [0,mxAx],'BinWidth',2.5,...
     'Normalization','probability','EdgeColor','none',...
@@ -102,14 +115,14 @@ mednLnsX = mxH:mxH*0.08:mxH*(0.1*(Nperm -1)+1);
 mxH = mednLnsX(end);
 %% Plotting loop
 for cmod = 1:Nmod
-    evolutionFigures(cmod) = figure('Color','w','Visible','on');
+    evolutionFigures(cmod) = figure("Color",'w');
     % Evolution axis
     ax(1,cmod) = subplot(1,6,1:5,axOpts{:});
     % Mean trace for different conditions
     arrayfun(@(c)...
         plot(ax(1,cmod), trigTms(expSubs(trigTmsSubs(c,:))), muTrace{c,cmod},...
         'LineWidth',2), 1:Ncond);
-    % Confidence range for the mean 
+    % Confidence range for the mean or SEM
     arrayfun(@(c)...
         plot(ax(1,cmod), trigTms(expSubs(trigTmsSubs(c,:))), confTrace{c,cmod}',...
         'LineStyle',':','Color',0.5*ones(1,3)), 1:Ncond);
@@ -130,7 +143,8 @@ for cmod = 1:Nmod
     % Histogram axis
     ax(2,cmod) = subplot(1,6,6,axOpts{:}); arrayfun(@(c)...
         histogram(ax(2,cmod), muTrace{c,cmod}, histOpts{:}), 1:Ncond);
-    axis(ax(2,cmod), [0,mxH,0,mxAx]); set(get(ax(2,cmod),'YAxis'),'Visible','off')
+    axis(ax(2,cmod), [0,mxH,0,mxAx]); set(get(ax(2,cmod),'YAxis'),...
+        'Visible','off')
     % Plot significance on the y-distributions
     plot(ax(2,cmod),[zeros(1,Ncond);mxH*ones(1,Ncond)],...
         mednMds(:,cmod)'.*ones(2,Ncond),'LineStyle', '--',...
