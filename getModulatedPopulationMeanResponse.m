@@ -59,6 +59,7 @@ rconfidence = cellfun(@(x)...
     arrayfun(@(y) y.paramci, x, fnOpts{:}),...
     poissonDistributions, fnOpts{:}); 
 rconfidence = cellfun(@(x) cat(2, x{:}), rconfidence, fnOpts{:});
+% Fano Factor across clusters
 ffact = cellfun(@(x) var(x,'omitnan')./mean(x,'omitnan'), spkCount, fnOpts{:});
 % Standard error of the mean
 sem = cellfun(@(x,y) sqrt(x./size(y,1)), rlambda, modSpks, fnOpts{:});
