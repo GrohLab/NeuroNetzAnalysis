@@ -345,7 +345,7 @@ classdef ProtocolGetter < handle
                 wFreqs(wTrainBodyFlags(1:end-1)) = [];
                 if ~isempty(wFreq)
                     obj.Edges(cst).Subs = obj.Edges(cst).Subs(~wTrainBodyFlags,:);
-                    coupFreq = round(wFlags .* wFreqs, 1);
+                    coupFreq = wFreqs(wFlags(1:length(wFreqs)));
                 end
                 obj.Edges(cst).Frequency = coupFreq;
                 obj.Edges(cst).FreqValues = wFreq;
