@@ -477,8 +477,9 @@ classdef ProtocolGetter < handle
                         % Create the name of the condition
                         obj.Conditions(Ncond + cdl).name =...
                             sprintf('Delay %0.3f s', delays(cdl));
-                        obj.Conditions(Ncond + cdl).Triggers =...
-                            fetchSubs(cdl, lsDel, wSubOrd, wSub);
+                        obj.Conditions(Ncond + cdl).Triggers = dlSubs;
+                            % fetchSubs(cdl, lsDel, wSubOrd, wSub)
+                        
                     end
                 end
                 fprintf(1, ' ms\n')
