@@ -9,10 +9,9 @@ tan_arg = (m2-m1)./(1+m1.*m2);
 if nargin == 2
     radDeg = 'deg';
 end
-if strcmp(radDeg,'rad') 
-    angulo = atan(tan_arg);
-elseif strcmp(radDeg,'deg') || nargin == 2
-    angulo = (180/pi)*atan(tan_arg);
+angulo = atan(tan_arg); 
+if strcmp(radDeg,'deg') || nargin == 2
+    angulo = (180/pi)*angulo;
 else
     error('Unrecognized string for the third argument')
 end
