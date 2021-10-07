@@ -12,8 +12,6 @@ end
 angulo = atan(tan_arg); 
 if strcmp(radDeg,'deg') || nargin == 2
     angulo = (180/pi)*angulo;
-else
-    error('Unrecognized string for the third argument')
 end
 
 end
