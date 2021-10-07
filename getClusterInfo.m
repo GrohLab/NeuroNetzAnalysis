@@ -48,7 +48,7 @@ conts_rs = reshape(conts,Nv,Ne/Nv)';
 for cv = 1:Nv
     % Proceeding slightly different for each variable
     switch heads{cv}
-        case {'id','KSLabel','group','NeuronType','Region'}
+        case {'cluster_id','id','KSLabel','group','NeuronType','Region'}
             % Read as string if the header indicates strings
             vals = cellfun(@(x) getContFirstCell(textscan(x,'%s')),...
                 conts_rs(:,cv));
@@ -66,5 +66,5 @@ for cv = 1:Nv
 end
 % Naming the rows and columns appropiately and respectively.
 clusterInfo.Properties.DimensionNames = {'Clusters', 'Measures'};
-clusterInfo.Properties.RowNames = clusterInfo.id;
+clusterInfo.Properties.RowNames = clusterInfo.(heads{1});
 end
