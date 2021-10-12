@@ -90,7 +90,7 @@ spkIdx = false(size(spkCls,1), numel(clusterID));
 clTempSubs = cell(numel(clusterID),1);
 % Verifying if the given clusters exist in this experiment
 for ccl = 1:numel(clusterID)
-    clIdx(:,ccl) = strcmp(clTable.id, clusterID(ccl));
+    clIdx(:,ccl) = strcmp(clTable{:,1}, clusterID(ccl));
     spkIdx(:,ccl) = spkCls == str2double(clusterID(ccl));
     % Determining the template for the given cluster
     clTempSubs{ccl} = mode(spkTmls(spkIdx(:,ccl)));
