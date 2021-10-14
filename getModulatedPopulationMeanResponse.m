@@ -44,6 +44,13 @@ if any((countMatSzs - size(rmdFlag,1)) ~= 0)
     fprintf(1,' matrices.\n')
     return;
 end
+
+if ~sum(all(rmdFlag, 2)) ||  ~sum(all(xor(rmdFlag,[0,0,1]),2))
+    fprintf(1, 'The given flag combination yields no stable clusters!\n')
+    fprintf(1, 'Perhaps change the slope range in getMatrixStabilityMeasure\n')
+    fprintf(1, 'No output created!\n')
+    return;
+end
 %% Stimulus response evolution
 modSpks = arrayfun(@(x)...
     cellfun(@(y) y(all(xor(rmdFlag,[0,0,x]),2),:),...
