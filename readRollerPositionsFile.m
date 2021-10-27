@@ -1,4 +1,4 @@
-function [rollerposition, tTimes] = readRollerPositionsFile(filepath)
+function [rollerposition, tTimes, rollTrigTimes] = readRollerPositionsFile(filepath)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
 tTimes = [];
@@ -23,10 +23,13 @@ else
     ops.EmptyLineRule = "read";
     % Roller file corresponding to Arduino's micros() function.
     rollTrigTimes = readtable(filepath, ops);
-    rollTrigTimes.Time_mus = unwrap(rollTrigTimes.Time_mus, 2^32);
+    rollTrigTimes.Time_mus = unwrap(rollTrigTimes.Time_mus, 2^31);
     % Is there any 
     trigFlag = isnan(str2double(rollTrigTimes.RoT));
     trigLetter = unique(rollTrigTimes.RoT(trigFlag)); 
+    rollerposition = zeros(sum(~trigFlag), 2);
+    rollerposition(:,2) = unwrap(rollTrigTimes.Time_mus(~trigFlag), 2^15);
+    rollerposition(:,1) = rollTrigTimes.RoT(~trigFlag);
     if ~isempty(trigLetter)
         trigNum = size(trigLetter, 1);
         fprintf(1, "Found %d trigger(s): %s\n", trigNum,...
@@ -34,9 +37,10 @@ else
         % Comparing the content of the table with all found letters
         % corresponding to specific triggers
         tFlags = arrayfun(@(x) ismember(rollTrigTimes.RoT(trigFlag), x),...
-            trigLetter', fnOpts{:}); 
+            trigLetter', fnOpts{:}); trigSubs = find(trigFlag);
         % Reading those times which correspond only to the specific trigger
-        tTimes = cellfun(@(x) rollTrigTimes.Time_mus(x), tFlags, fnOpts{:});
+        tTimes = cellfun(@(x) rollTrigTimes.Time_mus(trigSubs(x)), tFlags,...
+            fnOpts{:});
     end
 end
 end
