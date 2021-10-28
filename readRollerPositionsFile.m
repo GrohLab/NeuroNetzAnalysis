@@ -24,12 +24,31 @@ else
     % Roller file corresponding to Arduino's micros() function.
     rollTrigTimes = readtable(filepath, ops);
     rollTrigTimes.Time_mus = unwrap(rollTrigTimes.Time_mus, 2^31);
-    % Is there any 
+    % Searching for well-written trigger interruptions
     trigFlag = isnan(str2double(rollTrigTimes.RoT));
-    trigLetter = unique(rollTrigTimes.RoT(trigFlag)); 
+    trigLetter = unique(rollTrigTimes.RoT(trigFlag));
+    % Rescueing the lost trigger interruptions
+    nanSubs = find(isnan(rollTrigTimes.Time_mus));
+    fID = fopen(filepath, "r"); ln = 1;
+    for cns = nanSubs'
+        while ln < cns
+            fgetl(fID); ln = ln + 1;
+        end
+        strLn = fgetl(fID); ln = ln + 1;
+        strCell = strsplit(strLn, ","); chrepFlag = strCell{2} > 57;
+        refTm = num2str(mean(rollTrigTimes.Time_mus(cns+[1;-1])));
+        rollTrigTimes.RoT(cns) = string(strCell{2}(chrepFlag));
+        trigFlag(cns) = true;
+        strCell{2}(chrepFlag) = refTm(chrepFlag);
+        rollTrigTimes.Time_mus(cns) = str2double(strCell{2});
+    end
+    [~] = fclose(fID);
+    % Output for the roller positions
     rollerposition = zeros(sum(~trigFlag), 2);
-    rollerposition(:,2) = unwrap(rollTrigTimes.Time_mus(~trigFlag), 2^15);
-    rollerposition(:,1) = rollTrigTimes.RoT(~trigFlag);
+    rollerposition(:,2) = rollTrigTimes.Time_mus(~trigFlag);
+    rollerposition(:,1) = unwrap(str2double(rollTrigTimes.RoT(~trigFlag)),...
+        2^15);
+    % Output for the trigger times as measured by the rotary decoder
     if ~isempty(trigLetter)
         trigNum = size(trigLetter, 1);
         fprintf(1, "Found %d trigger(s): %s\n", trigNum,...
