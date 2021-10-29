@@ -25,22 +25,34 @@ else
     rollTrigTimes = readtable(filepath, ops);
     rollTrigTimes.Time_mus = unwrap(rollTrigTimes.Time_mus, 2^31);
     % Searching for well-written trigger interruptions
-    trigFlag = isnan(str2double(rollTrigTimes.RoT));
+    trigFlag = any([isnan(str2double(rollTrigTimes.RoT)),...
+        isnan(rollTrigTimes.Time_mus)], 2);
     trigLetter = unique(rollTrigTimes.RoT(trigFlag));
-    % Rescueing the lost trigger interruptions
+    % Rescuing ill-written trigger time interruptions
     nanSubs = find(isnan(rollTrigTimes.Time_mus));
     fID = fopen(filepath, "r"); ln = 1;
     for cns = nanSubs'
         while ln < cns
-            fgetl(fID); ln = ln + 1;
+            prevLn = fgetl(fID); ln = ln + 1; %#ok<NASGU>
         end
         strLn = fgetl(fID); ln = ln + 1;
-        strCell = strsplit(strLn, ","); chrepFlag = strCell{2} > 57;
-        refTm = num2str(mean(rollTrigTimes.Time_mus(cns+[1;-1])));
-        rollTrigTimes.RoT(cns) = string(strCell{2}(chrepFlag));
-        trigFlag(cns) = true;
-        strCell{2}(chrepFlag) = refTm(chrepFlag);
-        rollTrigTimes.Time_mus(cns) = str2double(strCell{2});
+        if ~isempty(strLn)
+            strCell = strsplit(strLn, ",");
+            if size(strCell,2) == 2
+                chrepFlag = strCell{2} > 57;
+                refTm = num2str(int32(mean(rollTrigTimes.Time_mus(cns+(-3:3)'),...
+                    'omitnan'))); rollTrigTimes.RoT(cns) =...
+                    string(strCell{2}(chrepFlag)); trigFlag(cns) = true;
+                strCell{2}(chrepFlag) = refTm(chrepFlag);
+                rollTrigTimes.Time_mus(cns) = str2double(strCell{2});
+            else
+                fprintf(1, 'Need user interaction!\n');
+            end
+        else
+            % Empty line--maybe double enter
+            rollTrigTimes(cns,:) = [];
+            trigFlag(cns) = [];
+        end
     end
     [~] = fclose(fID);
     % Output for the roller positions
@@ -50,7 +62,9 @@ else
         2^15);
     % Output for the trigger times as measured by the rotary decoder
     if ~isempty(trigLetter)
-        trigNum = size(trigLetter, 1);
+        % Searching for ill-written trigger ID interruptions
+        lettFlag = strlength(trigLetter) == 1;
+        trigLetter(~lettFlag) = []; trigNum = size(trigLetter, 1);
         fprintf(1, "Found %d trigger(s): %s\n", trigNum,...
             sprintf("%s ",trigLetter))
         % Comparing the content of the table with all found letters
