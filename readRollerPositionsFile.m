@@ -43,7 +43,13 @@ else
                 refTm = num2str(int32(mean(rollTrigTimes.Time_mus(cns+(-3:3)'),...
                     'omitnan'))); rollTrigTimes.RoT(cns) =...
                     string(strCell{2}(chrepFlag)); trigFlag(cns) = true;
-                strCell{2}(chrepFlag) = refTm(chrepFlag);
+                if length(refTm) == length(strCell{2})
+                    strCell{2}(chrepFlag) = refTm(chrepFlag);
+                elseif length(strCell{2}) > length(refTm)
+                    strCell{2}(chrepFlag) = [];
+                else
+                    strCell{2} = refTm;
+                end
                 rollTrigTimes.Time_mus(cns) = str2double(strCell{2});
             else
                 fprintf(1, 'Need user interaction!\n');
