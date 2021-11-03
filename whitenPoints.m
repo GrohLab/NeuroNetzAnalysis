@@ -3,10 +3,10 @@ function [ptsW, Wd, ptsMu] = whitenPoints(pts)
 %points without their mean.
 
 % Remove the mean
-ptsMu = mean(pts);
+ptsMu = mean(pts, "omitnan");
 pts = pts - ptsMu;
 % Compute the covariance matrix
-sig = cov(pts);
+sig = cov(pts, "partialrows");
 % Compute the whitening matrix
 [E, D] = eig(sig);
 D = pinv(real(sqrt(D))); % 1/sqrt(D)
