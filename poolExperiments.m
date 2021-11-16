@@ -671,7 +671,7 @@ focusPeriods(:,2) = focusPeriods + focusStep; focusPeriods = focusPeriods * 1e-3
 Nfs = size(focusPeriods,1);
 fws = 1:Nfs;
 auxOr = [false, true];
-trialBin = 1;
+trialBin = 10;
 Nas = [0;cumsum(NaStack./trialBin)'];
 spkDomain = 0:15;
 spkBins = spkDomain(1) - 0.5:spkDomain(end) + 0.5;
