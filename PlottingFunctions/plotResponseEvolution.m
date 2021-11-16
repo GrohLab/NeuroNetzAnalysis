@@ -1,6 +1,7 @@
 function evolutionFigures = plotResponseEvolution(popResponse, varargin)
 %PLOTRESPONSEEVOLUTION creates a plot with the given population mean
-%response and the given parameters.
+%response and the given parameters. popResponse is a structure created from
+%getModulatedPopulationMeanResponse.
 %   figure = plotResponseEvolution(popResponse, varargin)
 
 %% Parsing inputs
