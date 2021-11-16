@@ -13,7 +13,7 @@ function clWaveforms = getClusterWaveform(clusterID, dataDir)
 % Emilio Isaias-Camacho @GrohLab 2019
 
 %% Input validation
-clWaveforms = cell(1,3);
+clWaveforms = cell(1,2);
 checkNature = @(x) [iscell(x), ischar(x), isnumeric(x)];
 getLastCell = @(x) x{numel(x)};
 if ~any(checkNature(clusterID))
@@ -132,7 +132,7 @@ if ~isempty(waveFile)
     % N_exCl = size(clWaveforms, 1);
     [exIdx, exSub] = ismember(clWaveforms(:,1),clusterID);
     % 'Removing' unwanted cluster waveforms and retrieving missing clusters
-    clWaveforms = clWaveforms(exIdx,:);
+    clWaveforms = clWaveforms(exIdx,1:2);
     % Number of stored clusters
     Nstcl = nnz(exIdx);
     % Number of requested clusters
@@ -141,7 +141,7 @@ if ~isempty(waveFile)
     Nbncl = numel(missingClSubs);
     if Nbncl
         % Allocation of the bigger space
-        clOutput = cell(Nstcl+Nbncl,3);
+        clOutput = cell(Nstcl+Nbncl,2);
         % Reading the clusters from the file
         cl_fromBin = fetchWaveforms_fromBin(dataDir, clusterID(missingClSubs),...
             chanMap, Nch, clSub(missingClSubs), clTempSubs(missingClSubs),...
