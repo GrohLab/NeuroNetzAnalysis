@@ -335,9 +335,9 @@ for cexp = reshape(chExp, 1, [])
         auxDStack(:,:,emtyRow) = [];
         auxCStack(:,:,emtyRow) = [];
     end
-    clInfo.id = cellfun(@(x) [sprintf('%d_',cexp), x], clInfo.id,...
+    clInfo{:,1} = cellfun(@(x) [sprintf('%d_',cexp), x], clInfo{:,1},...
         'UniformOutput', 0);
-    clInfo.Properties.RowNames = clInfo.id;
+    clInfo.Properties.RowNames = clInfo{:,1};
     if cexp == chExp(1)
         % First assignment
         delayFlags = auxDelayFlags;
@@ -550,7 +550,7 @@ for cq = 1:length(qVals10)-1
 end
 % Median , mean, and mode markers
 [~, mxQSub] = max(binCounts); mLabels = ["Median","Mean","Mode"];
-triM = 10.^[qVals(3), nanmean(logData), binCents(mxQSub)]; 
+triM = 10.^[qVals(3), mean(logData, "omitnan"), binCents(mxQSub)]; 
 triBCts = interp1(binCents10, binCounts, triM); mCMap = flip(hsv(3),1);
 for cm = 1:length(triM)
     line(sdAx, repmat(triM(cm),2,1), [0; triBCts(cm)],...
