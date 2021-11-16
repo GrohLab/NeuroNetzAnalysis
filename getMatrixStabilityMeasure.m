@@ -1,4 +1,4 @@
-function [stableCluster, firingMdl] = getMatrixStabilityMeasure(countMatrix, varargin)
+function [stableCluster] = getMatrixStabilityMeasure(countMatrix, varargin)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -16,12 +16,12 @@ p.parse(countMatrix, varargin{:});
 countMatrix = p.Results.countMatrix;
 slopeRange = p.Results.slopeRange;
 
-%% Function
-[Ncl, Nt] = size(countMatrix);
-%vmr = arrayfun(@(x) var(countMatrix(x,:), [], 2)./mean(countMatrix(x,:), 2),...
-%    (1:size(countMatrix,1))');
-firingMdl = arrayfun(@(x) fit_poly(1:Nt, countMatrix(x,:), 1), (1:Ncl)', 'UniformOutput', 0);
-firingMdl = cat(2,firingMdl{:}); firingMdl = firingMdl';
-% stableCluster = arrayfun(@(x,y) all([x >= 1, abs(y) < 5e-3]), vmr, firingMdl(:,1));
-stableCluster = arrayfun(@(y) abs(y) < slopeRange, firingMdl(:,1));
+%% Getting measures of the matrix' rows
+[Ncl, Nt] = size(countMatrix); fnOpts = {'UniformOutput', false};
+fanoFact = @(x) var(x, [], 2, "omitnan")./mean(x, 2, "omitnan");
+ffm = fanoFact(countMatrix);
+firingMdl = arrayfun(@(x) fit_poly(1:Nt, countMatrix(x,:), 1), (1:Ncl)',...
+    fnOpts{:}); firingMdl = cat(2,firingMdl{:}); firingMdl = firingMdl';
+% stableCluster = arrayfun(@(y) abs(y) < slopeRange, firingMdl(:,1));
+stableCluster = (abs(firingMdl(:,1)) < slopeRange) & (ffm <= 1);
 end
