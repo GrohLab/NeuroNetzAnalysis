@@ -485,6 +485,53 @@ Nwru = nnz(wruIdx);
 
 fprintf('%d whisker responding clusters:\n', Nwru);
 fprintf('- %s\n',gclID{wruIdx})
+%% Get the numbers for the proportional pies
+fnOpts = {'UniformOutput', false};
+hsOpts = {'BinLimits', [-1,1], 'NumBins', 32,...
+    'Normalization', 'probability', 'EdgeColor', 'none', 'DisplayName'};
+axOpts = {'Box', 'off', 'Color', 'none'};
+evFr = cellfun(@(x) mean(x,2)./diff(responseWindow), Counts(:,2),fnOpts{:});
+evFr = cat(2, evFr{:});
+getMI = @(x) diff(x, 1, 2)./sum(x, 2);
+MIevok = getMI(evFr); 
+Nrn = sum(wruIdx); Ntn = size(wruIdx,1); 
+signMod = Results(1).Activity(2).Pvalues < 0.05;
+potFlag = MIevok > 0;
+Nrsn = sum(wruIdx & signMod); Nrsp = sum(wruIdx & signMod & potFlag);
+% All spikes in a cell format
+MIspon = getMI(spFr);
+%% Plot proportional pies
+clrMap = lines(2); clrMap([3,4],:) = [0.65;0.8].*ones(2,3);
+% Responsive and non responsive clusters
+respFig = figure("Color", "w"); 
+pie([Ntn-Nrn, Nrn], [0, 1], {'Unresponsive', 'Responsive'});
+pObj = findobj(respFig, "Type", "Patch"); 
+arrayfun(@(x) set(x, "EdgeColor", "none"), pObj);
+arrayfun(@(x) set(pObj(x), "FaceColor", clrMap(x+2,:)), 1:length(pObj))
+chExpStr = sprintf(" %d", chExp);
+propPieFileName = fullfile(figureDir,...
+    sprintf("Whisker responsive proportion pie RW%.1f - %.1f ms%s (%dC, %dR)",...
+    responseWindow*1e3, chExpStr, [Ntn-Nrn, Nrn]));
+saveFigure(respFig, propPieFileName, 1);
+% Potentiated, depressed and unmodulated clusters pie
+potFig = figure("Color", "w");
+pie([Nrn - Nrsn, Nrsp, Nrsn - Nrsp], [0, 1, 1], {'Non-modulated', ...
+    'Potentiated', 'Depressed'}); % set(potFig, axOpts{:})
+pObj = findobj(potFig, "Type", "Patch"); 
+arrayfun(@(x) set(x, "EdgeColor", "none"), pObj);
+arrayfun(@(x) set(pObj(x), "FaceColor", clrMap(x,:)), 1:length(pObj))
+modPropPieFigFileName = fullfile(figureDir,...
+    sprintf("Modulation proportions pie RW%.1f - %.1f ms%s (%dR, %dP, %dD)",...
+    responseWindow*1e3, chExpStr, Nrn - Nrsn, Nrsp, Nrsn - Nrsp));
+saveFigure(potFig, modPropPieFigFileName, 1)
+% Modulation index histogram
+MIFig = figure; histogram(MIspon, hsOpts{:}, "Spontaneous"); hold on; 
+histogram(MIevok, hsOpts{:}, "Evoked"); set(gca, axOpts{:});
+title("Modulation index distribution"); xlabel("MI"); 
+ylabel("Cluster proportion"); lgnd = legend("show"); 
+set(lgnd, "Box", "off", "Location", "best")
+saveFigure(MIFig, fullfile(figureDir,...
+    sprintf("Modulation index dist evoked & after induction%s",chExpStr)), 1)
 %% Filter responsive?
 filterIdx = true(Ne,1);
 if strcmpi(filtStr, 'filtered') && nnz(wruIdx)
