@@ -482,6 +482,9 @@ if ~nnz(CtrlCond)
 end
 wruIdx = any(H(:,CtrlCond),2);
 Nwru = nnz(wruIdx);
+% Getting the stability measure from the control evoked condition.
+[stableFlag, msrTbl] =...
+    getMatrixStabilityMeasure(cat(2,Counts{CtrlCond,2}));
 
 fprintf('%d whisker responding clusters:\n', Nwru);
 fprintf('- %s\n',gclID{wruIdx})
