@@ -1,4 +1,4 @@
-function [stableCluster] = getMatrixStabilityMeasure(countMatrix, varargin)
+function [stableCluster, msrMat] = getMatrixStabilityMeasure(countMatrix, varargin)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
 
@@ -24,4 +24,5 @@ firingMdl = arrayfun(@(x) fit_poly(1:Nt, countMatrix(x,:), 1), (1:Ncl)',...
     fnOpts{:}); firingMdl = cat(2,firingMdl{:}); firingMdl = firingMdl';
 % stableCluster = arrayfun(@(y) abs(y) < slopeRange, firingMdl(:,1));
 stableCluster = (abs(firingMdl(:,1)) < slopeRange) & (ffm <= 1);
+msrMat = table(ffm, firingMdl, "VariableNames", ["Fano factor", "Linear model"]);
 end
