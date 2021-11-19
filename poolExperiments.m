@@ -510,6 +510,7 @@ signMod = Results(1).Activity(2).Pvalues < 0.05;
 potFlag = MIevok > 0;
 Nrsn = sum(wruIdx & signMod); Nrsp = sum(wruIdx & signMod & potFlag);
 % All spikes in a cell format
+spFr = pfr;
 MIspon = getMI(spFr);
 %% Plot proportional pies
 clrMap = lines(2); clrMap([3,4],:) = [0.65;0.8].*ones(2,3);
@@ -629,8 +630,6 @@ ylabel(sdAx, "Population proportion"); saveFigure(sdFig,...
     fullfile(figureDir, ttlFile),1)
 %% Modulation index
 frNbin = 32; 
-evFr = cellfun(@(x) mean(x,2)./diff(responseWindow), Counts(:,2),...
-    'UniformOutput', 0); evFr = cat(2, evFr{:}); SNr = evFr./pfr;
 if ~exist('structString','var')
     structStruct = [];
     structAns = inputdlg('What structure are you looking at?','Structure');
@@ -1086,7 +1085,7 @@ legend(areaAx(cmod),consCondNames,'Location','best')
 linkaxes(areaAx,'xy')
 evokIsiFigPath = fullfile(figureDir, "Evoked ISI, potentiated & depressed" +...
     " clusters, exp"+string(sprintf(' %d',chExp))+" LB 10^"+string(lDt));
-saveFigure(areaFig, evokIsiFigPath)
+saveFigure(areaFig, evokIsiFigPath, 1)
 
 %% Ordering PSTH
 orderedStr = 'ID ordered';
