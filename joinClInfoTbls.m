@@ -4,7 +4,7 @@ function [clInfoOut] = joinClInfoTbls(clInfoA, clInfoB)
 %tables but only those which Phy outputs.
 %   Basically it places table A on top of table B.
 %   [clInfoOut] = joinClInfoTbls(clInfoA, clInfoB);
-% Emilio Isa?as-Camacho @ GrohLab 2020
+% Emilio Isaias-Camacho @ GrohLab 2020
 
 % Phy different names for the same variable
 phyNames = ["ch","channel";...
