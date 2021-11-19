@@ -488,6 +488,14 @@ Nwru = nnz(wruIdx);
 
 fprintf('%d whisker responding clusters:\n', Nwru);
 fprintf('- %s\n',gclID{wruIdx})
+%% Add the response to the table
+try
+    clInfoTotal = addvars(clInfoTotal, false(size(clInfoTotal,1),1),...
+        'NewVariableNames', 'Control');
+    clInfoTotal{logical(clInfoTotal.ActiveUnit), 'Control'} = wruIdx;
+catch
+    fprintf('Reran, perhaps?\n')
+end
 %% Get the numbers for the proportional pies
 fnOpts = {'UniformOutput', false};
 hsOpts = {'BinLimits', [-1,1], 'NumBins', 32,...
