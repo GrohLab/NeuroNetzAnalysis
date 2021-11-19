@@ -448,9 +448,8 @@ arrayfun(@configureFigureToPDF, figs);
 % Firing rate for all clusters, for all trials
 % meanfr = cellfun(@(x) mean(x,2)/delta_t,Counts,'UniformOutput',false);
 stFigBasename = fullfile(figureDir,[expName,' ',sprintf('%d ',chExp)]);
-stFigSubfix = sprintf(' Stat RW%.1f-%.1fms SW%.1f-%.1fms',...
-    responseWindow(1)*1e3, responseWindow(2)*1e3, spontaneousWindow(1)*1e3,...
-    spontaneousWindow(2)*1e3);
+stFigSubfix = sprintf(' Stat RW%.1f-%.1f ms SW%.1f-%.1f ms',...
+    responseWindow*1e3, spontaneousWindow*1e3);
 ccn = 1;
 %for cc = indCondSubs
 for cc = 1:numel(figs)
@@ -462,11 +461,12 @@ for cc = 1:numel(figs)
         ccn = ccn + 1;
     end
     stFigName = [stFigBasename, altCondNames, stFigSubfix];
-    if ~exist([stFigName,'.pdf'],'file') ||...
-            ~exist([stFigName,'.emf'],'file')
-        print(figs(cc),[stFigName,'.pdf'],printOpts{1}{:})
-        print(figs(cc),[stFigName,'.emf'],printOpts{2})
-    end
+    saveFigure(figs(cc), stFigName, 1)
+%     if ~exist([stFigName,'.pdf'],'file') ||...
+%             ~exist([stFigName,'.emf'],'file')
+%         print(figs(cc),[stFigName,'.pdf'],printOpts{1}{:})
+%         print(figs(cc),[stFigName,'.emf'],printOpts{2})
+%     end
 end
 
 % Filtering for the whisker responding clusters
@@ -618,7 +618,6 @@ ylabel(sdAx, "Population proportion"); saveFigure(sdFig,...
     fullfile(figureDir, ttlFile),1)
 %% Modulation index
 frNbin = 32; 
-
 evFr = cellfun(@(x) mean(x,2)./diff(responseWindow), Counts(:,2),...
     'UniformOutput', 0); evFr = cat(2, evFr{:}); SNr = evFr./pfr;
 if ~exist('structString','var')
@@ -647,14 +646,7 @@ end
 % boxplot(sfrBPAx, MI, 'Orientation', 'horizontal', 'Symbol', '.',...
 %     'Notch', 'on'); sfrBPAx.Visible = 'off'; 
 % linkaxes([sfrAx, sfrBPAx], 'x');
-%% Add the response to the table
-try
-    clInfoTotal = addvars(clInfoTotal, false(size(clInfoTotal,1),1),...
-        'NewVariableNames', 'Control');
-    clInfoTotal{logical(clInfoTotal.ActiveUnit), 'Control'} = wruIdx;
-catch
-    fprintf('Reran, perhaps?\n')
-end
+
 %% Reponse dynamics
 trigTms = cell2mat(arrayfun(@(x) x.Triggers(:,1), Conditions(chCond),...
     'UniformOutput', 0)')/fs;
@@ -668,19 +660,13 @@ stackTx = (0:Nt-1)/fs + timeLapse(1) + 2.5e-3;
 cnd = cnd(tmOrdSubs(1:length(cnd))); 
 trialAx = minutes(seconds(trigTms(tmOrdSubs)));
 % Modulation: distance from the y=x line.
-try
-    modFlags = sign(clInfoTotal{clInfoTotal.ActiveUnit &...
-        clInfoTotal.Control, 'Modulation'});
-catch
+if ~any(contains(clInfoTotal.Properties.VariableNames, 'Modulation'))
     clInfoTotal = addvars(clInfoTotal, zeros(size(clInfoTotal,1),1),...
         'NewVariableNames', 'Modulation');
     clInfoTotal{clInfoTotal.ActiveUnit==1,'Modulation'} =... Thalamus
-       Results(1).Activity(2).Direction;
-    %clInfoTotal{clInfoTotal.ActiveUnit==1,'Modulation'} =... Cortex with laser
-    %    Results.Activity(1).Direction;
-    modFlags = sign(clInfoTotal{clInfoTotal.ActiveUnit &...
-        clInfoTotal.Control, 'Modulation'});
+        Results(1).Activity(2).Direction;
 end
+
 % Group indeces
 modVal = clInfoTotal{clInfoTotal.ActiveUnit == 1, 'Modulation'};
 pruIdx = wruIdx & modVal > 0; % Potentiated responding
@@ -692,7 +678,7 @@ nmuIdx(nruIdx) = abs(zscore(modVal(nruIdx))) < 0.33; % With this criteria
 aruIdx = and(xor(H(:,1),H(:,2)),H(:,2)); % Response only A.-I.
 sruIdx = and(xor(H(:,1),H(:,2)),H(:,1)); % Stopped responding after A.-I.
 
-modFlags = modFlags > 0;
+modFlags = potFlag;
 modFlags(:,2) = ~modFlags;
 cmap = lines(Nccond);
 cmap(CtrlCond,:) = ones(1,3)*1/3; cmap(:,:,2) = ones(Nccond,3)*0.7;
@@ -872,8 +858,7 @@ for cmod = 1:size(popMeanFreq,3)
         sumFigName = cat(2, sumFigName,...
             sprintf(' sf-%s', dirNames{subFoldSel}));
     end
-    summFig.PaperType = 'A4';
-    saveFigure(summFig, sumFigName, false);
+    saveFigure(summFig, sumFigName, false); clearvars summFig;
 end
 
 %% Spontaneous ISIs for different cluster groups
