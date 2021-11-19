@@ -24,5 +24,7 @@ firingMdl = arrayfun(@(x) fit_poly(1:Nt, countMatrix(x,:), 1), (1:Ncl)',...
     fnOpts{:}); firingMdl = cat(2,firingMdl{:}); firingMdl = firingMdl';
 % stableCluster = arrayfun(@(y) abs(y) < slopeRange, firingMdl(:,1));
 stableCluster = (abs(firingMdl(:,1)) < slopeRange) & (ffm <= 1);
-msrMat = table(ffm, firingMdl, "VariableNames", ["Fano factor", "Linear model"]);
+% linMdlTbl = table(firingMdl, "VariableNames", ["Slope", "Intersection"]);
+msrMat = table(ffm, firingMdl); 
+msrMat.Properties.VariableNames = {'FanoFactor','LinearModel'};
 end
