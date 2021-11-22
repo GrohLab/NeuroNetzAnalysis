@@ -710,11 +710,10 @@ condLey = consCondNames;
 respLey = {'Responsive', 'Non-responsive'};
 % Time steps for the 3D PSTH in ms
 focusStep = 2.5;
-focusPeriods = (-3:focusStep:25)';
-focusPeriods(:,2) = focusPeriods + focusStep; focusPeriods = focusPeriods * 1e-3;
-Nfs = size(focusPeriods,1);
-fws = 1:Nfs;
-auxOr = [false, true];
+focusPeriods = (-3:focusStep:25)'; 
+focusPeriods(:,2) = focusPeriods + focusStep; 
+focusPeriods = focusPeriods * 1e-3; Nfs = size(focusPeriods,1);
+fws = 1:Nfs; auxOr = [false, true];
 trialBin = 10;
 Nas = [0;cumsum(NaStack./trialBin)'];
 spkDomain = 0:15;
@@ -821,7 +820,7 @@ for pfp = fws
         tdFigName = tdFigName + " sf-" + dirNames{subFoldSel};
     end
     tempFigName = fullfile(figureDir, tdFigName);
-    saveFigure(tdFig, tempFigName);
+    saveFigure(tdFig, tempFigName, 1);
 end
 
 %% 3D Visualization of the spiking dynamics
@@ -872,6 +871,32 @@ for cmod = 1:size(popMeanFreq,3)
     saveFigure(summFig, sumFigName, false); clearvars summFig;
 end
 
+%% Average Response evolution 
+% Auxiliary and necessary variables
+signMod = Results(1).Activity(2).Pvalues < 0.05;
+potFlag = MIevok > 0;
+trialBin = 10; rssFlag = wruIdx & stableFlag & signMod;
+minFlag = true; errStr = 'SEM';
+trigTms = cat(1, Conditions(consideredConditions).Triggers);
+trigTms = trigTms(:,1)/fs;
+modLabels = {'potentiated', 'depressed'};
+
+% Responsive, significantly modulated, stable and potentiated
+popResponse = getModulatedPopulationMeanResponse(Counts,...
+    [wruIdx, signMod & stableFlag, potFlag]); 
+evolutionFigs = plotResponseEvolution(popResponse,...
+    'windowDuration', diff(responseWindow), 'triggerTimes', trigTms,...
+    'trialBin', trialBin, 'inMinutes', minFlag, 'error', errStr);
+
+% Saving the figures
+strFmt = "Average response evolution for %d %s clusters"+...
+    " RW%.1f - %.1f s ERR-%s TB%d EXP%s (%s)";
+chExpStr = sprintf(" %d", chExp);
+arrayfun(@(x) saveFigure(evolutionFigs(x), fullfile(figureDir,...
+    sprintf(strFmt, sum(all([rssFlag, xor(x-1, potFlag)],2)),...
+    modLabels{x}, timeLapse*1e3, errStr, trialBin, chExpStr,...
+    structString)), 1), (1:size(evolutionFigs)))
+clearvars evolutionFigs
 %% Spontaneous ISIs for different cluster groups
 % Logarithmic spacing for the histogram counts
 lDt = 0.01;
@@ -1150,13 +1175,30 @@ for ccond = 1:Nccond
     end
 end
 
+%% Log PSTH -- Generalise this part!!
+Nbin = 64;
+ncl = size(relativeSpkTmsStruct(1).SpikeTimes,1);
+
+logPSTH = getLogTimePSTH(relativeSpkTmsStruct, true(ncl,1),...
+    'tmWin', responseWindow, 'Offset', 2.5e-3, 'Nbin', Nbin,...
+    'normalization', 'fr');
+logFigs = plotLogPSTH(logPSTH);
+% Saving the figures
+lpFigName = sprintf('%s Log-likePSTH %s %d-conditions RW%.1f-%.1f ms NB%d (%s)',...
+    expName, logPSTH.Normalization, Nccond, responseWindow*1e3, Nbin, filtStr);
+saveFigure(logFigs(1), fullfile(figureDir, lpFigName))
+if numel(logFigs) > 1
+    lmiFigName = sprintf('%s LogMI %d-conditions RW%.1f-%.1f ms NB%d (%s)',...
+        expName, Nccond, responseWindow*1e3, Nbin, filtStr);
+    saveFigure(logFigs(2), fullfile(figureDir, lmiFigName))
+end
+
 %% Comparing the PSTHs for all conditions
 
 txpsth = (0:Nbn-1)*binSz + timeLapse(1) + 2.5e-3;
 focusWindow = [-5, 30]*1e-3;
 focusIdx = txpsth >= focusWindow(1) & txpsth <= focusWindow(2);
 txfocus = txpsth(focusIdx);
-modLabels = {'potentiated', 'depressed'};
 %modLabels = {'non-responding','non-modulated'};
 lnClr = lines(Nccond);
 for cmod = 1:2
