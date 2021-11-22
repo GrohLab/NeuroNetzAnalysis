@@ -512,6 +512,7 @@ Nrsn = sum(wruIdx & signMod); Nrsp = sum(wruIdx & signMod & potFlag);
 % All spikes in a cell format
 spFr = pfr;
 MIspon = getMI(spFr);
+SNr = evFr./spFr;
 %% Plot proportional pies
 clrMap = lines(2); clrMap([3,4],:) = [0.65;0.8].*ones(2,3);
 % Responsive and non responsive clusters
