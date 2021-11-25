@@ -18,5 +18,5 @@ else
     return;
 end
 aux = rdivide(P1,P2);
-kbd = dot(P1,log2(aux))/log(N);
+kbd = dot(P1,log2(aux))/log2(N);
 end
