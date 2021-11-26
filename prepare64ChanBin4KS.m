@@ -52,7 +52,7 @@ if numel(recFile) < 2
         end % File identifier validation
         fwrite(fID, data, 'int16'); fclose(fID);
         
-        fID = fopen(fullfile(dataDir, ['ExperimentMedian.bin']), 'w');
+        fID = fopen(fullfile(dataDir, 'ExperimentMedian.bin'), 'w');
         if fID < 3
             fprintf(2, 'Unable to create median file!\n');
             fprintf(2, 'Please verify the file and directory!\n');
