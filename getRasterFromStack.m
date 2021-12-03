@@ -71,8 +71,10 @@ for cse = iE
                     % If the event contains spikes
                     spikeTimes = tx(squeeze(discreteStack(cse,:,cap)));
                     if tmsORsubsFlag
+                        % Time
                         relativeSpikeTimes(spIdx,cap) = {spikeTimes};
                     else
+                        % Subscripts
                         relativeSpikeTimes(spIdx,cap) =...
                             {round(fs*spikeTimes)};
                     end
