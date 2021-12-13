@@ -58,7 +58,9 @@ if numel(recFile) < 2
             fprintf(2, 'Please verify the file and directory!\n');
             return
         end % File identifier validation
-        fwrite(fID, expMedian, 'int16'); fclose(fID);
+        fwrite(fID, expMedian, 'int16'); fclose(fID); fs = 3e4; 
+        save(fullfile(dataDir, [outBinName, '_sampling_frequency.mat']),...
+            'fs')
         iOk = true;
     else
         % Read a big chunk of data, and write in disk. Use while loop.
