@@ -39,7 +39,7 @@ if numel(recFile) < 2
     memObj = memory;
     if 0.85*memObj.MaxPossibleArrayBytes > recFile.bytes
         % It is possible to allocate the whole recording.
-        data = fread(fID, Inf, 'uint16'); fclose(fID);
+        data = fread(fID, Inf, 'uint16=>single'); fclose(fID);
         data = data - 2^15; data = reshape(data, 64, []);
         data = int16(data); expMedian = median(data);
         data = data - expMedian;
@@ -69,6 +69,9 @@ if numel(recFile) < 2
     end % Memory validation
 else
     % Deal with more than one recording file
+    % TODO: Allow the user to select one recording file from the folder.
+    fprintf(1, 'There''s more than 1 recording in the folder!/n')
+    fprintf(1, 'To implement choosing functionality/n')
 end % More than one Recording* file in the directory
 
 end
