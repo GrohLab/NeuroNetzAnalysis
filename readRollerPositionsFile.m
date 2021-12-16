@@ -39,23 +39,36 @@ else
         if ~isempty(strLn)
             strCell = strsplit(strLn, ",");
             if size(strCell,2) == 2
+                % Character outside numeric ASCII range.
                 chrepFlag = strCell{2} > 57;
+                % Taking the mean from 6 cells around the found trigger
+                % time.
                 refTm = num2str(round(mean(rollTrigTimes.Time_mus(cns+(-3:3)'),...
-                    'omitnan'))); rollTrigTimes.RoT(cns) =...
+                    'omitnan'))); 
+                % Writting the found trigger character and logic flag.
+                rollTrigTimes.RoT(cns) =...
                     string(strCell{2}(chrepFlag)); trigFlag(cns) = true;
+                % "Mistake" correction cases:
                 if length(refTm) == length(strCell{2})
+                    % If the letter is in the middle of the microseconds,
+                    % replace the character with the mean value from all 6
+                    % previous cells
                     strCell{2}(chrepFlag) = refTm(chrepFlag);
                 elseif length(strCell{2}) > length(refTm)
+                    % If the 
                     strCell{2}(chrepFlag) = [];
                 else
                     strCell{2} = refTm;
                 end
                 rollTrigTimes.Time_mus(cns) = str2double(strCell{2});
             else
+                % There are more commas in the line. Something like an
+                % interrupted interruption, new line in the time string,
+                % and continued writing the time string.                
                 fprintf(1, 'Need user interaction!\n');
             end
         else
-            % Empty line--maybe double enter
+            % Empty line--maybe double enter from interrupted interruption
             rollTrigTimes(cns,:) = [];
             trigFlag(cns) = [];
         end
