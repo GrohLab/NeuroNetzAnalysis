@@ -17,19 +17,20 @@ else
     ops = delimitedTextImportOptions("NumVariables", 2);
     ops.DataLines = [1, Inf];
     ops.Delimiter = ",";
-    ops.VariableNames = ["RoT", "Time_mus"];
+    ops.VariableNames = ["RoT", "Time_us"];
     ops.VariableTypes = ["string", "double"];
     ops.ExtraColumnsRule = "ignore";
     ops.EmptyLineRule = "read";
     % Roller file corresponding to Arduino's micros() function.
     rollTrigTimes = readtable(filepath, ops);
-    rollTrigTimes.Time_mus = unwrap(rollTrigTimes.Time_mus, 2^31);
+    % Accounting for long int format in the Arduino clock.
+    rollTrigTimes.Time_us = unwrap(rollTrigTimes.Time_us, 2^31);
     % Searching for well-written trigger interruptions
     trigFlag = any([isnan(str2double(rollTrigTimes.RoT)),...
-        isnan(rollTrigTimes.Time_mus)], 2);
+        isnan(rollTrigTimes.Time_us)], 2);
     trigLetter = unique(rollTrigTimes.RoT(trigFlag));
     % Rescuing ill-written trigger time interruptions
-    nanSubs = find(isnan(rollTrigTimes.Time_mus));
+    nanSubs = find(isnan(rollTrigTimes.Time_us));
     fID = fopen(filepath, "r"); ln = 1;
     for cns = nanSubs'
         while ln < cns
@@ -43,7 +44,7 @@ else
                 chrepFlag = strCell{2} > 57;
                 % Taking the mean from 6 cells around the found trigger
                 % time.
-                refTm = num2str(round(mean(rollTrigTimes.Time_mus(cns+(-3:3)'),...
+                refTm = num2str(round(mean(rollTrigTimes.Time_us(cns+(-3:3)'),...
                     'omitnan'))); 
                 % Writting the found trigger character and logic flag.
                 rollTrigTimes.RoT(cns) =...
@@ -60,7 +61,7 @@ else
                 else
                     strCell{2} = refTm;
                 end
-                rollTrigTimes.Time_mus(cns) = str2double(strCell{2});
+                rollTrigTimes.Time_us(cns) = str2double(strCell{2});
             else
                 % There are more commas in the line. Something like an
                 % interrupted interruption, new line in the time string,
@@ -76,7 +77,7 @@ else
     [~] = fclose(fID);
     % Output for the roller positions
     rollerposition = zeros(sum(~trigFlag), 2);
-    rollerposition(:,2) = rollTrigTimes.Time_mus(~trigFlag);
+    rollerposition(:,2) = rollTrigTimes.Time_us(~trigFlag);
     rollerposition(:,1) = unwrap(str2double(rollTrigTimes.RoT(~trigFlag)),...
         2^15);
     % Output for the trigger times as measured by the rotary decoder
@@ -91,7 +92,7 @@ else
         tFlags = arrayfun(@(x) ismember(rollTrigTimes.RoT(trigFlag), x),...
             trigLetter', fnOpts{:}); trigSubs = find(trigFlag);
         % Reading those times which correspond only to the specific trigger
-        tTimes = cellfun(@(x) rollTrigTimes.Time_mus(trigSubs(x)), tFlags,...
+        tTimes = cellfun(@(x) rollTrigTimes.Time_us(trigSubs(x)), tFlags,...
             fnOpts{:});
     end
 end
