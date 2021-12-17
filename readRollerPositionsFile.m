@@ -5,6 +5,26 @@ tTimes = [];
 fID = fopen(filepath, 'r');
 rollerline = textscan(fID, '%d,2021-%*d-%*dT%d:%d:%f+02:00');
 fclose(fID);
+
+    function fetchTimeFromNextLine()
+        % Save the time fragment from the position, if any.
+        nxtRoT = rollTrigTimes.RoT(cns+1);
+        if ismissing(nxtRoT)
+            nxtRoT = [];
+        end
+        % Setting the trigger flag to false, as the
+        % position is not lost, and the next line true.
+        trigFlag(cns) = false; trigFlag(cns+1) = true;
+        % Write the trigger letter and time in the
+        % following line. rollTrigTimes(cns+1,:)
+        rollTrigTimes.RoT(cns+1) = strCell{clFlag}(chRepFlag);
+        rollTrigTimes.Time_us(cns+1) = str2double(strCell{end});
+        % Fixing the current line by concatenating the time
+        % stamp of the roller position
+        strCell{clFlag}(chRepFlag) = [];
+        strCell{clFlag} = cat(2, strCell{clFlag}, char(nxtRoT));
+    end
+
 if all(cellfun(@(x) ~isempty(x), rollerline))
     % Roller file corresponding to the Bonsai timestamps
     rollerx = int16(rollerline{1}); rollert = string(rollerline{2})+":"+...
@@ -17,20 +37,20 @@ else
     ops = delimitedTextImportOptions("NumVariables", 2);
     ops.DataLines = [1, Inf];
     ops.Delimiter = ",";
+    ops.MissingRule = "fill";
     ops.VariableNames = ["RoT", "Time_us"];
     ops.VariableTypes = ["string", "double"];
     ops.ExtraColumnsRule = "ignore";
     ops.EmptyLineRule = "read";
+    ops.ConsecutiveDelimitersRule = "join";
     % Roller file corresponding to Arduino's micros() function.
     rollTrigTimes = readtable(filepath, ops);
-    % Accounting for long int format in the Arduino clock.
-    rollTrigTimes.Time_us = unwrap(rollTrigTimes.Time_us, 2^31);
     % Searching for well-written trigger interruptions
     trigFlag = any([isnan(str2double(rollTrigTimes.RoT)),...
         isnan(rollTrigTimes.Time_us)], 2);
     trigLetter = unique(rollTrigTimes.RoT(trigFlag));
-    % Rescuing ill-written trigger time interruptions
-    nanSubs = find(isnan(rollTrigTimes.Time_us));
+    % Rescuing ill-written rows
+    nanSubs = find(trigFlag & strlength(rollTrigTimes.RoT) > 1);
     fID = fopen(filepath, "r"); ln = 1;
     for cns = nanSubs'
         while ln < cns
@@ -39,45 +59,90 @@ else
         strLn = fgetl(fID); ln = ln + 1;
         if ~isempty(strLn)
             strCell = strsplit(strLn, ",");
-            if size(strCell,2) == 2
-                % Character outside numeric ASCII range.
-                chrepFlag = strCell{2} > 57;
-                % Taking the mean from 6 cells around the found trigger
-                % time.
-                refTm = num2str(round(mean(rollTrigTimes.Time_us(cns+(-3:3)'),...
-                    'omitnan'))); 
-                % Writting the found trigger character and logic flag.
-                rollTrigTimes.RoT(cns) =...
-                    string(strCell{2}(chrepFlag)); trigFlag(cns) = true;
-                % "Mistake" correction cases:
-                if length(refTm) == length(strCell{2})
-                    % If the letter is in the middle of the microseconds,
-                    % replace the character with the mean value from all 6
-                    % previous cells
-                    strCell{2}(chrepFlag) = refTm(chrepFlag);
-                elseif length(strCell{2}) > length(refTm)
-                    % If the 
-                    strCell{2}(chrepFlag) = [];
+            if size(strCell,2) > 1
+                % Searching for the cell which has a letter.
+                clFlag = cellfun(@(x) isnan(str2double(x)), strCell);
+                % Character outside numeric ASCII range on the second cell.
+                chRepFlag = strCell{clFlag} > 57;
+                if size(strCell,2) < 3
+                    % Writting the found trigger character and logic flag.
+                    rollTrigTimes.RoT(cns) =...
+                        string(strCell{clFlag}(chRepFlag));
+                    trigFlag(cns) = true;
+                    % If the trigger letter was written on the time string
+                    if find(clFlag) == 2
+                        % Taking the mean from 6 cells around the found
+                        % trigger time. rollTrigTimes(cns+(-3:3)',:)
+                        refNum = num2str(round(mean(rollTrigTimes{...
+                            cns+(-3:3)',clFlag}, 'omitnan')));
+                        % "Mistake" correction cases:
+                        if length(refNum) == length(strCell{clFlag})
+                            % If the letter is in the middle of the
+                            % microseconds, replace the character with the
+                            % mean value from all 6 previous cells
+                            strCell{clFlag}(chRepFlag) = refNum(chRepFlag);
+                        elseif length(strCell{clFlag}) > length(refNum)
+                            % This might mean that the trigger letter is at
+                            % the end of the line. The solution is just to
+                            % delete the trigger letter.
+                            strCell{clFlag}(chRepFlag) = [];
+                        else
+                            % Strange case. I cannot imagine what could
+                            % have happened here.
+                            strCell{clFlag} = refNum;
+                        end
+                    else
+                        % The trigger letter was written on the position
+                        % part of the line. There's nothing more to be done
+                        % here. Replaced the position time stamp with the
+                        % trigger.
+                        continue
+                    end
                 else
-                    strCell{2} = refTm;
+                    % There are more commas in the line. Something like an
+                    % interrupted interruption, new line in the time
+                    % string, and continued writing the time string.
+                    
+                    % Save the time fragment from the position, if any.
+                    nxtRoT = rollTrigTimes.RoT(cns+1);
+                    if ismissing(nxtRoT)
+                        nxtRoT = [];
+                    end
+                    % Setting the trigger flag to false, as the
+                    % position is not lost, and the next line true.
+                    trigFlag(cns) = false; trigFlag(cns+1) = true;
+                    % Write the trigger letter and time in the
+                    % following line. rollTrigTimes(cns+1,:)
+                    rollTrigTimes.RoT(cns+1) = strCell{clFlag}(chRepFlag);
+                    rollTrigTimes.Time_us(cns+1) = str2double(strCell{3});
+                    % Fixing the current line by concatenating the time
+                    % stamp of the roller position
+                    strCell{clFlag}(chRepFlag) = [];
+                    strCell{clFlag} = cat(2, strCell{clFlag}, char(nxtRoT));
                 end
-                rollTrigTimes.Time_us(cns) = str2double(strCell{2});
+                switch find(clFlag)
+                    case 1
+                        rollTrigTimes.RoT(cns) = strCell{clFlag};
+                    case 2
+                        rollTrigTimes.Time_us(cns) =...
+                            str2double(strCell{clFlag});
+                    otherwise
+                        fprintf(1, 'A case worth seeing!\n')
+                end
             else
-                % There are more commas in the line. Something like an
-                % interrupted interruption, new line in the time string,
-                % and continued writing the time string.                
-                fprintf(1, 'Need user interaction!\n');
+                fprintf(1, 'When we only have a time fragment\n');
             end
         else
-            % Empty line--maybe double enter from interrupted interruption
-            rollTrigTimes(cns,:) = [];
-            trigFlag(cns) = [];
+            % Empty line--maybe double enter from interrupted interruption.
+            % Better to erase this else.
         end
     end
     [~] = fclose(fID);
     % Output for the roller positions
     rollerposition = zeros(sum(~trigFlag), 2);
     rollerposition(:,2) = rollTrigTimes.Time_us(~trigFlag);
+    % Accounting for long int format in the Arduino clock.
+    rollTrigTimes.Time_us = unwrap(rollTrigTimes.Time_us, 2^31);
     rollerposition(:,1) = unwrap(str2double(rollTrigTimes.RoT(~trigFlag)),...
         2^15);
     % Output for the trigger times as measured by the rotary decoder
