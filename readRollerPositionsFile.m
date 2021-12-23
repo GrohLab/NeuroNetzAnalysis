@@ -22,7 +22,7 @@ refTime = 0; refRoT = 'C'; nxtRoT = '';nxtTime = 0;
         % roller position
         strCell{clFlag}(chRepFlag) = [];
         strCell{clFlag} = cat(2, strCell{clFlag}, char(nxtRoT));
-        rollTrigTimes.Rot(cns) = strCell{1}(chRepFlag);
+        % rollTrigTimes.RoT(cns) = string(strCell{1});
         rollTrigTimes.Time_us(cns) = str2double(strCell{clFlag});
     end
 
