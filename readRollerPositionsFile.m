@@ -207,11 +207,11 @@ else
     [~] = fclose(fID);
     % Output for the roller positions
     rollerposition = zeros(sum(~trigFlag), 2);
-    rollerposition(:,2) = rollTrigTimes.Time_us(~trigFlag);
     % Accounting for long int format in the Arduino clock.
     rollTrigTimes.Time_us = unwrap(rollTrigTimes.Time_us, 2^31);
     rollerposition(:,1) = unwrap(str2double(rollTrigTimes.RoT(~trigFlag)),...
         2^15);
+    rollerposition(:,2) = rollTrigTimes.Time_us(~trigFlag);
     % Output for the trigger times as measured by the rotary decoder
     if ~isempty(trigLetter)
         % Searching for ill-written trigger ID interruptions
