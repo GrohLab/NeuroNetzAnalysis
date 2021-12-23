@@ -47,7 +47,8 @@ refTime = 0; refRoT = 'C'; nxtRoT = '';nxtTime = 0;
             refRoT = createRefRoT();
             rollTrigTimes.Time_us(cns) = strCell{end};
             rollTrigTimes.RoT(cns+1) = num2str(refRoT);
-            numPatDm = (strCell{2} - num2str(refRoT)') == 0;
+            % TODO: Implement a way to recognise the time from the position
+            % numPatDm = (strCell{2} - num2str(refRoT)') == 0;
         end
         rollTrigTimes.Time_us(cns+1) = str2double(strCell{end});
     end
