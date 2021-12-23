@@ -23,7 +23,7 @@ refTime = 0; refRoT = 'C'; nxtRoT = '';nxtTime = 0;
         strCell{clFlag}(chRepFlag) = [];
         strCell{clFlag} = cat(2, strCell{clFlag}, char(nxtRoT));
         rollTrigTimes.Rot(cns) = strCell{1}(chRepFlag);
-        rollTrigTimes.Time_us(cns) = strCell{clFlag};
+        rollTrigTimes.Time_us(cns) = str2double(strCell{clFlag});
     end
 
     function placeTriggerInCurrentRow()
@@ -41,7 +41,7 @@ refTime = 0; refRoT = 'C'; nxtRoT = '';nxtTime = 0;
             tmPos = strsplit(strCell{2}, '-');
             tmPos{1} = cat(2, tmPos{1}, char(nxtRoT));
             rollTrigTimes.RoT(cns+1) = cat(2, '-', tmPos{2});
-            rollTrigTimes.Time_us(cns) = tmPos{1};
+            rollTrigTimes.Time_us(cns) = str2double(tmPos{1});
         else
             % Difficult to separate position and time. In development
             refRoT = createRefRoT();
@@ -49,11 +49,11 @@ refTime = 0; refRoT = 'C'; nxtRoT = '';nxtTime = 0;
             rollTrigTimes.RoT(cns+1) = num2str(refRoT);
             numPatDm = (strCell{2} - num2str(refRoT)') == 0;
         end
-        rollTrigTimes.Time_us(cns+1) = strCell{end};
+        rollTrigTimes.Time_us(cns+1) = str2double(strCell{end});
     end
 
     function correctTimeAndReplacePosWithTrigger()
-        createRefTime();
+        createRefTime(); refTime = char(string(round(refTime)));
         rollTrigTimes.RoT(cns) = strCell{clFlag}(chRepFlag);
         if length(refTime) == length(strCell{clFlag})
             % If the letter is in the middle of the microseconds, replace
@@ -67,7 +67,9 @@ refTime = 0; refRoT = 'C'; nxtRoT = '';nxtTime = 0;
             % Strange case. I cannot imagine what could have happened here.
             strCell{clFlag} = refTime;
         end
-        rollTrigTimes.Time_us(cns) = strCell{clFlag};
+        rollTrigTimes.Time_us(cns) = str2double(strCell{clFlag});
+        % rollTrigTimes(cns,:)
+        % trigFlag(cns)
     end
 
     function correctPosAndPlaceTrigNextRow()
