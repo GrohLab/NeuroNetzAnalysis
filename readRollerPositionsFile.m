@@ -164,7 +164,9 @@ else
         % Searching for the cell which has a letter.
         clFlag = cellfun(@(x) isnan(str2double(x)), strCell);
         % Character outside numeric ASCII range on the second cell.
-        chRepFlag = strCell{clFlag} > 57;
+        if any(clFlag)
+            chRepFlag = strCell{clFlag} > 57;
+        end
         clX = find(clFlag);
         if Ncell > 3
             % Not considered so far. Better prompt the user to check the
