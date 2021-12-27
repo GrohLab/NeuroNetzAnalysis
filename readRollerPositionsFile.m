@@ -91,7 +91,7 @@ refTime = 0; refRoT = 'C'; nxtRoT = '';nxtTime = 0;
                     rollTrigTimes.Time_us(cns+1);
                 % The position writing was interrupted by the trigger
                 rollTrigTimes.RoT(cns+1) = strCell{clFlag}(chRepFlag);
-                rollTrigTimes.Time_us(cns+1) = strCell{end};
+                rollTrigTimes.Time_us(cns+1) = str2double(strCell{end});
                 % Fixing the current line by concatenating the time stamp
                 % of the roller position
                 strCell{clFlag}(chRepFlag) = [];
