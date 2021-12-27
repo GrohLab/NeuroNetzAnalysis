@@ -96,7 +96,7 @@ refTime = 0; refRoT = 'C'; nxtRoT = '';nxtTime = 0;
                 % of the roller position
                 strCell{clFlag}(chRepFlag) = [];
                 strCell{clFlag} = cat(2, strCell{clFlag}, char(nxtRoT));
-                rollTrigTimes.Rot(cns) = strCell{clFlag};
+                rollTrigTimes.RoT(cns) = strCell{clFlag};
             else
                 % Trigger char was written at the end of the position, but
                 % without it's own time.
