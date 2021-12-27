@@ -117,7 +117,7 @@ refTime = 0; refRoT = 'C'; nxtRoT = '';nxtTime = 0;
         nxtTime = rollTrigTimes.Time_us(cns+1);
     end
 
-    function refRoT = createRefRoT()
+    function createRefRoT()
         % Create reference roller position number.
         refRoT = mean(str2double(rollTrigTimes.RoT(cns+([(-10:-1)';...
             (1:10)']))),'omitnan');
