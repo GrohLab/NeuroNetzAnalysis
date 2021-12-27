@@ -7,7 +7,7 @@ rollerline = textscan(fID, '%d,2021-%*d-%*dT%d:%d:%f+02:00');
 fclose(fID);
 
 %% Auxiliary functions
-refTime = 0; refRoT = 'C'; nxtRoT = '';nxtTime = 0;
+refTime = 0; refRoT = 'C'; nxtRoT = '';
 
     function placeTriggerInNextRow()
         % Save the time fragment from the position, if any.
@@ -111,10 +111,6 @@ refTime = 0; refRoT = 'C'; nxtRoT = '';nxtTime = 0;
 
     function fetchNextRoT()
         nxtRoT = rollTrigTimes.RoT(cns+1);
-    end
-
-    function fetchNextTime()
-        nxtTime = rollTrigTimes.Time_us(cns+1);
     end
 
     function createRefRoT()
