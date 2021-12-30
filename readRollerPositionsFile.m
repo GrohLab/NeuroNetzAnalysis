@@ -1,6 +1,19 @@
 function [rollerposition, tTimes, rollTrigTimes] = readRollerPositionsFile(filepath)
-%UNTITLED2 Summary of this function goes here
-%   Detailed explanation goes here
+%READROLLERPOSITIONSFILE corrects the arduino serial communication CVS file
+%from Bonsai-rx.
+%   INPUTS:
+%       filepath - string indicating the location of the file to read.
+%   OUTPUTS:
+%       rollerposition - Rx2 matrix containing the position of the encoder
+%                        in the first column and the time in microseconds
+%                        in the second.
+%       tTimes - cell array containing time in microseconds when a letter
+%                encoding for triggers (or something appart from roller
+%                positions).
+%       rollTrigTimes - table of 2 variables containing the corrected
+%                       positions and letters enconding triggers, and time
+%                       when these occurred in microseconds.
+%Emilio Isaias-Camacho @ GrohLab 2021
 tTimes = [];
 fID = fopen(filepath, 'r');
 rollerline = textscan(fID, '%d,2021-%*d-%*dT%d:%d:%f+02:00');
