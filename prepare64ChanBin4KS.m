@@ -96,13 +96,19 @@ for cf = 1:Nrf
     fWeight = recFiles.bytes;
     % How many bytes are available in this computer. Occupying 85%
     mxBytes = 0.8 * mem.MaxPossibleArrayBytes;
-    % Number of samples in the file with Nch channels. 2 bytes from uint16. 
+    % Number of samples in the file with Nch channels. 2 bytes from uint16.
+    % 4 from int32 and considering the samples that fit in memory. 
     Ns = fWeight/(2*Nch); Nms = mxBytes/(4*Nch);
     if Ns > Nms
+        % If the file has more samples than the memory allows, then take
+        % the samples that fit in memory.
         Ns = Nms;
     else
+        % If the file fits entirely in the memory, then read it all at once
         Ns = Inf;
     end
+    % Low-level programming keeps the current position in the opened data
+    % file.
     dfID = openDataFile(fullfile(dataDir, fNames(cf)));
     chnk = 1;
     while ~feof(dfID)
