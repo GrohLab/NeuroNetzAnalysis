@@ -42,10 +42,6 @@ classdef ProtocolGetter < handle
             if isempty(smrxFiles)
                 subfolderFlag = true;
                 smrxFiles = dir(fullfile(directory,'*\*.smrx'));
-            elseif isempty(smrxFiles)
-                fprintf(1,'The given directory contains no .smrx files. Please ')
-                fprintf(1,'try again with another folder which do contain .smrx files.\n')
-                return
             end
             [~,smrxBaseNames] = getBaseNames(smrxFiles);
             merFiles = dir(fullfile(directory, ['*', foStr, '.txt']));
@@ -60,30 +56,44 @@ classdef ProtocolGetter < handle
                 if ~sitFlags(2)
                     obj.ismerged = true;
                     foID = fopen(fullfile(merFiles(1).folder,...
-                        merFiles(1).name),'r');
-                    smrxFlags = zeros(Ns,1,'single'); counter = 1;
-                    smrxBaseNamesStr = string(smrxBaseNames);
-                    while ~feof(foID) && counter <= Ns
-                        [~,cfName,~] = fileparts(string(fgetl(foID)));
-                        smrxFlags = smrxFlags + counter * strcmpi(...
-                            smrxBaseNamesStr, cfName);
-                        counter = counter + 1;
-                    end
-                    smrxBaseNames(smrxFlags == 0) = [];
-                    smrxFlags(smrxFlags == 0) = [];
-                    if feof(foID)
-                        binFile = cfName + ".bin";
+                        merFiles(1).name), 'r');
+                    % BIG ASSUMTION!! If there's at least one smrx file,
+                    % then the bin came from there. Otherwise, the bin file
+                    % is produced by merging other bin recordings.
+                    if Ns
+                        % Merged from 2 or more SMRX  files.
+                        smrxFlags = zeros(Ns,1,'single'); counter = 1;
+                        smrxBaseNamesStr = string(smrxBaseNames);
+                        while ~feof(foID) && counter <= Ns
+                            [~,cfName,~] = fileparts(string(fgetl(foID)));
+                            smrxFlags = smrxFlags + counter * strcmpi(...
+                                smrxBaseNamesStr, cfName);
+                            counter = counter + 1;
+                        end
+                        smrxBaseNames(smrxFlags == 0) = [];
+                        smrxFlags(smrxFlags == 0) = [];
+                        if feof(foID)
+                            binFile = cfName + ".bin";
+                        else
+                            binFile = string(fgetl(foID));
+                        end
+                        fclose(foID);
+                        if subfolderFlag
+                            [~,subFolders] = arrayfun(@(x) fileparts(x.folder),...
+                                smrxFiles, 'UniformOutput', 0);
+                            smrxBaseNames(smrxFlags) = arrayfun(@(x,y) ...
+                                fullfile(x,y), subFolders, smrxBaseNames);
+                        else
+                            smrxBaseNames(smrxFlags) = smrxBaseNames;
+                        end
                     else
-                        binFile = string(fgetl(foID));
-                    end
-                    fclose(foID);
-                    if subfolderFlag
-                        [~,subFolders] = arrayfun(@(x) fileparts(x.folder),...
-                                    smrxFiles, 'UniformOutput', 0);
-                        smrxBaseNames(smrxFlags) = arrayfun(@(x,y) ...
-                            fullfile(x,y), subFolders, smrxBaseNames);
-                    else
-                        smrxBaseNames(smrxFlags) = smrxBaseNames;
+                        % Merges from 2 or more bin files.
+                        obj.awaken = true;
+                        filesInvolved = textscan(foID, "%s", "TextType",...
+                            "string"); filesInvolved = filesInvolved{:};
+                        [~] = fclose(foID);
+                        obj.fileOrder = filesInvolved(1:end-1);
+                        obj.BinFile = filesInvolved(end);
                     end
                 else
                     % User interaction for older merges
@@ -212,17 +222,22 @@ classdef ProtocolGetter < handle
                     end
                     binFile = binBaseNames{binRecordFile} + ".bin";
                 end
-                if obj.awaken
-                    obj.fileOrder = string(binBaseNames{binRecordFile}) + ".bin";
-                else
-                    obj.fileOrder = string(smrxBaseNames) + ".smrx";
+                if isempty(obj.fileOrder)
+                    if obj.awaken
+                        obj.fileOrder = string(binBaseNames{binRecordFile})...
+                            + ".bin";
+                    else
+                        obj.fileOrder = string(smrxBaseNames) + ".smrx";
+                    end
                 end
             else
                 % Likely single file transformation
                 binFile = binBaseNames{1} + ".bin";
                 obj.fileOrder = string(smrxBaseNames) + ".smrx";
             end
-            obj.BinFile = binFile;
+            if isempty(obj.BinFile) || ~strlength(obj.BinFile)
+                obj.BinFile = binFile;
+            end
         end
         
         function obj = getConditionSignals(obj)
@@ -233,12 +248,30 @@ classdef ProtocolGetter < handle
                 trigFile = dir(fullfile(obj.dataDir,'TriggerSignals*.bin'));
                 baseName = strsplit(obj.BinFile,'.bin'); baseName = baseName(1);
                 condSigFile = fullfile(obj.dataDir,string(baseName)+"_AwakeCondSig.mat");
+                trigCat = [];
+                % Ensuring same file order than in the recording files.
+                if numel(trigFile) > 1
+                    tfNames = arrayfun(@(x) string(x.name), trigFile);
+                    rfDate = extractAfter(obj.fileOrder, "Recording");
+                    tfDate = extractAfter(tfNames, "TriggerSignals");
+                    ordMat = rfDate == tfDate';
+                    [tOrd, ~] = find(ordMat');
+                    trigFile = trigFile(tOrd);
+                end
+                % Cycling through the files in the ordered trigger files in
+                % the folder
                 if ~isempty(trigFile) && ~exist(condSigFile,'file')
-                    fID = fopen(fullfile(trigFile.folder,trigFile.name),'r');
-                    trig = fread(fID, Inf, 'uint16'); [~] = fclose(fID);
-                    trig = reshape(trig, 2, []); trig = trig - median(trig, 2);
-                    trig = int16(trig); 
-                    trig(1,:) = -trig(1,:);                    
+                    for ctf = trigFile'
+                        tfName = fullfile(ctf.folder,ctf.name);
+                        fprintf(1, '%s\n', ctf.name)
+                        fID = fopen(fullfile(ctf.folder,ctf.name),'r');
+                        trig = fread(fID, [2,Inf], 'uint16=>int32'); 
+                        [~] = fclose(fID);
+                        trig = int16(trig - median(trig, 2));
+                        trig(1,:) = -trig(1,:);
+                        trigCat = cat(2, trigCat, trig);
+                    end
+                    trig = trigCat;
                     save(condSigFile, 'trig'); 
                 else
                     fprintf(1,['Either there''s a problem with the trigger',...
@@ -378,6 +411,8 @@ classdef ProtocolGetter < handle
             wFreq = obj.Edges(1).FreqValues;lFreq = obj.Edges(2).FreqValues;
             validateFreq = @(idx, bf, subOrd, freqs)...
                 nnz(fetchSubs(idx, bf, subOrd, freqs));
+            % Removing artifacts from the whisker signal.
+            wSub = wSub(~(diff(wSub,1,2)/obj.fs > 1),:);
             removeZeros = @(x) x(x~=0);
             % Verify whether the experiment contains frequencies
             freqExpFlag = [~isempty(wFreq), ~isempty(lFreq)];
@@ -432,7 +467,9 @@ classdef ProtocolGetter < handle
                         % And which frequencies are involved in the current
                         % delay (cdl)??
                         if freqExpFlag(2)
-                            % Yes, the laser contains frequency.
+                            % Yes, the laser contains frequency. Which of
+                            % all the experiment frequencies are in the
+                            % delay?
                             cdFreqL = fetchSubs(cdl, lsDel, lSubOrd, lFreqs);
                             cdLFreqs = uniquetol(cdFreqL, 0.2/max(lFreqs));
                         end
