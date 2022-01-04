@@ -364,23 +364,34 @@ classdef ProtocolGetter < handle
             %GETFREQUENCYEDGES looks for train of stimulus in both signals
             %and saves the position and frequency of the train.
             % Whisker, piezo, mechanical
+            getFot = @(x,y) StepWaveform.firstOfTrain(x,y);
+            getLot = @(x,y) StepWaveform.lastOfTrain(x,y);
             for cst = 1:size(obj.Edges, 2)
                 coupFreq = 0;
                 % Frequencies found (wFreq), First pulse of the trains
                 % (wFlags), and frequency by pulse (wFreqs)
                 [wFreq, wFlags, wFreqs] = ProtocolGetter.extractFrequencyTrains(...
-                    obj.Edges(cst).Subs, obj.fs); 
+                    obj.Edges(cst).Subs, obj.fs); wFreqs = [0;wFreqs]; %#ok<AGROW>
                 if obj.awaken && any(wFreq == 1)
                     wFreq(wFreq == 1) = [];
                 end
-                wTrainBodyFlags = ismembertol([0;wFreqs], wFreq, 0.01);
+                % Getting the pulses in between the train with 0.5 Hz of
+                % tolerance.
+                wTrainBodyFlags = ismembertol(wFreqs, wFreq, 0.5/max(wFreqs));
+                % Eliminating the pulses in between the train
                 wFlags(wTrainBodyFlags) = [];
-                wFreqs(wTrainBodyFlags(1:end-1)) = [];
+                % Auxiliary flags to eliminate the frequencies associated
+                % to each pulse and keeping only the last of the train.
+                fotFlags = getFot(obj.Edges(cst).Subs(:,1)/obj.fs, 1);
+                lotFlags = getLot(obj.Edges(cst).Subs(:,1)/obj.fs, 1);
+                % Eliminate only those pulses which are in between the
+                % pulse, not the end but the beginning.
+                wFreqs(xor(wTrainBodyFlags , lotFlags) | fotFlags) = [];
                 if ~isempty(wFreq)
                     obj.Edges(cst).Subs = obj.Edges(cst).Subs(~wTrainBodyFlags,:);
                     coupFreq = wFreqs(wFlags(1:length(wFreqs)));
                 end
-                obj.Edges(cst).Frequency = coupFreq;
+                obj.Edges(cst).Frequency = wFreqs;
                 obj.Edges(cst).FreqValues = wFreq;
                 fprintf(1, 'Found %d frequencies for %s (', numel(wFreq),...
                     obj.Edges(cst).Name)
@@ -469,14 +480,16 @@ classdef ProtocolGetter < handle
                         if freqExpFlag(2)
                             % Yes, the laser contains frequency. Which of
                             % all the experiment frequencies are in the
-                            % delay?
+                            % delay including the non-frequency pulses?
                             cdFreqL = fetchSubs(cdl, lsDel, lSubOrd, lFreqs);
+                            cdFreqL(cdFreqL < 1) = 0;
                             cdLFreqs = uniquetol(cdFreqL, 0.2/max(lFreqs));
                         end
                         % Is it the whisker (or other) that contains frequency?
                         if freqExpFlag(1)
                             % Yes, the whisker (other) contains frequency
                             cdFreqW = fetchSubs(cdl, lsDel, wSubOrd, wFreqs);
+                            cdFreqW(cdFreqW < 1) = 0;
                             cdWFreqs = uniquetol(cdFreqW, 0.2/max(wFreqs));
                         end
                         % Getting the paired frequencies
@@ -732,7 +745,7 @@ classdef ProtocolGetter < handle
                 fstSubs = StepWaveform.firstOfTrain(tms);
                 % Inverse of the time difference between pulses (frequency)
                 
-                freqCond = round(uniquetol(pulsFreq, 0.2/max(pulsFreq)), 1);
+                freqCond = round(uniquetol(pulsFreq, 0.5/max(pulsFreq)), 1);
                 freqCond = freqCond(freqCond >= 1); % Empty for no frequency
             else
                 fprintf(1, 'No triggers found for the given signal.\n')
