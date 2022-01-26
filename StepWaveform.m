@@ -11,15 +11,27 @@ classdef StepWaveform < DiscreteWaveform
     
     methods
         % Constructor
-        function obj = StepWaveform(data, samplingFreq, units, title)
+        function obj = StepWaveform(data, samplingFreq, varargin)
             %STEPWAVEFORM Construct an instance of this class
             %   Detailed explanation goes here
-            if nargin < 3
-                units = 'on-off';
-                title = 'Step Waveform';
-            end
+            p = inputParser;
+            defUnits = 'on-off';
+            defTitle = 'Step Waveform';
+            addRequired(p, 'data');
+            addRequired(p, 'samplingFreq');
+            addOptional(p, 'units', defUnits);
+            addOptional(p, 'title', defTitle);
+            addOptional(p, 'verbose', true, @(x) islogical(x));
+            parse(p, data, samplingFreq, varargin{:});
+            
+            data = p.Results.data;
+            samplingFreq = p.Results.samplingFreq;
+            units = p.Results.units;
+            title = p.Results.title;
+            verbose = p.Results.verbose;
+            
             obj@DiscreteWaveform(data,samplingFreq, units,title);
-            obj.Triggers = computeTriggers(obj);
+            obj.Triggers = computeTriggers(obj, verbose);
         end
         
         % Rising and falling edges
@@ -54,7 +66,7 @@ classdef StepWaveform < DiscreteWaveform
     end
     %% Private Methods
     methods (Access = 'private')
-        function RaF = computeTriggers(obj)
+        function RaF = computeTriggers(obj, verbose)
             % Checking the data type
             if isa(obj.Data,'double')
                 % Real valued signal
@@ -62,7 +74,7 @@ classdef StepWaveform < DiscreteWaveform
                 if sum(ds>0) ~= numel(obj.Data)-1
                     data = obj.Data - mean(obj.Data);
                     zs2 = (mean(data)/std(obj.Data))^2;
-                    fprintf(1,'The square z-score of the signal is %.2f\n',zs2)
+                    if verbose; fprintf(1,'The square z-score of the signal is %.2f\n',zs2); end
                     if zs2 < 0.9
                         rise = false(obj.NSamples,1);    % Rising edge times
                         fall = rise;                    % Falling edge times
@@ -72,13 +84,17 @@ classdef StepWaveform < DiscreteWaveform
                         fall(1:end-1) = ds < min(ds)/3;
                         fall = StepWaveform.cleanEdges(fall);
                         if sum(rise) ~= sum(fall)
-                            warning('The cardinality of the rising edges is different for the falling edges')
+                            if verbose
+                                warning('The cardinality of the rising edges is different for the falling edges')
+                            end
                             if abs(sum(rise) - sum(fall)) == 1
                                 % Determining the missing edge (normally
                                 % would be at the extreme cases; at the
                                 % beguinning or at the end of the time
                                 % series)
-                                fprintf(1,'Perhaps it is a truncated pulse...\n')
+                                if verbose
+                                    fprintf(1,'Perhaps it is a truncated pulse...\n')
+                                end
                                 r = find(rise);
                                 f = find(fall);
                                 dm = distmatrix(r,f);
@@ -94,8 +110,10 @@ classdef StepWaveform < DiscreteWaveform
                                     fall(f(Sub)) = false;
                                 end
                             else
-                                fprintf(1,'It might be worth improving ')
-                                fprintf(1,'signal quality\n')
+                                if verbose
+                                    fprintf(1,'It might be worth improving ')
+                                    fprintf(1,'signal quality\n')
+                                end
                             end % abs(sum(rise) - sum(fall)) == 1
                         end % sum(rise) ~= sum(fall)
                         try
@@ -106,12 +124,16 @@ classdef StepWaveform < DiscreteWaveform
                             RaF = {rise, fall};
                         end
                     else
-                        fprintf(1,'The input signal seems to be only noise.\n')
-                        fprintf(1,'Consider examining it closely...\n')
+                        if verbose
+                            fprintf(1,'The input signal seems to be only noise.\n')
+                            fprintf(1,'Consider examining it closely...\n')
+                        end
                         RaF = [];
                     end % if zs2 < 0.9 -- Noise-like signal?
                 else
-                    disp('The given data are probably the triggers already!')
+                    if verbose
+                        disp('The given data are probably the triggers already!')
+                    end
                     RaF = obj.Data;
                 end % sum(ds>0) ~= numel(obj.Data)-1 -- Triggers given?
                 obj.Triggers = RaF;
