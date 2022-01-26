@@ -128,14 +128,20 @@ refTime = 0; refRoT = 'C'; nxtRoT = '';
 
     function createRefRoT()
         % Create reference roller position number.
-        refRoT = mean(str2double(rollTrigTimes.RoT(cns+([(-10:-1)';...
-            (1:10)']))),'omitnan');
+        subs = subsInRange(cns);
+        refRoT = mean(str2double(rollTrigTimes.RoT(subs)),'omitnan');
     end
 
     function createRefTime()
         % Create reference time.
-        refTime = mean(rollTrigTimes.Time_us(cns+([(-10:-1)';(1:10)'])),...
+        subs = subsInRange(cns);
+        refTime = mean(rollTrigTimes.Time_us(subs),...
             'omitnan');
+    end
+
+    function subs = subsInRange(cns)
+        subs = cns+([(-10:-1)';(1:10)']);
+        subs(subs < 1 | subs > size(rollTrigTimes,1)) = [];
     end
 
 %% Reading file
@@ -241,6 +247,11 @@ else
         % Reading those times which correspond only to the specific trigger
         tTimes = cellfun(@(x) rollTrigTimes.Time_us(trigSubs(x)), tFlags,...
             fnOpts{:});
+        if iscolumn(trigLetter)
+            tTimes = cat(1, tTimes, cellstr(trigLetter'));
+        else
+            tTimes = cat(1, tTimes, cellstr(trigLetter));
+        end
     end
 end
 end
