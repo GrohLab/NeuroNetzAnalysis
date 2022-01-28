@@ -110,12 +110,14 @@ if fthAxFlag
         stims = stims';
     end
     
+    trigTXc = linspace(timeLapse(1), timeLapse(2), size(stims,1));
+    
     for cs = 1:min(r,c)
         if exist('IDs','var')
-            plot(ax3,trigTX,stims(:,cs),'LineStyle','-.','LineWidth',0.5,...
+            plot(ax3,trigTXc,stims(:,cs),'LineStyle','-.','LineWidth',0.5,...
                 'DisplayName', IDs{cs})
         else
-            plot(ax3,trigTX,stims(:,cs),'LineStyle','-.','LineWidth',0.5)
+            plot(ax3,trigTXc,stims(:,cs),'LineStyle','-.','LineWidth',0.5)
         end
         
         ax3.Children(1).Color = defineColorForStimuli(IDs(cs));
