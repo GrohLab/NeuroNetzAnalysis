@@ -93,7 +93,11 @@ classdef (Abstract) DiscreteWaveform < GeneralWaveform
                 % In case of spikeWaveform
                 trigs = obj.Data(:);
             end
-            tdTms = trigs(:,1)./fs;
+            if ~isempty(trigs)
+                tdTms = trigs(:,1)./fs;
+            else
+                tdTms = [];
+            end
         end
     end
     
@@ -151,8 +155,12 @@ classdef (Abstract) DiscreteWaveform < GeneralWaveform
                 end
             end
             Pks = Ipi < minIpi;
-            Sps = DiscreteWaveform.addFst(~Pks,true);
-            frstSpks = DiscreteWaveform.addLst(Sps(1:end-1) & Pks,false);
+            if ~isempty(Pks)
+                Sps = DiscreteWaveform.addFst(~Pks,true);
+                frstSpks = DiscreteWaveform.addLst(Sps(1:end-1) & Pks,false);
+            else
+                Sps = []; frstSpks = [];
+            end
         end 
         
         function [frstSpks, minIpi, Pks, Sps] = lastOfTrain(spkTimes, minIpi)
