@@ -50,8 +50,8 @@ erOpts = {"ErrorHandler", @falseLaserDetection};
         atDelta = cellfun(derv, atTimes(cfp,:), fnOpts{:}, erOpts{:});
         itDelta = cellfun(derv, itTimes(:,cfp), fnOpts{:}, erOpts{:});
         ddm = cellfun(dsmt,...
-            itDelta(:, cfp), atDelta(cfp,:), fnOpts{:});
-        dm = cellfun(@(x,y) dsmt(x(:,1), y), itTimes(:,cfp), atTimes(cfp,:),...
+            itDelta(:, cfp), flip(atDelta(cfp,:)'), fnOpts{:});
+        dm = cellfun(@(x,y) y - x(:,1)', itTimes(:,cfp), flip(atTimes(cfp,:)'),...
             fnOpts{:});
     end
 % Function to eliminate a trigger that was detected in the roller position
@@ -75,6 +75,72 @@ erOpts = {"ErrorHandler", @falseLaserDetection};
         trig(1,:) = -trig(1,:);
         subs = getSubsFromTriggers(trig);
     end
+% Detection of stimulation pairs between arduino and intan
+    function correctAnomalities()
+        [Nta, Nti] = cellfun(@size, dm);
+        errTh = -3; 
+        for cc = 1:size(dm)
+            ca = cc;
+            if flipFlag
+                ca = 3-cc;
+            end
+            % Taking a guess from the number of triggers in both trigger
+            % recorders
+            if Nti(cc) > Nta(cc)
+                fprintf(1, "Perhaps the arduino missed N trigger(s)\n");
+            elseif Nta(cc) > Nti(cc)
+                fprintf(1, "Perhaps the arduino added N trigger(s) from noise\n");
+            else
+                fprintf(1, "Seems like the triggers have good pairing\n");
+                intSim = diag(log2(abs(ddm{cc}+1))); mm = mean(intSim);
+                sm = std(intSim); ffm = sm/mm;
+                if abs(ffm) > 0.8
+                    % Perhaps there's a change in delay or one trigger is
+                    % slightly more shifted than the others
+                    fprintf(1, "Viewing the triggers recommended\n")
+                    fprintf(1, "Perhaps need to reposition a trigger\n")
+                else
+                    % Seems like there's no problem at all ;)
+                    fprintf(1, "Looks like this set of triggers have no issue\n")
+                    continue
+                end
+            end
+            preArd = dm{cc} < 0; [~, mnSubs] = sort(dm{cc}(:), "ascend",...
+                "ComparisonMethod", "abs");
+            mnSubs(~preArd(mnSubs)) = [];
+            [aSubs, iSubs] = ind2sub(size(dm{cc}), mnSubs);
+            mxSub = min(Nti(cc),Nta(cc));
+            cp = 1; r2 = 0; err = Inf;
+            while err > errTh || r2 < 0.98
+                while length(unique(iSubs(cp:mxSub-1+cp))) < mxSub ||...
+                        length(unique(aSubs(cp:mxSub-1+cp))) < mxSub
+                    cp = cp + 1;
+                end
+                xSubs = sort(iSubs(cp:mxSub-1+cp));
+                x = itTimes{cc}(xSubs,1);
+                ySubs = sort(aSubs(cp:mxSub-1+cp));
+                y = atTimes{ca}(ySubs);
+                [mdl, yhat, r2] = fit_poly(x, y, 1);
+                err = log(norm(y - yhat, 1));
+                cp = cp + 1;
+            end
+            if Nta(cc) > Nti(cc)
+                % More arduino pulses
+                atTimes{ca}(setdiff(1:Nta(cc), ySubs)) = [];
+            elseif Nta(cc) < Nti(cc)
+                % Missed arduino pulses
+                atTimesHat = (itTimes{cc}(setdiff(1:Nti(cc), xSubs),1).^[1,0])*mdl;
+                atTimes2 = zeros(size(itTimes{cc},1),1);
+                atTimes2(ySubs) = atTimes{ca}(:);
+                atTimes2(setdiff(1:Nti(cc), ySubs)) = atTimesHat;
+                atTimes{ca} = atTimes2;
+            else
+                % Correct cardinality
+            end
+        end
+        
+    end
+
 %% Validation section
 % Given folder exists?
 Conditions_arduino = struct();
@@ -122,9 +188,13 @@ end
 itNames = ["P", "L"];
 
 for cfp = 1:numel(rpFiles)
+    flipFlag = false;
     % Read file for arduino trigger times and names
     [atTimes, atNames] = getArduinoTriggers(...
         fullfile(rpFiles(cfp).folder, rpFiles(cfp).name));
+    if ~all(itNames == atNames)
+        flipFlag = true;
+    end
     % Read trigger signals
     tfName = fullfile(itFiles(cfp).folder,itFiles(cfp).name);
     % Subs from the trigger signals
@@ -132,65 +202,7 @@ for cfp = 1:numel(rpFiles)
     % Computing the similarity between the trigger intervals from arduino
     % and intan
     [ddm, dm] = computeSimilarityMatrices();
-    [as2d, as2i] = detectAnomalities(ddm, dm);
-end
-end
-
-function [as2d, as2i] = detectAnomalities(ddm, dm)
-as2d = []; as2i = [];
-[Nti, Nta] = cellfun(@size, dm);
-for cc = 1:size(dm)
-    % Taking a guess from the number of triggers in both trigger recorders
-    if Nti(cc) > Nta(cc)
-        fprintf(1, "Perhaps the arduino missed N trigger(s)\n");
-    elseif Nta(cc) > Nti(cc)
-        fprintf(1, "Perhaps the arduino added N trigger(s) from noise\n");
-    else
-        fprintf(1, "Seems like the triggers have good pairing\n");
-        intSim = diag(log2(abs(ddm{cc}+1))); mm = mean(intSim);
-        sm = std(intSim); ffm = sm/mm;
-        if abs(ffm) > 0.8
-            % Perhaps there's a change in delay or one trigger is slightly
-            % more shifted than the others
-            fprintf(1, "Viewing the triggers recommended\n")
-            fprintf(1, "Perhaps need to reposition a trigger\n")
-        else
-            % Seems like there's no problem at all ;)
-            fprintf(1, "Looks like this set of triggers have no issue\n")
-            
-            continue
-        end
-    end
-    ci = 1; ca = ci;
-    % [~, whr] = min(dm{cc});
-    for ctp = 1:min(Nti(cc), Nta(cc))
-        [er, ec] = diagonalContinuity(ddm{cc}, ci, ca, Nti(cc), Nta(cc));
-        if (ci + er) < Nti(cc)
-            ci = ci + er;
-        end
-        if (ca + ec) < Nta(cc)
-            ca = ca + ec;
-        end
-    end
-end
-
-end
-
-function [er, ec] = diagonalContinuity(cMat, cr, cc, Nr, Nc)
-% Minimum in the row and column but looking into the future only
-% 
-[~, cm] = min(cMat(cr,cc:Nc-1));
-[~, rm] = min(cMat(cr:Nr-1,cc));
-fprintf(1, "Min col in row %d: %d, min row in col %d: %d\t",cc,rm(1),cr,cm(1));
-if cm > rm && rm > 1 
-    fprintf(1, "Moving %d row(s)\n", rm-1)
-    ec = 0; er = rm - 1;
-elseif cm < rm && cm > 1
-    fprintf(1, "Moving %d column(s)\n", cm-1)
-    er = 0; ec = cm - 1;
-else
-    fprintf(1, "Moving diagonally\n")
-    er = 1; ec = 1;
+    correctAnomalities();
 end
 end
 
