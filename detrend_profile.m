@@ -40,7 +40,7 @@ if length(x) == length(y)
             % Polynomial order 0
             warning(...
                 'The polynomial order 0 is the mean of the ''y'' values')
-            ft = nanmean(y);
+            ft = mean(y, "omitnan");
         end
     end
 else
