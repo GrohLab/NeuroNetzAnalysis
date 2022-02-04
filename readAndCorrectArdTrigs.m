@@ -42,23 +42,21 @@ erOpts = {"ErrorHandler", @falseLaserDetection};
         delFlags = cellfun(@(x) [false;diff(x) < 1], tTimes(1,:), fnOpts{:});
         tTimes(1,:) = cellfun(@(x,y) x(~y), tTimes(1,:), delFlags, fnOpts{:});
         % Arduino times
-        atTimes(cfp,:) = tTimes(1,:); atNames = string(tTimes(2,:));
+        atTimes = tTimes(1,:); atNames = string(tTimes(2,:));
     end
 % Function to compute 2 matrices: similarity between trigger intervals
 % (ddm) and similarity between trigger times (dm)
     function [ddm, dm] = computeSimilarityMatrices()
-        atDelta = cellfun(derv, atTimes(cfp,:), fnOpts{:}, erOpts{:});
-        itDelta = cellfun(derv, itTimes(:,cfp), fnOpts{:}, erOpts{:});
-        ddm = cellfun(dsmt,...
-            itDelta(:, cfp), flip(atDelta(cfp,:)'), fnOpts{:});
-        dm = cellfun(@(x,y) y - x(:,1)', itTimes(:,cfp), flip(atTimes(cfp,:)'),...
-            fnOpts{:});
+        atDelta = cellfun(derv, atTimes, fnOpts{:}, erOpts{:});
+        itDelta = cellfun(derv, itTimes, fnOpts{:}, erOpts{:});
+        ddm = cellfun(dsmt, itDelta, flip(atDelta'), fnOpts{:});
+        dm = cellfun(@(x,y) y-x(:,1)', itTimes, flip(atTimes'),fnOpts{:});
     end
 % Function to eliminate a trigger that was detected in the roller position
 % file but didn't actually happen according to the ground truth: the intan
 % trigger signals
     function detectFalseAlarms()
-        itTimes(:,cfp) = cellfun(@(x) x./3e4, tSubs, fnOpts{:});
+        itTimes = cellfun(@(x) x./3e4, tSubs, fnOpts{:});
         % Registering and deleting the empty triggers
         eiFlag = cellfun(@(x) isempty(x), itTimes); itTimes(eiFlag) = [];
         if size(itTimes,1) ~= size(atTimes,2)
@@ -78,7 +76,7 @@ erOpts = {"ErrorHandler", @falseLaserDetection};
 % Detection of stimulation pairs between arduino and intan
     function correctAnomalities()
         [Nta, Nti] = cellfun(@size, dm);
-        errTh = -3; 
+        % errTh = -3;
         for cc = 1:size(dm)
             ca = cc;
             if flipFlag
@@ -91,14 +89,15 @@ erOpts = {"ErrorHandler", @falseLaserDetection};
             elseif Nta(cc) > Nti(cc)
                 fprintf(1, "Perhaps the arduino added N trigger(s) from noise\n");
             else
-                fprintf(1, "Seems like the triggers have good pairing\n");
                 intSim = diag(log2(abs(ddm{cc}+1))); mm = mean(intSim);
                 sm = std(intSim); ffm = sm/mm;
-                if abs(ffm) > 0.8
+                if abs(ffm) > 1
                     % Perhaps there's a change in delay or one trigger is
                     % slightly more shifted than the others
                     fprintf(1, "Viewing the triggers recommended\n")
                     fprintf(1, "Perhaps need to reposition a trigger\n")
+                    fprintf(1, "Or it is just a change in delay\n")
+                    continue
                 else
                     % Seems like there's no problem at all ;)
                     fprintf(1, "Looks like this set of triggers have no issue\n")
@@ -109,30 +108,99 @@ erOpts = {"ErrorHandler", @falseLaserDetection};
                 "ComparisonMethod", "abs");
             mnSubs(~preArd(mnSubs)) = [];
             [aSubs, iSubs] = ind2sub(size(dm{cc}), mnSubs);
-            mxSub = min(Nti(cc),Nta(cc));
-            cp = 1; r2 = 0; err = Inf;
-            while err > errTh || r2 < 0.98
-                while length(unique(iSubs(cp:mxSub-1+cp))) < mxSub ||...
-                        length(unique(aSubs(cp:mxSub-1+cp))) < mxSub
-                    cp = cp + 1;
+            mxSub = min(Nti(cc),Nta(cc)); naiveSubs = 1:mxSub;
+            pairFlags = abs(iSubs - aSubs) < abs(Nta(cc) - Nti(cc)) + 1;
+            dstPrs = dm{cc}(mnSubs(pairFlags)); medDst = median(dstPrs);
+            unqePrs = unique([...
+                iSubs(pairFlags), aSubs(pairFlags), dstPrs], "row");
+            allFlag = unqePrs(:,1:2) == reshape(naiveSubs, 1,1,[]);
+            IoA = all(any(allFlag,3))'; snglPairs = zeros(mxSub, 2);
+            if all(IoA)
+                [~, IoASub] = min([Nti(cc),Nta(cc)]); IoA = false(2,1);
+                IoA(IoASub) = true;
+            end
+            auxCnt = 1;
+            % Logical reduction of possibilities
+            while auxCnt <= mxSub && ~isempty(unqePrs)
+                allFlag = unqePrs(:,1:2) == reshape(naiveSubs, 1,1,[]);
+                appCount = squeeze(sum(allFlag, 1));
+                appCount(appCount == 0) = NaN;
+                % Lower cardinality trigger times with only one pairing possibility
+                mstUseFlag = any(appCount == IoA);
+                if all(~mstUseFlag)
+                    unlikelyFlag = isnan(appCount(IoA,:));
+                    unpairFlag = any(unqePrs(:,IoA) == naiveSubs(unlikelyFlag),2);
+                    if all(~unpairFlag)
+                        unlikelyFlag = unqePrs(:,3) < medDst*1.1;
+                        if all(~unlikelyFlag)
+                            fprintf(1, "Taking the pair(s) that is(are) closest to")
+                            fprintf(1, " the linear fit\n")
+                            xSubs = snglPairs(snglPairs(:,1) ~= 0,1);
+                            ySubs = snglPairs(snglPairs(:,2) ~= 0,2);
+                            x = itTimes{cc}(xSubs,1);
+                            y = atTimes{ca}(ySubs);
+                            [n, d] = getHesseLineForm(fit_poly(x, y, 1));
+                            M = [itTimes{cc}(unqePrs(:,1),1),...
+                                atTimes{ca}(unqePrs(:,2))];
+                            yErr = log(abs(M*n - d));
+                            bigErrFlag = yErr > 0;
+                            if all(~bigErrFlag)
+                                [~, furthSub] = max(yErr);
+                                unqePrs(furthSub,:) = [];
+                            else
+                                unqePrs(bigErrFlag,:) = [];
+                            end
+                        else
+                            fprintf(1, "Removing pairs with a 'big'")
+                            fprintf(1, " distance. (%.2f)\n", medDst*1.1)
+                            unqePrs(unlikelyFlag,:) = [];
+                        end
+                    else
+                        unqePrs(unpairFlag,:) = [];
+                    end
+                    continue
                 end
-                xSubs = sort(iSubs(cp:mxSub-1+cp));
-                x = itTimes{cc}(xSubs,1);
-                ySubs = sort(aSubs(cp:mxSub-1+cp));
-                y = atTimes{ca}(ySubs);
-                [mdl, yhat, r2] = fit_poly(x, y, 1);
-                err = log(norm(y - yhat, 1));
-                cp = cp + 1;
+                % Pairs that *must* be in the pair selection
+                unPrFlag = any(unqePrs(:,IoA) == naiveSubs(mstUseFlag),2);
+                Nup = sum(unPrFlag);
+                snglPairs(auxCnt:auxCnt-1+Nup,:) = unqePrs(unPrFlag,1:2);
+                auxCnt = auxCnt+Nup;
+                unavFlags = arrayfun(@(x) any(unqePrs(:,x) == snglPairs(:,x)',2), 1:2,...
+                    "UniformOutput", false); unavFlags = [unavFlags{:}];
+                unqePrs(any(unavFlags,2),:) = [];
+                
+            end
+            snglPairs = sortrows(snglPairs, 1);
+            x = itTimes{cc}(snglPairs(:,1),1);
+            y = atTimes{ca}(snglPairs(:,2));
+            [mdl, ~, r2] = fit_poly(x, y, 1);
+            % [mdl, yhat, r2] = fit_poly(x, y, 1);
+            % err = log(norm(y - yhat,1));
+            if r2 < 0.8
+                fprintf(1, "Better take a look at the triggers!\n")
+                return
             end
             if Nta(cc) > Nti(cc)
                 % More arduino pulses
-                atTimes{ca}(setdiff(1:Nta(cc), ySubs)) = [];
+                atTimes{ca}(setdiff(1:Nta(cc), snglPairs(:,2))) = [];
             elseif Nta(cc) < Nti(cc)
                 % Missed arduino pulses
-                atTimesHat = (itTimes{cc}(setdiff(1:Nti(cc), xSubs),1).^[1,0])*mdl;
-                atTimes2 = zeros(size(itTimes{cc},1),1);
-                atTimes2(ySubs) = atTimes{ca}(:);
-                atTimes2(setdiff(1:Nti(cc), ySubs)) = atTimesHat;
+                mssSubs = setdiff(1:Nti(cc), snglPairs(:,1));
+                M = (itTimes{cc}(mssSubs,1).^[1,0]);
+                %{ 
+                % We assume that we miss only 1 trigger. 
+                if err > errTh
+                    xSubs = snglPairs(snglPairs(:,1)>mssSubs(1),1);
+                    ySubs = snglPairs(snglPairs(:,1)>mssSubs(1),2);
+                    x = itTimes{cc}(xSubs,1);
+                    y = atTimes{ca}(ySubs);
+                    mdl = fit_poly(x, y, 1);
+                end
+                %}
+                atTimesHat = M*mdl;
+                atTimes2 = zeros(Nti(cc),1);
+                atTimes2(snglPairs(:,1)) = atTimes{ca};
+                atTimes2(mssSubs) = atTimesHat;
                 atTimes{ca} = atTimes2;
             else
                 % Correct cardinality
@@ -185,7 +253,7 @@ if any((rpDates - itDates) ~= 0)
 end
 
 %% Searching for arduino instabilities
-itNames = ["P", "L"];
+itNames = ["P"; "L"];
 
 for cfp = 1:numel(rpFiles)
     flipFlag = false;
@@ -204,6 +272,7 @@ for cfp = 1:numel(rpFiles)
     [ddm, dm] = computeSimilarityMatrices();
     correctAnomalities();
 end
+
 end
 
 function A = falseLaserDetection(S, varargin)
