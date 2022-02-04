@@ -108,7 +108,9 @@ refTime = 0; refRoT = 'C'; nxtRoT = '';
                 % Fixing the current line by concatenating the time stamp
                 % of the roller position
                 strCell{clFlag}(chRepFlag) = [];
-                strCell{clFlag} = cat(2, strCell{clFlag}, char(nxtRoT));
+                if ~ismissing(nxtRoT)
+                    strCell{clFlag} = cat(2, strCell{clFlag}, char(nxtRoT));
+                end
                 rollTrigTimes.RoT(cns) = strCell{clFlag};
             else
                 % Trigger char was written at the end of the position, but
