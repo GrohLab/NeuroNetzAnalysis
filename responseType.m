@@ -2,6 +2,7 @@ function [mSubs, coeff, Npc, Nv] = responseType(PSTH, timeLapse, varargin)
 %RESPONSETYPE computes the PCA on the given PSTHs and returns the groups
 %which 
 %   Detailed explanation goes here
+
 %% Input parsing
 % Required arguments: PSTH and timeLapse (timeLapse has no function as for
 % now)
