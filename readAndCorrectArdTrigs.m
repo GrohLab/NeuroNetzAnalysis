@@ -1,9 +1,14 @@
-function [atTimes, itTimes, Conditions_arduino] = readAndCorrectArdTrigs(dataDir)
-%UNTITLED5 Summary of this function goes here
+function readAndCorrectArdTrigs(dataDir)
+%READANDCORRECTARDTRIGS pairs the trigger times from the arduino board with
+%intan onset trigger times and saves the times in seconds in a file called
+%ArduinoTriggersYYYY-MM-DDTHH_mm_ss.mat accordingly with the
+%Roller_position and TriggerSignal files with the same date in the file
+%name.
 %   Detailed explanation goes here
 %% Auxiliary variables and functions
 fnOpts = {"UniformOutput", false};
 dateFormStr = 'yyyy-MM-dd''T''HH_mm_ss';
+outFileFormat = "ArduinoTriggers%s.mat";
 derv = @(x) diff(x(:,1));
 dsmt = @(x,y) distmatrix(x, y, 2);
 erOpts = {"ErrorHandler", @falseLaserDetection};
@@ -44,18 +49,10 @@ erOpts = {"ErrorHandler", @falseLaserDetection};
         % Arduino times
         atTimes = tTimes(1,:); atNames = string(tTimes(2,:));
     end
-% Function to compute 2 matrices: similarity between trigger intervals
-% (ddm) and similarity between trigger times (dm)
-    function [ddm, dm] = computeSimilarityMatrices()
-        atDelta = cellfun(derv, atTimes, fnOpts{:}, erOpts{:});
-        itDelta = cellfun(derv, itTimes, fnOpts{:}, erOpts{:});
-        ddm = cellfun(dsmt, itDelta, flip(atDelta'), fnOpts{:});
-        dm = cellfun(@(x,y) y-x(:,1)', itTimes, flip(atTimes'),fnOpts{:});
-    end
 % Function to eliminate a trigger that was detected in the roller position
 % file but didn't actually happen according to the ground truth: the intan
 % trigger signals
-    function detectFalseAlarms()
+    function itTimes = detectFalseAlarms()
         itTimes = cellfun(@(x) x./3e4, tSubs, fnOpts{:});
         % Registering and deleting the empty triggers
         eiFlag = cellfun(@(x) isempty(x), itTimes); itTimes(eiFlag) = [];
@@ -63,7 +60,16 @@ erOpts = {"ErrorHandler", @falseLaserDetection};
             atTimes(flip(eiFlag)) = [];
             fprintf(1, "%s was a false detection!\n", atNames(flip(eiFlag)))
             atNames(flip(eiFlag)) = [];
+            itNames(eiFlag) = [];
         end
+    end
+% Function to compute 2 matrices: similarity between trigger intervals
+% (ddm) and similarity between trigger times (dm)
+    function [ddm, dm] = computeSimilarityMatrices()
+        atDelta = cellfun(derv, atTimes, fnOpts{:}, erOpts{:});
+        itDelta = cellfun(derv, itTimes, fnOpts{:}, erOpts{:});
+        ddm = cellfun(dsmt, itDelta, flip(atDelta'), fnOpts{:});
+        dm = cellfun(@(x,y) y-x(:,1)', itTimes, flip(atTimes'),fnOpts{:});
     end
 % Read the trigger file and compute the triggers directly without keeping
 % the trigger signals in memory
@@ -211,7 +217,6 @@ erOpts = {"ErrorHandler", @falseLaserDetection};
 
 %% Validation section
 % Given folder exists?
-Conditions_arduino = struct();
 if ~exist(dataDir, "dir")
     fprintf(1, "Given directory doesn''t exist!\n")
     return
@@ -253,24 +258,32 @@ if any((rpDates - itDates) ~= 0)
 end
 
 %% Searching for arduino instabilities
-itNames = ["P"; "L"];
-
 for cfp = 1:numel(rpFiles)
+    itNames = ["P"; "L"];
     flipFlag = false;
-    % Read file for arduino trigger times and names
-    [atTimes, atNames] = getArduinoTriggers(...
-        fullfile(rpFiles(cfp).folder, rpFiles(cfp).name));
-    if ~all(itNames == atNames)
-        flipFlag = true;
+    atFileName = fullfile(rpFiles(cfp).folder,...
+        sprintf(outFileFormat, string(rpDates, dateFormStr)));
+    if ~exist(atFileName, "file")
+        % Read file for arduino trigger times and names
+        [atTimes, atNames] = getArduinoTriggers(...
+            fullfile(rpFiles(cfp).folder, rpFiles(cfp).name));
+        if ~all(itNames == atNames)
+            flipFlag = true;
+        end
+        % Read trigger signals
+        tfName = fullfile(itFiles(cfp).folder,itFiles(cfp).name);
+        % Subs from the trigger signals
+        tSubs = readTriggerFile(tfName); 
+        itTimes = detectFalseAlarms();
+        % Computing the similarity between the trigger intervals from
+        % arduino and intan
+        [ddm, dm] = computeSimilarityMatrices();
+        correctAnomalities();
+        fprintf(1, "Saving %s...\n", atFileName)
+        save(atFileName, "atTimes", "atNames", "itTimes", "itNames");
+    else
+        fprintf(1, "File already saved! Skipping...\n")
     end
-    % Read trigger signals
-    tfName = fullfile(itFiles(cfp).folder,itFiles(cfp).name);
-    % Subs from the trigger signals
-    tSubs = readTriggerFile(tfName); detectFalseAlarms()
-    % Computing the similarity between the trigger intervals from arduino
-    % and intan
-    [ddm, dm] = computeSimilarityMatrices();
-    correctAnomalities();
 end
 
 end
