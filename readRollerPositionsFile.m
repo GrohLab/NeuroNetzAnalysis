@@ -238,8 +238,10 @@ else
     % Output for the trigger times as measured by the rotary decoder
     if ~isempty(trigLetter)
         % Searching for ill-written trigger ID interruptions
-        lettFlag = strlength(trigLetter) == 1;
-        trigLetter(~lettFlag) = []; trigNum = size(trigLetter, 1);
+        lettFlag = strlength(trigLetter) == 1 &...
+            cellfun(@(x) all(isletter(x)), cellstr(trigLetter));
+        trigLetter(~lettFlag) = [];
+        trigNum = size(trigLetter, 1);
         fprintf(1, "Found %d trigger(s): %s\n", trigNum,...
             sprintf("%s ",trigLetter))
         % Comparing the content of the table with all found letters
