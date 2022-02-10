@@ -222,7 +222,7 @@ classdef ProtocolGetter < handle
                     end
                     binFile = binBaseNames{binRecordFile} + ".bin";
                 end
-                if isempty(obj.fileOrder)
+                if isempty(obj.fileOrder) || ~strlength(obj.fileOrder)
                     if obj.awaken
                         obj.fileOrder = string(binBaseNames{binRecordFile})...
                             + ".bin";
@@ -321,7 +321,7 @@ classdef ProtocolGetter < handle
                         ProtocolGetter.searchIDFromSignals(stimSig);
                     headers = string(headers);
                     % Variable assignment
-                    stSgStruct = ProtocolGetter.assign2StimulationSignals(...
+                    [stSgStruct, idMat] = ProtocolGetter.assign2StimulationSignals(...
                         stimSig, idMat, titles, fields);
                     wHead = stimSig.(headers(idMat(:,1)));
                     try
@@ -593,7 +593,8 @@ classdef ProtocolGetter < handle
                     Triggers = obj.Triggers; fs = obj.fs;
                     condFileName = fullfile(obj.dataDir, binBaseName+...
                         "analysis.mat");
-                    save(condFileName, 'Conditions', 'Triggers', 'fs')
+                    save(condFileName, 'Conditions', 'Triggers', 'fs',...
+                        "-v7.3")
                     obj.isSaved = true;
                 end
             end
@@ -625,7 +626,7 @@ classdef ProtocolGetter < handle
             idMat = [whiskFlag, laserFlag, lfpFlag];
         end
         
-        function stSgStruct =...
+        function [stSgStruct, idMat] =...
                 assign2StimulationSignals(stimSig, idMat, titles, fields)
             whiskSubs = 1:numel(titles);
             laserSubs = whiskSubs;
@@ -683,6 +684,9 @@ classdef ProtocolGetter < handle
                 lfp = 0;
             end
             stSgStruct = struct('Whisker',whisk,'Laser',laser,'LFP',lfp);
+            idMat(:,1) = whiskFlag;
+            idMat(:,2) = laserFlag;
+            idMat(:,3) = lfpFlag;
         end
         
         function [stSgStruct, Ns] = correctLFPLength(stSgStruct, wHead,...
