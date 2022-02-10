@@ -71,7 +71,7 @@ end
 
 % Formatting the heatmap
 ax1.YLim = [0.5,size(PSTH,1)+0.5];
-ax1.XLim = [timeLapse(1)-binSz/2, timeLapse(2)+binSz/2];
+ax1.XLim = timeLapse+([-0.5, 0.5]*binSz);
 ax1.YTick = 1:Ncl;
 ax1.YTickLabel = IDe(2:end);
 ax1.YAxis.Label.String = sprintf('Cluster ID_{%d #clusters}', size(PSTH,1));
