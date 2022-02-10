@@ -262,7 +262,7 @@ for cfp = 1:numel(rpFiles)
     itNames = ["P"; "L"];
     flipFlag = false;
     atFileName = fullfile(rpFiles(cfp).folder,...
-        sprintf(outFileFormat, string(rpDates, dateFormStr)));
+        sprintf(outFileFormat, string(rpDates(cfp), dateFormStr)));
     if ~exist(atFileName, "file")
         % Read file for arduino trigger times and names
         [atTimes, atNames] = getArduinoTriggers(...
