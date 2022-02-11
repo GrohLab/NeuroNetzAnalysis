@@ -29,7 +29,10 @@ Nexp = numel(chExp);
 %     "fr", "firing_rate"];
 % Function for performing ONLY autocorrelograms
 corrWin = 0.05;
-
+fnOpts = {"UniformOutput", false};
+getCondNames = @(y) arrayfun(@(x) x.name, y, fnOpts{:});
+matchConditionNames = @(x, y) ismember(x, y) |...
+    contains(x, y, "IgnoreCase", true);
 %% User controlling variables
 % Time lapse, bin size, and spontaneous and response windows
 promptStrings = {'Viewing window (time lapse) [s]:','Response window [s]',...
@@ -165,10 +168,8 @@ for cexp = reshape(chExp, 1, [])
         end
     end
     gclID = sortedData(goods,1);
-    % Logical spike trace for the first good cluster
-    spkLog = StepWaveform.subs2idx(round(sortedData{goods(1),2}*fs),Ns);
     % Subscript column vectors for the rest good clusters
-    spkSubs = cellfun(@(x) round(x.*fs),sortedData(goods(2:end),2),...
+    spkSubs = cellfun(@(x) round(x.*fs),sortedData(goods, 2),...
         'UniformOutput',false);
     % Number of good clusters
     Ncl = numel(goods);
@@ -179,18 +180,19 @@ for cexp = reshape(chExp, 1, [])
     trigNames = fieldnames(Triggers);
     numTrigNames = numel(trigNames);
     continuousSignals = struct2cell(Triggers);
+    condNames = getCondNames(Conditions);
     % User defined conditions variables if not already chosen
     if ~exist('chCond','var')
         Nt = round(sum(ceil(abs(timeLapse)*fs))+1);
         % Computing the time axis for the stack
         tx = (0:Nt - 1)/fs + timeLapse(1);
         %% Condition triggered stacks
-        condNames = arrayfun(@(x) x.name,Conditions,'UniformOutput',false);
-        condGuess = contains(condNames, 'whiskerall', 'IgnoreCase', true);
+        condGuess = contains(condNames, whStim, 'IgnoreCase', true) &...
+            contains(condNames, 'all', 'IgnoreCase', true);
         % Choose the conditions to create the stack upon
         [chCond, iOk] = listdlg('ListString',condNames,'SelectionMode','single',...
             'PromptString',...
-            'Choose the condition which has all whisker triggers: (one condition)',...
+            'Choose the trigger condition for all other conditions:',...
             'InitialValue', find(condGuess), 'ListSize', [350, numel(condNames)*16]);
         if ~iOk
             fprintf(1,'Cancelling...\n')
@@ -234,11 +236,9 @@ for cexp = reshape(chExp, 1, [])
         consideredConditions = auxSubs(cchCond);
         Nccond = length(consideredConditions);
         
-        % Select the onset or the offset of a trigger
-        fprintf(1,'Condition(s):\n')
-        fprintf('- ''%s''\n', Conditions(auxSubs(cchCond)).name)
         % Subscripts and names for the considered conditions
         consCondNames = condNames(consideredConditions);
+        trigCondName = condNames(chCond);
         
         % Time windows for comparison between conditions and activity
         sponActStackIdx = tx >= spontaneousWindow(1) & tx <= spontaneousWindow(2);
@@ -254,6 +254,66 @@ for cexp = reshape(chExp, 1, [])
         indCondSubs = cumsum(Nccond:-1:1);
         isWithinResponsiveWindow =...
             @(x) x > responseWindow(1) & x < responseWindow(2);
+    else
+        chCondFlag = matchConditionNames(condNames, trigCondName);
+        if all(~chCondFlag)
+            fprintf(1, "Didn't find trigger condition (%s)\n", trigCondName)
+            [chCond, iOk] = listdlg("ListString", condNames,...
+                "SelectionMode", "single", "PromptString",...
+                "Would you like to choose again a trigger condition?");
+            if ~iOk
+                fprintf(1,'Skipping...\n')
+                continue
+            end
+            fprintf(1, "Will search for this same condition in the ")
+            fprintf(1, "following experiments\n")
+            fprintf(1, "- - %s\n", Conditions(chCond).name)
+        end
+        cchCondFlag = matchConditionNames(condNames, consCondNames);
+        auxSubs = setdiff(1:numel(condNames), chCond);
+        ccondNames = condNames(auxSubs);
+        if all(~cchCondFlag)
+            % No condition matches the same name as before
+            fprintf(1, "Didn't find any considered condition(s):\n")
+            fprintf(1, "- %s\n", consCondNames{:})
+            [cchCond, iOk] = listdlg('ListString',ccondNames,...
+                'SelectionMode','multiple',...
+                'PromptString',...
+                'Choose the condition(s) to look at (including whiskers):',...
+                'ListSize', [350, numel(ccondNames)*16]);
+            if ~iOk
+                fprintf(1, "Skipping...\n")
+                continue
+            end
+            fprintf(1, "Will search for these same conditions in the ")
+            fprintf(1, "following experiments\n")
+            fprintf(1, "- %s\n", Conditions(chCond).name)
+        elseif Nccond ~= sum(cchCondFlag)
+            fprintf(1, "Not all considered conditions were found:\n")
+            cchCondFlag2 = cellfun(@(x) matchConditionNames(condNames, x),...
+                consCondNames, fnOpts{:}); 
+            cchCondFlag2 = cat(1,cchCondFlag2{:});
+            ncfnFlag = all(~cchCondFlag2,2);
+            fprintf(1, "- %s\n", consCondNames{ncfnFlag})
+            [~, foundSubs] = find(cchCondFlag2);
+            auxSubs = setdiff(auxSubs, foundSubs);
+            ccondNames = condNames(auxSubs);
+            [cchCond, iOk] = listdlg('ListString',ccondNames,'SelectionMode','multiple',...
+                'PromptString',...
+                'Choose the condition(s) to look at (including whiskers):',...
+                'ListSize', [350, numel(condNames)*16]);
+            if ~iOk
+                fprintf(1,'Cancelling...\n')
+                continue
+            end
+            
+            % Select the onset or the offset of a trigger
+            fprintf(1,'Re-selected Condition(s):\n')
+            fprintf(1,'- ''%s''\n', Conditions(auxSubs(cchCond)).name)
+            fprintf(1, "Found condition(s):\n");
+            fprintf(1, "- '%s'\n", Conditions(foundSubs).name)
+            consideredConditions = sort([foundSubs, auxSubs(cchCond)]);
+        end
     end
     
     % Constructing the stack out of the user's choice
@@ -261,8 +321,10 @@ for cexp = reshape(chExp, 1, [])
     % cst - continuous stack has a numerical nature
     % Both of these stacks have the same number of time samples and trigger
     % points. They differ only in the number of considered events.
-    [auxDStack, auxCStack] = getStacks(spkLog, Conditions(chCond).Triggers,...
+    [auxDStack, auxCStack] = getStacks(false, Conditions(chCond).Triggers,...
         onOffStr, timeLapse, fs, fs, spkSubs, continuousSignals);
+    % Removing the 'false' input argument to the function
+    auxDStack(2,:,:) = [];
     % Number of clusters + the piezo as the first event + the laser as the last
     % event, number of time samples in between the time window, and number of
     % total triggers.
@@ -279,7 +341,7 @@ for cexp = reshape(chExp, 1, [])
     NaNew = sum(auxDelayFlags,1);
     
     % All spikes in a cell format
-    spkSubs = cat(1, {round(sortedData{goods(1),2}*fs)}, spkSubs);
+    %spkSubs = cat(1, {round(sortedData{goods(1),2}*fs)}, spkSubs);
     
     % Autocorrelation for all active units
     
@@ -450,22 +512,16 @@ stFigBasename = fullfile(figureDir,[expName,' ',sprintf('%d ',chExp)]);
 stFigSubfix = sprintf(' Stat RW%.1f-%.1f ms SW%.1f-%.1f ms',...
     responseWindow*1e3, spontaneousWindow*1e3);
 ccn = 1;
-%for cc = indCondSubs
 for cc = 1:numel(figs)
     if ~ismember(cc, indCondSubs)
-        altCondNames = strsplit(figs(cc).Children(2).Title.String,': ');
+        altCondNames = strsplit(Figs(cc).Children(2).Title.String,': ');
         altCondNames = altCondNames{2};
     else
         altCondNames = consCondNames{ccn};
         ccn = ccn + 1;
     end
     stFigName = [stFigBasename, altCondNames, stFigSubfix];
-    saveFigure(figs(cc), stFigName, 1)
-%     if ~exist([stFigName,'.pdf'],'file') ||...
-%             ~exist([stFigName,'.emf'],'file')
-%         print(figs(cc),[stFigName,'.pdf'],printOpts{1}{:})
-%         print(figs(cc),[stFigName,'.emf'],printOpts{2})
-%     end
+    saveFigure(figs(cc), stFigName)
 end
 
 % Filtering for the whisker responding clusters
@@ -526,24 +582,26 @@ propPieFileName = fullfile(figureDir,...
     responseWindow*1e3, chExpStr, [Ntn-Nrn, Nrn]));
 saveFigure(respFig, propPieFileName, 1);
 % Potentiated, depressed and unmodulated clusters pie
-potFig = figure("Color", "w");
-pie([Nrn - Nrsn, Nrsp, Nrsn - Nrsp], [0, 1, 1], {'Non-modulated', ...
-    'Potentiated', 'Depressed'}); % set(potFig, axOpts{:})
-pObj = findobj(potFig, "Type", "Patch"); 
-arrayfun(@(x) set(x, "EdgeColor", "none"), pObj);
-arrayfun(@(x) set(pObj(x), "FaceColor", clrMap(x,:)), 1:length(pObj))
-modPropPieFigFileName = fullfile(figureDir,...
-    sprintf("Modulation proportions pie RW%.1f - %.1f ms%s (%dR, %dP, %dD)",...
-    responseWindow*1e3, chExpStr, Nrn - Nrsn, Nrsp, Nrsn - Nrsp));
-saveFigure(potFig, modPropPieFigFileName, 1)
-% Modulation index histogram
-MIFig = figure; histogram(MIspon, hsOpts{:}, "Spontaneous"); hold on; 
-histogram(MIevok, hsOpts{:}, "Evoked"); set(gca, axOpts{:});
-title("Modulation index distribution"); xlabel("MI"); 
-ylabel("Cluster proportion"); lgnd = legend("show"); 
-set(lgnd, "Box", "off", "Location", "best")
-saveFigure(MIFig, fullfile(figureDir,...
-    sprintf("Modulation index dist evoked & after induction%s",chExpStr)), 1)
+if Nccond == 2
+    potFig = figure("Color", "w");
+    pie([Nrn - Nrsn, Nrsp, Nrsn - Nrsp], [0, 1, 1], {'Non-modulated', ...
+        'Potentiated', 'Depressed'}); % set(potFig, axOpts{:})
+    pObj = findobj(potFig, "Type", "Patch");
+    arrayfun(@(x) set(x, "EdgeColor", "none"), pObj);
+    arrayfun(@(x) set(pObj(x), "FaceColor", clrMap(x,:)), 1:length(pObj))
+    modPropPieFigFileName = fullfile(figureDir,...
+        sprintf("Modulation proportions pie RW%.1f - %.1f ms%s (%dR, %dP, %dD)",...
+        responseWindow*1e3, chExpStr, Nrn - Nrsn, Nrsp, Nrsn - Nrsp));
+    saveFigure(potFig, modPropPieFigFileName, 1)
+    % Modulation index histogram
+    MIFig = figure; histogram(MIspon, hsOpts{:}, "Spontaneous"); hold on;
+    histogram(MIevok, hsOpts{:}, "Evoked"); set(gca, axOpts{:});
+    title("Modulation index distribution"); xlabel("MI");
+    ylabel("Cluster proportion"); lgnd = legend("show");
+    set(lgnd, "Box", "off", "Location", "best")
+    saveFigure(MIFig, fullfile(figureDir,...
+        sprintf("Modulation index dist evoked & after induction%s",chExpStr)), 1)
+end
 %% Filter responsive?
 filterIdx = true(Ne,1);
 if strcmpi(filtStr, 'filtered') && nnz(wruIdx)
@@ -551,34 +609,36 @@ if strcmpi(filtStr, 'filtered') && nnz(wruIdx)
 end
 %% Spontaneous firing rate with a bigger window
 mltpl = 10;
-sfrMdl = fit_poly(pfr(:,1), pfr(:,2), 1);
-xyLims = ceil(max(pfr,[],1)./mltpl)*mltpl;
-yeqxOpts = {'LineStyle','--','Color',[0.7,0.7,0.7],'DisplayName','y = x'};
-ptOpts = {'LineStyle',':','Color','k',...
-    'DisplayName',sprintf('Population trend (%.1fx%+.2f)',sfrMdl)};
-scatOpts = {'MarkerEdgeColor', 'k', 'Marker', '.'};
-sfrFig = figure('Name','Spontaneous firing rate','Color',[1,1,1]);
-sfrAx = axes('Parent',sfrFig,'NextPlot','add');
-yeqxLine = line(sfrAx, [0;min(xyLims)], [0;min(xyLims)], yeqxOpts{:});
-scPts = scatter(sfrAx, pfr(:,1), pfr(:,2), scatOpts{:});
-text(sfrAx, double(pfr(:,1)), double(pfr(:,2)), gclID, 'FontSize', 9)
-axis(sfrAx,[0,xyLims(1),0,xyLims(2)],'square'); grid(sfrAx,'on'); 
-grid(sfrAx, 'minor'); ptLine = line(sfrAx,[0;xyLims(1)],...
-    [0;xyLims(1)]*sfrMdl(1) + sfrMdl(2), ptOpts{:});
-legend(sfrAx, [yeqxLine, ptLine]);
-xlabel(sprintf('%s_{fr} [Hz]',Conditions(cchCond(1)).name));
-ylabel(sprintf('%s_{fr} [Hz]',Conditions(cchCond(2)).name));
-ttlString = sprintf('Spontaneous firing rate %s vs. %s', ...
-        Conditions(cchCond).name); ttlFile = cat(2, ttlString, ...
+if Nccond == 2
+    sfrMdl = fit_poly(pfr(:,1), pfr(:,2), 1);
+    xyLims = ceil(max(pfr,[],1)./mltpl)*mltpl;
+    yeqxOpts = {'LineStyle','--','Color',[0.7,0.7,0.7],'DisplayName','y = x'};
+    ptOpts = {'LineStyle',':','Color','k',...
+        'DisplayName',sprintf('Population trend (%.1fx%+.2f)',sfrMdl)};
+    scatOpts = {'MarkerEdgeColor', 'k', 'Marker', '.'};
+    sfrFig = figure('Name','Spontaneous firing rate','Color',[1,1,1]);
+    sfrAx = axes('Parent',sfrFig,'NextPlot','add');
+    yeqxLine = line(sfrAx, [0;min(xyLims)], [0;min(xyLims)], yeqxOpts{:});
+    scPts = scatter(sfrAx, pfr(:,1), pfr(:,2), scatOpts{:});
+    text(sfrAx, double(pfr(:,1)), double(pfr(:,2)), gclID, 'FontSize', 9)
+    axis(sfrAx,[0,xyLims(1),0,xyLims(2)],'square'); grid(sfrAx,'on');
+    grid(sfrAx, 'minor'); ptLine = line(sfrAx,[0;xyLims(1)],...
+        [0;xyLims(1)]*sfrMdl(1) + sfrMdl(2), ptOpts{:});
+    legend(sfrAx, [yeqxLine, ptLine]);
+    xlabel(sprintf('%s_{fr} [Hz]',Conditions(consideredConditions(1)).name));
+    ylabel(sprintf('%s_{fr} [Hz]',Conditions(consideredConditions(2)).name));
+    ttlString = sprintf('Spontaneous firing rate %s vs. %s', ...
+        Conditions(consideredConditions).name); ttlFile = cat(2, ttlString, ...
         sprintf(' %d', chExp));
-structAns = inputdlg('What structure are you looking at?','Structure');
-if ~isempty(structAns)
-    ttlString = cat(2,ttlString, sprintf(' (%s)', structAns{:}));
-    ttlFile = cat(2, ttlFile, sprintf(' (%s)', structAns{:}));
-    structString = structAns{:}; 
+    structAns = inputdlg('What structure are you looking at?','Structure');
+    if ~isempty(structAns)
+        ttlString = cat(2,ttlString, sprintf(' (%s)', structAns{:}));
+        ttlFile = cat(2, ttlFile, sprintf(' (%s)', structAns{:}));
+        structString = structAns{:};
+    end
+    title(sfrAx, ttlString);
+    saveFigure(sfrFig, fullfile(figureDir, ttlFile)); clearvars sfr*;
 end
-title(sfrAx, ttlString); 
-saveFigure(sfrFig, fullfile(figureDir, ttlFile)); clearvars sfr*;
 %% Spontaneous modulation distribution
 % Proportion or ratio between conditions and number of bins (Nlb)
 psr = double(pfr(:,2)./pfr(:,1)); Nlb = 64;
@@ -617,7 +677,7 @@ for cm = 1:length(triM)
 end
 triMLines = get(sdAx, 'Children');
 ttlString = sprintf('Proportional change distribution %s & %s',...
-    Conditions(flip(cchCond)).name);
+    Conditions(flip(consideredConditions)).name);
 ttlFile = cat(2, ttlString, sprintf(' %d', chExp));
 if exist('structString','var')
     ttlString = cat(2, ttlString, sprintf(' (%s)', structString));
@@ -625,7 +685,7 @@ if exist('structString','var')
 end
 lgnd = legend(sdAx, triMLines(1:length(triM))); title(sdAx, ttlString)
 lgnd.Box = 'off'; lgnd.Location = 'best';
-xlabel(sdAx, sprintf('%s multiplier to get %s fr', Conditions(cchCond).name))
+xlabel(sdAx, sprintf('%s multiplier to get %s fr', Conditions(consideredConditions).name))
 ylabel(sdAx, "Population proportion"); saveFigure(sdFig,...
     fullfile(figureDir, ttlFile),1)
 %% Modulation index
