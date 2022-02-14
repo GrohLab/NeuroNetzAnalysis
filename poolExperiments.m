@@ -641,387 +641,392 @@ if Nccond == 2
 end
 %% Spontaneous modulation distribution
 % Proportion or ratio between conditions and number of bins (Nlb)
-psr = double(pfr(:,2)./pfr(:,1)); Nlb = 64;
-% Color map for the areas under the quartiles
-qCMap = [224, 231, 250; 123, 152, 234; 21, 50, 132];
-qCMap = cat(1, qCMap, flip(qCMap(1:2,:),1))./255;
-% Computing logarithmic histogram
-[binCents, binEdges, logData, ts] = prepareLogBinEdges(psr, Nlb);
-binCounts = histcounts(logData, binEdges, 'Normalization', 'probability');
-sdFig = figure('Name','Spontaneous fr proportion','Color',[1,1,1]);
-sdAx = axes('Parent', sdFig, 'NextPlot', 'add');
-sdOpts = {"LineStyle","--","Color",qCMap(2,:),"LineWidth",0.5};
-sdDist = semilogx(sdAx,10.^binCents, binCounts, sdOpts{:});
-sdAx.XAxis.Scale = "log"; xticklabels(sdAx, xticks(sdAx))
-% Computing the quartiles
-grid(sdAx, 'on'); [~, ~, qVals, ~] =...
-    exponentialSpread(binCounts, binCents, binCents([1,end]));
-% Depicting the area under first, second & third, and fourth quartile
-qVals10 = double(10.^[binCents(1), qVals([1,2,5,6]), binCents(Nlb)]); 
-binCents10 = double(10.^binCents); binCtsQV = interp1(binCents10,...
-    binCounts, qVals10);
-sdaOpts = {"FaceAlpha", 0.6, "EdgeColor", "none", "FaceColor"};
-for cq = 1:length(qVals10)-1
-    qIdx = binCents10 >= qVals10(cq) & binCents10 <= qVals10(cq+1);
-    area(sdAx, [qVals10(cq), binCents10(qIdx), qVals10(cq+1)],...
-        [binCtsQV(cq), binCounts(qIdx), binCtsQV(cq+1)], sdaOpts{:},...
-        qCMap(cq,:));
+if Nccond == 2
+    psr = double(pfr(:,2)./pfr(:,1)); Nlb = 64;
+    % Color map for the areas under the quartiles
+    qCMap = [224, 231, 250; 123, 152, 234; 21, 50, 132];
+    qCMap = cat(1, qCMap, flip(qCMap(1:2,:),1))./255;
+    % Computing logarithmic histogram
+    [binCents, binEdges, logData, ts] = prepareLogBinEdges(psr, Nlb);
+    binCounts = histcounts(logData, binEdges, 'Normalization', 'probability');
+    sdFig = figure('Name','Spontaneous fr proportion','Color',[1,1,1]);
+    sdAx = axes('Parent', sdFig, 'NextPlot', 'add');
+    sdOpts = {"LineStyle","--","Color",qCMap(2,:),"LineWidth",0.5};
+    sdDist = semilogx(sdAx,10.^binCents, binCounts, sdOpts{:});
+    sdAx.XAxis.Scale = "log"; xticklabels(sdAx, xticks(sdAx))
+    % Computing the quartiles
+    grid(sdAx, 'on'); [~, ~, qVals, ~] =...
+        exponentialSpread(binCounts, binCents, binCents([1,end]));
+    % Depicting the area under first, second & third, and fourth quartile
+    qVals10 = double(10.^[binCents(1), qVals([1,2,5,6]), binCents(Nlb)]);
+    binCents10 = double(10.^binCents); binCtsQV = interp1(binCents10,...
+        binCounts, qVals10);
+    sdaOpts = {"FaceAlpha", 0.6, "EdgeColor", "none", "FaceColor"};
+    for cq = 1:length(qVals10)-1
+        qIdx = binCents10 >= qVals10(cq) & binCents10 <= qVals10(cq+1);
+        area(sdAx, [qVals10(cq), binCents10(qIdx), qVals10(cq+1)],...
+            [binCtsQV(cq), binCounts(qIdx), binCtsQV(cq+1)], sdaOpts{:},...
+            qCMap(cq,:));
+    end
+    % Median , mean, and mode markers
+    [~, mxQSub] = max(binCounts); mLabels = ["Median","Mean","Mode"];
+    triM = 10.^[qVals(3), mean(logData, "omitnan"), binCents(mxQSub)];
+    triBCts = interp1(binCents10, binCounts, triM); mCMap = flip(hsv(3),1);
+    for cm = 1:length(triM)
+        line(sdAx, repmat(triM(cm),2,1), [0; triBCts(cm)],...
+            "Color", mCMap(cm,:), "DisplayName", mLabels(cm)+" "+triM(cm))
+    end
+    triMLines = get(sdAx, 'Children');
+    ttlString = sprintf('Proportional change distribution %s & %s',...
+        Conditions(flip(consideredConditions)).name);
+    ttlFile = cat(2, ttlString, sprintf(' %d', chExp));
+    if exist('structString','var')
+        ttlString = cat(2, ttlString, sprintf(' (%s)', structString));
+        ttlFile = cat(2, ttlFile, sprintf(' (%s)', structString));
+    end
+    lgnd = legend(sdAx, triMLines(1:length(triM))); title(sdAx, ttlString)
+    lgnd.Box = 'off'; lgnd.Location = 'best';
+    xlabel(sdAx, sprintf('%s multiplier to get %s fr', Conditions(consideredConditions).name))
+    ylabel(sdAx, "Population proportion"); saveFigure(sdFig,...
+        fullfile(figureDir, ttlFile),1)
 end
-% Median , mean, and mode markers
-[~, mxQSub] = max(binCounts); mLabels = ["Median","Mean","Mode"];
-triM = 10.^[qVals(3), mean(logData, "omitnan"), binCents(mxQSub)]; 
-triBCts = interp1(binCents10, binCounts, triM); mCMap = flip(hsv(3),1);
-for cm = 1:length(triM)
-    line(sdAx, repmat(triM(cm),2,1), [0; triBCts(cm)],...
-        "Color", mCMap(cm,:), "DisplayName", mLabels(cm)+" "+triM(cm))
-end
-triMLines = get(sdAx, 'Children');
-ttlString = sprintf('Proportional change distribution %s & %s',...
-    Conditions(flip(consideredConditions)).name);
-ttlFile = cat(2, ttlString, sprintf(' %d', chExp));
-if exist('structString','var')
-    ttlString = cat(2, ttlString, sprintf(' (%s)', structString));
-    ttlFile = cat(2, ttlFile, sprintf(' (%s)', structString));
-end
-lgnd = legend(sdAx, triMLines(1:length(triM))); title(sdAx, ttlString)
-lgnd.Box = 'off'; lgnd.Location = 'best';
-xlabel(sdAx, sprintf('%s multiplier to get %s fr', Conditions(consideredConditions).name))
-ylabel(sdAx, "Population proportion"); saveFigure(sdFig,...
-    fullfile(figureDir, ttlFile),1)
 %% Modulation index
-frNbin = 32; 
-if ~exist('structString','var')
-    structStruct = [];
-    structAns = inputdlg('What structure are you looking at?','Structure');
-    if ~isempty(structAns)
-        structString = structAns{:};
+if Nccond > 1
+    frNbin = 32;
+    if ~exist('structString','var')
+        structStruct = [];
+        structAns = inputdlg('What structure are you looking at?','Structure');
+        if ~isempty(structAns)
+            structString = structAns{:};
+        end
     end
+    mdOpts = {figureDir, chExp, structString};
+    
+    [MIh(:,1), ~, ~, MIspon] = modulationDist(pfr, frNbin,...
+        'Spontaneous modulation index', mdOpts{:});
+    [MIh(:,2), ~, ~, MIevok] = modulationDist(evFr, frNbin,...
+        'Evoked modulation index', mdOpts{:});
+    ttls = "SNR modulation"; ttls(2) = ttls(1) + " responsive";
+    ttls(3) = ttls(1) + " non-responsive"; ci = 1; SNR = zeros(frNbin, 3);
+    ttls = ttls.cellstr;
+    for cr = [true(size(H,1),1), any(H,2), ~any(H,2)]
+        [SNR(:,ci),~,~,MIsnr] = modulationDist(SNr(cr,:), frNbin,...
+            ttls{ci}, mdOpts{:});
+        ci = ci + 1;
+    end
+    % sfrBPAx = axes('Parent', sfrFig, 'Position', [0.13, 0.8, 0.775, 0.2],...
+    %     'Box','off', 'Color', 'none');
+    % boxplot(sfrBPAx, MI, 'Orientation', 'horizontal', 'Symbol', '.',...
+    %     'Notch', 'on'); sfrBPAx.Visible = 'off';
+    % linkaxes([sfrAx, sfrBPAx], 'x');
 end
-mdOpts = {figureDir, chExp, structString};
-
-[MIh(:,1), ~, ~, MIspon] = modulationDist(pfr, frNbin,...
-    'Spontaneous modulation index', mdOpts{:}); 
-[MIh(:,2), ~, ~, MIevok] = modulationDist(evFr, frNbin,...
-    'Evoked modulation index', mdOpts{:});
-ttls = "SNR modulation"; ttls(2) = ttls(1) + " responsive";
-ttls(3) = ttls(1) + " non-responsive"; ci = 1; SNR = zeros(frNbin, 3);
-ttls = ttls.cellstr;
-for cr = [true(size(H,1),1), any(H,2), ~any(H,2)]
-    [SNR(:,ci),~,~,MIsnr] = modulationDist(SNr(cr,:), frNbin,...
-        ttls{ci}, mdOpts{:}); 
-    ci = ci + 1;
-end
-% sfrBPAx = axes('Parent', sfrFig, 'Position', [0.13, 0.8, 0.775, 0.2],...
-%     'Box','off', 'Color', 'none');
-% boxplot(sfrBPAx, MI, 'Orientation', 'horizontal', 'Symbol', '.',...
-%     'Notch', 'on'); sfrBPAx.Visible = 'off'; 
-% linkaxes([sfrAx, sfrBPAx], 'x');
-
 %% Reponse dynamics
-trigTms = cell2mat(arrayfun(@(x) x.Triggers(:,1), Conditions(chCond),...
-    'UniformOutput', 0)')/fs;
-timesum = @(x) squeeze(sum(x,2));
-clsum = @(x) squeeze(sum(x,1));
-matsum = @(x) timesum(clsum(x));
-stackTx = (0:Nt-1)/fs + timeLapse(1) + 2.5e-3;
-
-[~,cnd] = find(delayFlags);
-[~, tmOrdSubs] = sort(trigTms, 'ascend');
-cnd = cnd(tmOrdSubs(1:length(cnd))); 
-trialAx = minutes(seconds(trigTms(tmOrdSubs)));
-% Modulation: distance from the y=x line.
-if ~any(contains(clInfoTotal.Properties.VariableNames, 'Modulation'))
-    clInfoTotal = addvars(clInfoTotal, zeros(size(clInfoTotal,1),1),...
-        'NewVariableNames', 'Modulation');
-    clInfoTotal{clInfoTotal.ActiveUnit==1,'Modulation'} =... Thalamus
-        Results(1).Activity(2).Direction;
-end
-
-% Group indeces
-modVal = clInfoTotal{clInfoTotal.ActiveUnit == 1, 'Modulation'};
-pruIdx = wruIdx & modVal > 0; % Potentiated responding
-druIdx = wruIdx & modVal <= 0; % Depressed responding
-nruIdx = ~any(H,2); % Non-responding what-so-ever
-nmuIdx = false(size(nruIdx)); % Non-responding nor modulating
-nmuIdx(nruIdx) = abs(zscore(modVal(nruIdx))) < 0.33; % With this criteria
-% Thalamus
-aruIdx = and(xor(H(:,1),H(:,2)),H(:,2)); % Response only A.-I.
-sruIdx = and(xor(H(:,1),H(:,2)),H(:,1)); % Stopped responding after A.-I.
-
-modFlags = potFlag;
-modFlags(:,2) = ~modFlags;
-cmap = lines(Nccond);
-cmap(CtrlCond,:) = ones(1,3)*1/3; cmap(:,:,2) = ones(Nccond,3)*0.7;
-
-signMod = Results(1).Activity(2).Pvalues < 0.05; signMod(~wruIdx) = [];
-potFlag = MIevok > 0; potFlag(~wruIdx) = [];
-
-% modFlags = false(size(modFlags));
-% modVals_rt = clInfoTotal(clInfoTotal.ActiveUnit == 1 & clInfoTotal.Control, 'Modulation');
-% trnFlag = string(clInfoTotal{clInfoTotal.ActiveUnit == 1 & clInfoTotal.Control,'Region'}) == 'TRN';
-% modFlags(trnFlag,:) = [modVals_rt(trnFlag),-modVals_rt(trnFlag)] > 0;
-
-plotOpts = {'LineStyle', 'none', 'Marker', '.', 'Color', 'DisplayName'};
-modLabel = {'Potentiation', 'Depression'};
-clrSat = 0.5;
-ax = gobjects(size(modFlags,2), 1);
-condLey = consCondNames;
-respLey = {'Responsive', 'Non-responsive'};
-% Time steps for the 3D PSTH in ms
-focusStep = 2.5;
-focusPeriods = (-3:focusStep:25)'; 
-focusPeriods(:,2) = focusPeriods + focusStep; 
-focusPeriods = focusPeriods * 1e-3; Nfs = size(focusPeriods,1);
-fws = 1:Nfs; auxOr = [false, true];
-trialBin = 1;
-Nas = [0;cumsum(NaStack./trialBin)'];
-spkDomain = 0:15;
-spkBins = spkDomain(1) - 0.5:spkDomain(end) + 0.5;
-
-
-resTotalTrial = mod(sum(NaStack),trialBin);
-resTrialPerCond = mod(NaStack, trialBin);
-
-trialsPerCond = floor(NaStack./trialBin);
-NaCs = [0;cumsum(trialsPerCond(:))];
-% popMeanResp = nan(Nfs, floor(Nas(end)), 4);
-popMeanResp = nan(Nfs, sum(trialsPerCond), 4);
-auxResp = [H(:,1), ~any(H,2)];
-
-for pfp = fws
-    tdFig = figure('Name', 'Temporal dynamics', 'Color', [1,1,1]);
-    for cmod = 1:size(modFlags,2) % Up- and down-modulation
-        tcount = 1;
-        ax(cmod) = subplot(size(modFlags,2),1,cmod,'Parent',tdFig);
-        ax(cmod).NextPlot = 'add';
-        title(ax(cmod), sprintf('%s',modLabel{cmod}));
-        trSubsTotal = zeros(sum(trialsPerCond),1);
-        for ccond = 1:Nccond % Cycling through the conditions (control and after-induction)
-            % muTrSubs = Nas(ccond:ccond+1)+[1;0];
-            % muTrSubs = [ceil(Nas(ccond)+1);floor(Nas(ccond+1))];
-            muTrSubs = NaCs(ccond:ccond+1)+[1;0];
-            % trSubs = tcount:trialBin:sum(NaStack(1:ccond));
-            trSubs = tcount:trialBin:muTrSubs(2)*trialBin;
-            % clMod = modFlags(:,cmod);
-            clMod = signMod & xor(potFlag,cmod-1);
-            for cr = 1:2 % responsive and non-responsive
-                rsSel = [cr,cmod-1]*[1;2];
-                respIdx = auxResp(:,cr);
-                %respIdx = xor(H(:,1), auxOr(cr)); % Negation of H(:,2)
-                %respIdx = xor(any(H,2), auxOr(cr)); % Negation of H(:,2)
-                popErr = nan(Nfs, trialsPerCond(ccond));
-                for cp = 1:Nfs % 'Micro' time windows
-                    % Mean count for selected conditions
-                    focusIdx = stackTx >= focusPeriods(cp,1) &...
-                        stackTx <= focusPeriods(cp,2);
-                    clCounts = timesum( discStack( [false; respIdx],...
-                        focusIdx, delayFlags(:,ccond)));
-                    clCounts_resh = reshape(clCounts(clMod, ...
-                        1:NaStack(ccond)-resTrialPerCond(ccond)),...
-                        sum(clMod), trialBin, trialsPerCond(ccond));
-                    clMean = squeeze(mean(mean(clCounts_resh,2,'omitnan')));
-                    popMeanResp(cp,  muTrSubs(1):muTrSubs(2),...
-                        rsSel) = clMean;
-                    
-                    % Error per mean
-                    if trialBin > 1
-                        sem = squeeze(std(std(clCounts_resh,0,2,'omitnan')))./...
-                            sqrt(sum(respIdx));
-                    else
-                        sem = std(clCounts(clMod,:))./sqrt(sum(respIdx));
+if Nccond == 2
+    trigTms = cell2mat(arrayfun(@(x) x.Triggers(:,1), Conditions(chCond),...
+        'UniformOutput', 0)')/fs;
+    timesum = @(x) squeeze(sum(x,2));
+    clsum = @(x) squeeze(sum(x,1));
+    matsum = @(x) timesum(clsum(x));
+    stackTx = (0:Nt-1)/fs + timeLapse(1) + 2.5e-3;
+    
+    [~,cnd] = find(delayFlags);
+    [~, tmOrdSubs] = sort(trigTms, 'ascend');
+    cnd = cnd(tmOrdSubs(1:length(cnd)));
+    trialAx = minutes(seconds(trigTms(tmOrdSubs)));
+    % Modulation: distance from the y=x line.
+    if ~any(contains(clInfoTotal.Properties.VariableNames, 'Modulation'))
+        clInfoTotal = addvars(clInfoTotal, zeros(size(clInfoTotal,1),1),...
+            'NewVariableNames', 'Modulation');
+        clInfoTotal{clInfoTotal.ActiveUnit==1,'Modulation'} =... Thalamus
+            Results(1).Activity(2).Direction;
+    end
+    
+    % Group indeces
+    modVal = clInfoTotal{clInfoTotal.ActiveUnit == 1, 'Modulation'};
+    pruIdx = wruIdx & modVal > 0; % Potentiated responding
+    druIdx = wruIdx & modVal <= 0; % Depressed responding
+    nruIdx = ~any(H,2); % Non-responding what-so-ever
+    nmuIdx = false(size(nruIdx)); % Non-responding nor modulating
+    nmuIdx(nruIdx) = abs(zscore(modVal(nruIdx))) < 0.33; % With this criteria
+    % Thalamus
+    aruIdx = and(xor(H(:,1),H(:,2)),H(:,2)); % Response only A.-I.
+    sruIdx = and(xor(H(:,1),H(:,2)),H(:,1)); % Stopped responding after A.-I.
+    
+    modFlags = potFlag;
+    modFlags(:,2) = ~modFlags;
+    cmap = lines(Nccond);
+    cmap(CtrlCond,:) = ones(1,3)*1/3; cmap(:,:,2) = ones(Nccond,3)*0.7;
+    
+    signMod = Results(1).Activity(2).Pvalues < 0.05; signMod(~wruIdx) = [];
+    potFlag = MIevok > 0; potFlag(~wruIdx) = [];
+    
+    % modFlags = false(size(modFlags));
+    % modVals_rt = clInfoTotal(clInfoTotal.ActiveUnit == 1 & clInfoTotal.Control, 'Modulation');
+    % trnFlag = string(clInfoTotal{clInfoTotal.ActiveUnit == 1 & clInfoTotal.Control,'Region'}) == 'TRN';
+    % modFlags(trnFlag,:) = [modVals_rt(trnFlag),-modVals_rt(trnFlag)] > 0;
+    
+    plotOpts = {'LineStyle', 'none', 'Marker', '.', 'Color', 'DisplayName'};
+    modLabel = {'Potentiation', 'Depression'};
+    clrSat = 0.5;
+    ax = gobjects(size(modFlags,2), 1);
+    condLey = consCondNames;
+    respLey = {'Responsive', 'Non-responsive'};
+    % Time steps for the 3D PSTH in ms
+    focusStep = 2.5;
+    focusPeriods = (-3:focusStep:25)';
+    focusPeriods(:,2) = focusPeriods + focusStep;
+    focusPeriods = focusPeriods * 1e-3; Nfs = size(focusPeriods,1);
+    fws = 1:Nfs; auxOr = [false, true];
+    trialBin = 1;
+    Nas = [0;cumsum(NaStack./trialBin)'];
+    spkDomain = 0:15;
+    spkBins = spkDomain(1) - 0.5:spkDomain(end) + 0.5;
+    
+    
+    resTotalTrial = mod(sum(NaStack),trialBin);
+    resTrialPerCond = mod(NaStack, trialBin);
+    
+    trialsPerCond = floor(NaStack./trialBin);
+    NaCs = [0;cumsum(trialsPerCond(:))];
+    % popMeanResp = nan(Nfs, floor(Nas(end)), 4);
+    popMeanResp = nan(Nfs, sum(trialsPerCond), 4);
+    auxResp = [H(:,1), ~any(H,2)];
+    
+    for pfp = fws
+        tdFig = figure('Name', 'Temporal dynamics', 'Color', [1,1,1]);
+        for cmod = 1:size(modFlags,2) % Up- and down-modulation
+            tcount = 1;
+            ax(cmod) = subplot(size(modFlags,2),1,cmod,'Parent',tdFig);
+            ax(cmod).NextPlot = 'add';
+            title(ax(cmod), sprintf('%s',modLabel{cmod}));
+            trSubsTotal = zeros(sum(trialsPerCond),1);
+            for ccond = 1:Nccond % Cycling through the conditions (control and after-induction)
+                % muTrSubs = Nas(ccond:ccond+1)+[1;0];
+                % muTrSubs = [ceil(Nas(ccond)+1);floor(Nas(ccond+1))];
+                muTrSubs = NaCs(ccond:ccond+1)+[1;0];
+                % trSubs = tcount:trialBin:sum(NaStack(1:ccond));
+                trSubs = tcount:trialBin:muTrSubs(2)*trialBin;
+                % clMod = modFlags(:,cmod);
+                clMod = signMod & xor(potFlag,cmod-1);
+                for cr = 1:2 % responsive and non-responsive
+                    rsSel = [cr,cmod-1]*[1;2];
+                    respIdx = auxResp(:,cr);
+                    %respIdx = xor(H(:,1), auxOr(cr)); % Negation of H(:,2)
+                    %respIdx = xor(any(H,2), auxOr(cr)); % Negation of H(:,2)
+                    popErr = nan(Nfs, trialsPerCond(ccond));
+                    for cp = 1:Nfs % 'Micro' time windows
+                        % Mean count for selected conditions
+                        focusIdx = stackTx >= focusPeriods(cp,1) &...
+                            stackTx <= focusPeriods(cp,2);
+                        clCounts = timesum( discStack( [false; respIdx],...
+                            focusIdx, delayFlags(:,ccond)));
+                        clCounts_resh = reshape(clCounts(clMod, ...
+                            1:NaStack(ccond)-resTrialPerCond(ccond)),...
+                            sum(clMod), trialBin, trialsPerCond(ccond));
+                        clMean = squeeze(mean(mean(clCounts_resh,2,'omitnan')));
+                        popMeanResp(cp,  muTrSubs(1):muTrSubs(2),...
+                            rsSel) = clMean;
+                        
+                        % Error per mean
+                        if trialBin > 1
+                            sem = squeeze(std(std(clCounts_resh,0,2,'omitnan')))./...
+                                sqrt(sum(respIdx));
+                        else
+                            sem = std(clCounts(clMod,:))./sqrt(sum(respIdx));
+                        end
+                        popErr(cp, muTrSubs(1):muTrSubs(2),rsSel) = sem;
                     end
-                    popErr(cp, muTrSubs(1):muTrSubs(2),rsSel) = sem;
+                    dispName = [condLey{ccond}, ' ', respLey{cr}];
+                    errorbar(ax(cmod), trialAx(trSubs),...
+                        popMeanResp(pfp, muTrSubs(1):muTrSubs(2),rsSel)./...
+                        (focusStep * 1e-3), popErr(pfp, muTrSubs(1):...
+                        muTrSubs(2),rsSel)./(focusStep * 1e-3),...
+                        'Color', cmap(ccond,:,cr), 'DisplayName', dispName,...
+                        'LineWidth',0.1, 'LineStyle', ':', 'Marker', '.')
+                    clMod = true(sum(auxResp(:,2)),1);
                 end
-                dispName = [condLey{ccond}, ' ', respLey{cr}];
-                errorbar(ax(cmod), trialAx(trSubs),...
-                    popMeanResp(pfp, muTrSubs(1):muTrSubs(2),rsSel)./...
-                    (focusStep * 1e-3), popErr(pfp, muTrSubs(1):...
-                    muTrSubs(2),rsSel)./(focusStep * 1e-3),...
-                    'Color', cmap(ccond,:,cr), 'DisplayName', dispName,...
-                    'LineWidth',0.1, 'LineStyle', ':', 'Marker', '.')
-                clMod = true(sum(auxResp(:,2)),1);
+                trSubsTotal(muTrSubs(1):muTrSubs(2)) = trSubs;
+                tcount = 1 + sum(NaStack(1:ccond));% + resTrialPerCond(ccond);
             end
-            trSubsTotal(muTrSubs(1):muTrSubs(2)) = trSubs;
-            tcount = 1 + sum(NaStack(1:ccond));% + resTrialPerCond(ccond);
-        end
-        ctMu = mean(popMeanResp(pfp, (NaCs(1)+1):NaCs(2), [cmod,1]*[2;-1]));
-        if ~ctMu
-            ctMu = 1;
-        end
-        aiMu = mean(popMeanResp(pfp, (NaCs(2)+1):NaCs(3), [cmod,1]*[2;-1]));
-        if ~aiMu 
-            aiMu = 1;
-        end
-        yyaxis(ax(cmod), 'right')
-        % plot(trialAx(1:trialBin:sum(NaStack)),...
-        plot(trialAx(trSubsTotal), popMeanResp(pfp,:,[cmod,1]*[2;-1]),...
-            'LineStyle', 'none', 'Color',[0.7,0.7,0.7]);
-        ax(cmod).YAxis(2).Limits = ax(cmod).YAxis(1).Limits*focusStep*1e-3;
-        tpMlt = floor(ax(cmod).YAxis(2).Limits(2)/ctMu);
-        yticks(ax(cmod),ctMu*(1:tpMlt)'); yticklabels(num2str((1:tpMlt)'))
-        set(get(ax(cmod),'YAxis'),'Color',[0.4,0.4,0.45]);
-        if cmod == 1
-            ylabel(ax(cmod),'Proportional change');
-        end
-        yyaxis(ax(cmod),'left')
-        
-        cmap(ccond,:,1) = brighten(cmap(ccond, :, 1), clrSat);
-        clrSat = -clrSat;
-    end
-    ylabel(ax(cmod), 'Spikes / Time window [Hz]'); xlabel(ax(cmod),...
-        sprintf('(%.1f - %.1f [ms]) Trial_{%d trials} [min]',...
-        focusPeriods(pfp,:)*1e3, trialBin))
-%     linkaxes(ax,'xy')
-    tdFigName = string(...
-        sprintf('Temporal dynamics exps %sFW%.1f-%.1f ms TB %d trials (f, prop, lines & bars)',...
-        sprintf('%d ', chExp), focusPeriods(pfp,:)*1e3, trialBin));
-    if ~isempty(dirNames) && exist('subFoldSel','var')
-        tdFigName = tdFigName + " sf-" + dirNames{subFoldSel};
-    end
-    tempFigName = fullfile(figureDir, tdFigName);
-    saveFigure(tdFig, tempFigName, 1);
-end
-
-%% 3D Visualization of the spiking dynamics
-redundantFlag = false(size(popMeanResp,3),1);
-lvls = 128;
-redundantFlag(2) = length(redundantFlag)==4;
-popMeanResp(:,:,redundantFlag) = [];
-popMeanFreq = popMeanResp./(focusStep * 1e-3);
-srfOp = {'FaceColor','interp','EdgeColor','none'};
-tpVal = max(popMeanFreq(:));
-NaCum = [0;cumsum(NaStack(:))];
-% Colormap for all modulated neurons
-clrMap = jet(lvls); [m, b] = lineariz([0;tpVal], lvls, 1);
-[Ntw, Nbt, Nmn] = size(popMeanFreq);
-clrSheet = clrMap(round(popMeanFreq*m + b),1:3);
-clrSheet = reshape(clrSheet, Ntw, Nbt, Nmn, 3);
-modLey = ["potentiated";"depressed";"non-responding"];
-for cmod = 1:size(popMeanFreq,3)
-    summFig = figure('Color', [1,1,1], 'Colormap', clrMap);
-    ax = axes('Parent', summFig, 'NextPlot', 'add','Clipping','off',...
-        'View',[-37.5, 30]);
-    caxis([0, tpVal]);
-    tcount = 1;
-    for ccond = 1:Nccond
-        muTrEdges = NaCs(ccond:ccond+1)+[1;0];
-        muTrSubs = muTrEdges(1):muTrEdges(2);
-        trEdges = NaCum(ccond:ccond+1)+[1;0]+[resTrialPerCond(ccond);0];
-        trSubs = trEdges(1):trialBin:trEdges(2);
-        clrSheetSq = squeeze(clrSheet(:,muTrSubs,cmod,:));
-        surf(trialAx(trSubs), 1e3*focusPeriods(:,1), popMeanFreq(:,...
-            muTrSubs, cmod), clrSheetSq, srfOp{:}, 'Parent', ax); 
-    end
-    cbOut = colorbar('Parent', summFig); cbOut.Label.String = ...
-        'Response [Hz]';box(ax,'off'); grid(ax,'on'); 
-    xlim(ax, trialAx([NaCum(1)+1, NaCum(Nccond+1)])); ylim(ax,...
-        focusPeriods([1,end],1)*1e3); xlabel(ax, 'Trial time [min]'); 
-    ylabel(ax, 'Within-trial time [ms]'); zlabel(ax,...
-        'Spike / within-trial window [Hz]'); title(ax, sprintf(...
-        '%s clusters', capitalizeFirst(modLey(cmod))))
-    sumFigName = fullfile(figureDir,...
-        sprintf('Spike-dynamics 3D %s exp%s FP%.2f - %.2f ms FW%.2f ms TB %d trial(s)',...
-        modLey(cmod), sprintf(' %d', chExp), focusPeriods([1,end])*1e3,...
-        focusStep, trialBin));
-    if numel(chExp) == 1 && ~isempty(dirNames) && exist('subFoldSel','var')
-        sumFigName = cat(2, sumFigName,...
-            sprintf(' sf-%s', dirNames{subFoldSel}));
-    end
-    saveFigure(summFig, sumFigName, false); clearvars summFig;
-end
-
-%% Average Response evolution 
-% Auxiliary and necessary variables
-signMod = Results(1).Activity(2).Pvalues < 0.05;
-potFlag = MIevok > 0;
-trialBin = 10; rssFlag = wruIdx & stableFlag & signMod;
-minFlag = true; errStr = 'SEM';
-trigTms = cat(1, Conditions(consideredConditions).Triggers);
-trigTms = trigTms(:,1)/fs;
-modLabels = {'potentiated', 'depressed'};
-
-% Responsive, significantly modulated, stable and potentiated
-popResponse = getModulatedPopulationMeanResponse(Counts,...
-    [wruIdx, signMod & stableFlag, potFlag]); 
-evolutionFigs = plotResponseEvolution(popResponse,...
-    'windowDuration', diff(responseWindow), 'triggerTimes', trigTms,...
-    'trialBin', trialBin, 'inMinutes', minFlag, 'error', errStr);
-
-% Saving the figures
-strFmt = "Average response evolution for %d %s clusters"+...
-    " RW%.1f - %.1f s ERR-%s TB%d EXP%s (%s)";
-chExpStr = sprintf(" %d", chExp);
-arrayfun(@(x) saveFigure(evolutionFigs(x), fullfile(figureDir,...
-    sprintf(strFmt, sum(all([rssFlag, xor(x-1, potFlag)],2)),...
-    modLabels{x}, timeLapse*1e3, errStr, trialBin, chExpStr,...
-    structString)), 1), (1:size(evolutionFigs)))
-clearvars evolutionFigs
-%% Spontaneous ISIs for different cluster groups
-% Logarithmic spacing for the histogram counts
-lDt = 0.01;
-logSpkHD = [-log10(2e3); 1] + [-1;1]*(lDt/2);
-logSpkEdges = logSpkHD(1):lDt:logSpkHD(2);logSpkDom = logSpkHD +...
-    [1;-1]*(lDt/2); logSpkDom = logSpkDom(1):lDt:logSpkDom(2);
-lgStTmAx = 10.^logSpkDom';
-% Potentiated (2), non-modulated (1), depressed (0) clusters'
-% classification
-modCat = categorical(...
-    sign(clInfoTotal{clInfoTotal.ActiveUnit == 1,'Modulation'}) + 1);
-modLey = ["depressed";"non-modulated";"potentiated"];
-% Conditions for the plot
-condLey = string(consCondNames)';
-respLey = ["responsive";"non-responsive"];
-% Responsive clusters in any condition (control AND after induction)
-respIdx = any(H,2);
-% respIdx = H(:,1); % Control only
-% respIdx = H(:,2); % After-induction only
-% % Responsive and TRN 
-% respIdx = any(H,2) &...
-%     string(clInfoTotal{clInfoTotal.ActiveUnit == 1, 'Region'}) == 'TRN';
-
-% Auxiliary variables for the loop
-isiFigs = gobjects(6,1);
-% Combinatorial loop
-for cr = 1:2 % Responsive and non-responsive
-    riveFlag = xor(respIdx, cr-1); % 0 passes, 1 negates    
-    for cmod = 0:2 % depressed - non-modulalted - potentiated
-        lc = [cr-1,cmod+1] * [3;1];
-        modFlag = modCat == num2str(cmod);
-        isiFigs(lc) = figure('Color',[1,1,1]);
-        htotal = zeros(length(logSpkDom),Nccond);
-        totalErr = htotal;
-        for ccond = 1:Nccond % Condition numbers
-            hcond = cellfun(@(x) histcounts(log10(x/fs), logSpkEdges),...
-                pcondIsi(riveFlag & modFlag, ccond), 'UniformOutput', 0);
-            hcond = cellfun(@(x) x./sum(x), hcond, 'UniformOutput', 0);
-            hcond = cat(1,hcond{:}); totalErr(:,ccond) =...
-                std(hcond,'omitnan');%./sqrt(sum(~emptFlag));
-            hcond = mean(hcond,1,'omitnan');
-            if isempty(hcond)
-                fprintf(1, 'No spikes!\n')
-                continue
+            ctMu = mean(popMeanResp(pfp, (NaCs(1)+1):NaCs(2), [cmod,1]*[2;-1]));
+            if ~ctMu
+                ctMu = 1;
             end
-            hcond = hcond./sum(hcond); htotal(:,ccond) = hcond;
+            aiMu = mean(popMeanResp(pfp, (NaCs(2)+1):NaCs(3), [cmod,1]*[2;-1]));
+            if ~aiMu
+                aiMu = 1;
+            end
+            yyaxis(ax(cmod), 'right')
+            % plot(trialAx(1:trialBin:sum(NaStack)),...
+            plot(trialAx(trSubsTotal), popMeanResp(pfp,:,[cmod,1]*[2;-1]),...
+                'LineStyle', 'none', 'Color',[0.7,0.7,0.7]);
+            ax(cmod).YAxis(2).Limits = ax(cmod).YAxis(1).Limits*focusStep*1e-3;
+            tpMlt = floor(ax(cmod).YAxis(2).Limits(2)/ctMu);
+            yticks(ax(cmod),ctMu*(1:tpMlt)'); yticklabels(num2str((1:tpMlt)'))
+            set(get(ax(cmod),'YAxis'),'Color',[0.4,0.4,0.45]);
+            if cmod == 1
+                ylabel(ax(cmod),'Proportional change');
+            end
+            yyaxis(ax(cmod),'left')
+            
+            cmap(ccond,:,1) = brighten(cmap(ccond, :, 1), clrSat);
+            clrSat = -clrSat;
         end
-        ax = axes('Parent', isiFigs(lc));
-        semilogx(ax, lgStTmAx, cumsum(htotal)); ylim(ax,[0,1]);
-        ax.NextPlot = 'add'; ax.ColorOrderIndex = 1; 
-        semilogx(ax, lgStTmAx, cumsum(htotal) + totalErr,'LineStyle',':')
-        ax.ColorOrderIndex = 1; semilogx(ax, lgStTmAx, cumsum(htotal) -...
-            totalErr,'LineStyle',':')
-        xlim(ax,10.^logSpkHD); box(ax,'off'); grid('on'); 
-        xticklabels(ax, xticks(ax)*1e3); 
-        xlabel(ax,'Inter-spike interval [ms]'); 
-        ylabel('Cumulative probability');
-        title(ax, "Cumulative ISI: "+respLey(cr)+" & "+modLey(cmod+1))
-        lgnd = legend(ax, condLey); set(lgnd, 'Location','best', 'Box', 'off');
-        ciName = "Cumulative ISI, "+respLey(cr)+" & "+modLey(cmod+1) + ...
-            ", exp"+string(sprintf(' %d', chExp))+ " LB 10^"+string(lDt);
-        ciFilePath = fullfile(figureDir, ciName);
-        if numel(chExp) == 1 && ~isempty(dirNames)
-            ciFilePath = ciFilePath + ' sf-' + dirNames{subFoldSel};
+        ylabel(ax(cmod), 'Spikes / Time window [Hz]'); xlabel(ax(cmod),...
+            sprintf('(%.1f - %.1f [ms]) Trial_{%d trials} [min]',...
+            focusPeriods(pfp,:)*1e3, trialBin))
+        %     linkaxes(ax,'xy')
+        tdFigName = string(...
+            sprintf('Temporal dynamics exps %sFW%.1f-%.1f ms TB %d trials (f, prop, lines & bars)',...
+            sprintf('%d ', chExp), focusPeriods(pfp,:)*1e3, trialBin));
+        if ~isempty(dirNames) && exist('subFoldSel','var')
+            tdFigName = tdFigName + " sf-" + dirNames{subFoldSel};
         end
-        saveFigure(isiFigs(lc),ciFilePath);
+        tempFigName = fullfile(figureDir, tdFigName);
+        saveFigure(tdFig, tempFigName, 1);
+    end
+    
+    %% 3D Visualization of the spiking dynamics
+    redundantFlag = false(size(popMeanResp,3),1);
+    lvls = 128;
+    redundantFlag(2) = length(redundantFlag)==4;
+    popMeanResp(:,:,redundantFlag) = [];
+    popMeanFreq = popMeanResp./(focusStep * 1e-3);
+    srfOp = {'FaceColor','interp','EdgeColor','none'};
+    tpVal = max(popMeanFreq(:));
+    NaCum = [0;cumsum(NaStack(:))];
+    % Colormap for all modulated neurons
+    clrMap = jet(lvls); [m, b] = lineariz([0;tpVal], lvls, 1);
+    [Ntw, Nbt, Nmn] = size(popMeanFreq);
+    clrSheet = clrMap(round(popMeanFreq*m + b),1:3);
+    clrSheet = reshape(clrSheet, Ntw, Nbt, Nmn, 3);
+    modLey = ["potentiated";"depressed";"non-responding"];
+    for cmod = 1:size(popMeanFreq,3)
+        summFig = figure('Color', [1,1,1], 'Colormap', clrMap);
+        ax = axes('Parent', summFig, 'NextPlot', 'add','Clipping','off',...
+            'View',[-37.5, 30]);
+        caxis([0, tpVal]);
+        tcount = 1;
+        for ccond = 1:Nccond
+            muTrEdges = NaCs(ccond:ccond+1)+[1;0];
+            muTrSubs = muTrEdges(1):muTrEdges(2);
+            trEdges = NaCum(ccond:ccond+1)+[1;0]+[resTrialPerCond(ccond);0];
+            trSubs = trEdges(1):trialBin:trEdges(2);
+            clrSheetSq = squeeze(clrSheet(:,muTrSubs,cmod,:));
+            surf(trialAx(trSubs), 1e3*focusPeriods(:,1), popMeanFreq(:,...
+                muTrSubs, cmod), clrSheetSq, srfOp{:}, 'Parent', ax);
+        end
+        cbOut = colorbar('Parent', summFig); cbOut.Label.String = ...
+            'Response [Hz]';box(ax,'off'); grid(ax,'on');
+        xlim(ax, trialAx([NaCum(1)+1, NaCum(Nccond+1)])); ylim(ax,...
+            focusPeriods([1,end],1)*1e3); xlabel(ax, 'Trial time [min]');
+        ylabel(ax, 'Within-trial time [ms]'); zlabel(ax,...
+            'Spike / within-trial window [Hz]'); title(ax, sprintf(...
+            '%s clusters', capitalizeFirst(modLey(cmod))))
+        sumFigName = fullfile(figureDir,...
+            sprintf('Spike-dynamics 3D %s exp%s FP%.2f - %.2f ms FW%.2f ms TB %d trial(s)',...
+            modLey(cmod), sprintf(' %d', chExp), focusPeriods([1,end])*1e3,...
+            focusStep, trialBin));
+        if numel(chExp) == 1 && ~isempty(dirNames) && exist('subFoldSel','var')
+            sumFigName = cat(2, sumFigName,...
+                sprintf(' sf-%s', dirNames{subFoldSel}));
+        end
+        saveFigure(summFig, sumFigName, false); clearvars summFig;
+    end
+    
+    %% Average Response evolution
+    % Auxiliary and necessary variables
+    signMod = Results(1).Activity(2).Pvalues < 0.05;
+    potFlag = MIevok > 0;
+    trialBin = 10; rssFlag = wruIdx & stableFlag & signMod;
+    minFlag = true; errStr = 'SEM';
+    trigTms = cat(1, Conditions(consideredConditions).Triggers);
+    trigTms = trigTms(:,1)/fs;
+    modLabels = {'potentiated', 'depressed'};
+    
+    % Responsive, significantly modulated, stable and potentiated
+    popResponse = getModulatedPopulationMeanResponse(Counts,...
+        [wruIdx, signMod & stableFlag, potFlag]);
+    evolutionFigs = plotResponseEvolution(popResponse,...
+        'windowDuration', diff(responseWindow), 'triggerTimes', trigTms,...
+        'trialBin', trialBin, 'inMinutes', minFlag, 'error', errStr);
+    
+    % Saving the figures
+    strFmt = "Average response evolution for %d %s clusters"+...
+        " RW%.1f - %.1f s ERR-%s TB%d EXP%s (%s)";
+    chExpStr = sprintf(" %d", chExp);
+    arrayfun(@(x) saveFigure(evolutionFigs(x), fullfile(figureDir,...
+        sprintf(strFmt, sum(all([rssFlag, xor(x-1, potFlag)],2)),...
+        modLabels{x}, timeLapse*1e3, errStr, trialBin, chExpStr,...
+        structString)), 1), (1:size(evolutionFigs)))
+    clearvars evolutionFigs
+    %% Spontaneous ISIs for different cluster groups
+    % Logarithmic spacing for the histogram counts
+    lDt = 0.01;
+    logSpkHD = [-log10(2e3); 1] + [-1;1]*(lDt/2);
+    logSpkEdges = logSpkHD(1):lDt:logSpkHD(2);logSpkDom = logSpkHD +...
+        [1;-1]*(lDt/2); logSpkDom = logSpkDom(1):lDt:logSpkDom(2);
+    lgStTmAx = 10.^logSpkDom';
+    % Potentiated (2), non-modulated (1), depressed (0) clusters'
+    % classification
+    modCat = categorical(...
+        sign(clInfoTotal{clInfoTotal.ActiveUnit == 1,'Modulation'}) + 1);
+    modLey = ["depressed";"non-modulated";"potentiated"];
+    % Conditions for the plot
+    condLey = string(consCondNames)';
+    respLey = ["responsive";"non-responsive"];
+    % Responsive clusters in any condition (control AND after induction)
+    respIdx = any(H,2);
+    % respIdx = H(:,1); % Control only
+    % respIdx = H(:,2); % After-induction only
+    % % Responsive and TRN
+    % respIdx = any(H,2) &...
+    %     string(clInfoTotal{clInfoTotal.ActiveUnit == 1, 'Region'}) == 'TRN';
+    
+    % Auxiliary variables for the loop
+    isiFigs = gobjects(6,1);
+    % Combinatorial loop
+    for cr = 1:2 % Responsive and non-responsive
+        riveFlag = xor(respIdx, cr-1); % 0 passes, 1 negates
+        for cmod = 0:2 % depressed - non-modulalted - potentiated
+            lc = [cr-1,cmod+1] * [3;1];
+            modFlag = modCat == num2str(cmod);
+            isiFigs(lc) = figure('Color',[1,1,1]);
+            htotal = zeros(length(logSpkDom),Nccond);
+            totalErr = htotal;
+            for ccond = 1:Nccond % Condition numbers
+                hcond = cellfun(@(x) histcounts(log10(x/fs), logSpkEdges),...
+                    pcondIsi(riveFlag & modFlag, ccond), 'UniformOutput', 0);
+                hcond = cellfun(@(x) x./sum(x), hcond, 'UniformOutput', 0);
+                hcond = cat(1,hcond{:}); totalErr(:,ccond) =...
+                    std(hcond,'omitnan');%./sqrt(sum(~emptFlag));
+                hcond = mean(hcond,1,'omitnan');
+                if isempty(hcond)
+                    fprintf(1, 'No spikes!\n')
+                    continue
+                end
+                hcond = hcond./sum(hcond); htotal(:,ccond) = hcond;
+            end
+            ax = axes('Parent', isiFigs(lc));
+            semilogx(ax, lgStTmAx, cumsum(htotal)); ylim(ax,[0,1]);
+            ax.NextPlot = 'add'; ax.ColorOrderIndex = 1;
+            semilogx(ax, lgStTmAx, cumsum(htotal) + totalErr,'LineStyle',':')
+            ax.ColorOrderIndex = 1; semilogx(ax, lgStTmAx, cumsum(htotal) -...
+                totalErr,'LineStyle',':')
+            xlim(ax,10.^logSpkHD); box(ax,'off'); grid('on');
+            xticklabels(ax, xticks(ax)*1e3);
+            xlabel(ax,'Inter-spike interval [ms]');
+            ylabel('Cumulative probability');
+            title(ax, "Cumulative ISI: "+respLey(cr)+" & "+modLey(cmod+1))
+            lgnd = legend(ax, condLey); set(lgnd, 'Location','best', 'Box', 'off');
+            ciName = "Cumulative ISI, "+respLey(cr)+" & "+modLey(cmod+1) + ...
+                ", exp"+string(sprintf(' %d', chExp))+ " LB 10^"+string(lDt);
+            ciFilePath = fullfile(figureDir, ciName);
+            if numel(chExp) == 1 && ~isempty(dirNames)
+                ciFilePath = ciFilePath + ' sf-' + dirNames{subFoldSel};
+            end
+            saveFigure(isiFigs(lc),ciFilePath);
+        end
     end
 end
 %% Getting the relative spike times for the whisker responsive units (wru)
@@ -1109,69 +1114,70 @@ if ~exist(spkFileName,'file')
 end
 
 %% ISI PDF & CDF
-areaFig = figure('Visible','on', 'Color', [1,1,1],'Name','ISI probability');
-areaAx = gobjects(2,1);
-lDt = 0.01;
-logSpkHD = [-log10(1e3); log10(0.05)] + [-1;1]*(lDt/2); % 2000 = 1/0.0005
-logSpkEdges = logSpkHD(1):lDt:logSpkHD(2);logSpkDom = logSpkHD +...
-    [1;-1]*(lDt/2); logSpkDom = logSpkDom(1):lDt:logSpkDom(2);
-lgStTmAx = 10.^logSpkDom';
-% cmap = [0,0,102;... azul marino
-%     153, 204, 255]/255; % azul cielo
-cmap = lines(Nccond);
-%areaOpts = {'EdgeColor', 'none', 'FaceAlpha', 0.3, 'FaceColor'};
-areaOpts = {'Color','LineStyle','--','LineWidth',1.5};
-ley = ["Potentiated", "Depressed"];
-isiPdf = zeros(length(logSpkDom),2*Nccond);
-for cmod = 1:2 % Potentiated and depressed clusters
-    areaAx(cmod) = subplot(1,2,cmod,'Parent',areaFig);
-    Nccl = sum(modFlags(:,cmod));
-    for ccond = 1:Nccond
-        cnt = [cmod-1,ccond] * [2,1]';
-        ISI = cellfun(@(x) diff(x(x >= 0 & x <= 0.05)), ...
-            relativeSpkTmsStruct(ccond).SpikeTimes(modFlags(:,cmod),:),...
-            'UniformOutput', 0);
-        ISIpc = arrayfun(@(x) cat(2, ISI{x,:}), (1:size(ISI,1))',...
-            'UniformOutput', 0);
-        hisi = cellfun(@(x) histcounts(log10(x), logSpkEdges), ISIpc,...
-            'UniformOutput', 0); 
-        hisi = cellfun(@(x) x/sum(x), hisi, 'UniformOutput', 0);
-        hisi = cat(1,hisi{:});
-        hisi = mean(hisi,1,'omitnan'); hisi = hisi./sum(hisi);
-        if ~isempty(hisi)
-            isiPdf(:,cnt) = hisi;
+if Nccond == 2
+    areaFig = figure('Visible','on', 'Color', [1,1,1],'Name','ISI probability');
+    areaAx = gobjects(2,1);
+    lDt = 0.01;
+    logSpkHD = [-log10(1e3); log10(0.05)] + [-1;1]*(lDt/2); % 2000 = 1/0.0005
+    logSpkEdges = logSpkHD(1):lDt:logSpkHD(2);logSpkDom = logSpkHD +...
+        [1;-1]*(lDt/2); logSpkDom = logSpkDom(1):lDt:logSpkDom(2);
+    lgStTmAx = 10.^logSpkDom';
+    % cmap = [0,0,102;... azul marino
+    %     153, 204, 255]/255; % azul cielo
+    cmap = lines(Nccond);
+    %areaOpts = {'EdgeColor', 'none', 'FaceAlpha', 0.3, 'FaceColor'};
+    areaOpts = {'Color','LineStyle','--','LineWidth',1.5};
+    ley = ["Potentiated", "Depressed"];
+    isiPdf = zeros(length(logSpkDom),2*Nccond);
+    for cmod = 1:2 % Potentiated and depressed clusters
+        areaAx(cmod) = subplot(1,2,cmod,'Parent',areaFig);
+        Nccl = sum(modFlags(:,cmod));
+        for ccond = 1:Nccond
+            cnt = [cmod-1,ccond] * [2,1]';
+            ISI = cellfun(@(x) diff(x(x >= 0 & x <= 0.05)), ...
+                relativeSpkTmsStruct(ccond).SpikeTimes(modFlags(:,cmod),:),...
+                'UniformOutput', 0);
+            ISIpc = arrayfun(@(x) cat(2, ISI{x,:}), (1:size(ISI,1))',...
+                'UniformOutput', 0);
+            hisi = cellfun(@(x) histcounts(log10(x), logSpkEdges), ISIpc,...
+                'UniformOutput', 0);
+            hisi = cellfun(@(x) x/sum(x), hisi, 'UniformOutput', 0);
+            hisi = cat(1,hisi{:});
+            hisi = mean(hisi,1,'omitnan'); hisi = hisi./sum(hisi);
+            if ~isempty(hisi)
+                isiPdf(:,cnt) = hisi;
+            end
+            %ISI_merge = [ISI{:}];
+            %lISI = log10(ISI_merge);
+            %hisi = histcounts(lISI, logSpkEdges);
+            %spkPerT_C = hisi./(NaStack(ccond)*Nccl);
+            %isiPdf(:,cnt) = spkPerT_C/sum(spkPerT_C);
+            semilogx(areaAx(cmod), lgStTmAx, isiPdf(:,cnt),...
+                areaOpts{1}, cmap(ccond,:), areaOpts{4:5});
+            if ccond == 1
+                hold(areaAx(cmod), 'on');
+                areaAx(cmod).XAxis.Scale = 'log';
+                areaAx(cmod).XLabel.String = "ISI [ms]";
+                areaAx(cmod).YLabel.String = "ISI probability";
+            end
+            yyaxis(areaAx(cmod) ,'right')
+            
+            semilogx(areaAx(cmod), lgStTmAx, cumsum(isiPdf(:,cnt)),...
+                areaOpts{1}, cmap(ccond,:), areaOpts{2:3})
+            ylim(areaAx(cmod), [0,1]); areaAx(cmod).YAxis(2).Color = [0,0,0];
+            ylabel(areaAx(cmod), 'Cumulative probability');
+            yyaxis(areaAx(cmod) ,'left'); set(areaAx(cmod),'Box','off')
+            xticklabels(xticks*1e3)
         end
-        %ISI_merge = [ISI{:}];
-        %lISI = log10(ISI_merge);
-        %hisi = histcounts(lISI, logSpkEdges);
-        %spkPerT_C = hisi./(NaStack(ccond)*Nccl);
-        %isiPdf(:,cnt) = spkPerT_C/sum(spkPerT_C);
-        semilogx(areaAx(cmod), lgStTmAx, isiPdf(:,cnt),...
-            areaOpts{1}, cmap(ccond,:), areaOpts{4:5});
-        if ccond == 1
-            hold(areaAx(cmod), 'on');
-            areaAx(cmod).XAxis.Scale = 'log';
-            areaAx(cmod).XLabel.String = "ISI [ms]";
-            areaAx(cmod).YLabel.String = "ISI probability";
-        end
-        yyaxis(areaAx(cmod) ,'right')
-        
-        semilogx(areaAx(cmod), lgStTmAx, cumsum(isiPdf(:,cnt)),...
-            areaOpts{1}, cmap(ccond,:), areaOpts{2:3})
-        ylim(areaAx(cmod), [0,1]); areaAx(cmod).YAxis(2).Color = [0,0,0];
-        ylabel(areaAx(cmod), 'Cumulative probability');
-        yyaxis(areaAx(cmod) ,'left'); set(areaAx(cmod),'Box','off')
-        xticklabels(xticks*1e3)
+        title(areaAx(cmod), sprintf('ISI PDF for %s clusters',ley(cmod)));
+        grid(areaAx(cmod),'on')
     end
-    title(areaAx(cmod), sprintf('ISI PDF for %s clusters',ley(cmod)));
-    grid(areaAx(cmod),'on')
+    legend(areaAx(cmod),consCondNames,'Location','best')
+    linkaxes(areaAx,'xy')
+    evokIsiFigPath = fullfile(figureDir, "Evoked ISI, potentiated & depressed" +...
+        " clusters, exp"+string(sprintf(' %d',chExp))+" LB 10^"+string(lDt));
+    saveFigure(areaFig, evokIsiFigPath, 1)
 end
-legend(areaAx(cmod),consCondNames,'Location','best')
-linkaxes(areaAx,'xy')
-evokIsiFigPath = fullfile(figureDir, "Evoked ISI, potentiated & depressed" +...
-    " clusters, exp"+string(sprintf(' %d',chExp))+" LB 10^"+string(lDt));
-saveFigure(areaFig, evokIsiFigPath, 1)
-
 %% Ordering PSTH
 orderedStr = 'ID ordered';
 dans = questdlg('Do you want to order the PSTH other than by IDs?',...
