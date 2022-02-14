@@ -256,6 +256,7 @@ for cexp = reshape(chExp, 1, [])
             @(x) x > responseWindow(1) & x < responseWindow(2);
     else
         chCondFlag = matchConditionNames(condNames, trigCondName);
+        [~, chCond] = find(chCondFlag);
         if all(~chCondFlag)
             fprintf(1, "Didn't find trigger condition (%s)\n", trigCondName)
             [chCond, iOk] = listdlg("ListString", condNames,...
@@ -272,6 +273,12 @@ for cexp = reshape(chExp, 1, [])
         cchCondFlag = matchConditionNames(condNames, consCondNames);
         auxSubs = setdiff(1:numel(condNames), chCond);
         ccondNames = condNames(auxSubs);
+        cchCondFlag2 = cellfun(@(x) matchConditionNames(condNames, x),...
+            consCondNames, fnOpts{:});
+        cchCondFlag2 = cat(1,cchCondFlag2{:});
+        [a, foundSubs] = find(cchCondFlag2);
+        % Relying on finding only one condition that fits
+        foundSubs = foundSubs(a); consideredConditions = foundSubs;
         if all(~cchCondFlag)
             % No condition matches the same name as before
             fprintf(1, "Didn't find any considered condition(s):\n")
@@ -290,12 +297,10 @@ for cexp = reshape(chExp, 1, [])
             fprintf(1, "- %s\n", Conditions(chCond).name)
         elseif Nccond ~= sum(cchCondFlag)
             fprintf(1, "Not all considered conditions were found:\n")
-            cchCondFlag2 = cellfun(@(x) matchConditionNames(condNames, x),...
-                consCondNames, fnOpts{:}); 
-            cchCondFlag2 = cat(1,cchCondFlag2{:});
+           
             ncfnFlag = all(~cchCondFlag2,2);
             fprintf(1, "- %s\n", consCondNames{ncfnFlag})
-            [~, foundSubs] = find(cchCondFlag2);
+            
             auxSubs = setdiff(auxSubs, foundSubs);
             ccondNames = condNames(auxSubs);
             [cchCond, iOk] = listdlg('ListString',ccondNames,'SelectionMode','multiple',...
@@ -313,6 +318,11 @@ for cexp = reshape(chExp, 1, [])
             fprintf(1, "Found condition(s):\n");
             fprintf(1, "- '%s'\n", Conditions(foundSubs).name)
             consideredConditions = sort([foundSubs, auxSubs(cchCond)]);
+        end
+        fprintf(1, "Considered conditions:\n");
+        fprintf(1, "- '%s'\n", condNames{consideredConditions})
+        if iscolumn(consideredConditions)
+            consideredConditions = consideredConditions';
         end
     end
     
@@ -490,7 +500,7 @@ gclID = clInfoTotal{clInfoTotal.ActiveUnit == 1,'id'};
 Ncl = numel(gclID);
 Ne = size(discStack, 1);
 %% Population analysis
-figureDir = fullfile(experimentDir,'PopFigures\');
+figureDir = fullfile(experimentDir, 'PopFigures\');
 if ~mkdir(figureDir)
     fprintf(1,'There was an issue with the figure folder...\n');
     fprintf(1,'Saving the figures in the data folder!\n');
@@ -514,7 +524,7 @@ stFigSubfix = sprintf(' Stat RW%.1f-%.1f ms SW%.1f-%.1f ms',...
 ccn = 1;
 for cc = 1:numel(figs)
     if ~ismember(cc, indCondSubs)
-        altCondNames = strsplit(Figs(cc).Children(2).Title.String,': ');
+        altCondNames = strsplit(figs(cc).Children(2).Title.String,': ');
         altCondNames = altCondNames{2};
     else
         altCondNames = consCondNames{ccn};
@@ -624,7 +634,8 @@ if Nccond == 2
     axis(sfrAx,[0,xyLims(1),0,xyLims(2)],'square'); grid(sfrAx,'on');
     grid(sfrAx, 'minor'); ptLine = line(sfrAx,[0;xyLims(1)],...
         [0;xyLims(1)]*sfrMdl(1) + sfrMdl(2), ptOpts{:});
-    legend(sfrAx, [yeqxLine, ptLine]);
+    lgnd = legend(sfrAx, [yeqxLine, ptLine]); set(lgnd, "Box", "off",...
+        "Color", "none", "Location", "best");
     xlabel(sprintf('%s_{fr} [Hz]',Conditions(consideredConditions(1)).name));
     ylabel(sprintf('%s_{fr} [Hz]',Conditions(consideredConditions(2)).name));
     ttlString = sprintf('Spontaneous firing rate %s vs. %s', ...
@@ -1210,6 +1221,7 @@ if (Nbn - round(Nbn)) ~= 0
     Nbn = ceil(Nbn);
 end
 PSTH = zeros(nnz(filterIdx) - 1, Nbn, Nccond);
+Nt_cst = size(cStack,2);
 for ccond = 1:Nccond
     figFileName = sprintf('%s %s %sVW%.1f-%.1f ms B%.1f ms RW%.1f-%.1f ms SW%.1f-%.1f ms %sset %s (%s)',...
         expName, Conditions(consideredConditions(ccond)).name,...
@@ -1218,14 +1230,14 @@ for ccond = 1:Nccond
         orderedStr, filtStr);
     [PSTH(:,:,ccond), trig, sweeps] = getPSTH(discStack(filterIdx,:,:),...
         timeLapse, ~delayFlags(:,ccond), binSz, fs);
-    stims = mean(discStack(:,:,delayFlags(:,ccond)),3);
+    stims = mean(cStack(:,:,delayFlags(:,ccond)),3);
     stims = stims - median(stims,2);
     for cs = 1:size(stims,1)
         if abs(log10(var(stims(cs,:),[],2))) < 13
             [m,b] = lineariz(stims(cs,:),1,0);
             stims(cs,:) = m*stims(cs,:) + b;
         else
-            stims(cs,:) = zeros(1,Nt);
+            stims(cs,:) = zeros(1,Nt_cst);
         end
     end
     figs = plotClusterReactivity(PSTH(ordSubs,:,ccond), trig, sweeps,...
