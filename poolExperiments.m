@@ -518,8 +518,7 @@ dataDir = experimentDir;
 % Statistical tests
 [Results, Counts] = statTests(discStack, delayFlags, timeFlags);
 % Z-score significance
-muZ = cellfun(@(x) mean(x, 2), Counts(:,1), fnOpts{:});
-sigZ = cellfun(@(x) std(x, 1, 2), Counts(:,1), fnOpts{:});
+[~, muZ, sigZ] = cellfun(@(x) zscore(x, 1, 2), Counts(:,1), fnOpts{:});
 evZpt = cellfun(@(x,y,z) (x - y)./z, Counts(:,2), muZ, sigZ, fnOpts{:});
 evZ = cellfun(meanmed, evZpt, fnOpts{:});
 signMat = cellfun(@(x) thcmp(x, signTh), evZ, fnOpts{:});
