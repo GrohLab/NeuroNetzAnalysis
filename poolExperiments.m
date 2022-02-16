@@ -503,8 +503,8 @@ Ne = size(discStack, 1);
 meanmed = @(x) [mean(x,2,"omitnan"), median(x,2,"omitnan")];
 thcmp = @(x,y) x > reshape(y,1,1,[]);
 nDist = makedist('Normal', "mu", 0, "sigma", 1);
-alph = [0.95,0.98,0.99,0.995,0.998];
-signTh = arrayfun(@(y) fminbnd(@(x) norm(nDist.cdf(x) - y, 2), 1.4, 5),...
+alph = [0.95, 0.98, 0.99, 0.995, 0.998, 0.999];
+signTh = arrayfun(@(y) fminbnd(@(x) norm(nDist.cdf(x) - y, 2), 1, 5),...
     alph);
 figureDir = fullfile(experimentDir, 'PopFigures\');
 if ~mkdir(figureDir)
@@ -517,6 +517,7 @@ end
 dataDir = experimentDir;
 % Statistical tests
 [Results, Counts] = statTests(discStack, delayFlags, timeFlags);
+
 muZ = cellfun(@(x) mean(x, 2), Counts(:,1), fnOpts{:});
 sigZ = cellfun(@(x) std(x, [], 2), Counts(:,1), fnOpts{:});
 evZpt = cellfun(@(x,y,z) (x - y)./z, Counts(:,2), muZ, sigZ, fnOpts{:});
