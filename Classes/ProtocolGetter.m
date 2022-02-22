@@ -460,6 +460,9 @@ classdef ProtocolGetter < handle
                 lsDel = false(length(timeDelay),Ndel);
                 Ncond = numel(obj.Conditions);
                 tol = (1e-4*~obj.awaken + 2e-2*obj.awaken)/max(timeDelay);
+                if isinf(tol)
+                    tol = 1./eps;
+                end
                 for cdl = 1:Ndel
                     % Starting from the last condition on
                     fprintf(1,' %.1f',delays(cdl)*1e3)
@@ -743,13 +746,12 @@ classdef ProtocolGetter < handle
             pulsFreq = [];
             if ~isempty(subs)
                 tms = subs(:,1)/fs;
+                % Inverse of the time difference between pulses (frequency)
                 pulsFreq = 1./diff(tms);
                 % Logical index pointing at the first pulse of a frequency
                 % train
                 fstSubs = StepWaveform.firstOfTrain(tms);
-                % Inverse of the time difference between pulses (frequency)
-                
-                freqCond = round(uniquetol(pulsFreq, 0.5/max(pulsFreq)), 1);
+                freqCond = round(uniquetol(pulsFreq, 0.9/max(pulsFreq)), 1);
                 freqCond = freqCond(freqCond >= 1); % Empty for no frequency
             else
                 fprintf(1, 'No triggers found for the given signal.\n')
