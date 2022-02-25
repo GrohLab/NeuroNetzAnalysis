@@ -61,7 +61,7 @@ end
 end
 %% Local functions
 function [mSubs, eVec] = spectral_clustering(X, k, Npc, plotFlag)
-[mSubs, eVec, eVal] = spectralcluster(X(:,1:Npc), k,...
+[mSubs, eVec] = spectralcluster(X(:,1:Npc), k,...
     'Distance', 'seuclidean');
 if plotFlag
     figure;
