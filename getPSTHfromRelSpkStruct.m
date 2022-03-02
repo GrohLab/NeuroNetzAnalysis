@@ -8,7 +8,7 @@ fnOpts = {'UniformOutput', false};
 Ncond = length(relSpkStrct);
 [Ncl, Na] = arrayfun(@(x) size(x.SpikeTimes), relSpkStrct);
 timeLapse = confgStruct.Viewing_window_s;
-Npsth = round(diff(timeLapse)/configStructure.BinSize_s);
+Npsth = round(diff(timeLapse)/confgStruct.BinSize_s);
 mdl = fit_poly([1,Npsth], timeLapse, 1);
 psthTx = ((1:Npsth).^[1;0])'*mdl;
 
