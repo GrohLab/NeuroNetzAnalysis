@@ -2,7 +2,7 @@ function [signMat, evZ, evZpt, alph] = zscoreSignificance(Counts)
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
 fnOpts = {'UniformOutput', false}; mymean = @(x) mean(x,2,"omitnan");
-thcmp = @(x,y) x > reshape(y,1,1,[]);
+thcmp = @(x,y) abs(x) > reshape(y,1,1,[]);
 nDist = makedist('Normal', "mu", 0, "sigma", 1);
 % Replace for user input thresholds
 alph = [0.95, 0.98, 0.99, 0.995, 0.998, 0.999];
