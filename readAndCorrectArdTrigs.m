@@ -12,17 +12,6 @@ outFileFormat = "ArduinoTriggers%s.mat";
 derv = @(x) diff(x(:,1));
 dsmt = @(x,y) distmatrix(x, y, 2);
 erOpts = {"ErrorHandler", @falseLaserDetection};
-% Function to extract the date from the file name. 
-% Extract machine readable 19-December-2021 15:32:12 from
-% Roller_position2021-12-19T15_32_12.csv, for example. "Roller_position"
-% would be the baseName, and an array with structures from dir function.
-    function fDates = getDates(fileNames, baseName)
-        getDate = @(x, y) extractBefore(extractAfter(x, y), ".");
-        fDates = arrayfun(@(x) getDate(x.name, baseName), fileNames,...
-            fnOpts{:});
-        fDates = cellfun(@(x) datetime(x, 'InputFormat', dateFormStr),...
-            fDates);
-    end
 % Function to get the edges from the trigger signals in the trigger file.
     function tSubs = getSubsFromTriggers(trig)
         % Unstable line! Display function not working!
