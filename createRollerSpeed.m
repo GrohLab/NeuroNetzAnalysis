@@ -1,4 +1,4 @@
-function iOk = createRollerSpeed(behDir)
+function [iOk, vf, rollTx, fr, Texp] = createRollerSpeed(behDir)
 iOk = false;
 fnOpts = {"UniformOutput", false};
 if ~exist(behDir, "dir")
