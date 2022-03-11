@@ -1,4 +1,4 @@
-function readAndCorrectArdTrigs(dataDir)
+function [atTimes, atNames, itTimes, itNames] = readAndCorrectArdTrigs(dataDir)
 %READANDCORRECTARDTRIGS pairs the trigger times from the arduino board with
 %intan onset trigger times and saves the times in seconds in a file called
 %ArduinoTriggersYYYY-MM-DDTHH_mm_ss.mat accordingly with the
@@ -72,9 +72,10 @@ erOpts = {"ErrorHandler", @falseLaserDetection};
     function correctAnomalities()
         [Nta, Nti] = cellfun(@size, dm);
         % errTh = -3;
-        for cc = 1:size(dm)
+        Ntrigs = length(dm);
+        for cc = 1:Ntrigs
             ca = cc;
-            if flipFlag
+            if flipFlag && Ntrigs > 1
                 ca = 3-cc;
             end
             % Taking a guess from the number of triggers in both trigger
