@@ -58,6 +58,7 @@ fsCell = arrayfun(@(x) cellfun(@(y) y(gFS(y>0)), x.SpikeTimes(clSubs,:), fnOpts{
 fsCol = cellfun(@(x) arrayfun(@(y) cat(2, x{y,:}), (1:size(x,1))', fnOpts{:}), ...
     fsCell, fnOpts{:});
 % First order statistics
+% IDEA: This can be a stand alone function for other spike collection.
 fsFOS = cellfun(@(x) cellfun(foSts, x, fnOpts{:}), fsCol, fnOpts{:});
 fsFOS = cellfun(@(x) cat(1, x{:}), fsFOS, fnOpts{:});
 % Histogram for the first spike
