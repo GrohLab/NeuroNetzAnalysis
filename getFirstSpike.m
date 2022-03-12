@@ -4,6 +4,7 @@ function [fSpkStr] = getFirstSpike(relSpkTmsStr, confStr, varargin)
 %% Auxiliary variables
 fnOpts = {'UniformOutput', false};
 shftOne = @(x) [x(1:end-1);x(2:end)];
+foSts = @(x) [median(x), mean(x), std(x)];
 %% Input parser
 p = inputParser;
 
@@ -44,7 +45,7 @@ condSubs = p.Results.CondSubs;
 res = p.Results.Res;
 
 %% First spike for selected clusters in selected conditions
-hsOpts = {'BinLimits', [0, confStr.Viewing_window_s(2)], 'BinWidth', res};
+hsOpts = {'BinLimits', confStr.Response_window_s, 'BinWidth', res};
 % Assuming the spike train to be a row vector, this logical operation
 % returns the first spike after the trigger onset. It is not suited to find
 % the first spike of a burst in a spike train
@@ -56,9 +57,13 @@ fsCell = arrayfun(@(x) cellfun(@(y) y(gFS(y>0)), x.SpikeTimes(clSubs,:), fnOpts{
 % Trial-collapsed version for statistical purposes
 fsCol = cellfun(@(x) arrayfun(@(y) cat(2, x{y,:}), (1:size(x,1))', fnOpts{:}), ...
     fsCell, fnOpts{:});
-% Median
-[fsMed, fsMu, fsStd] = cellfun(@(x) cellfun(@(y) [median(y), mean(y), ...
-    std(y)], x), fsCol, fnOpts{:});
+% First order statistics
+fsFOS = cellfun(@(x) cellfun(foSts, x, fnOpts{:}), fsCol, fnOpts{:});
+fsFOS = cellfun(@(x) cat(1, x{:}), fsFOS, fnOpts{:});
+% Histogram for the first spike
 [fsH, hbe] = cellfun(@(x) cellfun(@(y) histcounts(y, hsOpts{:}), x, fnOpts{:}), ...
     fsCol, fnOpts{:}); hbc = mean(shftOne(hbe{1}{1}));
+% Mahalanobis distance in matrix form
+fsMh = cellfun(@(x) cellfun(@(y) squareform(pdist(y(:), "mahalanobis")), x, ...
+    fnOpts{:}), fsCol, fnOpts{:});
 end
