@@ -61,10 +61,10 @@ fsCol = cellfun(@(x) arrayfun(@(y) cat(2, x{y,:}), (1:size(x,1))', fnOpts{:}), .
 % First order statistics
 [stStruct, spkDom] = getBasicSts(fsCol, confStr, Na, res);
 % Quartile positions (0.25, 0.5, 0.75)
-Qv = arrayfun(@(z) arrayfun(@(a) cellfun(@(y) fzero(@(x) ...
+Qv = arrayfun(@(a) arrayfun(@(z) cellfun(@(y) fzero(@(x) ...
     interp1(spkDom, cumsum(y./sum(y))-z, x), spkDom([1,end-1])), a.PDF, ...
-    erOpts{:}), stStruct, fnOpts{:}), 0.25:0.25:0.75, fnOpts{:});
-
+    erOpts{:}), 0.25:0.25:0.75, fnOpts{:}), stStruct, fnOpts{:});
+Qv = cellfun(@(x) cat(2, x{:}), Qv, fnOpts{:});
 end
 
 function errorOut = errHandlr(S, varargin)
