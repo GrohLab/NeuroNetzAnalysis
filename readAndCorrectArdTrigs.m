@@ -164,7 +164,35 @@ erOpts = {"ErrorHandler", @falseLaserDetection};
                 unavFlags = arrayfun(@(x) any(unqePrs(:,x) == snglPairs(:,x)',2), 1:2,...
                     "UniformOutput", false); unavFlags = [unavFlags{:}];
                 unqePrs(any(unavFlags,2),:) = [];
-                
+                if isempty(unqePrs)
+                    if nnz(snglPairs) < numel(snglPairs)
+                        snglPairs = zeros(mxSub, 2); auxCnt = 1;
+                        fprintf(1, "There was a miscalculation in the ")
+                        fprintf(1, "trigger assignment!\n")
+                        % Estimation for the most repeated delay (the
+                        % actual delay between intan and arduino)
+                        loPks = arrayfun(@(x) fminsearch(@(y) -ksdensity(dstPrs, ...
+                            y), x), rand(100,1)*(min(dstPrs)*1.1));
+                        dstPks = uniquetol(loPks, 0.01/max(abs(loPks)));
+                        unqePrs = unique([iSubs(pairFlags), ...
+                            aSubs(pairFlags), dstPrs], "row");
+                        ddstPrs = unqePrs(:,3) - dstPks';
+                        prFlag = any(ddstPrs < 1 & ddstPrs > -1,2);
+                        allFlag = unqePrs(prFlag,1:2) == reshape(naiveSubs, 1,1,[]);
+                        appCount = squeeze(sum(allFlag, 1));
+                        appCount(appCount == 0) = nan;
+                        mstUseFlag = any(appCount == IoA);
+                        auxUP = unqePrs(prFlag, :);
+                        unPrFlag = any(unqePrs(prFlag,IoA) == naiveSubs(mstUseFlag),2);
+                        Nup = sum(unPrFlag);
+                        snglPairs(auxCnt:auxCnt-1+Nup,:) = auxUP(unPrFlag,1:2);
+                        auxCnt = auxCnt+Nup;
+                        unavFlags = arrayfun(@(x) any(unqePrs(:,x) == snglPairs(:,x)',2), 1:2,...
+                            "UniformOutput", false); unavFlags = [unavFlags{:}];
+                        unqePrs(any(unavFlags,2),:) = [];
+                        continue
+                    end
+                end
             end
             snglPairs = sortrows(snglPairs, 1);
             x = itTimes{cc}(snglPairs(:,1),1);
