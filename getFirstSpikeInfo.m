@@ -3,8 +3,7 @@ function [fSpkStr] = getFirstSpikeInfo(relSpkTmsStr, confStr, varargin)
 %   Detailed explanation goes here
 %% Auxiliary variables
 fnOpts = {'UniformOutput', false};
-erOpts = {'ErrorHandler', @errHandlr};
-shftOne = @(x) [x(1:end-1);x(2:end)];
+% shftOne = @(x) [x(1:end-1);x(2:end)];
 
 %% Input parser
 p = inputParser;
@@ -60,13 +59,5 @@ fsCol = cellfun(@(x) arrayfun(@(y) cat(2, x{y,:}), (1:size(x,1))', fnOpts{:}), .
     fsCell, fnOpts{:});
 % First order statistics
 [stStruct, spkDom] = getBasicSts(fsCol, confStr, Na, res);
-% Quartile positions (0.25, 0.5, 0.75)
-Qv = arrayfun(@(a) arrayfun(@(z) cellfun(@(y) fzero(@(x) ...
-    interp1(spkDom, cumsum(y./sum(y))-z, x), spkDom([1,end-1])), a.PDF, ...
-    erOpts{:}), 0.25:0.25:0.75, fnOpts{:}), stStruct, fnOpts{:});
-Qv = cellfun(@(x) cat(2, x{:}), Qv, fnOpts{:});
-end
 
-function errorOut = errHandlr(S, varargin)
-errorOut = 0;
 end

@@ -27,11 +27,17 @@ for ca = 1:length(sH)
         sH{ca}{cb} = repmat(sH{ca}{cb}, 1, N);
     end
 end
+% Quartile positions (0.25, 0.5, 0.75)
+Qv = cellfun(@(a) arrayfun(@(z) cellfun(@(y) fzero(@(x) ...
+    interp1(spkDom, cumsum(y./sum(y))-z, x), spkDom([1,end])), a, ...
+    erOpts{:}), 0.25:0.25:0.75, fnOpts{:}), sH, fnOpts{:});
+Qv = cellfun(@(x) cat(2, x{:}), Qv, fnOpts{:});
 % Mahalanobis distance in matrix form
 sMh = cellfun(@(x) cellfun(@(y) squareform(pdist(y(:), "mahalanobis")), ...
     x, fnOpts{:}), spkCell, fnOpts{:});
 % Saving results
-stStruct = struct('FOstats', sFOS, 'PDF', sH, 'MahalDist', sMh);
+stStruct = struct('FOstats', sFOS, 'PDF', sH,'Quartiles', Qv, ...
+    'MahalDist', sMh);
 end
 
 function fsH = emptySpkTrain(S, varargin)
