@@ -8,6 +8,8 @@ meanfr = cellfun(@(x) mean(x,2)/Delta_t, Counts, 'UniformOutput', false);
 mxfr = cellfun(@max, meanfr);
 mxfr = round(mxfr*1.15, -1);
 % mxfr = max(mxfr);
+% Z-score test for response significance
+signMat = zscoreSignificance(Counts, 'Alpha', 0.05);
 if ~min(mxfr(:))
     mxfr(mxfr==0) = 10;
 end
@@ -33,6 +35,9 @@ for cr = 1:Nr
     csp = 1;
     while csp <= figType
         actvty = Results(cr).Activity(csp).Type;
+        if figType == 1
+            Results(cr).Activity(csp).ZSignificance = signMat{cond1};
+        end
         H = Results(cr).Activity(csp).Pvalues < 0.05;
         Hc(:,hCount) = H;
         hCount = hCount + 1;        
