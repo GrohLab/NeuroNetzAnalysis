@@ -57,5 +57,8 @@ fsCol = cellfun(@(x) arrayfun(@(y) cat(2, x{y,:}), (1:size(x,1))', fnOpts{:}), .
     fsCell, fnOpts{:});
 % First order statistics
 [stStruct, spkDom] = getBasicSts(fsCol, confStr, Na, res);
-
+fSpkStr = struct('FirstSpikeTimes', fsCell, 'FSTcollapsed', fsCol, ...
+    'FOStats', {stStruct.FOstats}, ...
+    'PDF', cellfun(@(x) {{x};spkDom}, {stStruct.PDF}, fnOpts{:}), ...
+    'Quartiles', {stStruct.Quartiles}, 'MahalDist', {stStruct.MahalDist});
 end
