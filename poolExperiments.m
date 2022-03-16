@@ -119,16 +119,6 @@ for cexp = reshape(chExp, 1, [])
         fprintf(1,'Skipping experiment %s\n', expFolders(cexp).name)
         continue
     end
-    %{
-    % Figures directory for the considered experiment
-    figureDir = fullfile(dataDir,'Figures\');
-    if ~mkdir(figureDir)
-        fprintf(1,'There was an issue with the figure folder...\n');
-        fprintf(1,'Saving the figures in the data folder!\n');
-        fprintf(1,'%s\n',dataDir);
-        figureDir = dataDir;
-    end
-    %}
     %% Constructing the helper 'global' variables
     if (fs - (1/33.3e-6)) > 1
         fprintf(2, '%.3f kHz different sampling frequency!\n', fs/1e3);
@@ -520,11 +510,6 @@ end
 dataDir = experimentDir;
 % Statistical tests
 [Results, Counts] = statTests(discStack, delayFlags, timeFlags);
-% Z-score significance
-[~, muZ, sigZ] = cellfun(@(x) zscore(x, 1, 2), Counts(:,1), fnOpts{:});
-evZpt = cellfun(@(x,y,z) (x - y)./z, Counts(:,2), muZ, sigZ, fnOpts{:});
-evZ = cellfun(meanmed, evZpt, fnOpts{:});
-signMat = cellfun(@(x) thcmp(x, signTh), evZ, fnOpts{:});
 
 % Plotting statistical tests
 [figs, Results] = scatterSignificance(Results, Counts,...
@@ -573,12 +558,13 @@ if ~exist(resDir, 'dir')
         resDir = dataDir;
     end
 end
+% Not the best name, but works for now...
 resPttrn = 'Res VW%.2f-%.2f ms RW%.2f-%.2f ms SW%.2f-%.2f ms %d Cond.mat';
 resFN = sprintf(resPttrn, timeLapse*1e3, responseWindow*1e3, ...
     spontaneousWindow*1e3, Nccond);
 resFP = fullfile(resDir, resFN);
 if ~exist(resFP, "file")
-    save(resFP, "Results", "Counts", "configStructure")
+    save(resFP, "Results", "Counts", "configStructure", "gclID")
 end
 %% Add the response to the table
 try
@@ -588,6 +574,172 @@ try
 catch
     fprintf('Reran, perhaps?\n')
 end
+%% Filter responsive?
+filterIdx = true(Ne,1);
+if strcmpi(filtStr, 'filtered') && nnz(wruIdx)
+    filterIdx = [true; wruIdx];
+end
+%% Ordering PSTH
+orderedStr = 'ID ordered';
+dans = questdlg('Do you want to order the PSTH other than by IDs?',...
+    'Order', 'Yes', 'No', 'No');
+ordSubs = 1:nnz(filterIdx(2:Ncl+1));
+pclID = gclID(filterIdx(2:Ncl+1));
+if strcmp(dans, 'Yes')
+    if ~exist('clInfoTotal','var')
+        clInfoTotal = getClusterInfo(fullfile(dataDir,'cluster_info.tsv'));
+    end
+    % varClass = varfun(@class,clInfo,'OutputFormat','cell');
+    [ordSel, iOk] = listdlg('ListString', clInfoTotal.Properties.VariableNames,...
+        'SelectionMode', 'multiple');
+    orderedStr = [];
+    ordVar = clInfoTotal.Properties.VariableNames(ordSel);
+    for cvar = 1:numel(ordVar)
+        orderedStr = [orderedStr, sprintf('%s ',ordVar{cvar})]; %#ok<AGROW>
+    end
+    orderedStr = [orderedStr, 'ordered'];
+    
+    if ~strcmp(ordVar,'id')
+        [~,ordSubs] = sortrows(clInfoTotal(pclID,:),ordVar);
+    end
+end
+%% Plot PSTH
+goodsIdx = logical(clInfoTotal.ActiveUnit);
+csNames = fieldnames(Triggers);
+Nbn = diff(timeLapse)/binSz;
+if (Nbn - round(Nbn)) ~= 0
+    Nbn = ceil(Nbn);
+end
+PSTH = zeros(nnz(filterIdx) - 1, Nbn, Nccond);
+Nt_cst = size(cStack,2);
+for ccond = 1:Nccond
+    figFileName = sprintf('%s %s %sVW%.1f-%.1f ms B%.1f ms RW%.1f-%.1f ms SW%.1f-%.1f ms %sset %s (%s)',...
+        expName, Conditions(consideredConditions(ccond)).name,...
+        sprintf('%d ', chExp), timeLapse*1e3,...
+        binSz*1e3, responseWindow*1e3, spontaneousWindow*1e3, onOffStr,...
+        orderedStr, filtStr);
+    [PSTH(:,:,ccond), trig, sweeps] = getPSTH(discStack(filterIdx,:,:),...
+        timeLapse, ~delayFlags(:,ccond), binSz, fs);
+    stims = mean(cStack(:,:,delayFlags(:,ccond)),3);
+    stims = stims - median(stims,2);
+    for cs = 1:size(stims,1)
+        if abs(log10(var(stims(cs,:),[],2))) < 13
+            [m,b] = lineariz(stims(cs,:),1,0);
+            stims(cs,:) = m*stims(cs,:) + b;
+        else
+            stims(cs,:) = zeros(1,Nt_cst);
+        end
+    end
+    figs = plotClusterReactivity(PSTH(ordSubs,:,ccond), trig, sweeps,...
+        timeLapse, binSz, [{Conditions(consideredConditions(ccond)).name};...
+        pclID(ordSubs)], strrep(expName,'_','\_'));
+    configureFigureToPDF(figs);
+    figs.Children(end).YLabel.String = [figs.Children(end).YLabel.String,...
+        sprintf('^{%s}',orderedStr)];
+    if ~exist([figFileName,'.pdf'], 'file') || ~exist([figFileName,'.emf'], 'file')
+        print(figs, fullfile(figureDir,[figFileName, '.pdf']),'-dpdf','-fillpage')
+        print(figs, fullfile(figureDir,[figFileName, '.emf']),'-dmeta')
+    end
+end
+
+
+%% Getting the relative spike times for the whisker responsive units (wru)
+% For each condition, the first spike of each wru will be used to compute
+% the standard deviation of it.
+cellLogicalIndexing = @(x,idx) x(idx);
+isWithinResponsiveWindow =...
+    @(x) x > responseWindow(1) & x < responseWindow(2);
+
+firstSpike = zeros(Nwru,Nccond);
+M = 16;
+binAx = responseWindow(1):binSz:responseWindow(2);
+condHist = zeros(size(binAx,2)-1, Nccond);
+firstOrdStats = zeros(2,Nccond);
+condParams = zeros(M,3,Nccond);
+txpdf = responseWindow(1):1/fs:responseWindow(2);
+condPDF = zeros(numel(txpdf),Nccond);
+csvSubfx = sprintf(' SW%.1f-%.1f ms RW%.1f-%.1f ms VW%.1f-%.1f ms (%s).csv',...
+    spontaneousWindow*1e3, responseWindow*1e3, timeLapse*1e3, filtStr);
+existFlag = false;
+condRelativeSpkTms = cell(Nccond,1);
+relativeSpkTmsStruct = struct('name',{},'SpikeTimes',{});
+csvDir = fullfile(dataDir, 'SpikeTimes');
+if ~exist(csvDir,'dir')
+    iOk = mkdir(csvDir);
+    if ~iOk
+        fprintf(1, 'The ''Figure'' folder was not created!\n')
+        fprintf(1, 'Please verify your writing permissions!\n')
+    end
+end
+for ccond = 1:size(delayFlags,2)
+    csvFileName = fullfile(csvDir,[expName,' ', sprintf('%d ',chExp),...
+        consCondNames{ccond}, csvSubfx]);
+    relativeSpikeTimes = getRasterFromStack(discStack,~delayFlags(:,ccond),...
+        filterIdx(3:end), timeLapse, fs, true, false);
+    relativeSpikeTimes(:,~delayFlags(:,ccond)) = [];
+    relativeSpikeTimes(~filterIdx(2),:) = [];
+    condRelativeSpkTms{ccond} = relativeSpikeTimes;
+    %     respIdx = cellfun(isWithinResponsiveWindow, relativeSpikeTimes,...
+    %         'UniformOutput',false);
+    clSpkTms = cell(size(relativeSpikeTimes,1),1);
+    if exist(csvFileName, 'file') && ccond == 1
+        existFlag = true;
+        ansOW = questdlg(['The exported .csv files exist! ',...
+            'Would you like to overwrite them?'],'Overwrite?','Yes','No','No');
+        if strcmp(ansOW,'Yes')
+            existFlag = false;
+            fprintf(1,'Overwriting... ');
+        end
+    end
+    fID = 1;
+    if ~existFlag
+        fID = fopen(csvFileName,'w');
+        fprintf(fID,'%s, %s\n','Cluster ID','Relative spike times [ms]');
+    end
+    rsclSub = find(filterIdx(2:end))-1;
+    % If a subcript is zero, don't substract.
+    if any(~rsclSub)
+        rsclSub = rsclSub + 1;
+    end
+    for cr = 1:size(relativeSpikeTimes, 1)
+        clSpkTms(cr) = {sort(cell2mat(relativeSpikeTimes(cr,:)))};
+        if fID > 2
+            fprintf(fID,'%s,',gclID{rsclSub(cr)});
+            fprintf(fID,'%f,',clSpkTms{cr});fprintf(fID,'\n');
+        end
+    end
+    if fID > 2
+        fclose(fID);
+    end
+    relativeSpkTmsStruct(ccond).name = consCondNames{ccond};
+    relativeSpkTmsStruct(ccond).SpikeTimes = condRelativeSpkTms{ccond};
+end
+spkFileName =...
+    sprintf('%s exps%s RW%.2f - %.2f ms SW%.2f - %.2f ms VW%.2f - %.2f ms %s (%s) exportSpkTms.mat',...
+    expName, sprintf(' %d',chExp), responseWindow*1e3, spontaneousWindow*1e3,...
+    timeLapse*1e3, Conditions(chCond).name, filtStr);
+if ~exist(spkFileName,'file')
+    save(fullfile(csvDir, spkFileName), 'relativeSpkTmsStruct',...
+        'configStructure')
+end
+%% Log PSTH -- Generalise this part!!
+Nbin = 64;
+ncl = size(relativeSpkTmsStruct(1).SpikeTimes,1);
+
+logPSTH = getLogTimePSTH(relativeSpkTmsStruct, true(ncl,1),...
+    'tmWin', responseWindow, 'Offset', 2.5e-3, 'Nbin', Nbin,...
+    'normalization', 'fr');
+logFigs = plotLogPSTH(logPSTH);
+% Saving the figures
+lpFigName = sprintf('%s Log-likePSTH %s %d-conditions RW%.1f-%.1f ms NB%d (%s)',...
+    expName, logPSTH.Normalization, Nccond, responseWindow*1e3, Nbin, filtStr);
+saveFigure(logFigs(1), fullfile(figureDir, lpFigName))
+if numel(logFigs) > 1
+    lmiFigName = sprintf('%s LogMI %d-conditions RW%.1f-%.1f ms NB%d (%s)',...
+        expName, Nccond, responseWindow*1e3, Nbin, filtStr);
+    saveFigure(logFigs(2), fullfile(figureDir, lmiFigName))
+end
+
 %% Get the numbers for the proportional pies
 fnOpts = {'UniformOutput', false};
 hsOpts = {'BinLimits', [-1,1], 'NumBins', 32,...
@@ -639,11 +791,7 @@ if Nccond == 2
     saveFigure(MIFig, fullfile(figureDir,...
         sprintf("Modulation index dist evoked & after induction%s",chExpStr)), 1)
 end
-%% Filter responsive?
-filterIdx = true(Ne,1);
-if strcmpi(filtStr, 'filtered') && nnz(wruIdx)
-    filterIdx = [true; wruIdx];
-end
+
 %% Spontaneous firing rate with a bigger window
 mltpl = 10;
 if Nccond == 2
@@ -1067,85 +1215,7 @@ if Nccond == 2
         end
     end
 end
-%% Getting the relative spike times for the whisker responsive units (wru)
-% For each condition, the first spike of each wru will be used to compute
-% the standard deviation of it.
-cellLogicalIndexing = @(x,idx) x(idx);
-isWithinResponsiveWindow =...
-    @(x) x > responseWindow(1) & x < responseWindow(2);
 
-firstSpike = zeros(Nwru,Nccond);
-M = 16;
-binAx = responseWindow(1):binSz:responseWindow(2);
-condHist = zeros(size(binAx,2)-1, Nccond);
-firstOrdStats = zeros(2,Nccond);
-condParams = zeros(M,3,Nccond);
-txpdf = responseWindow(1):1/fs:responseWindow(2);
-condPDF = zeros(numel(txpdf),Nccond);
-csvSubfx = sprintf(' SW%.1f-%.1f ms RW%.1f-%.1f ms VW%.1f-%.1f ms (%s).csv',...
-    spontaneousWindow*1e3, responseWindow*1e3, timeLapse*1e3, filtStr);
-existFlag = false;
-condRelativeSpkTms = cell(Nccond,1);
-relativeSpkTmsStruct = struct('name',{},'SpikeTimes',{});
-csvDir = fullfile(dataDir, 'SpikeTimes');
-if ~exist(csvDir,'dir')
-    iOk = mkdir(csvDir);
-    if ~iOk
-        fprintf(1, 'The ''Figure'' folder was not created!\n')
-        fprintf(1, 'Please verify your writing permissions!\n')
-    end
-end
-for ccond = 1:size(delayFlags,2)
-    csvFileName = fullfile(csvDir,[expName,' ', sprintf('%d ',chExp),...
-        consCondNames{ccond}, csvSubfx]);
-    relativeSpikeTimes = getRasterFromStack(discStack,~delayFlags(:,ccond),...
-        filterIdx(3:end), timeLapse, fs, true, false);
-    relativeSpikeTimes(:,~delayFlags(:,ccond)) = [];
-    relativeSpikeTimes(~filterIdx(2),:) = [];
-    condRelativeSpkTms{ccond} = relativeSpikeTimes;
-    %     respIdx = cellfun(isWithinResponsiveWindow, relativeSpikeTimes,...
-    %         'UniformOutput',false);
-    clSpkTms = cell(size(relativeSpikeTimes,1),1);
-    if exist(csvFileName, 'file') && ccond == 1
-        existFlag = true;
-        ansOW = questdlg(['The exported .csv files exist! ',...
-            'Would you like to overwrite them?'],'Overwrite?','Yes','No','No');
-        if strcmp(ansOW,'Yes')
-            existFlag = false;
-            fprintf(1,'Overwriting... ');
-        end
-    end
-    fID = 1;
-    if ~existFlag
-        fID = fopen(csvFileName,'w');
-        fprintf(fID,'%s, %s\n','Cluster ID','Relative spike times [ms]');
-    end
-    rsclSub = find(filterIdx(2:end))-1;
-    % If a subcript is zero, don't substract.
-    if any(~rsclSub)
-        rsclSub = rsclSub + 1;
-    end
-    for cr = 1:size(relativeSpikeTimes, 1)
-        clSpkTms(cr) = {sort(cell2mat(relativeSpikeTimes(cr,:)))};
-        if fID > 2
-            fprintf(fID,'%s,',gclID{rsclSub(cr)});
-            fprintf(fID,'%f,',clSpkTms{cr});fprintf(fID,'\n');
-        end
-    end
-    if fID > 2
-        fclose(fID);
-    end
-    relativeSpkTmsStruct(ccond).name = consCondNames{ccond};
-    relativeSpkTmsStruct(ccond).SpikeTimes = condRelativeSpkTms{ccond};
-end
-spkFileName =...
-    sprintf('%s exps%s RW%.2f - %.2f ms SW%.2f - %.2f ms VW%.2f - %.2f ms %s (%s) exportSpkTms.mat',...
-    expName, sprintf(' %d',chExp), responseWindow*1e3, spontaneousWindow*1e3,...
-    timeLapse*1e3, Conditions(chCond).name, filtStr);
-if ~exist(spkFileName,'file')
-    save(fullfile(csvDir, spkFileName), 'relativeSpkTmsStruct',...
-        'configStructure')
-end
 
 %% ISI PDF & CDF
 if Nccond == 2
@@ -1211,86 +1281,6 @@ if Nccond == 2
     evokIsiFigPath = fullfile(figureDir, "Evoked ISI, potentiated & depressed" +...
         " clusters, exp"+string(sprintf(' %d',chExp))+" LB 10^"+string(lDt));
     saveFigure(areaFig, evokIsiFigPath, 1)
-end
-%% Ordering PSTH
-orderedStr = 'ID ordered';
-dans = questdlg('Do you want to order the PSTH other than by IDs?',...
-    'Order', 'Yes', 'No', 'No');
-ordSubs = 1:nnz(filterIdx(2:Ncl+1));
-pclID = gclID(filterIdx(2:Ncl+1));
-if strcmp(dans, 'Yes')
-    if ~exist('clInfoTotal','var')
-        clInfoTotal = getClusterInfo(fullfile(dataDir,'cluster_info.tsv'));
-    end
-    % varClass = varfun(@class,clInfo,'OutputFormat','cell');
-    [ordSel, iOk] = listdlg('ListString', clInfoTotal.Properties.VariableNames,...
-        'SelectionMode', 'multiple');
-    orderedStr = [];
-    ordVar = clInfoTotal.Properties.VariableNames(ordSel);
-    for cvar = 1:numel(ordVar)
-        orderedStr = [orderedStr, sprintf('%s ',ordVar{cvar})]; %#ok<AGROW>
-    end
-    orderedStr = [orderedStr, 'ordered'];
-    
-    if ~strcmp(ordVar,'id')
-        [~,ordSubs] = sortrows(clInfoTotal(pclID,:),ordVar);
-    end
-end
-%% Plot PSTH
-goodsIdx = logical(clInfoTotal.ActiveUnit);
-csNames = fieldnames(Triggers);
-Nbn = diff(timeLapse)/binSz;
-if (Nbn - round(Nbn)) ~= 0
-    Nbn = ceil(Nbn);
-end
-PSTH = zeros(nnz(filterIdx) - 1, Nbn, Nccond);
-Nt_cst = size(cStack,2);
-for ccond = 1:Nccond
-    figFileName = sprintf('%s %s %sVW%.1f-%.1f ms B%.1f ms RW%.1f-%.1f ms SW%.1f-%.1f ms %sset %s (%s)',...
-        expName, Conditions(consideredConditions(ccond)).name,...
-        sprintf('%d ', chExp), timeLapse*1e3,...
-        binSz*1e3, responseWindow*1e3, spontaneousWindow*1e3, onOffStr,...
-        orderedStr, filtStr);
-    [PSTH(:,:,ccond), trig, sweeps] = getPSTH(discStack(filterIdx,:,:),...
-        timeLapse, ~delayFlags(:,ccond), binSz, fs);
-    stims = mean(cStack(:,:,delayFlags(:,ccond)),3);
-    stims = stims - median(stims,2);
-    for cs = 1:size(stims,1)
-        if abs(log10(var(stims(cs,:),[],2))) < 13
-            [m,b] = lineariz(stims(cs,:),1,0);
-            stims(cs,:) = m*stims(cs,:) + b;
-        else
-            stims(cs,:) = zeros(1,Nt_cst);
-        end
-    end
-    figs = plotClusterReactivity(PSTH(ordSubs,:,ccond), trig, sweeps,...
-        timeLapse, binSz, [{Conditions(consideredConditions(ccond)).name};...
-        pclID(ordSubs)], strrep(expName,'_','\_'));
-    configureFigureToPDF(figs);
-    figs.Children(end).YLabel.String = [figs.Children(end).YLabel.String,...
-        sprintf('^{%s}',orderedStr)];
-    if ~exist([figFileName,'.pdf'], 'file') || ~exist([figFileName,'.emf'], 'file')
-        print(figs, fullfile(figureDir,[figFileName, '.pdf']),'-dpdf','-fillpage')
-        print(figs, fullfile(figureDir,[figFileName, '.emf']),'-dmeta')
-    end
-end
-
-%% Log PSTH -- Generalise this part!!
-Nbin = 64;
-ncl = size(relativeSpkTmsStruct(1).SpikeTimes,1);
-
-logPSTH = getLogTimePSTH(relativeSpkTmsStruct, true(ncl,1),...
-    'tmWin', responseWindow, 'Offset', 2.5e-3, 'Nbin', Nbin,...
-    'normalization', 'fr');
-logFigs = plotLogPSTH(logPSTH);
-% Saving the figures
-lpFigName = sprintf('%s Log-likePSTH %s %d-conditions RW%.1f-%.1f ms NB%d (%s)',...
-    expName, logPSTH.Normalization, Nccond, responseWindow*1e3, Nbin, filtStr);
-saveFigure(logFigs(1), fullfile(figureDir, lpFigName))
-if numel(logFigs) > 1
-    lmiFigName = sprintf('%s LogMI %d-conditions RW%.1f-%.1f ms NB%d (%s)',...
-        expName, Nccond, responseWindow*1e3, Nbin, filtStr);
-    saveFigure(logFigs(2), fullfile(figureDir, lmiFigName))
 end
 
 %% Comparing the PSTHs for all conditions
