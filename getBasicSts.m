@@ -34,7 +34,7 @@ Qv = cellfun(@(a) arrayfun(@(z) cellfun(@(y) fzero(@(x) ...
 Qv = cellfun(@(x) cat(2, x{:}), Qv, fnOpts{:});
 % Mahalanobis distance in matrix form
 sMh = cellfun(@(x) cellfun(@(y) squareform(pdist(y(:), "mahalanobis")), ...
-    x, fnOpts{:}), spkCell, fnOpts{:});
+    x, fnOpts{:}, erOpts{1},@covError), spkCell, fnOpts{:});
 % Saving results
 stStruct = struct('FOstats', sFOS, 'PDF', sH,'Quartiles', Qv, ...
     'MahalDist', sMh);
@@ -42,4 +42,8 @@ end
 
 function fsH = emptySpkTrain(S, varargin)
 fsH = 0;
+end
+
+function sMh = covError(S, varargin)
+sMh = [];
 end
