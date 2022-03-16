@@ -499,19 +499,22 @@ end
 gclID = clInfoTotal{clInfoTotal.ActiveUnit == 1,'id'};
 Ncl = numel(gclID);
 Ne = size(discStack, 1);
+%% Configuration structure
+configStructure = struct('Experiment', fullfile(dataDir,expName),...
+    'Viewing_window_s', timeLapse, 'Response_window_s', responseWindow,...
+    'Spontaneous_window_s', spontaneousWindow, 'BinSize_s', binSz, ...
+    'Trigger', struct('Name', condNames{chCond}, 'Edge',onOffStr), ...
+    'ConsideredConditions',{consCondNames});
 %% Population analysis
-meanmed = @(x) [mean(x,2,"omitnan"), median(x,2,"omitnan")];
-thcmp = @(x,y) x > reshape(y,1,1,[]);
-nDist = makedist('Normal', "mu", 0, "sigma", 1);
-alph = [0.95, 0.98, 0.99, 0.995, 0.998, 0.999];
-signTh = arrayfun(@(y) fminbnd(@(x) norm(nDist.cdf(x) - y, 2), 1, 5),...
-    alph);
+
 figureDir = fullfile(experimentDir, 'PopFigures\');
-if ~mkdir(figureDir)
-    fprintf(1,'There was an issue with the figure folder...\n');
-    fprintf(1,'Saving the figures in the data folder!\n');
-    fprintf(1,'%s\n',dataDir);
-    figureDir = dataDir;
+if ~exist(figureDir, "dir")
+    if ~mkdir(figureDir)
+        fprintf(1,'There was an issue with the figure folder...\n');
+        fprintf(1,'Saving the figures in the data folder!\n');
+        fprintf(1,'%s\n',dataDir);
+        figureDir = dataDir;
+    end
 end
 [~,expName] = fileparts(experimentDir);
 dataDir = experimentDir;
@@ -546,9 +549,7 @@ for cc = 1:numel(figs)
 end
 
 % Filtering for the whisker responding clusters
-H = cell2mat(cellfun(@(x) x.Pvalues,...
-    arrayfun(@(x) x.Activity, Results(indCondSubs), 'UniformOutput', 0),...
-    'UniformOutput', 0)) < 0.05;
+[rclIdx, H, zH] = getSignificantFlags(Results);
 Htc = sum(H,2);
 % Those clusters responding more than 80% of all whisker stimulating
 % conditions
@@ -561,9 +562,24 @@ Nwru = nnz(wruIdx);
 % Getting the stability measure from the control evoked condition.
 [stableFlag, msrTbl] =...
     getMatrixStabilityMeasure(cat(2,Counts{CtrlCond,2}));
-
-fprintf('%d whisker responding clusters:\n', Nwru);
+%% Saving statistical results
+fprintf('%d responding clusters:\n', Nwru);
 fprintf('- %s\n',gclID{wruIdx})
+resDir = fullfile(dataDir, 'Results');
+if ~exist(resDir, 'dir')
+    if ~mkdir(resDir)
+        fprintf(1, "There was an issue creating %s!\n", resDir)
+        fprintf(1, "Saving results in main directory")
+        resDir = dataDir;
+    end
+end
+resPttrn = 'Res VW%.2f-%.2f ms RW%.2f-%.2f ms SW%.2f-%.2f ms %d Cond.mat';
+resFN = sprintf(resPttrn, timeLapse*1e3, responseWindow*1e3, ...
+    spontaneousWindow*1e3, Nccond);
+resFP = fullfile(resDir, resFN);
+if ~exist(resFP, "file")
+    save(resFP, "Results", "Counts", "configStructure")
+end
 %% Add the response to the table
 try
     clInfoTotal = addvars(clInfoTotal, false(size(clInfoTotal,1),1),...
@@ -1054,10 +1070,6 @@ end
 %% Getting the relative spike times for the whisker responsive units (wru)
 % For each condition, the first spike of each wru will be used to compute
 % the standard deviation of it.
-configStructure = struct('Experiment', fullfile(dataDir,expName),...
-    'Viewing_window_s', timeLapse, 'Response_window_s', responseWindow,...
-    'BinSize_s', binSz, 'Trigger', struct('Name', condNames{chCond},...
-    'Edge',onOffStr), 'ConsideredConditions',{consCondNames});
 cellLogicalIndexing = @(x,idx) x(idx);
 isWithinResponsiveWindow =...
     @(x) x > responseWindow(1) & x < responseWindow(2);
