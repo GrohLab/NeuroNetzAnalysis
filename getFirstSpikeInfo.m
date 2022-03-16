@@ -10,9 +10,7 @@ p = inputParser;
 
 checkRelSpkTmsStruct = @(x) isstruct(x) & all(contains(fieldnames(x), ...
     {'name', 'SpikeTimes'}));
-checkConfStr = @(x) isstruct(x) & all(contains(fieldnames(x), ...
-    {'Experiment', 'Viewing_window_s', 'Response_window_s', 'BinSize_s', ...
-    'Trigger', 'ConsideredConditions'}));
+
 defRes = 5e-4;
 checkRes = @(x) isnumeric(x) & numel(x) == 1 & x > 0;
 
@@ -34,7 +32,7 @@ if checkRelSpkTmsStruct(relSpkTmsStr)
     p.addParameter('CondSubs', defCond, checkCond);
 end
 p.addRequired('relSpkTmsStr', checkRelSpkTmsStruct);
-p.addRequired('confStr', checkConfStr);
+p.addRequired('confStr', @checkConfigStruct);
 p.addParameter('Res', defRes, checkRes);
 p.parse(relSpkTmsStr, confStr, varargin{:});
 % Results from parsing
