@@ -3,6 +3,7 @@ function [signMat, evZmu, signMatpt, evZpt, alph] = ...
 %ZSCORESIGNIFICANCE computes the mean and standard deviation of the
 %spontaneous window spiking activity to get the zscore of the spiking
 %during the evoked window.
+%   [signMat, evZmu, signMatpt, evZpt, alph] = zscoreSignificance(Counts, 'Alpha', alpha)
 %   INPUTS
 %       Counts - Cx2 cell array with C conditions and 2 time periods:
 %                spontaneous (1) and evoked (2)
