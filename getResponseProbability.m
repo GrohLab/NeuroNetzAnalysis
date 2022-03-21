@@ -1,4 +1,5 @@
-function [p_f, pEvok, pSpon] = getResponseProbability(relSpkTms,cStruct,varargin)
+function [p_f, pEvok, pSpon, fishStats] = ...
+    getResponseProbability(relSpkTms,cStruct,varargin)
 %GETRESPONSEPROBABILITY The trial is classified as responsive (true) when
 %the spiking activity within the response window exceeds the spiking
 %activity in the spontaneous window
@@ -29,7 +30,7 @@ function [p_f, pEvok, pSpon] = getResponseProbability(relSpkTms,cStruct,varargin
 
 %% Parse inputs
 
-p = inputParser;
+pfs = inputParser;
 % Required arguments
 checkSpkStruct = @(x) all([isstruct(x), isfield(x,{'name','SpikeTimes'})]);
 
@@ -39,16 +40,16 @@ defVerbose = false;
 checkVerbose = @(x) all([numel(x) == 1, isnumeric(x) | islogical(x)]);
 
 % Parsing
-p.addRequired('relSpkTms', checkSpkStruct);
-p.addRequired('cStruct', @checkConfigStruct);
-p.addOptional('verbose', defVerbose, checkVerbose); 
-p.KeepUnmatched = true;
-p.parse(relSpkTms, cStruct, varargin{:});
+pfs.addRequired('relSpkTms', checkSpkStruct);
+pfs.addRequired('cStruct', @checkConfigStruct);
+pfs.addOptional('verbose', defVerbose, checkVerbose); 
+pfs.KeepUnmatched = true;
+pfs.parse(relSpkTms, cStruct, varargin{:});
 
 % Results
-relSpkTms = p.Results.relSpkTms;
-cStruct = p.Results.cStruct;
-verbose = p.Results.verbose;
+relSpkTms = pfs.Results.relSpkTms;
+cStruct = pfs.Results.cStruct;
+verbose = pfs.Results.verbose;
 %% Validation of time windows
 respWin = cStruct.Response_window_s;
 sponWin = -flip(respWin);
@@ -76,7 +77,10 @@ end
 %% Binarizing the spiking activity associated to the response
 psthOpts = {'BinWidth', binWdth, 'BinLimits', tmLm};
 fnOpts = {'UniformOutput', false};
-Ncl = size(relSpkTms(1).SpikeTimes,1);
+erOpts = {"ErrorHandler",@badSizeSamp};
+[Ncl, Na] = size(relSpkTms(1).SpikeTimes);
+M = [1, -1;0, 1];
+getProps = @(x) round(M*(x'.^[0;1])*Na);
 % Get a PSTH per cluster per trial
 psthPerCluster_perTrial =...
     arrayfun(@(y) cellfun(@(x) histcounts(x, psthOpts{:}),...
@@ -90,13 +94,29 @@ p_f =...
 getSpikingActivityIn = @(x, tw) mean(x(:, psthtx >= tw(1) & psthtx <= tw(2)),2);
 pSpon = cellfun(@(y) cellfun(@(x)...
     mean(getSpikingActivityIn(x,sponWin) > 0), y), p_f, fnOpts{:});
-pSpon = cat(2, pSpon{:});
 pEvok = cellfun(@(y) cellfun(@(x)...
     mean(getSpikingActivityIn(x,respWin) > 0), y), p_f, fnOpts{:});
+[h, pfs] = cellfun(@(x,y) arrayfun(@(u,v) ...
+    fishertest(table(getProps(u), getProps(v))), x, y, fnOpts{:}), ...
+    pSpon, pEvok, fnOpts{:});
+h = gatherValues(h); pfs = gatherValues(pfs);
+pwr = cellfun(@(x,y) arrayfun(@(u,v) sampsizepwr('p', u, v, [], Na), ...
+    x, y, erOpts{:}), pEvok, pSpon, fnOpts{:});
+pwr = cat(2, pwr{:});
 pEvok = cat(2, pEvok{:});
+pSpon = cat(2, pSpon{:});
 p_f = cellfun(@(y) cellfun(@(x)...
     mean(getSpikingActivityIn(x,respWin)...
     > getSpikingActivityIn(x,sponWin)), y), p_f, fnOpts{:});
 p_f = cat(2, p_f{:});
+fishStats = struct('H',h,'P',pfs,'Power',pwr);
 end
 
+function out = badSizeSamp(S, varargin)
+out = NaN;
+end
+
+function x_out = gatherValues(x_in)
+x_out = cellfun(@(x) cell2mat(x), x_in, 'UniformOutput', false);
+x_out = cat(2, x_out{:});
+end
