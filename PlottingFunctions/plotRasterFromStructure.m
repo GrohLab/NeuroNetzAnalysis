@@ -10,9 +10,7 @@ stOpts = {'MarkerEdgeColor','none','MarkerFaceColor','k','Marker','o'};
 p = inputParser;
 checkRSTS = @(x) isstruct(x) &...
     all(contains(fieldnames(x),{'name','SpikeTimes'}));
-checkCS = @(x) isstruct(x) & all(contains(fieldnames(x),...
-    {'Experiment','Viewing_window_s','Response_window_s','BinSize_s',...
-    'Trigger','ConsideredConditions'}));
+
 if checkRSTS(relSpkStruct)
     % Condition number
     Ncond = length(relSpkStruct);
@@ -32,7 +30,7 @@ if checkRSTS(relSpkStruct)
 end
 % 
 p.addRequired('relSpkStruct', checkRSTS);
-p.addRequired('configStruct', checkCS);
+p.addRequired('configStruct', @checkConfigStruct);
 p.parse(relSpkStruct, configStruct, varargin{:});
 
 relSpkStruct = p.Results.relSpkStruct;
