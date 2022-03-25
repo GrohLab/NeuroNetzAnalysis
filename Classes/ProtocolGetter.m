@@ -222,7 +222,7 @@ classdef ProtocolGetter < handle
                     end
                     binFile = binBaseNames{binRecordFile} + ".bin";
                 end
-                if isempty(obj.fileOrder) || ~strlength(obj.fileOrder)
+                if isempty(obj.fileOrder) || ~any(strlength(obj.fileOrder))
                     if obj.awaken
                         obj.fileOrder = string(binBaseNames{binRecordFile})...
                             + ".bin";
