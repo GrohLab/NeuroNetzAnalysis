@@ -10,7 +10,7 @@ defAlpha = 0.05; % 2.5% is 5% in zscore
 checkAlpha = @(x) isnumeric(x) & numel(x)==1 & all(x>0 & x<0.2);
 % Z-proportions
 defZProp = 0.5;
-checkZProp =  @(x) isnumeric(x) & numel(x)==1 & all(x>0.5 & x<=1);
+checkZProp =  @(x) isnumeric(x) & numel(x)==1 & all(x>0 & x<=1);
 % Construction of input parser
 p.addRequired('Results', checkRes)
 p.addParameter('Alpha', defAlpha, checkAlpha);
