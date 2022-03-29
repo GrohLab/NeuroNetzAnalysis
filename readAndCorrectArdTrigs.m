@@ -1,4 +1,4 @@
-function [atTimes, atNames, itTimes, itNames] = readAndCorrectArdTrigs(dataDir)
+function [atTimes, atNames, itTimes, itNames, Nt] = readAndCorrectArdTrigs(dataDir)
 %READANDCORRECTARDTRIGS pairs the trigger times from the arduino board with
 %intan onset trigger times and saves the times in seconds in a file called
 %ArduinoTriggersYYYY-MM-DDTHH_mm_ss.mat accordingly with the
@@ -12,6 +12,7 @@ outFileFormat = "ArduinoTriggers%s.mat";
 derv = @(x) diff(x(:,1));
 dsmt = @(x,y) distmatrix(x, y, 2);
 erOpts = {"ErrorHandler", @falseLaserDetection};
+fs = 3e4;
 % Function to get the edges from the trigger signals in the trigger file.
     function tSubs = getSubsFromTriggers(trig)
         % Unstable line! Display function not working!
@@ -65,7 +66,7 @@ erOpts = {"ErrorHandler", @falseLaserDetection};
     function subs = readTriggerFile(tfName)
         fID = fopen(tfName,'r'); trig = fread(fID, [2,Inf], 'uint16=>int32');
         [~] = fclose(fID); trig = int16(trig - median(trig, 2));
-        trig(1,:) = -trig(1,:);
+        trig(1,:) = -trig(1,:); Ns = length(trig);
         subs = getSubsFromTriggers(trig);
     end
 % Detection of stimulation pairs between arduino and intan
@@ -104,17 +105,47 @@ erOpts = {"ErrorHandler", @falseLaserDetection};
                 "ComparisonMethod", "abs");
             mnSubs(~preArd(mnSubs)) = [];
             [aSubs, iSubs] = ind2sub(size(dm{cc}), mnSubs);
-            mxSub = min(Nti(cc),Nta(cc)); naiveSubs = 1:mxSub;
-            pairFlags = abs(iSubs - aSubs) < abs(Nta(cc) - Nti(cc)) + 1;
-            dstPrs = dm{cc}(mnSubs(pairFlags)); medDst = median(dstPrs);
-            unqePrs = unique([...
-                iSubs(pairFlags), aSubs(pairFlags), dstPrs], "row");
+            mxSub = min(Nti(cc),Nta(cc)); naiveSubs = 1:Nti(cc);
+            pairFlags = abs(iSubs - aSubs) < abs(Nti(cc) - Nta(cc)) + 1;
+            dstPrs = dm{cc}(mnSubs(pairFlags)); 
+            unqePrs = unique([iSubs(pairFlags), aSubs(pairFlags), dstPrs], ...
+                "row");
+            % Correlation between trigger times
+            [sbXc, aLag] = xcorr(atTimes{ca}, itTimes{cc}(:,1));
+            [~, mxLag] = max(sbXc); aLag = aLag(mxLag);
+            dirFlag = diff(unqePrs(:,1:2), 1, 2) == aLag:-sign(aLag):0;
+            dirFlag = any(dirFlag, 2);  %#ok<NASGU> 
+            % Removing pairs going in the opposite direcion of the
+            % cross-corrlation maximum lag. ???
+            % % % % % unqePrs(~dirFlag,:) = [];
+            % Distribution of the distances found between the likely pairs
+            dstDom = linspace(min(unqePrs(:,3))*1.1, 0, 128);
+            dstDist = ksdensity(unqePrs(:,3), dstDom, "Bandwidth", ...
+                floor(range(dstPrs)/sqrt(sum(pairFlags)*2)));
+            % Estimation for the most repeated delay (the actual delay
+            % between intan and arduino)
+            loPks = arrayfun(@(x) fminsearch(@(y) -interp1(dstDom, ...
+                dstDist, y), x), rand(100,1)*(min(dstPrs)*1.1));
+            dstPks = uniquetol(loPks, 0.01/max(abs(loPks)));
+            modDst = min(dstPks)*1.1;
+            % Likelihood of the pair given the distance distribution
+            lk = interp1(dstDom, dstDist./max(dstDist), unqePrs(:,3));
+            xyM = zeros(Nti(cc),3);
+            for ci = naiveSubs
+                iFlag = unqePrs(:,1) == ci;
+                [~, iSb] = max(lk(iFlag));
+                xyM(ci,:) = unqePrs(find(cumsum(iFlag) == iSb, 1, ...
+                    "first"),:);
+            end
+            unqePrs = xyM;
+            % Initialization of the logical reduction loop
             allFlag = unqePrs(:,1:2) == reshape(naiveSubs, 1,1,[]);
             IoA = all(any(allFlag,3))'; snglPairs = zeros(mxSub, 2);
             if all(IoA)
                 [~, IoASub] = min([Nti(cc),Nta(cc)]); IoA = false(2,1);
                 IoA(IoASub) = true;
             end
+            
             auxCnt = 1;
             % Logical reduction of possibilities
             while auxCnt <= mxSub && ~isempty(unqePrs)
@@ -127,7 +158,7 @@ erOpts = {"ErrorHandler", @falseLaserDetection};
                     unlikelyFlag = isnan(appCount(IoA,:));
                     unpairFlag = any(unqePrs(:,IoA) == naiveSubs(unlikelyFlag),2);
                     if all(~unpairFlag)
-                        unlikelyFlag = unqePrs(:,3) < medDst*1.1;
+                        unlikelyFlag = unqePrs(:,3) < modDst*1.1;
                         if all(~unlikelyFlag)
                             fprintf(1, "Taking the pair(s) that is(are) closest to")
                             fprintf(1, " the linear fit\n")
@@ -140,7 +171,7 @@ erOpts = {"ErrorHandler", @falseLaserDetection};
                                 atTimes{ca}(unqePrs(:,2))];
                             yErr = log(abs(M*n - d));
                             bigErrFlag = yErr > 0;
-                            if all(~bigErrFlag)
+                            if all(~bigErrFlag) || all(bigErrFlag)
                                 [~, furthSub] = max(yErr);
                                 unqePrs(furthSub,:) = [];
                             else
@@ -148,7 +179,7 @@ erOpts = {"ErrorHandler", @falseLaserDetection};
                             end
                         else
                             fprintf(1, "Removing pairs with a 'big'")
-                            fprintf(1, " distance. (%.2f)\n", medDst*1.1)
+                            fprintf(1, " distance. (%.2f)\n", modDst*1.1)
                             unqePrs(unlikelyFlag,:) = [];
                         end
                     else
@@ -169,11 +200,6 @@ erOpts = {"ErrorHandler", @falseLaserDetection};
                         snglPairs = zeros(mxSub, 2); auxCnt = 1;
                         fprintf(1, "There was a miscalculation in the ")
                         fprintf(1, "trigger assignment!\n")
-                        % Estimation for the most repeated delay (the
-                        % actual delay between intan and arduino)
-                        loPks = arrayfun(@(x) fminsearch(@(y) -ksdensity(dstPrs, ...
-                            y), x), rand(100,1)*(min(dstPrs)*1.1));
-                        dstPks = uniquetol(loPks, 0.01/max(abs(loPks)));
                         unqePrs = unique([iSubs(pairFlags), ...
                             aSubs(pairFlags), dstPrs], "row");
                         ddstPrs = unqePrs(:,3) - dstPks';
@@ -274,7 +300,7 @@ if any((rpDates - itDates) ~= 0)
     fprintf(1, "%s\n", arrayfun(@(x) string(x.name), itFiles))
     return
 end
-
+Ns = 0;
 %% Searching for arduino instabilities
 for cfp = 1:numel(rpFiles)
     itNames = ["P"; "L"];
@@ -292,13 +318,13 @@ for cfp = 1:numel(rpFiles)
         tfName = fullfile(itFiles(cfp).folder,itFiles(cfp).name);
         % Subs from the trigger signals
         tSubs = readTriggerFile(tfName); 
-        itTimes = detectFalseAlarms();
+        itTimes = detectFalseAlarms(); Nt = Ns/fs;
         % Computing the similarity between the trigger intervals from
         % arduino and intan
         [ddm, dm] = computeSimilarityMatrices();
         correctAnomalities();
         fprintf(1, "Saving %s...\n", atFileName)
-        save(atFileName, "atTimes", "atNames", "itTimes", "itNames");
+        save(atFileName, "atTimes", "atNames", "itTimes", "itNames", "Nt");
     else
         fprintf(1, "File already saved! Skipping...\n")
     end
