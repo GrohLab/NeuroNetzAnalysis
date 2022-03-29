@@ -119,17 +119,27 @@ fs = 3e4;
             % cross-corrlation maximum lag. ???
             % % % % % unqePrs(~dirFlag,:) = [];
             % Distribution of the distances found between the likely pairs
-            dstDom = linspace(min(unqePrs(:,3))*1.1, 0, 128);
-            dstDist = ksdensity(unqePrs(:,3), dstDom, "Bandwidth", ...
+            dstDom = linspace(min(unqePrs(:,3))*1.1, 0.1, 257)';
+            % Quartiles
+            dstDist = histcounts(dstPrs, dstDom, "Normalization", "probability");
+            dstCnt = mean([dstDom(1:end-1),dstDom(2:end)], 2);
+            Q = arrayfun(@(q) fminbnd(@(x) ...
+                norm(interp1(dstCnt, cumsum(dstDist)-q, x),2), ...
+                dstDom(1), dstDom(end)), 1/4 * [1,3]);
+            modDst = Q(1)*1.1;
+            % Kernel distribution
+            dstDist2 = ksdensity(unqePrs(:,3), dstDom, "Bandwidth", ...
                 floor(range(dstPrs)/sqrt(sum(pairFlags)*2)));
             % Estimation for the most repeated delay (the actual delay
             % between intan and arduino)
             loPks = arrayfun(@(x) fminsearch(@(y) -interp1(dstDom, ...
-                dstDist, y), x), rand(100,1)*(min(dstPrs)*1.1));
-            dstPks = uniquetol(loPks, 0.01/max(abs(loPks)));
-            modDst = min(dstPks)*1.1;
+                dstDist2, y), x), rand(100,1)*(min(dstPrs)*1.1));
+            dstPks = [uniquetol(loPks, 0.01/max(abs(loPks)));...
+                -mode(abs(dstPrs))];
             % Likelihood of the pair given the distance distribution
-            lk = interp1(dstDom, dstDist./max(dstDist), unqePrs(:,3));
+            %lk = interp1(dstDom, dstDist2./max(dstDist2), unqePrs(:,3));
+            lk = interp1(dstCnt, dstDist*(1./max(dstDist)), unqePrs(:,3), ...
+                "pchip", "extrap");
             xyM = zeros(Nti(cc),3);
             for ci = naiveSubs
                 iFlag = unqePrs(:,1) == ci;
