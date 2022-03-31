@@ -67,6 +67,8 @@ classdef StepWaveform < DiscreteWaveform
     %% Private Methods
     methods (Access = 'private')
         function RaF = computeTriggers(obj, verbose)
+            hsOpts = {'BinMethod', 'integers', 'Normalization',...
+                'probability'};
             % Checking the data type
             if isa(obj.Data,'double')
                 % Real valued signal
@@ -87,34 +89,35 @@ classdef StepWaveform < DiscreteWaveform
                             if verbose
                                 warning('The cardinality of the rising edges is different for the falling edges')
                             end
-                            if abs(sum(rise) - sum(fall)) == 1
-                                % Determining the missing edge (normally
-                                % would be at the extreme cases; at the
-                                % beguinning or at the end of the time
-                                % series)
-                                if verbose
-                                    fprintf(1,'Perhaps it is a truncated pulse...\n')
-                                end
-                                r = find(rise);
-                                f = find(fall);
-                                dm = distmatrix(r,f);
-                                if numel(r) < numel(f)
-                                    dim = 1;
-                                else
-                                    dim = 2;
-                                end
+                            % Determining the missing edges (normally would
+                            % be at the extreme cases; at the beginning or
+                            % at the end of the time series)
+                            if verbose
+                                fprintf(1,'Perhaps it is a truncated pulse...\n')
+                            end
+                            r = find(rise); f = find(fall);
+                            dm = distmatrix(r,f); [Nr, Nf] = size(dm);
+                            Nsft = abs(Nr-Nf); dgSubs = setdiff(-Nsft:Nsft,0);
+                            Ev = arrayfun(@(x) getEntropyFromPDF( ...
+                                histcounts(diag(dm, x), hsOpts{:})), dgSubs);
+                            [~,eSub] = min(Ev); 
+                            nSubs = 1:min(Nr, Nf);
+                            if dgSubs(eSub) > 0
+                                f = f(nSubs+abs(dgSubs(eSub)));
+                                fall = false(size(rise)); fall(f) = true;
+                            else
+                                r = r(nSubs+abs(dgSubs(eSub)));
+                                rise = false(size(fall)); rise(r) = true;
+                            end
+                            %{
                                 [~,Sub] = max(min(dm,[],dim));
                                 if dim == 2
                                     rise(r(Sub)) = false;
                                 else
                                     fall(f(Sub)) = false;
                                 end
-                            else
-                                if verbose
-                                    fprintf(1,'It might be worth improving ')
-                                    fprintf(1,'signal quality\n')
-                                end
-                            end % abs(sum(rise) - sum(fall)) == 1
+                            %}
+
                         end % sum(rise) ~= sum(fall)
                         try
                             RaF = [rise, fall];
