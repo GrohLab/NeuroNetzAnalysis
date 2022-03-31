@@ -102,7 +102,7 @@ classdef StepWaveform < DiscreteWaveform
                                 histcounts(diag(dm, x), hsOpts{:})), dgSubs);
                             [~,eSub] = min(Ev); 
                             nSubs = 1:min(Nr, Nf);
-                            if dgSubs(eSub) > 0
+                            if Nf > Nr
                                 f = f(nSubs+abs(dgSubs(eSub)));
                                 fall = false(size(rise)); fall(f) = true;
                             else
