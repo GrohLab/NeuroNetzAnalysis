@@ -12,6 +12,7 @@ outFileFormat = "ArduinoTriggers%s.mat";
 derv = @(x) diff(x(:,1));
 dsmt = @(x,y) distmatrix(x, y, 2);
 erOpts = {"ErrorHandler", @falseLaserDetection};
+var2Check = {'atTimes','atNames','itTimes','itNames','Nt'};
 fs = 3e4;
 % Function to get the edges from the trigger signals in the trigger file.
     function tSubs = getSubsFromTriggers(trig)
@@ -312,12 +313,14 @@ if any((rpDates - itDates) ~= 0)
 end
 Ns = 0;
 %% Searching for arduino instabilities
+var2save = {'atTimes', 'atNames', 'itTimes', 'itNames', 'Nt', 'minOfSt'};
 for cfp = 1:numel(rpFiles)
     itNames = ["P"; "L"];
     flipFlag = false;
     atFileName = fullfile(rpFiles(cfp).folder,...
         sprintf(outFileFormat, string(rpDates(cfp), dateFormStr)));
-    if ~exist(atFileName, "file")
+    atMObj = matfile(atFileName); varIn = who(atMObj);
+    if ~exist(atFileName, "file") || ~all(contains(varIn,var2Check))
         % Read file for arduino trigger times and names
         [atTimes, atNames] = getArduinoTriggers(...
             fullfile(rpFiles(cfp).folder, rpFiles(cfp).name));
@@ -332,9 +335,15 @@ for cfp = 1:numel(rpFiles)
         % Computing the similarity between the trigger intervals from
         % arduino and intan
         [ddm, dm] = computeSimilarityMatrices();
-        correctAnomalities();
+        correctAnomalities(); tmMat = atNames == itNames;
+        itNames(~any(tmMat,2)) = []; tmMat(~any(tmMat,2)) = [];
+        [iS, aS] = find(tmMat); 
+        ofSts = arrayfun(@(x) itTimes{iS(x)}(1,1) - atTimes{aS(x)}(1), ...
+            1:size(atNames)); minOfSt = min(ofSts);
+        fprintf(1, "Correcting arduino triggers by %.3f seconds\n", minOfSt)
+        atTimes = cellfun(@(x) x+minOfSt, atTimes, fnOpts{:});
         fprintf(1, "Saving %s...\n", atFileName)
-        save(atFileName, "atTimes", "atNames", "itTimes", "itNames", "Nt");
+        save(atFileName, var2save{:});
     else
         fprintf(1, "File already saved! Skipping...\n")
     end
