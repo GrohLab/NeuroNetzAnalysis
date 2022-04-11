@@ -75,10 +75,10 @@ classdef StepWaveform < DiscreteWaveform
                 ds = diff(obj.Data);
                 if sum(ds>0) ~= numel(obj.Data)-1
                     data = obj.Data - mean(obj.Data);
-                    zs2 = (mean(data)/std(obj.Data))^2;
+                     zs2 = (mean(data)/std(obj.Data))^2;
                     if verbose; fprintf(1,'The square z-score of the signal is %.2f\n',zs2); end
-                    rostd = range(data)./std(data);
-                    if zs2 < 0.9 && rostd < 7
+                    %rostd = range(data)./std(data);
+                    if zs2 < 0.9 %&& rostd < 7
                         rise = false(obj.NSamples,1);    % Rising edge times
                         fall = rise;                    % Falling edge times
                         % Maximum value divided by three
