@@ -657,7 +657,7 @@ condHist = zeros(size(binAx,2)-1, Nccond);
 firstOrdStats = zeros(2,Nccond);
 condParams = zeros(M,3,Nccond);
 txpdf = responseWindow(1):1/fs:responseWindow(2);
-condPDF = zeros(numel(txpdf),Nccond);
+%condPDF = zeros(numel(txpdf),Nccond);
 csvSubfx = sprintf(' SW%.1f-%.1f ms RW%.1f-%.1f ms VW%.1f-%.1f ms (%s).csv',...
     spontaneousWindow*1e3, responseWindow*1e3, timeLapse*1e3, filtStr);
 existFlag = false;
