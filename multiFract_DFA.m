@@ -27,7 +27,8 @@ for s = 1:length(scale)
     nseg = floor(length(profile)/scale(s));
     for v=1:nseg
         idxs = uint32((((v-1) * round(scale(s))) + 1):v*scale(s));
-        [polft,~]=detrend_profile(m,ts(idxs),profile(idxs));
+        [polft,~]=detrend_profile(m,ts(idxs),profile(idxs)); 
+        polft = polft';
         bs{s}(v) = sqrt(mean((profile(idxs)-polft).^2));
     end
     % Current q (cq)
