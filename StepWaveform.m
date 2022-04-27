@@ -75,10 +75,16 @@ classdef StepWaveform < DiscreteWaveform
                 ds = diff(obj.Data);
                 if sum(ds>0) ~= numel(obj.Data)-1
                     data = obj.Data - mean(obj.Data);
-                     zs2 = (mean(data)/std(obj.Data))^2;
-                    if verbose; fprintf(1,'The square z-score of the signal is %.2f\n',zs2); end
+                    % zs2 = (mean(data)/std(obj.Data))^2;
+                    % if verbose; fprintf(1,'The square z-score of the signal is %.2f\n',zs2); end
+                    zdata = zscore(data); [Zh, zdom] = ksdensity(zdata);
+                    zDist = fitdist(zdata(:), 'Normal');
+                    Dkl = KullbackLeiblerDivergence(Zh, pdf(zDist, zdom));
+                    if verbose; fprintf(1,'KL divergence is %.2f\n',Dkl); 
+                    end
                     %rostd = range(data)./std(data);
-                    if zs2 < 0.9 %&& rostd < 7
+                    %if zs2 < 0.9 %&& rostd < 7
+                    if Dkl > 0.5
                         rise = false(obj.NSamples,1);    % Rising edge times
                         fall = rise;                    % Falling edge times
                         % Maximum value divided by three
