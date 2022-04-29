@@ -29,16 +29,19 @@ fs = 3e4;
     end
 % Function to get arduino trigger times
     function [atTimes, atNames] = getArduinoTriggers(rpFilePath)
+        atTimes = cell(1,1); atNames = "";
         % Read the roller position file
         [rp, tTimes] = readRollerPositionsFile(rpFilePath);
         % Converting the trigger times from microseconds to seconds
-        tTimes(1,:) = cellfun(@(x) (x - rp(1,2))/1e6, tTimes(1,:), fnOpts{:});
-        % Deleting noise entries to the arduino (times with less than 1 second
-        % difference)
-        delFlags = cellfun(@(x) [false;diff(x) < 1], tTimes(1,:), fnOpts{:});
-        tTimes(1,:) = cellfun(@(x,y) x(~y), tTimes(1,:), delFlags, fnOpts{:});
-        % Arduino times
-        atTimes = tTimes(1,:); atNames = string(tTimes(2,:));
+        if ~isempty(tTimes)
+            tTimes(1,:) = cellfun(@(x) (x - rp(1,2))/1e6, tTimes(1,:), fnOpts{:});
+            % Deleting noise entries to the arduino (times with less than 1 second
+            % difference)
+            delFlags = cellfun(@(x) [false;diff(x) < 1], tTimes(1,:), fnOpts{:});
+            tTimes(1,:) = cellfun(@(x,y) x(~y), tTimes(1,:), delFlags, fnOpts{:});
+            % Arduino times
+            atTimes = tTimes(1,:); atNames = string(tTimes(2,:));
+        end
     end
 % Function to eliminate a trigger that was detected in the roller position
 % file but didn't actually happen according to the ground truth: the intan
@@ -314,21 +317,34 @@ end
 Ns = 0;
 %% Searching for arduino instabilities
 var2save = {'atTimes', 'atNames', 'itTimes', 'itNames', 'Nt', 'minOfSt'};
+flfl = @(x, y) fullfile(x, y);
+fobPthIdx = @(x, y) fullfile(x(y).folder, x(y).name);
+fobPth = @(x) fullfile(x.folder, x.name);
+lcFiles = dir(flfl(string(dataDir), "Laser*.csv"));
+pcFiles = dir(flfl(string(dataDir), "Puff*.csv"));
 for cfp = 1:numel(rpFiles)
     itNames = ["P"; "L"];
     flipFlag = false;
-    atFileName = fullfile(rpFiles(cfp).folder,...
+    atFileName = flfl(rpFiles(cfp).folder,...
         sprintf(outFileFormat, string(rpDates(cfp), dateFormStr)));
     atMObj = matfile(atFileName); varIn = who(atMObj);
     if ~exist(atFileName, "file") || ~all(contains(varIn,var2Check))
         % Read file for arduino trigger times and names
-        [atTimes, atNames] = getArduinoTriggers(...
-            fullfile(rpFiles(cfp).folder, rpFiles(cfp).name));
+        [atTimes, atNames] = getArduinoTriggers(fobPthIdx(rpFiles, cfp));
+        if isempty(atTimes{1})
+            % Old version without trigger times in the roller position
+            trigFls = [lcFiles(cfp), pcFiles(cfp)];
+            [atTimes, atNames] = arrayfun(@getCSVTriggers,...
+                arrayfun(@(x) string(fobPth(x)),trigFls), fnOpts{:});
+            atTimes = cellfun(@(x) x(:,1) - second(rpDates(cfp), ...
+                "secondofday"), atTimes, fnOpts{:});
+            atNames = cat(2, atNames{:});
+        end
         if ~all(itNames == atNames)
             flipFlag = true;
         end
         % Read trigger signals
-        tfName = fullfile(itFiles(cfp).folder,itFiles(cfp).name);
+        tfName = fobPthIdx(itFiles, cfp);
         % Subs from the trigger signals
         tSubs = readTriggerFile(tfName); 
         itTimes = detectFalseAlarms(); Nt = Ns/fs;
@@ -349,6 +365,29 @@ for cfp = 1:numel(rpFiles)
     end
 end
 
+end
+
+function [trigTime, trigName] = getCSVTriggers(fPath)
+clean4Date = @(x) extractBefore(extractAfter(x,','), '+');
+clean4LV = @(x) extractBefore(x,',');
+dateFormStr = 'uuuu-MM-dd''T''HH:mm:ss.SSSS';
+dtOpts = {'InputFormat', dateFormStr};
+fnOpts = {'UniformOutput', false};
+if exist(fPath, 'file')
+    fID = fopen(fPath, 'r');lns = textscan(fID,'%s',Inf);[~] = fclose(fID);
+    trigTime = datetime(clean4Date(lns{:}), dtOpts{:});
+    trigTime = second(trigTime, "secondofday");
+    udVal = arrayfun(@str2num, lower(string(clean4LV(lns{:}))));
+    if sum(udVal) == sum(~udVal)
+        trigTime = cat(2, trigTime(udVal), trigTime(~udVal));
+    else
+        trigTime = arrayfun(@(x) trigTime(xor(udVal, x)), [true false], fnOpts{:});
+    end
+    if ~udVal(1)
+        trigTime = flip(trigTime,2);
+    end
+    [~, trigName, ~] = fileparts(fPath); trigName = extract(trigName,1);
+end
 end
 
 function A = falseLaserDetection(S, varargin)
