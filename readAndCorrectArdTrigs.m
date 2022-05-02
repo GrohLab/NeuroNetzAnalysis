@@ -329,31 +329,36 @@ for cfp = 1:numel(rpFiles)
         sprintf(outFileFormat, string(rpDates(cfp), dateFormStr)));
     atMObj = matfile(atFileName); varIn = who(atMObj);
     if ~exist(atFileName, "file") || ~all(contains(varIn,var2Check))
-        % Read file for arduino trigger times and names
+        % Read file for *arduino* trigger times and names
         [atTimes, atNames] = getArduinoTriggers(fobPthIdx(rpFiles, cfp));
+        % Read trigger signals and extracet subs from the *intan* trigger
+        % signals
+        tfName = fobPthIdx(itFiles, cfp); tSubs = readTriggerFile(tfName);
         if isempty(atTimes{1})
+            Nti = cellfun(@(x) size(x, 1), tSubs(:));
             % Old version without trigger times in the roller position
             trigFls = [lcFiles(cfp), pcFiles(cfp)];
             [atTimes, atNames] = arrayfun(@getCSVTriggers,...
                 arrayfun(@(x) string(fobPth(x)),trigFls), fnOpts{:});
-            atTimes = cellfun(@(x) x(:,1) - second(rpDates(cfp), ...
-                "secondofday"), atTimes, fnOpts{:});
             atNames = cat(2, atNames{:});
+            [iS, aS, itNames] = matchOrder(atNames, itNames);
+            Nta = cellfun(@(x) size(x, 1), atTimes(:)); 
+            trm = Nta(aS) - Nti(iS);
+            atTimes = cellfun(@(x,y) x(y+1:end,1) - (10 + ...
+                second(rpDates(cfp), "secondofday")), atTimes, ...
+                num2cell(trm)', fnOpts{:});
+            itTimes = detectFalseAlarms(); Nt = Ns/fs;
+        else
+            if ~all(itNames == atNames)
+                flipFlag = true;
+            end
+            itTimes = detectFalseAlarms(); Nt = Ns/fs;
+            % Computing the similarity between the trigger intervals from
+            % arduino and intan
+            [ddm, dm] = computeSimilarityMatrices();
+            correctAnomalities();
+            [iS, aS, itNames] = matchOrder(atNames, itNames); 
         end
-        if ~all(itNames == atNames)
-            flipFlag = true;
-        end
-        % Read trigger signals
-        tfName = fobPthIdx(itFiles, cfp);
-        % Subs from the trigger signals
-        tSubs = readTriggerFile(tfName); 
-        itTimes = detectFalseAlarms(); Nt = Ns/fs;
-        % Computing the similarity between the trigger intervals from
-        % arduino and intan
-        [ddm, dm] = computeSimilarityMatrices();
-        correctAnomalities(); tmMat = atNames == itNames;
-        itNames(~any(tmMat,2)) = []; tmMat(~any(tmMat,2)) = [];
-        [iS, aS] = find(tmMat); 
         ofSts = arrayfun(@(x) itTimes{iS(x)}(1,1) - atTimes{aS(x)}(1), ...
             1:size(atNames)); minOfSt = min(ofSts);
         fprintf(1, "Correcting arduino triggers by %.3f seconds\n", minOfSt)
@@ -365,6 +370,12 @@ for cfp = 1:numel(rpFiles)
     end
 end
 
+end
+
+function [iS, aS, itNames] = matchOrder(atNames, itNames)
+tmMat = atNames == itNames;
+itNames(~any(tmMat,2)) = []; tmMat(~any(tmMat,2)) = [];
+[iS, aS] = find(tmMat);
 end
 
 function [trigTime, trigName] = getCSVTriggers(fPath)
