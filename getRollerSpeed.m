@@ -6,9 +6,19 @@ function [vf, rollTx] = getRollerSpeed(rollerPositions, fsRoll)
 %   signal.
 %Emilio Isaias-Camacho@GrohLab 2021
 
-% Assuming the time resolution is micro seconds 
-rollTx = rollerPositions(1,2)/1e6:1/fsRoll:rollerPositions(end,2)/1e6;
-rxx = interp1(rollerPositions(:,2)/1e6, rollerPositions(:,1), rollTx, "pchip");
+us = 1e-6;
+if isa(rollerPositions, "table")
+    rt = [single(rollerPositions.RollerX),...
+        seconds(rollerPositions.RollerT)];
+    rt(circshift(diff(rt(:,2))==0, 1),:) = [];    
+elseif isa(rollerPositions, "numeric")
+    % Assuming the time resolution is micro seconds 
+    rt = rollerPositions*us;
+    rxx = interp1(rollerPositions(:,2)*us, rollerPositions(:,1), rollTx, ...
+        "pchip");
+end
+rollTx = rt(2,1):1/fsRoll:rt(2,end);
+rxx = interp1(rt(:,2), rt(:,1), rollTx, "pchip");
 % Filtering for 18 Hz
 v = diff(rxx); [b, a] = butter(10, (2*18)/fsRoll, "low"); 
 vf = filtfilt(b, a, v);
