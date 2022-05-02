@@ -37,7 +37,7 @@ end
 crtName = @(x) fullfile(behDir, x);
 getName = @(x, y) crtName(x(y).name);
 flfa = @(x) fullfile(x.folder, x.name);
-vars2load = {'Nt', 'atTimes', 'atNames', 'itTimes', 'itNames','minOfSt'};
+vars2load = {'Nt', 'atTimes', 'atNames', 'itTimes', 'itNames', 'minOfSt'};
 dy = dt(1); dy.Format = 'yyyy-MM-dd'; dt.Format = '''T''HH_mm_ss';
 auxStr = [];
 for cdt = 1:numel(dt)-1
