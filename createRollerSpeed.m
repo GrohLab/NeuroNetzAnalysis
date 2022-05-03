@@ -63,8 +63,13 @@ if ~isfield(tStruct, 'minOfSt')
 else
     minOfSt = [tStruct.minOfSt];
 end
-vf = arrayfun(@(x) padarray(vf{x}, [0, round(minOfSt(x)*fr(x))], 0, 'pre'), ...
-    1:Ne, fnOpts{:});
+if minOfSt > 0
+    vf = arrayfun(@(x) padarray(vf{x}, [0, round(minOfSt(x)*fr(x))], 0, ...
+        'pre'), 1:Ne, fnOpts{:});
+else
+    minOfSt = minOfSt - (10 + second(dt, "secondofday"));
+    fprintf(1, 'Debug');
+end
 Texp = arrayfun(@(x) size(vf{x}, 2)/fr(x), 1:Ne);
 if isfield(tStruct, 'Nt')
     vf = arrayfun(@(x) padarray(vf{x}, [0, round(abs(Texp(x) - ...
