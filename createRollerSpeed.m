@@ -68,6 +68,7 @@ if minOfSt > 0
         'pre'), 1:Ne, fnOpts{:});
 else
     minOfSt = minOfSt - 10;
+    % figure; plot((0:length(vf{1}(sign(minOfSt)*round(minOfSt*fr):end))-1)/fr,vf{1}(sign(minOfSt)*round(minOfSt*fr):end))
     fprintf(1, 'Debug');
 end
 Texp = arrayfun(@(x) size(vf{x}, 2)/fr(x), 1:Ne);
