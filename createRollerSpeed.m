@@ -57,19 +57,27 @@ efName = string(arrayfun(@(x) getName(eFiles, x), 1:Ne, fnOpts{:}));
 rp = arrayfun(@(x) readRollerPositionsFile(x), efName, fnOpts{:});
 [vf, rollTx] = arrayfun(@(x) getRollerSpeed(rp{x}, fr(x)), 1:Ne, ...
     fnOpts{:});
-Ns = cellfun(@(x) numel(x)-1, rollTx);
 if ~isfield(tStruct, 'minOfSt')
     minOfSt = getArd_IntOffset();
 else
     minOfSt = [tStruct.minOfSt];
 end
-if minOfSt > 0
-    vf = arrayfun(@(x) padarray(vf{x}, [0, round(minOfSt(x)*fr(x))], 0, ...
-        'pre'), 1:Ne, fnOpts{:});
-else
-    minOfSt = minOfSt - 10;
-    % figure; plot((0:length(vf{1}(sign(minOfSt)*round(minOfSt*fr):end))-1)/fr,vf{1}(sign(minOfSt)*round(minOfSt*fr):end))
-    fprintf(1, 'Debug');
+rpFrmt = string(cellfun(@class, rp, fnOpts{:}));
+switch rpFrmt
+    case "double"
+        if minOfSt > 0
+            vf = arrayfun(@(x) padarray(vf{x}, [0, ...
+                round(minOfSt(x)*fr(x))], 0, 'pre'), 1:Ne, fnOpts{:});
+        else
+            fprintf(1, 'Manual alignment requred!\n')
+            fprintf(1, 'Aborting!\n')
+            return
+        end
+    case "table"
+        ibFlags = arrayfun(@(x, y, z) (x{:} - (10 + second(y, "secondofday") ...
+            - z)) < 0, rollTx, dt, minOfSt, fnOpts{:});
+        vf = cellfun(@(x, y) x(~y(1:end-1)), vf, ibFlags, fnOpts{:});
+    otherwise
 end
 Texp = arrayfun(@(x) size(vf{x}, 2)/fr(x), 1:Ne);
 if isfield(tStruct, 'Nt')
@@ -79,7 +87,8 @@ if isfield(tStruct, 'Nt')
     rollTx = arrayfun(@(x) ...
         rollTx{x}(1):1/fr(x):Texp(x)+rollTx{x}(1)-1/fr(x), 1:Ne, fnOpts{:});
 end
-vf = cellfun(@(x) x(:), vf, fnOpts{:}); vf = cat(1, vf{:});
+vf = cellfun(@(x) x(:), vf, fnOpts{:}); Ns = cellfun(@(x) numel(x), vf);
+vf = cat(1, vf{:});
 if ~std(fr)
     fr = mean(fr);
 else
