@@ -270,9 +270,7 @@ fs = 3e4;
                 % Correct cardinality
             end
         end
-        
     end
-
 %% Validation section
 % Given folder exists?
 if ~exist(dataDir, "dir")
