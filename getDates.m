@@ -6,8 +6,16 @@ function [fDates, dateFormStr] = getDates(fileNames, baseName)
 dateFormStr = 'yyyy-MM-dd''T''HH_mm_ss';
 fnOpts = {"UniformOutput", false};
 getDate = @(x, y) extractBefore(extractAfter(x, y), ".");
-fDates = arrayfun(@(x) getDate(x.name, baseName), fileNames,...
-    fnOpts{:});
+switch class(fileNames)
+    case 'struct'
+        fDates = arrayfun(@(x) getDate(x.name, baseName), fileNames,...
+            fnOpts{:});
+    case {'char', 'string'}
+        fDates = arrayfun(@(x) getDate(x, baseName), fileNames,...
+            fnOpts{:});
+    otherwise
+        error('Unrecognised input format! Must be a string or dir() output!')
+end
 fDates = cellfun(@(x) datetime(x, 'InputFormat', dateFormStr),...
     fDates);
 fDates.Format = dateFormStr;
