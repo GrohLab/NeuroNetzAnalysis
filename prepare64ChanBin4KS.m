@@ -85,8 +85,10 @@ end
 fNames = arrayfun(getName, recFiles);
 try
     mem = memory;
+    mFlag = true;
 catch
-   fprintf(1, "Memory pack unavailable!\n")
+    fprintf(1, "Memory pack unavailable!\n")
+    mFlag = false;
 end
 % Overwrite the output file.
 fPerm = 'w';
@@ -95,7 +97,11 @@ for cf = 1:Nrf
     % How many bytes is this file?
     fWeight = recFiles.bytes;
     % How many bytes are available in this computer. Occupying 85%
-    mxBytes = 0.8 * mem.MaxPossibleArrayBytes;
+    if mFlag
+        mxBytes = 0.8 * mem.MaxPossibleArrayBytes;
+    else
+        mxBytes = fWeight;
+    end
     % Number of samples in the file with Nch channels. 2 bytes from uint16.
     % 4 from int32 and considering the samples that fit in memory. 
     Ns = fWeight/(2*Nch); Nms = mxBytes/(4*Nch);
