@@ -15,13 +15,14 @@ function [rollerposition, tTimes, rollTrigTimes] = readRollerPositionsFile(filep
 %                       when these occurred in microseconds.
 %Emilio Isaias-Camacho @ GrohLab 2021
 tTimes = [];
-fID = fopen(filepath, 'r');
-rollerline = textscan(fID, '%d,2021-%*d-%*dT%d:%d:%f+02:00');
-fclose(fID);
-
-%% Auxiliary functions
+clean4Date = @(x) extractBefore(extractAfter(x,','), '+');
+clean4LV = @(x) extractBefore(x,',');
+dateFormStr = 'uuuu-MM-dd''T''HH:mm:ss.SSSS';
+dtOpts = {'InputFormat', dateFormStr};
+fnOpts = {'UniformOutput', false};
+fID = fopen(filepath, 'r');lns = textscan(fID,'%s',Inf);[~] = fclose(fID);
 refTime = 0; refRoT = 'C'; nxtRoT = '';
-
+%% Auxiliary functions
     function placeTriggerInNextRow()
         % Save the time fragment from the position, if any.
         fetchNextRoT()
@@ -147,15 +148,21 @@ refTime = 0; refRoT = 'C'; nxtRoT = '';
     end
 
 %% Reading file
-if all(cellfun(@(x) ~isempty(x), rollerline))
+if all(cellfun(@(x) ~isempty(x), lns))
     % Roller file corresponding to the Bonsai timestamps
-    rollerx = int16(rollerline{1}); rollert = string(rollerline{2})+":"+...
-        rollerline{3}+":"+rollerline{4}; rollert = duration(rollert);
-    rollert.Format = 'hh:mm:ss.SSSSSSS';
-    rollerposition = table(rollerx, rollert, ...
-        'VariableNames', {'RollerX','RollerT'});
+    rollerx = str2double(clean4LV(lns{:}));
+    rollerx = unwrap(rollerx, 2^15);
+    rollert = datetime(clean4Date(lns{:}), dtOpts{:});
+    rollert = second(rollert, "secondofday");
+    rollerposition = table(rollerx, rollert, 'VariableNames', ...
+        {'RollerX','RollerT'});
+%     rollerx = unwrap(str2double(rollerline{1}), 2^15);
+%     rollerx = int16(rollerline{1}); rollert = string(rollerline{2})+":"+...
+%         rollerline{3}+":"+rollerline{4}; rollert = duration(rollert);
+%     rollert.Format = 'hh:mm:ss.SSSSSSS';
+%     rollerposition = table(rollerx, rollert, ...
+%         'VariableNames', {'RollerX','RollerT'});
 else
-    fnOpts = {"UniformOutput", false};
     ops = delimitedTextImportOptions("NumVariables", 2);
     ops.DataLines = [1, Inf];
     ops.Delimiter = ",";
