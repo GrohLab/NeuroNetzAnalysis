@@ -8,8 +8,7 @@ function [vf, rollTx] = getRollerSpeed(rollerPositions, fsRoll)
 
 us = 1e-6;
 if isa(rollerPositions, "table")
-    rt = [double(rollerPositions.RollerX),...
-        seconds(rollerPositions.RollerT)];
+    rt = [double(rollerPositions.RollerX), rollerPositions.RollerT];
     rt(circshift(diff(rt(:,2))==0, 1),:) = [];    
 elseif isa(rollerPositions, "numeric")
     % Assuming the time resolution is micro seconds 
