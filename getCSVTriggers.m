@@ -12,7 +12,8 @@ if exist(fPath, 'file')
     if sum(udVal) == sum(~udVal)
         trigTime = cat(2, trigTime(udVal), trigTime(~udVal));
     else
-        trigTime = arrayfun(@(x) trigTime(xor(udVal, x)), [true false], fnOpts{:});
+        trigTime = arrayfun(@(x) trigTime(xor(udVal, x)), [false true], fnOpts{:});
+        fprintf(1, "Trigger onset and offset unmatched!\n")
     end
     if ~udVal(1)
         trigTime = flip(trigTime,2);
