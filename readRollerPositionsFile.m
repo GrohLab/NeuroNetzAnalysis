@@ -148,11 +148,11 @@ refTime = 0; refRoT = 'C'; nxtRoT = '';
     end
 
 %% Reading file
-if all(cellfun(@(x) ~isempty(x), lns))
+rollert = datetime(clean4Date(lns{:}), dtOpts{:});
+if all(cellfun(@(x) ~isempty(x), lns)) && ~all(isnat(rollert))
     % Roller file corresponding to the Bonsai timestamps
     rollerx = str2double(clean4LV(lns{:}));
     rollerx = unwrap(rollerx, 2^15);
-    rollert = datetime(clean4Date(lns{:}), dtOpts{:});
     rollert = second(rollert, "secondofday");
     rollerposition = table(rollerx, rollert, 'VariableNames', ...
         {'RollerX','RollerT'});
