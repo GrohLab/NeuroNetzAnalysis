@@ -69,9 +69,8 @@ switch rpFrmt
             vf = arrayfun(@(x) padarray(vf{x}, [0, ...
                 round(minOfSt(x)*fr(x))], 0, 'pre'), 1:Ne, fnOpts{:});
         else
-            fprintf(1, 'Manual alignment requred!\n')
-            fprintf(1, 'Aborting!\n')
-            return
+            vf = arrayfun(@(x) vf{x}(round(abs(minOfSt(x))*fr(x)):end), 1:Ne, ...
+                fnOpts{:});
         end
     case "table"
         ibFlags = arrayfun(@(x, y, z) (x{:} - (10 + second(y, "secondofday") ...
