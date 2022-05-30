@@ -9,7 +9,7 @@ p = inputParser;
 
 % Required arguments auxiliary function and variables
 pfn = ["LogPSTH", "Log10TimeAxis", "TimeAxis", "ConditionNames",...
-    "DeltaLogStep", "Normalization"];
+    "DeltaLogStep", "Normalization", "Log10BinEdges"];
 checkStruct = @(x) all([isstruct(x), isfield(x, pfn)]);
 
 % Required parameters
@@ -76,13 +76,13 @@ set(lgnd,'Location','best','Box','off');
 box(natAx(Ncond + 1), 'off'); 
 % Plotting PSTH per cluster
 tx = PSTHstruct.Log10TimeAxis; mxClr = max(PSTHstruct.LogPSTH(:));
-% clrMp = flip(gray(2^8));
+clrMp = rocket(2^8);
 for ccond = 1:Ncond
     imgMat = [ccond, 0; ccond, Ncond];
     natAx(ccond) = subplot(3, Ncond, imgMat * [1;1], natP{:}); 
     imagesc(natAx(ccond), 'XData', tx, 'YData', 1:Ncl,...
         'CData', PSTHstruct.LogPSTH(:,:,ccond),[0, mxClr]);
-%     colormap(natAx(ccond), clrMp)
+    colormap(natAx(ccond), clrMp)
     xticklabels(natAx(ccond), 10.^(xticks(natAx(ccond))+3));
     title(natAx(ccond), PSTHstruct.ConditionNames(ccond));
     ylim(natAx(ccond), [1, Ncl]); box(natAx(ccond), 'off');

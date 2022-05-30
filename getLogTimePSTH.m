@@ -122,7 +122,8 @@ logPSTH = logPSTH./reshape(divsr, [1, 1, Ncond]);
 
 PSTHstruct = struct('LogPSTH',logPSTH, 'Log10TimeAxis', binCenters,...
     'TimeAxis', 10.^binCenters, 'ConditionNames', string(conditionNames),...
-    'DeltaLogStep', deltaLogT, 'Normalization', normStr);
+    'DeltaLogStep', deltaLogT, 'Normalization', normStr, ...
+    'Log10BinEdges', binEdges);
 if verbose
     fprintf(1, ' done!\n')
 end
