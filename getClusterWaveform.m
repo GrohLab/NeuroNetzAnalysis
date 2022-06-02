@@ -14,7 +14,7 @@ function clWaveforms = getClusterWaveform(clusterID, dataDir)
 
 %% Input validation
 clWaveforms = cell(1,2);
-checkNature = @(x) [iscell(x), ischar(x), isnumeric(x)];
+checkNature = @(x) [iscell(x); ischar(x); isnumeric(x)];
 getLastCell = @(x) x{numel(x)};
 if ~any(checkNature(clusterID))
     fprintf(1,'Unsupported input!\n')
@@ -28,7 +28,7 @@ if ~exist(dataDir, 'dir')
     return
 end
 % Converting the ID(s) to cell arrays according to their nature
-switch bi2de(checkNature(clusterID),'left-msb')
+switch bit2int(checkNature(clusterID),3)
     case 1
         fprintf(1,'Numeric ID detected\n')
         clusterID = {num2str(clusterID)};
