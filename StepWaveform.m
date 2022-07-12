@@ -67,8 +67,6 @@ classdef StepWaveform < DiscreteWaveform
     %% Private Methods
     methods (Access = 'private')
         function RaF = computeTriggers(obj, verbose)
-            hsOpts = {'BinMethod', 'integers', 'Normalization',...
-                'probability'};
             % Checking the data type
             if isa(obj.Data,'double')
                 % Real valued signal
@@ -84,7 +82,7 @@ classdef StepWaveform < DiscreteWaveform
                     end
                     %rostd = range(data)./std(data);
                     %if zs2 < 0.9 %&& rostd < 7
-                    if Dkl > 0.5
+                    if Dkl > 1/3
                         rise = false(obj.NSamples,1);    % Rising edge times
                         fall = rise;                    % Falling edge times
                         % Maximum value divided by three
@@ -104,9 +102,10 @@ classdef StepWaveform < DiscreteWaveform
                             end
                             r = find(rise); f = find(fall);
                             dm = distmatrix(r,f); [Nr, Nf] = size(dm);
-                            Nsft = abs(Nr-Nf); dgSubs = setdiff(-Nsft:Nsft,0);
+                            Nsft = abs(Nr-Nf); dgSubs = -Nsft:Nsft;
                             Ev = arrayfun(@(x) getEntropyFromPDF( ...
-                                histcounts(diag(dm, x), hsOpts{:})), dgSubs);
+                                histcounts(diag(dm, x), 'BinLimits', ...
+                                [min(dm(:)),max(dm(:))])), dgSubs);
                             [~,eSub] = min(Ev); 
                             nSubs = 1:min(Nr, Nf);
                             if Nf > Nr
