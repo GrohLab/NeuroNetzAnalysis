@@ -67,6 +67,8 @@ classdef StepWaveform < DiscreteWaveform
     %% Private Methods
     methods (Access = 'private')
         function RaF = computeTriggers(obj, verbose)
+            fanoFact = @(x) std(x,1)/mean(x);
+            fnOpts = {'UniformOutput', false};
             % Checking the data type
             if isa(obj.Data,'double')
                 % Real valued signal
@@ -101,12 +103,17 @@ classdef StepWaveform < DiscreteWaveform
                                 fprintf(1,'Perhaps it is a truncated pulse...\n')
                             end
                             r = find(rise); f = find(fall);
-                            dm = distmatrix(r,f); [Nr, Nf] = size(dm);
+                            dm = distmatrix(r,f); [Nr, Nf] = size(dm);     
                             Nsft = abs(Nr-Nf); dgSubs = -Nsft:Nsft;
+                            dgdm = arrayfun(@(x) diag(dm, x), dgSubs, ...
+                                fnOpts{:});
+                            dgdm = cat(1, dgdm{:});
                             Ev = arrayfun(@(x) getEntropyFromPDF( ...
                                 histcounts(diag(dm, x), 'BinLimits', ...
-                                [min(dm(:)),max(dm(:))])), dgSubs);
-                            [~,eSub] = min(Ev); 
+                                [min(dgdm(:)),max(dgdm(:))])), dgSubs);
+                            ffact = arrayfun(@(x) fanoFact(diag(dm, x)), ...
+                                dgSubs);
+                            [~,eSub] = min(vecnorm([Ev;ffact],2,1));
                             nSubs = 1:min(Nr, Nf);
                             if Nf > Nr
                                 f = f(nSubs+abs(dgSubs(eSub)));
@@ -114,16 +121,7 @@ classdef StepWaveform < DiscreteWaveform
                             else
                                 r = r(nSubs+abs(dgSubs(eSub)));
                                 rise = false(size(fall)); rise(r) = true;
-                            end
-                            %{
-                                [~,Sub] = max(min(dm,[],dim));
-                                if dim == 2
-                                    rise(r(Sub)) = false;
-                                else
-                                    fall(f(Sub)) = false;
-                                end
-                            %}
-
+                            end % Nf > Nr
                         end % sum(rise) ~= sum(fall)
                         try
                             RaF = [rise, fall];
