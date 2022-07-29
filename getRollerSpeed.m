@@ -14,7 +14,8 @@ elseif isa(rollerPositions, "numeric")
     % Assuming the time resolution is micro seconds 
     rt = rollerPositions*diag([1,us]);
 end
-rollTx = rt(1,2):1/fsRoll:rt(end,2);
+rt(isnan(rt(:,1)), :) = [];
+rollTx = rt(1,2):1/fsRoll:rt(end,2); 
 rxx = interp1(rt(:,2), rt(:,1), rollTx, "pchip");
 % Filtering for 18 Hz
 v = diff(rxx); [b, a] = butter(10, (2*18)/fsRoll, "low"); 
