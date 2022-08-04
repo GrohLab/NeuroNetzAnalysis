@@ -113,7 +113,9 @@ classdef StepWaveform < DiscreteWaveform
                                 [min(dgdm(:)),max(dgdm(:))])), dgSubs);
                             ffact = arrayfun(@(x) fanoFact(diag(dm, x)), ...
                                 dgSubs);
-                            [~,eSub] = min(vecnorm([Ev;ffact],2,1));
+                            qdist = arrayfun(@(x) diff(quantile( ...
+                                diag(dm, x), [0.25, 0.75])), dgSubs);
+                            [~,eSub] = min(vecnorm([Ev;ffact;qdist],2,1));
                             nSubs = 1:min(Nr, Nf);
                             if Nf > Nr
                                 f = f(nSubs+abs(dgSubs(eSub)));
