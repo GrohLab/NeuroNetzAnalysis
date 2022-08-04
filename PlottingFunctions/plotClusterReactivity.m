@@ -54,20 +54,9 @@ colormap(ax1,clrmp)
 trigTX = linspace(timeLapse(1),timeLapse(2),size(trig,2));
 
 % Plotting lines for depicting the on- and offset of the trigger
-tObj = StepWaveform(trig,1/mean(diff(trigTX)));
-tSubs = tObj.subTriggers;
-if ~isempty(tSubs)
-    for ct = 1:size(tSubs,1)
-        for nf = 1:size(tSubs,2)
-            line(ax1,'XData',repmat(trigTX(tSubs(ct,nf)),1,2),'YData',[0.5,Ncl+0.5],...
-                'LineStyle',':','Color',clr,'LineWidth',2)
-        end
-    end
-else
-    trig = logical(trig/max(trig(:)));
-    line(ax1,'XData',trigTX,'YData',(Ncl+1.5)*trig - 0.5,...
-        'LineStyle',':','Color',clr,'LineWidth',2)
-end
+trig = logical(trig/max(trig(:)));
+line(ax1,'XData',trigTX,'YData',(Ncl+1.5)*trig - 0.5,...
+    'LineStyle',':','Color',clr,'LineWidth',2)
 
 % Formatting the heatmap
 ax1.YLim = [0.5,size(PSTH,1)+0.5];
