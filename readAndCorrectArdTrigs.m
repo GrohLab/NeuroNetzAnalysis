@@ -12,7 +12,7 @@ outFileFormat = "ArduinoTriggers%s.mat";
 derv = @(x) diff(x(:,1));
 dsmt = @(x,y) distmatrix(x, y, 2);
 erOpts = {"ErrorHandler", @falseLaserDetection};
-var2Check = {'atTimes','atNames','itTimes','itNames','Nt'};
+
 fs = 3e4;
 % Function to get the edges from the trigger signals in the trigger file.
     function tSubs = getSubsFromTriggers(trig)
@@ -125,15 +125,20 @@ fs = 3e4;
             % Distribution of the distances found between the likely pairs
             dstDom = linspace(min(unqePrs(:,3))*1.1, 0.1, 257)';
             % Quartiles
-            dstDist = histcounts(dstPrs, dstDom, "Normalization", "probability");
+            dstDist = ksdensity(dstPrs, dstDom, "Bandwidth", ...
+                1/sqrt(2));
             dstCnt = mean([dstDom(1:end-1),dstDom(2:end)], 2);
-            Q = arrayfun(@(q) fminbnd(@(x) ...
-                norm(interp1(dstCnt, cumsum(dstDist)-q, x),2), ...
-                dstDom(1), dstDom(end)), 1/4 * [1,3]);
+%             Q = arrayfun(@(q) fminbnd(@(x) ...
+%                 norm(interp1(dstDom, cumsum(dstDist)-q, x),2), ...
+%                 dstDom(1), dstDom(end)), 1/4 * [1,3]);
+            Q = quantile(dstPrs, 1/4 * [1,3]);
             modDst = Q(1)*1.1;
+            % Log-dist
+            % [bC, bE] = prepareLogBinEdges(dstPrs, 64);
+            % bN = histcounts(log10(abs(dstPrs)), bE, 'Normalization','pdf');
             % Kernel distribution
-            dstDist2 = ksdensity(unqePrs(:,3), dstDom, "Bandwidth", ...
-                floor(range(dstPrs)/sqrt(sum(pairFlags)*2)));
+            dstDist2 = ksdensity(dstPrs, dstDom, "Bandwidth", ...
+                floor(range(dstPrs)/sqrt(sum(pairFlags)*pi)));
             % Estimation for the most repeated delay (the actual delay
             % between intan and arduino)
             loPks = arrayfun(@(x) fminsearch(@(y) -interp1(dstDom, ...
@@ -141,8 +146,9 @@ fs = 3e4;
             dstPks = [uniquetol(loPks, 0.01/max(abs(loPks)));...
                 -mode(abs(dstPrs))];
             % Likelihood of the pair given the distance distribution
-            %lk = interp1(dstDom, dstDist2./max(dstDist2), unqePrs(:,3));
-            lk = interp1(dstCnt, dstDist*(1./max(dstDist)), unqePrs(:,3), ...
+%             lk = interp1(dstDom, dstDist2*(1./max(dstDist2)), ...
+%                 unqePrs(:,3), "pchip", "extrap");
+            lk = interp1(dstDom, dstDist*(1./max(dstDist)), unqePrs(:,3), ...
                 "pchip", "extrap");
             xyM = zeros(Nti(cc),3);
             for ci = naiveSubs
@@ -235,6 +241,8 @@ fs = 3e4;
                 end
             end
             snglPairs = sortrows(snglPairs, 1);
+            raFlag = [1;diff(snglPairs(:,2))]<1; % repeated arduino trigger
+            snglPairs(raFlag,:) = [];
             x = itTimes{cc}(snglPairs(:,1),1);
             y = atTimes{ca}(snglPairs(:,2));
             [mdl, ~, r2] = fit_poly(x, y, 1);
@@ -244,6 +252,14 @@ fs = 3e4;
                 fprintf(1, "Better take a look at the triggers!\n")
                 return
             end
+            mssSubs = setdiff(1:Nti(cc), snglPairs(:,1));
+            M = (itTimes{cc}(mssSubs,1).^[1,0]);
+            atTimesHat = M*mdl;
+            atTimes2 = zeros(Nti(cc),1);
+            atTimes2(snglPairs(:,1)) = atTimes{ca}(snglPairs(:,2));
+            atTimes2(mssSubs) = atTimesHat;
+            atTimes{ca} = atTimes2;
+            %{
             if Nta(cc) > Nti(cc)
                 % More arduino pulses
                 atTimes{ca}(setdiff(1:Nta(cc), snglPairs(:,2))) = [];
@@ -269,6 +285,7 @@ fs = 3e4;
             else
                 % Correct cardinality
             end
+            %}
         end
     end
 %% Validation section
@@ -315,6 +332,7 @@ end
 Ns = 0;
 %% Searching for arduino instabilities
 var2save = {'atTimes', 'atNames', 'itTimes', 'itNames', 'Nt', 'minOfSt'};
+var2Check = var2save;
 flfl = @(x, y) fullfile(x, y);
 fobPthIdx = @(x, y) fullfile(x(y).folder, x(y).name);
 fobPth = @(x) fullfile(x.folder, x.name);
