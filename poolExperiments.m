@@ -29,7 +29,7 @@ Nexp = numel(chExp);
 %     "fr", "firing_rate"];
 % Function for performing ONLY autocorrelograms
 corrWin = 0.05;
-fnOpts = {"UniformOutput", false};
+fnOpts = {'UniformOutput', false};
 getCondNames = @(y) arrayfun(@(x) x.name, y, fnOpts{:});
 matchConditionNames = @(x, y) ismember(x, y) |...
     contains(x, y, "IgnoreCase", true);
@@ -55,16 +55,15 @@ else
     responseWindow = str2num(answ{2});
     binSz = str2double(answ(3));
 end
-fprintf(1,'Time window: %.2f - %.2f ms\n',timeLapse(1)*1e3, timeLapse(2)*1e3)
-fprintf(1,'Response window: %.2f - %.2f ms\n',responseWindow(1)*1e3, responseWindow(2)*1e3)
+fprintf(1,'Time window: %.2f - %.2f ms\n',timeLapse*1e3)
+fprintf(1,'Response window: %.2f - %.2f ms\n',responseWindow*1e3)
 fprintf(1,'Bin size: %.3f ms\n', binSz*1e3)
 sponAns = questdlg('Mirror the spontaneous window?','Spontaneous window',...
     'Yes','No','Yes');
 spontaneousWindow = -flip(responseWindow);
 if strcmpi(sponAns,'No')
     spontPrompt = "Time before the trigger in [s] (e.g. -0.8, -0.6 s)";
-    sponDef = string(sprintf('%.3f, %.3f',spontaneousWindow(1),...
-        spontaneousWindow(2)));
+    sponDef = string(sprintf('%.3f, %.3f',spontaneousWindow));
     sponStr = inputdlg(spontPrompt, 'Inputs',[1,30],sponDef);
     if ~isempty(sponStr)
         spontAux = str2num(sponStr{1});
@@ -78,7 +77,7 @@ if strcmpi(sponAns,'No')
     end
 end
 fprintf(1,'Spontaneous window: %.2f to %.2f ms before the trigger\n',...
-    spontaneousWindow(1)*1e3, spontaneousWindow(2)*1e3)
+    spontaneousWindow*1e3)
 statFigFileNameEndings = {'.pdf','.emf'};
 printOpts = {{'-dpdf','-fillpage'},'-dmeta'};
 
@@ -93,10 +92,10 @@ relativeSpikeTimes = cell(Nexp);
 for cexp = reshape(chExp, 1, [])
     dataDir = fullfile(expFolders(cexp).folder, expFolders(cexp).name);
     foldContents = dir(dataDir); foldContents(1:2) = [];
-    contNames = arrayfun(@(x) x.name, foldContents, 'UniformOutput', 0);
-    [~,~,fext] = cellfun(@fileparts, contNames, 'UniformOutput', 0);
+    contNames = arrayfun(@(x) x.name, foldContents, fnOpts{:});
+    [~,~,fext] = cellfun(@fileparts, contNames, fnOpts{:});
     ksPhyFlags = cell2mat(cellfun(@(x) strcmpi(x,{'.npy','.tsv','.py'}),...
-        fext, 'UniformOutput', 0));
+        fext, fnOpts{:}));
     dirNames = contNames([foldContents.isdir]);
     if ~any(ksPhyFlags(:))
         if ~isempty(dirNames)
@@ -131,7 +130,7 @@ for cexp = reshape(chExp, 1, [])
     Ns = min(Ns(Ns>1));
     % Total duration of the recording
     Nt = Ns/fs;
-    
+
 
     autoCorr = @(x) neuroCorr(x, corrWin, 1, fs);
     % Useless clusters (labeled as noise or they have very low firing rate)
@@ -188,7 +187,7 @@ for cexp = reshape(chExp, 1, [])
             fprintf(1,'Cancelling...\n')
             return
         end
-        
+
         % Select the onset or the offset of a trigger
         fprintf(1,'Condition ''%s''\n', Conditions(chCond).name)
         onOffStr = questdlg('Trigger on the onset or on the offset?','Onset/Offset',...
@@ -197,7 +196,7 @@ for cexp = reshape(chExp, 1, [])
             fprintf(1,'Cancelling...\n')
             return
         end
-        
+
         %% Considered conditions selection
         % Choose the conditions to look at
         auxSubs = setdiff(1:numel(condNames), chCond);
@@ -210,11 +209,11 @@ for cexp = reshape(chExp, 1, [])
             fprintf(1,'Cancelling...\n')
             return
         end
-        
+
         % Select the onset or the offset of a trigger
         fprintf(1,'Condition(s):\n')
         fprintf('- ''%s''\n', Conditions(auxSubs(cchCond)).name)
-        
+
         ansFilt = questdlg('Would you like to filter for significance?','Filter',...
             'Yes','No','Yes');
         filtStr = 'unfiltered';
@@ -225,18 +224,18 @@ for cexp = reshape(chExp, 1, [])
         % whisker control, laser control, and the combination whisker and laser.
         consideredConditions = auxSubs(cchCond);
         Nccond = length(consideredConditions);
-        
+
         % Subscripts and names for the considered conditions
         consCondNames = condNames(consideredConditions);
         trigCondName = condNames(chCond);
-        
+
         % Time windows for comparison between conditions and activity
         sponActStackIdx = tx >= spontaneousWindow(1) & tx <= spontaneousWindow(2);
         respActStackIdx = tx >= responseWindow(1) & tx <= responseWindow(2);
         % The spontaneous activity of all the clusters, which are allocated from
         % the second until one before the last row, during the defined spontaneous
         % time window, and the whisker control condition.
-        
+
         timeFlags = [sponActStackIdx; respActStackIdx];
         % Time window
         delta_t = diff(responseWindow);
@@ -287,10 +286,10 @@ for cexp = reshape(chExp, 1, [])
             fprintf(1, "- %s\n", Conditions(chCond).name)
         elseif Nccond ~= sum(cchCondFlag)
             fprintf(1, "Not all considered conditions were found:\n")
-           
+
             ncfnFlag = all(~cchCondFlag2,2);
             fprintf(1, "- %s\n", consCondNames{ncfnFlag})
-            
+
             auxSubs = setdiff(auxSubs, foundSubs);
             ccondNames = condNames(auxSubs);
             [cchCond, iOk] = listdlg('ListString',ccondNames,'SelectionMode','multiple',...
@@ -301,13 +300,13 @@ for cexp = reshape(chExp, 1, [])
                 fprintf(1,'Cancelling...\n')
                 continue
             end
-            
+
             % Select the onset or the offset of a trigger
             fprintf(1,'Re-selected Condition(s):\n')
             fprintf(1,'- ''%s''\n', Conditions(auxSubs(cchCond)).name)
             fprintf(1, "Found condition(s):\n");
             fprintf(1, "- '%s'\n", Conditions(foundSubs).name)
-            consideredConditions = sort([foundSubs, auxSubs(cchCond)]);
+            consideredConditions = sort([foundSubs', auxSubs(cchCond)]);
         end
         fprintf(1, "Considered conditions:\n");
         fprintf(1, "- '%s'\n", condNames{consideredConditions})
@@ -315,7 +314,7 @@ for cexp = reshape(chExp, 1, [])
             consideredConditions = consideredConditions';
         end
     end
-    
+
     % Constructing the stack out of the user's choice
     % discStack - dicrete stack has a logical nature
     % cst - continuous stack has a numerical nature
@@ -329,7 +328,7 @@ for cexp = reshape(chExp, 1, [])
     % event, number of time samples in between the time window, and number of
     % total triggers.
     [Ne, Nt, NTa] = size(auxDStack);
-    
+
     % Computing which alignment points belong to which condition.
     auxDelayFlags = false(NTa,Nccond);
     counter2 = 1;
@@ -339,12 +338,12 @@ for cexp = reshape(chExp, 1, [])
         counter2 = counter2 + 1;
     end
     NaNew = sum(auxDelayFlags,1);
-    
+
     % All spikes in a cell format
     %spkSubs = cat(1, {round(sortedData{goods(1),2}*fs)}, spkSubs);
-    
+
     % Autocorrelation for all active units
-    
+
     corrFileName = fullfile(dataDir, '*_ccorr.mat');
     corrFiles = dir(corrFileName); corrCorr =...
         arrayfun(@(x) contains(x.name, sprintf('%.2f', corrWin*1e3)),...
@@ -359,9 +358,9 @@ for cexp = reshape(chExp, 1, [])
     end
     eaCorr = cat(1, eaCorr{:});
     eaCorr = sparse(eaCorr);
-%     % Computing the lag axis for the auto-correlograms
-%     b = -ceil(Ncrs/2)/fs; corrTx = (1:Ncrs)'/fs + b;
-    
+    %     % Computing the lag axis for the auto-correlograms
+    %     b = -ceil(Ncrs/2)/fs; corrTx = (1:Ncrs)'/fs + b;
+
     % Computing the firing rate during the different conditions
     NaCount = 1;
     % Experiment firing rate and ISI per considered condition
@@ -380,7 +379,7 @@ for cexp = reshape(chExp, 1, [])
             consTime, fs, trainDuration + delta_t + responseWindow(1));
         NaCount = NaCount + 1;
     end
-    
+
     % Getting the clusters' waveforms
     sewf = getClusterWaveform(gclID, dataDir);
     sewf(:,1) = cellfun(@(x) [sprintf('%d_',cexp), x], sewf(:,1),...
@@ -451,7 +450,7 @@ for cexp = reshape(chExp, 1, [])
                 end
             end
         end
-        
+
         % When the stacks have different order for different conditions
         if nnz(size(auxDelayFlags) - size(delayFlags))
             [ntrials, nconds] = size(delayFlags);
@@ -459,7 +458,7 @@ for cexp = reshape(chExp, 1, [])
             fprintf(1,'There are more trials in ')
             if ntrials > nctrials
                 fprintf(1, 'DelayFlags\n')
-                
+
             else
                 fprintf(1, 'AuxDelayFlags\n')
                 emptyADFFlag = ~any(auxDelayFlags,2);
@@ -598,7 +597,7 @@ if strcmp(dans, 'Yes')
         orderedStr = [orderedStr, sprintf('%s ',ordVar{cvar})]; %#ok<AGROW>
     end
     orderedStr = [orderedStr, 'ordered'];
-    
+
     if ~strcmp(ordVar,'id')
         [~,ordSubs] = sortrows(clInfoTotal(pclID,:),ordVar);
     end
@@ -682,6 +681,7 @@ for ccond = 1:size(delayFlags,2)
     %     respIdx = cellfun(isWithinResponsiveWindow, relativeSpikeTimes,...
     %         'UniformOutput',false);
     clSpkTms = cell(size(relativeSpikeTimes,1),1);
+    %{
     if exist(csvFileName, 'file') && ccond == 1
         existFlag = true;
         ansOW = questdlg(['The exported .csv files exist! ',...
@@ -696,6 +696,7 @@ for ccond = 1:size(delayFlags,2)
         fID = fopen(csvFileName,'w');
         fprintf(fID,'%s, %s\n','Cluster ID','Relative spike times [ms]');
     end
+    %}
     rsclSub = find(filterIdx(2:end))-1;
     % If a subcript is zero, don't substract.
     if any(~rsclSub)
@@ -703,14 +704,18 @@ for ccond = 1:size(delayFlags,2)
     end
     for cr = 1:size(relativeSpikeTimes, 1)
         clSpkTms(cr) = {sort(cell2mat(relativeSpikeTimes(cr,:)))};
+        %{
         if fID > 2
             fprintf(fID,'%s,',gclID{rsclSub(cr)});
             fprintf(fID,'%f,',clSpkTms{cr});fprintf(fID,'\n');
         end
+        %}
     end
+    %{
     if fID > 2
         fclose(fID);
     end
+    %}
     relativeSpkTmsStruct(ccond).name = consCondNames{ccond};
     relativeSpkTmsStruct(ccond).SpikeTimes = condRelativeSpkTms{ccond};
 end
@@ -748,8 +753,8 @@ axOpts = {'Box', 'off', 'Color', 'none'};
 evFr = cellfun(@(x) mean(x,2)./diff(responseWindow), Counts(:,2),fnOpts{:});
 evFr = cat(2, evFr{:});
 getMI = @(x) diff(x, 1, 2)./sum(x, 2);
-MIevok = getMI(evFr); 
-Nrn = sum(wruIdx); Ntn = size(wruIdx,1); 
+MIevok = getMI(evFr);
+Nrn = sum(wruIdx); Ntn = size(wruIdx,1);
 signMod = Results(1).Activity(2).Pvalues < 0.05;
 potFlag = MIevok > 0;
 Nrsn = sum(wruIdx & signMod); Nrsp = sum(wruIdx & signMod & potFlag);
@@ -760,9 +765,9 @@ SNr = evFr./spFr;
 %% Plot proportional pies
 clrMap = lines(2); clrMap([3,4],:) = [0.65;0.8].*ones(2,3);
 % Responsive and non responsive clusters
-respFig = figure("Color", "w"); 
+respFig = figure("Color", "w");
 pie([Ntn-Nrn, Nrn], [0, 1], {'Unresponsive', 'Responsive'});
-pObj = findobj(respFig, "Type", "Patch"); 
+pObj = findobj(respFig, "Type", "Patch");
 arrayfun(@(x) set(x, "EdgeColor", "none"), pObj);
 arrayfun(@(x) set(pObj(x), "FaceColor", clrMap(x+2,:)), 1:length(pObj))
 chExpStr = sprintf(" %d", chExp);
@@ -887,7 +892,7 @@ if Nccond > 1
         end
     end
     mdOpts = {figureDir, chExp, structString};
-    
+
     [MIh(:,1), ~, ~, MIspon] = modulationDist(pfr, frNbin,...
         'Spontaneous modulation index', mdOpts{:});
     [MIh(:,2), ~, ~, MIevok] = modulationDist(evFr, frNbin,...
@@ -914,7 +919,7 @@ if Nccond == 2
     clsum = @(x) squeeze(sum(x,1));
     matsum = @(x) timesum(clsum(x));
     stackTx = (0:Nt-1)/fs + timeLapse(1) + 2.5e-3;
-    
+
     [~,cnd] = find(delayFlags);
     [~, tmOrdSubs] = sort(trigTms, 'ascend');
     cnd = cnd(tmOrdSubs(1:length(cnd)));
@@ -926,7 +931,7 @@ if Nccond == 2
         clInfoTotal{clInfoTotal.ActiveUnit==1,'Modulation'} =... Thalamus
             Results(1).Activity(2).Direction;
     end
-    
+
     % Group indeces
     modVal = clInfoTotal{clInfoTotal.ActiveUnit == 1, 'Modulation'};
     pruIdx = wruIdx & modVal > 0; % Potentiated responding
@@ -937,20 +942,20 @@ if Nccond == 2
     % Thalamus
     aruIdx = and(xor(H(:,1),H(:,2)),H(:,2)); % Response only A.-I.
     sruIdx = and(xor(H(:,1),H(:,2)),H(:,1)); % Stopped responding after A.-I.
-    
+
     modFlags = potFlag;
     modFlags(:,2) = ~modFlags;
     cmap = lines(Nccond);
     cmap(CtrlCond,:) = ones(1,3)*1/3; cmap(:,:,2) = ones(Nccond,3)*0.7;
-    
+
     signMod = Results(1).Activity(2).Pvalues < 0.05; signMod(~wruIdx) = [];
     potFlag = MIevok > 0; potFlag(~wruIdx) = [];
-    
+
     % modFlags = false(size(modFlags));
     % modVals_rt = clInfoTotal(clInfoTotal.ActiveUnit == 1 & clInfoTotal.Control, 'Modulation');
     % trnFlag = string(clInfoTotal{clInfoTotal.ActiveUnit == 1 & clInfoTotal.Control,'Region'}) == 'TRN';
     % modFlags(trnFlag,:) = [modVals_rt(trnFlag),-modVals_rt(trnFlag)] > 0;
-    
+
     plotOpts = {'LineStyle', 'none', 'Marker', '.', 'Color', 'DisplayName'};
     modLabel = {'Potentiation', 'Depression'};
     clrSat = 0.5;
@@ -967,17 +972,17 @@ if Nccond == 2
     Nas = [0;cumsum(NaStack./trialBin)'];
     spkDomain = 0:15;
     spkBins = spkDomain(1) - 0.5:spkDomain(end) + 0.5;
-    
-    
+
+
     resTotalTrial = mod(sum(NaStack),trialBin);
     resTrialPerCond = mod(NaStack, trialBin);
-    
+
     trialsPerCond = floor(NaStack./trialBin);
     NaCs = [0;cumsum(trialsPerCond(:))];
     % popMeanResp = nan(Nfs, floor(Nas(end)), 4);
     popMeanResp = nan(Nfs, sum(trialsPerCond), 4);
     auxResp = [H(:,1), ~any(H,2)];
-    
+
     for pfp = fws
         tdFig = figure('Name', 'Temporal dynamics', 'Color', [1,1,1]);
         for cmod = 1:size(modFlags,2) % Up- and down-modulation
@@ -1012,7 +1017,7 @@ if Nccond == 2
                         clMean = squeeze(mean(mean(clCounts_resh,2,'omitnan')));
                         popMeanResp(cp,  muTrSubs(1):muTrSubs(2),...
                             rsSel) = clMean;
-                        
+
                         % Error per mean
                         if trialBin > 1
                             sem = squeeze(std(std(clCounts_resh,0,2,'omitnan')))./...
@@ -1054,7 +1059,7 @@ if Nccond == 2
                 ylabel(ax(cmod),'Proportional change');
             end
             yyaxis(ax(cmod),'left')
-            
+
             cmap(ccond,:,1) = brighten(cmap(ccond, :, 1), clrSat);
             clrSat = -clrSat;
         end
@@ -1071,7 +1076,7 @@ if Nccond == 2
         tempFigName = fullfile(figureDir, tdFigName);
         saveFigure(tdFig, tempFigName, 1);
     end
-    
+
     %% 3D Visualization of the spiking dynamics
     redundantFlag = false(size(popMeanResp,3),1);
     lvls = 128;
@@ -1119,7 +1124,7 @@ if Nccond == 2
         end
         saveFigure(summFig, sumFigName, false); clearvars summFig;
     end
-    
+
     %% Average Response evolution
     % Auxiliary and necessary variables
     signMod = Results(1).Activity(2).Pvalues < 0.05;
@@ -1129,14 +1134,14 @@ if Nccond == 2
     trigTms = cat(1, Conditions(consideredConditions).Triggers);
     trigTms = trigTms(:,1)/fs;
     modLabels = {'potentiated', 'depressed'};
-    
+
     % Responsive, significantly modulated, stable and potentiated
     popResponse = getModulatedPopulationMeanResponse(Counts,...
         [wruIdx, signMod & stableFlag, potFlag]);
     evolutionFigs = plotResponseEvolution(popResponse,...
         'windowDuration', diff(responseWindow), 'triggerTimes', trigTms,...
         'trialBin', trialBin, 'inMinutes', minFlag, 'error', errStr);
-    
+
     % Saving the figures
     strFmt = "Average response evolution for %d %s clusters"+...
         " RW%.1f - %.1f s ERR-%s TB%d EXP%s (%s)";
@@ -1168,7 +1173,7 @@ if Nccond == 2
     % % Responsive and TRN
     % respIdx = any(H,2) &...
     %     string(clInfoTotal{clInfoTotal.ActiveUnit == 1, 'Region'}) == 'TRN';
-    
+
     % Auxiliary variables for the loop
     isiFigs = gobjects(6,1);
     % Combinatorial loop
@@ -1265,7 +1270,7 @@ if Nccond == 2
                 areaAx(cmod).YLabel.String = "ISI probability";
             end
             yyaxis(areaAx(cmod) ,'right')
-            
+
             semilogx(areaAx(cmod), lgStTmAx, cumsum(isiPdf(:,cnt)),...
                 areaOpts{1}, cmap(ccond,:), areaOpts{2:3})
             ylim(areaAx(cmod), [0,1]); areaAx(cmod).YAxis(2).Color = [0,0,0];
@@ -1281,82 +1286,78 @@ if Nccond == 2
     evokIsiFigPath = fullfile(figureDir, "Evoked ISI, potentiated & depressed" +...
         " clusters, exp"+string(sprintf(' %d',chExp))+" LB 10^"+string(lDt));
     saveFigure(areaFig, evokIsiFigPath, 1)
-end
-
-%% Comparing the PSTHs for all conditions
-
-txpsth = (0:Nbn-1)*binSz + timeLapse(1) + 2.5e-3;
-focusWindow = [-5, 30]*1e-3;
-focusIdx = txpsth >= focusWindow(1) & txpsth <= focusWindow(2);
-txfocus = txpsth(focusIdx);
-%modLabels = {'non-responding','non-modulated'};
-lnClr = lines(Nccond);
-for cmod = 1:2
-    psthFig = figure('Color', [1,1,1], 'Name', 'Condition PSTH comparison',...
-        'Visible', 'off');
-    PSTH_raw = squeeze(sum(PSTH(modFlags(:,cmod),:,:),1));
-    PSTH_trial = PSTH_raw./(NaStack.*sum(modFlags(:,cmod)));
-    PSTH_prob = PSTH_raw./sum(PSTH_raw,1);
-    PSTH_all = cat(3, PSTH_raw, PSTH_trial, PSTH_prob);
-    axp = gobjects(4,1);
-    subpltsTitles = {sprintf('PSTH per condition, %s clusters',modLabels{cmod}),...
-        'Cumulative density function', 'Cumulative sum for normalized spikes'};
-    yaxsLbls = {'Spikes / (Trials * Cluster)', 'Spike probability',...
-        'Spike number'};
-    for cax = 1:3
-        axp(cax) = subplot(2, 2, cax, 'Parent', psthFig, 'NextPlot', 'add');
-        for ccond = 1:Nccond
-            plotOpts = {'DisplayName', consCondNames{ccond},'Color',...
-                lnClr(ccond,:), 'LineStyle','-.'};
-            switch cax
-                case 1 % Plot the trial-normalized PSTH; page #2
-                    plot(axp(cax), txfocus, PSTH_all(focusIdx,ccond,2),...
-                        plotOpts{1:4})
-                case 2 % Plot the cumulative probability function; page 3
-                    PSTH_aux = PSTH_all(focusIdx, ccond, 3);
-                    PSTH_aux = PSTH_aux./sum(PSTH_aux);
-                    plot(axp(cax), txfocus, PSTH_aux, plotOpts{1:4})
-                    yyaxis(axp(cax), 'right'); plot(axp(cax), txfocus,...
-                        cumsum(PSTH_aux), plotOpts{:}) 
-                    ylim(axp(cax), [0,1]); ylabel(axp(cax),...
-                        'Cumulative probability'); set(axp(cax).YAxis(2),...
-                        'Color',0.2*ones(3,1))
-                    yyaxis(axp(cax), 'left'); 
-                case 3 % Plot the cumulative sum for the mean spikes; page 2
-                    plot(axp(cax), txfocus, ...
-                        cumsum(PSTH_all(focusIdx, ccond, 2)), plotOpts{1:4})
+    %% Comparing the PSTHs for all conditions
+    txpsth = (0:Nbn-1)*binSz + timeLapse(1) + 2.5e-3;
+    focusWindow = [-5, 30]*1e-3;
+    focusIdx = txpsth >= focusWindow(1) & txpsth <= focusWindow(2);
+    txfocus = txpsth(focusIdx);
+    %modLabels = {'non-responding','non-modulated'};
+    lnClr = lines(Nccond);
+    for cmod = 1:2
+        psthFig = figure('Color', [1,1,1], 'Name', 'Condition PSTH comparison',...
+            'Visible', 'off');
+        PSTH_raw = squeeze(sum(PSTH(modFlags(:,cmod),:,:),1));
+        PSTH_trial = PSTH_raw./(NaStack.*sum(modFlags(:,cmod)));
+        PSTH_prob = PSTH_raw./sum(PSTH_raw,1);
+        PSTH_all = cat(3, PSTH_raw, PSTH_trial, PSTH_prob);
+        axp = gobjects(4,1);
+        subpltsTitles = {sprintf('PSTH per condition, %s clusters',modLabels{cmod}),...
+            'Cumulative density function', 'Cumulative sum for normalized spikes'};
+        yaxsLbls = {'Spikes / (Trials * Cluster)', 'Spike probability',...
+            'Spike number'};
+        for cax = 1:3
+            axp(cax) = subplot(2, 2, cax, 'Parent', psthFig, 'NextPlot', 'add');
+            for ccond = 1:Nccond
+                plotOpts = {'DisplayName', consCondNames{ccond},'Color',...
+                    lnClr(ccond,:), 'LineStyle','-.'};
+                switch cax
+                    case 1 % Plot the trial-normalized PSTH; page #2
+                        plot(axp(cax), txfocus, PSTH_all(focusIdx,ccond,2),...
+                            plotOpts{1:4})
+                    case 2 % Plot the cumulative probability function; page 3
+                        PSTH_aux = PSTH_all(focusIdx, ccond, 3);
+                        PSTH_aux = PSTH_aux./sum(PSTH_aux);
+                        plot(axp(cax), txfocus, PSTH_aux, plotOpts{1:4})
+                        yyaxis(axp(cax), 'right'); plot(axp(cax), txfocus,...
+                            cumsum(PSTH_aux), plotOpts{:})
+                        ylim(axp(cax), [0,1]); ylabel(axp(cax),...
+                            'Cumulative probability'); set(axp(cax).YAxis(2),...
+                            'Color',0.2*ones(3,1))
+                        yyaxis(axp(cax), 'left');
+                    case 3 % Plot the cumulative sum for the mean spikes; page 2
+                        plot(axp(cax), txfocus, ...
+                            cumsum(PSTH_all(focusIdx, ccond, 2)), plotOpts{1:4})
+                end
+            end
+            title(axp(cax), subpltsTitles{cax})
+            ylabel(axp(cax), yaxsLbls{cax})
+            if cax == 3
+                xlabel(axp(cax), sprintf('Time_{%.2f ms} [s]', binSz*1e3))
+                lgnd = legend(axp(cax), 'show');
+                set(lgnd, 'Location', 'best', 'Box', 'off')
             end
         end
-        title(axp(cax), subpltsTitles{cax})
-        ylabel(axp(cax), yaxsLbls{cax})
-        if cax == 3
-            xlabel(axp(cax), sprintf('Time_{%.2f ms} [s]', binSz*1e3))
-            lgnd = legend(axp(cax), 'show'); 
-            set(lgnd, 'Location', 'best', 'Box', 'off')
+        axp(4) = subplot(2,2,4, 'Parent', psthFig);
+        PSTH_diff = 100 * ((PSTH_prob(:,2)./PSTH_prob(:,1)) - 1);
+        bar(axp(4), txfocus(PSTH_diff(focusIdx) > 0), PSTH_diff(PSTH_diff > 0 & focusIdx'),...
+            'FaceColor', [51, 204, 51]/255, 'DisplayName', 'Potentiation'); hold on
+        bar(axp(4), txfocus(PSTH_diff(focusIdx) <= 0), PSTH_diff(PSTH_diff <= 0 & focusIdx'),...
+            'FaceColor', [204, 51, 0]/255, 'DisplayName', 'Depression');
+        axp(4).Box = 'off'; ylabel(axp(4), '%'); title(axp(4), 'Percentage of change')
+        xticks(axp(4),''); linkaxes(axp, 'x'); lgnd = legend(axp(4),'show');
+        lgnd.Box = 'off'; lgnd.Location = 'best';  psthFig.Visible = 'on';
+        %psthFig = configureFigureToPDF(psthFig);
+        psthFigFileName = sprintf('%s %sPSTH %sRW%.2f-%.2f ms FW%.2f-%.2f ms %s clusters',...
+            expName, sprintf('%d ',chExp), sprintf('%s ',string(consCondNames)),...
+            responseWindow*1e3, focusWindow*1e3, modLabels{cmod});
+        psthFigFileName = fullfile(figureDir,psthFigFileName);
+        arrayfun(@(x) set(x, 'Color', 'none'), axp)
+        if numel(chExp) == 1 && ~isempty(dirNames)
+            psthFigFileName = string(psthFigFileName) + " sf-" + dirNames{subFoldSel};
         end
+        saveFigure(psthFig, string(psthFigFileName))
     end
-    axp(4) = subplot(2,2,4, 'Parent', psthFig);
-    PSTH_diff = 100 * ((PSTH_prob(:,2)./PSTH_prob(:,1)) - 1);
-    bar(axp(4), txfocus(PSTH_diff(focusIdx) > 0), PSTH_diff(PSTH_diff > 0 & focusIdx'),...
-        'FaceColor', [51, 204, 51]/255, 'DisplayName', 'Potentiation'); hold on
-    bar(axp(4), txfocus(PSTH_diff(focusIdx) <= 0), PSTH_diff(PSTH_diff <= 0 & focusIdx'),...
-        'FaceColor', [204, 51, 0]/255, 'DisplayName', 'Depression');
-    axp(4).Box = 'off'; ylabel(axp(4), '%'); title(axp(4), 'Percentage of change')
-    xticks(axp(4),''); linkaxes(axp, 'x'); lgnd = legend(axp(4),'show'); 
-    lgnd.Box = 'off'; lgnd.Location = 'best';  psthFig.Visible = 'on';
-    %psthFig = configureFigureToPDF(psthFig);
-    psthFigFileName = sprintf('%s %sPSTH %sRW%.2f-%.2f ms FW%.2f-%.2f ms %s clusters',...
-        expName, sprintf('%d ',chExp), sprintf('%s ',string(consCondNames)),...
-        responseWindow*1e3, focusWindow*1e3, modLabels{cmod});
-    psthFigFileName = fullfile(figureDir,psthFigFileName);
-    arrayfun(@(x) set(x, 'Color', 'none'), axp)
-    if numel(chExp) == 1 && ~isempty(dirNames)
-       psthFigFileName = string(psthFigFileName) + " sf-" + dirNames{subFoldSel};
-    end
-    saveFigure(psthFig, string(psthFigFileName))
 end
-
-
 %% Waveform analysis
 % pltDot = {'LineStyle', 'none', 'Marker', '.', 'MarkerSize', 5};
 % fprintf(1, 'This is the waveform analysis section\n');
@@ -1371,7 +1372,7 @@ end
 % mg = mg(wx>=0,:); ph = ph(wx>=0,:); wx = wx(wx>=0); [~, mxWxSub] = max(mg);
 % wcp = getWaveformCriticalPoints(mg, size(ft,1)/fs);
 % pwc = cellfun(@(x) x(1), wcp(:,1)); mxW = wx(mxWxSub);
-% 
+%
 % tcp = getWaveformCriticalPoints(pwf_n, fs);
 % featWf = getWaveformFeatures(pwf_n, fs);
 % params = emforgmm(log(featWf(:,1)), 3, 1e-7, 0);
@@ -1382,7 +1383,7 @@ end
 % probCriticPts = cellfun(@(x) x + logDomain(1), probCriticPts,...
 %     'UniformOutput', 0); logThresh = probCriticPts{1,1}(2);
 % time_wf = log(featWf(:,1)) > logThresh;
-% 
+%
 % [m, b] = lineariz(pwc, 1, -1); pwc_n = pwc*m + b;
 % params_freq = emforgmm(pwc_n, 3, 1e-7, 0); wDomain = (-1.05:0.01:1.05)';
 % p_wx = genP_x(params_freq, wDomain);
@@ -1400,28 +1401,28 @@ end
 % % wFeat = whitenPoints(featWf);
 %% Adaptation
 if diff(timeLapse) > 0.5
-dt = 1/8;
-onst = (0:7)'*dt;
-ofst = (0:7)'*dt + 0.05;
-onrpWins = [onst+5e-3, onst+3e-2];
-ofrpWins = [ofst+5e-3, ofst+3e-2];
-onrpIdx = txpsth >= onrpWins(:,1) & txpsth <= onrpWins(:,2);
-ofrpIdx = txpsth >= ofrpWins(:,1) & txpsth <= ofrpWins(:,2);
-ptsOn = zeros(size(onrpIdx,1),size(PSTH_prob,2),2); % time, magnitude
-ptsOf = ptsOn;
-for ccond = 1:size(PSTH_prob,2)
-    for crw = 1:size(onst,1)
-        [mg, tmSub] = max(PSTH_prob(onrpIdx(crw,:),ccond));
-        tmWinSub = find(onrpIdx(crw,:));
-        ptsOn(crw, ccond, 1) = txpsth(tmWinSub(tmSub));
-        ptsOn(crw, ccond, 2) = mg;
-        [mg, tmSub] = max(PSTH_prob(ofrpIdx(crw,:),ccond));
-        tmWinSub = find(ofrpIdx(crw,:));
-        ptsOf(crw, ccond, 1) = txpsth(tmWinSub(tmSub));
-        ptsOf(crw, ccond, 2) = mg;
+    dt = 1/8;
+    onst = (0:7)'*dt;
+    ofst = (0:7)'*dt + 0.05;
+    onrpWins = [onst+5e-3, onst+3e-2];
+    ofrpWins = [ofst+5e-3, ofst+3e-2];
+    onrpIdx = txpsth >= onrpWins(:,1) & txpsth <= onrpWins(:,2);
+    ofrpIdx = txpsth >= ofrpWins(:,1) & txpsth <= ofrpWins(:,2);
+    ptsOn = zeros(size(onrpIdx,1),size(PSTH_prob,2),2); % time, magnitude
+    ptsOf = ptsOn;
+    for ccond = 1:size(PSTH_prob,2)
+        for crw = 1:size(onst,1)
+            [mg, tmSub] = max(PSTH_prob(onrpIdx(crw,:),ccond));
+            tmWinSub = find(onrpIdx(crw,:));
+            ptsOn(crw, ccond, 1) = txpsth(tmWinSub(tmSub));
+            ptsOn(crw, ccond, 2) = mg;
+            [mg, tmSub] = max(PSTH_prob(ofrpIdx(crw,:),ccond));
+            tmWinSub = find(ofrpIdx(crw,:));
+            ptsOf(crw, ccond, 1) = txpsth(tmWinSub(tmSub));
+            ptsOf(crw, ccond, 2) = mg;
+        end
     end
-end
 
 else
-    
+
 end
