@@ -49,7 +49,10 @@ if strcmpi(PSTHstruct.Normalization, 'prob')
 else
     % Firing rate with inhomogenous bin sizes
     [~, lgEdg] = prepareLogBinEdges(PSTHstruct.TimeAxis([1,Nbin]), Nbin);
-    tmBinWdth = (diff(10.^lgEdg(:)));
+    tmBinWdth = diff(10.^lgEdg(:));
+    if isrow(condPsth)
+        condPsth = condPsth';
+    end
     condPsth = condPsth./tmBinWdth;
 %     PSTHstruct.LogPSTH = PSTHstruct.LogPSTH.*reshape(condPsth, [1, Nbin, Ncond]);
 %     PSTHstruct.LogPSTH = PSTHstruct.LogPSTH./tmBinWdth';
