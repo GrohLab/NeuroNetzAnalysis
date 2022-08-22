@@ -10,7 +10,7 @@ psthOpts = {'BinLimits', timeLapse, 'BinWidth', binSz, 'Normalization', ...
     'countdensity'};
 
 % Convolution kernel: Gaussian window
-conv_kernel = gausswin(10, pi);
+conv_kernel = gausswin(5, pi);
 conv_kernel = conv_kernel/sum(conv_kernel);
 
 % Creating a smooth histogram per trial per unit.
