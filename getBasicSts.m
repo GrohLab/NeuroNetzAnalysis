@@ -6,14 +6,14 @@ function [stStruct, spkDom] = getBasicSts(spkCell, cStruct, Na, res)
 if ~exist("res", "var") || ~(isnumeric(res) && numel(res) == 1 && res > 0)
     res = 5e-4;
 end
-foSts = @(x) [median(x), mean(x), std(x)];
-expnd = @(x, r) linspace(x(1), x(end), 1+ceil(diff(x([1,end]))/res));
+foSts = @(x) [median(x,'omitnan'), mean(x,'omitnan'), std(x,'omitnan')];
+expnd = @(x) linspace(x(1), x(end), 1+ceil(diff(x([1,end]))/res));
 fnOpts = {'UniformOutput', false};
 erOpts = {'ErrorHandler', @emptySpkTrain};
 ksOpts = {'Function','pdf'};
 %% 
 
-spkDom = expnd(cStruct.Response_window_s, res); N = length(spkDom);
+spkDom = expnd(cStruct.Response_window_s); N = length(spkDom);
 % Median, Mean, and STD
 sFOS = cellfun(@(x) cellfun(foSts, x, fnOpts{:}), spkCell, fnOpts{:});
 sFOS = cellfun(@(x) cat(1, x{:}), sFOS, fnOpts{:});
