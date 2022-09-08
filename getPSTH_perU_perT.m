@@ -1,7 +1,11 @@
-function [PSTH_unit_trial] = getPSTH_perU_perT(relSpkTmsStruct, confStruct)
+function [PSTH_unit_trial] = getPSTH_perU_perT(relSpkTmsStruct, confStruct, varargin)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
 
+
+p = inputParser();
+
+p.addRequired('relSpkTmsStruct')
 timeLapse = confStruct.Viewing_window_s;
 binSz = confStruct.BinSize_s;
 
