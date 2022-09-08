@@ -13,6 +13,7 @@ classdef ProtocolGetter < handle
         Conditions struct;
         isSaved logical = false;
         BinFile string = "";
+        onff = "on";
     end
     
     properties (SetAccess = 'private',GetAccess = 'protected')
@@ -20,18 +21,20 @@ classdef ProtocolGetter < handle
     end
     
     methods
-        function obj = ProtocolGetter(directory)
+        function obj = ProtocolGetter(directory, varargin)
             %UNTITLED4 Construct an instance of this class
             %   Detailed explanation goes here
             foStr = '_fileOrder';
             getBaseNames = @(x) arrayfun(@(y) fileparts(y.name), x,...
                 'UniformOutput', 0);
             
-            % Good folder?
-            if ~exist(directory,'dir')
-                fprintf('Invalid folder! No object created!\n')
-                return
-            end
+            p = inputParser();
+            p.addRequired('directory', @(x) exist(x, "dir"))
+            p.addParameter('onff',"on",@(x) ischar(x) | isstring(x))
+            p.parse(directory, varargin{:})
+            directory = p.Results.directory;
+            obj.onff = p.Results.onff;
+            
             obj.dataDir = directory;
             fsFile = dir(fullfile(directory,'*_sampling_frequency.mat'));
             load(fullfile(directory,fsFile(1).name),'fs')
@@ -435,7 +438,12 @@ classdef ProtocolGetter < handle
             % signals
             mxPulses = min(size(lSub,1),size(wSub,1));
             if ~isempty(lSub) && ~isempty(wSub)
-                dm = distmatrix(lSub(:,1)/obj.fs,wSub(:,1)/obj.fs);
+                % Quick fix for association/conditioning trials
+                if obj.onff == "on"
+                    dm = distmatrix(lSub(:,1)/obj.fs,wSub(:,1)/obj.fs);
+                else
+                    dm = distmatrix(lSub(:,2)/obj.fs,wSub(:,1)/obj.fs);
+                end
                 [strDelay, whr] = sort(dm(:),'ascend');
                 [lSubOrd, wSubOrd] = ind2sub(size(dm),whr(1:mxPulses));
                 timeDelay = strDelay(1:mxPulses);
