@@ -247,7 +247,11 @@ for cexp = reshape(chExp, 1, [])
         chCondFlag = matchConditionNames(condNames, trigCondName);
         [~, chCond] = find(chCondFlag);
         if all(~chCondFlag)
-            fprintf(1, "Didn't find trigger condition (%s)\n", trigCondName)
+            try
+                fprintf(1, "Didn't find trigger condition (%s)\n", trigCondName)
+            catch
+                fprintf(1, "Didn't find trigger condition (%s)\n", trigCondName{:})
+            end
             [chCond, iOk] = listdlg("ListString", condNames,...
                 "SelectionMode", "single", "PromptString",...
                 "Would you like to choose again a trigger condition?");
@@ -494,6 +498,14 @@ configStructure = struct('Experiment', fullfile(dataDir,expName),...
     'Spontaneous_window_s', spontaneousWindow, 'BinSize_s', binSz, ...
     'Trigger', struct('Name', condNames{chCond}, 'Edge',onOffStr), ...
     'ConsideredConditions',{consCondNames});
+CC_key = '';
+for cc = 1:length(consCondNames)-1
+    CC_key = [CC_key, sprintf('%s-', consCondNames{cc})]; %#ok<AGROW> 
+end
+CC_key = [CC_key, sprintf('%s', consCondNames{end})];
+C_key = condNames{chCond};
+SW_key = sprintf('SW%.2f-%.2f', spontaneousWindow*1e3);
+RW_key = sprintf('RW%.2f-%.2f', responseWindow*1e3);
 %% Population analysis
 
 figureDir = fullfile(experimentDir, 'PopFigures\');
@@ -558,9 +570,8 @@ if ~exist(resDir, 'dir')
     end
 end
 % Not the best name, but works for now...
-resPttrn = 'Res VW%.2f-%.2f ms RW%.2f-%.2f ms SW%.2f-%.2f ms %d Cond.mat';
-resFN = sprintf(resPttrn, timeLapse*1e3, responseWindow*1e3, ...
-    spontaneousWindow*1e3, Nccond);
+resPttrn = 'Res VW%.2f-%.2f ms %s ms %s ms %d Cond.mat';
+resFN = sprintf(resPttrn, timeLapse*1e3, RW_key, SW_key, Nccond);
 resFP = fullfile(resDir, resFN);
 if ~exist(resFP, "file")
     save(resFP, "Results", "Counts", "configStructure", "gclID")
@@ -648,84 +659,26 @@ end
 cellLogicalIndexing = @(x,idx) x(idx);
 isWithinResponsiveWindow =...
     @(x) x > responseWindow(1) & x < responseWindow(2);
-
-firstSpike = zeros(Nwru,Nccond);
-M = 16;
-binAx = responseWindow(1):binSz:responseWindow(2);
-condHist = zeros(size(binAx,2)-1, Nccond);
-firstOrdStats = zeros(2,Nccond);
-condParams = zeros(M,3,Nccond);
-txpdf = responseWindow(1):1/fs:responseWindow(2);
-%condPDF = zeros(numel(txpdf),Nccond);
-csvSubfx = sprintf(' SW%.1f-%.1f ms RW%.1f-%.1f ms VW%.1f-%.1f ms (%s).csv',...
-    spontaneousWindow*1e3, responseWindow*1e3, timeLapse*1e3, filtStr);
-existFlag = false;
-condRelativeSpkTms = cell(Nccond,1);
-relativeSpkTmsStruct = struct('name',{},'SpikeTimes',{});
-csvDir = fullfile(dataDir, 'SpikeTimes');
-if ~exist(csvDir,'dir')
-    iOk = mkdir(csvDir);
+rst = arrayfun(@(x) getRasterFromStack(discStack, ~delayFlags(:,x), ...
+    filterIdx(3:end), timeLapse, fs, true, true), 1:size(delayFlags,2), ...
+    fnOpts{:});
+relativeSpkTmsStruct = struct('name', consCondNames, 'SpikeTimes', rst);
+firstSpkStruct = getFirstSpikeInfo(relativeSpkTmsStruct, configStructure);
+spkDir = fullfile(dataDir, 'SpikeTimes');
+if ~exist(spkDir,'dir')
+    iOk = mkdir(spkDir);
     if ~iOk
         fprintf(1, 'The ''Figure'' folder was not created!\n')
         fprintf(1, 'Please verify your writing permissions!\n')
     end
 end
-for ccond = 1:size(delayFlags,2)
-    csvFileName = fullfile(csvDir,[expName,' ', sprintf('%d ',chExp),...
-        consCondNames{ccond}, csvSubfx]);
-    relativeSpikeTimes = getRasterFromStack(discStack,~delayFlags(:,ccond),...
-        filterIdx(3:end), timeLapse, fs, true, false);
-    relativeSpikeTimes(:,~delayFlags(:,ccond)) = [];
-    relativeSpikeTimes(~filterIdx(2),:) = [];
-    condRelativeSpkTms{ccond} = relativeSpikeTimes;
-    %     respIdx = cellfun(isWithinResponsiveWindow, relativeSpikeTimes,...
-    %         'UniformOutput',false);
-    clSpkTms = cell(size(relativeSpikeTimes,1),1);
-    %{
-    if exist(csvFileName, 'file') && ccond == 1
-        existFlag = true;
-        ansOW = questdlg(['The exported .csv files exist! ',...
-            'Would you like to overwrite them?'],'Overwrite?','Yes','No','No');
-        if strcmp(ansOW,'Yes')
-            existFlag = false;
-            fprintf(1,'Overwriting... ');
-        end
-    end
-    fID = 1;
-    if ~existFlag
-        fID = fopen(csvFileName,'w');
-        fprintf(fID,'%s, %s\n','Cluster ID','Relative spike times [ms]');
-    end
-    %}
-    rsclSub = find(filterIdx(2:end))-1;
-    % If a subcript is zero, don't substract.
-    if any(~rsclSub)
-        rsclSub = rsclSub + 1;
-    end
-    for cr = 1:size(relativeSpikeTimes, 1)
-        clSpkTms(cr) = {sort(cell2mat(relativeSpikeTimes(cr,:)))};
-        %{
-        if fID > 2
-            fprintf(fID,'%s,',gclID{rsclSub(cr)});
-            fprintf(fID,'%f,',clSpkTms{cr});fprintf(fID,'\n');
-        end
-        %}
-    end
-    %{
-    if fID > 2
-        fclose(fID);
-    end
-    %}
-    relativeSpkTmsStruct(ccond).name = consCondNames{ccond};
-    relativeSpkTmsStruct(ccond).SpikeTimes = condRelativeSpkTms{ccond};
-end
 spkFileName =...
-    sprintf('%s exps%s RW%.2f - %.2f ms SW%.2f - %.2f ms VW%.2f - %.2f ms %s (%s) exportSpkTms.mat',...
-    expName, sprintf(' %d',chExp), responseWindow*1e3, spontaneousWindow*1e3,...
-    timeLapse*1e3, Conditions(chCond).name, filtStr);
+    sprintf('%s exps%s %s ms %s ms VW%.2f - %.2f ms %s (%s) exportSpkTms.mat',...
+    expName, sprintf(' %d',chExp), RW_key, SW_key, timeLapse*1e3, ...
+    Conditions(chCond).name, filtStr);
 if ~exist(spkFileName,'file')
-    save(fullfile(csvDir, spkFileName), 'relativeSpkTmsStruct',...
-        'configStructure')
+    save(fullfile(spkDir, spkFileName), 'relativeSpkTmsStruct',...
+        'configStructure', 'firstSpkStruct')
 end
 %% Log PSTH -- Generalise this part!!
 Nbin = 64;
@@ -762,6 +715,12 @@ Nrsn = sum(wruIdx & signMod); Nrsp = sum(wruIdx & signMod & potFlag);
 spFr = pfr;
 MIspon = getMI(spFr);
 SNr = evFr./spFr;
+firingPttrn = 'Units firing info %s ms %s ms VW%.2f-%.2f %s %s.mat';
+firing_path = fullfile(spkDir, sprintf(firingPttrn, RW_key, SW_key, ...
+    timeLapse*1e3, C_key, CC_key));
+if ~exist(firing_path, 'file')
+    save(firing_path, "evFr", "spFr", "signMod", "wruIdx")
+end
 %% Plot proportional pies
 clrMap = lines(2); clrMap([3,4],:) = [0.65;0.8].*ones(2,3);
 % Responsive and non responsive clusters
