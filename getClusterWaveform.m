@@ -27,8 +27,15 @@ if ~exist(dataDir, 'dir')
     fprintf(1,'Please provide the data directory\n')
     return
 end
+% MATLAB version control
+mVer = version('-release');
+if mVer >= "2021b"
+    clIDNature = bit2int(checkNature(clusterID),3);
+else
+    clIDNature = 2.^((2:-1:0)*checkNature(clusterID)');
+end
 % Converting the ID(s) to cell arrays according to their nature
-switch bit2int(checkNature(clusterID),3)
+switch clIDNature
     case 1
         fprintf(1,'Numeric ID detected\n')
         clusterID = {num2str(clusterID)};
