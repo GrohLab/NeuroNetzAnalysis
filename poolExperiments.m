@@ -82,8 +82,6 @@ statFigFileNameEndings = {'.pdf','.emf'};
 printOpts = {{'-dpdf','-fillpage'},'-dmeta'};
 
 cellLogicalIndexing = @(x,idx) x(idx);
-
-expCo = 1;
 %% Experiment loop
 % For all the chosen experiments, perform the statistical test and save its
 % results, and extract the spike times for all clusters blending in the
@@ -715,9 +713,10 @@ Nrsn = sum(wruIdx & signMod); Nrsp = sum(wruIdx & signMod & potFlag);
 spFr = pfr;
 MIspon = getMI(spFr);
 SNr = evFr./spFr;
-firingPttrn = 'Units firing info %s ms %s ms VW%.2f-%.2f %s %s.mat';
-firing_path = fullfile(spkDir, sprintf(firingPttrn, RW_key, SW_key, ...
-    timeLapse*1e3, C_key, CC_key));
+firingPttrn = 'Units firing info (%s) %s ms %s ms VW%.2f-%.2f %s %s.mat';
+chExpStr = sprintf("%d ", chExp(1:end-1)) + sprintf("%d", chExp(end));
+firing_path = fullfile(spkDir, sprintf(firingPttrn, chExpStr, ...
+    RW_key, SW_key, timeLapse*1e3, C_key, CC_key));
 if ~exist(firing_path, 'file')
     save(firing_path, "evFr", "spFr", "signMod", "wruIdx")
 end
@@ -729,7 +728,6 @@ pie([Ntn-Nrn, Nrn], [0, 1], {'Unresponsive', 'Responsive'});
 pObj = findobj(respFig, "Type", "Patch");
 arrayfun(@(x) set(x, "EdgeColor", "none"), pObj);
 arrayfun(@(x) set(pObj(x), "FaceColor", clrMap(x+2,:)), 1:length(pObj))
-chExpStr = sprintf(" %d", chExp);
 propPieFileName = fullfile(figureDir,...
     sprintf("Whisker responsive proportion pie RW%.1f - %.1f ms%s (%dC, %dR)",...
     responseWindow*1e3, chExpStr, [Ntn-Nrn, Nrn]));
