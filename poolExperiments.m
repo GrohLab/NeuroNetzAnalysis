@@ -155,9 +155,13 @@ for cexp = reshape(chExp, 1, [])
         end
     end
     gclID = sortedData(goods,1);
+    % Removing spurious spikes
+    spur_time = 1*1e-3;
+    spike_times = sortedData(~badsIdx, 2);
+    spike_times = cellfun(@(x) x([false; diff(x)<spur_time]), spike_times, ...
+        fnOpts{:});
     % Subscript column vectors for the rest good clusters
-    spkSubs = cellfun(@(x) round(x.*fs),sortedData(goods, 2),...
-        'UniformOutput',false);
+    spkSubs = cellfun(@(x) round(x.*fs), spike_times, fnOpts{:});
     % Number of good clusters
     Ncl = numel(goods);
     % Redefining the stimulus signals from the low amplitude to logical values
