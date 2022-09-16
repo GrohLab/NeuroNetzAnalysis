@@ -156,9 +156,9 @@ for cexp = reshape(chExp, 1, [])
     end
     gclID = sortedData(goods,1);
     % Removing spurious spikes
-    spur_time = 1*1e-3;
+    spur_time = 1e-3;
     spike_times = sortedData(~badsIdx, 2);
-    spike_times = cellfun(@(x) x([false; diff(x)<spur_time]), spike_times, ...
+    spike_times = cellfun(@(x) x(~[false; diff(x)<spur_time]), spike_times, ...
         fnOpts{:});
     % Subscript column vectors for the rest good clusters
     spkSubs = cellfun(@(x) round(x.*fs), spike_times, fnOpts{:});
