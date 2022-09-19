@@ -32,7 +32,7 @@ mVer = version('-release');
 if mVer >= "2021b"
     clIDNature = bit2int(checkNature(clusterID),3);
 else
-    clIDNature = 2.^((2:-1:0)*checkNature(clusterID)');
+    clIDNature = 2.^((2:-1:0)*checkNature(clusterID));
 end
 % Converting the ID(s) to cell arrays according to their nature
 switch clIDNature

@@ -22,8 +22,8 @@ function [signMat, evZmu, signMatpt, evZpt, alph] = ...
 % Must be cell, have two columns, and the number of clusters in all cells
 % must be the same.
 p = inputParser;
-checkCounts = @(x) iscell(x) & size(x,2)==2 & ...
-    ~std(cellfun(@(y) size(y,1), x), 0, "all");
+checkCounts = @(x) all(iscell(x) & size(x,2)==2 & ...
+    ~std(cellfun(@(y) size(y,1), x)));
 % Alpha
 defAlpha = 0.05; % 2.5% is 5% in zscore
 checkAlpha = @(x) isnumeric(x) & isvector(x) & all(x>0 & x<0.2);
