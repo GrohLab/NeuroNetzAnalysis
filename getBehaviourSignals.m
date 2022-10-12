@@ -7,7 +7,7 @@ function [a_bodyParts, refStruct] = getBehaviourSignals(dlcTable)
 % INPUTS
 %       dlcTable - obtained from function readDLCData.
 % OUTPUTS
-%       a_bodyParts - table containing the 
+%       a_bodyParts - table containing the
 %Emilio Isaias-Camacho @GrohLab 2022
 
 % Mean pixel position of the headplate and the nose to draw the middle
@@ -21,7 +21,7 @@ hnCoords = reshape(mean(dlcTable{:,{'headplate', 'nose'}}(:,[1,2,4,5])),...
 % point.
 midlPt = hnCoords(:, noseSel) - diff(hnCoords, 1, 2)/5;
 % Getting the line that divides the mouse in half sagittally
-mdl = fit_poly(hnCoords(1,:), hnCoords(2,:), 1); 
+mdl = fit_poly(hnCoords(1,:), hnCoords(2,:), 1);
 refStruct = struct('MiddleLine', mdl, 'MiddlePoint', midlPt);
 % [n, d] = getHesseLineForm(mdl);
 % Getting the name of the variables to search for 'w' - whisker names, and
@@ -37,7 +37,7 @@ a_bodyParts = angleBetweenLines(mdl(1), m_bodyParts, 'deg');
 % Unwrapping jumps from ±90 degrees using a variation from MATLAB unwrap
 % function.
 a_bodyParts = arrayfun(@(x) unwrapDLC(a_bodyParts(:,x), 90), 1:sum(avFlags),...
-    'UniformOutput', false); 
+    'UniformOutput', false);
 % Wrapping up the results in a table.
 a_bodyParts = table(a_bodyParts{:},'VariableNames', avNames);
 end
@@ -47,7 +47,7 @@ function p = unwrapDLC(p, cutoff)
 %LocalUnwrap   Unwraps column vector of phase values.
 m = length(p);
 
-% Unwrap phase angles.  Algorithm minimizes the incremental phase variation 
+% Unwrap phase angles.  Algorithm minimizes the incremental phase variation
 % by constraining it to the range [-pi,pi]
 dp = diff(p,1,1);                % Incremental phase variations
 
