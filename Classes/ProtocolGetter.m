@@ -377,6 +377,9 @@ classdef ProtocolGetter < handle
                     obj.Edges(cst).Subs, obj.fs); wFreqs = [0;wFreqs]; %#ok<AGROW>
                 if obj.awaken && any(wFreq == 1)
                     wFreq(wFreq == 1) = [];
+                    if isempty(wFreq)
+                        wFlags = false(size(wFlags));
+                    end
                 end
                 % Getting the pulses in between the train with 0.5 Hz of
                 % tolerance.
@@ -385,12 +388,12 @@ classdef ProtocolGetter < handle
                 wFlags(wTrainBodyFlags) = [];
                 % Auxiliary flags to eliminate the frequencies associated
                 % to each pulse and keeping only the last of the train.
-                fotFlags = getFot(obj.Edges(cst).Subs(:,1)/obj.fs, 1);
-                lotFlags = getLot(obj.Edges(cst).Subs(:,1)/obj.fs, 1);
-                % Eliminate only those pulses which are in between the
-                % pulse, not the end but the beginning.
-                wFreqs(xor(wTrainBodyFlags , lotFlags) | fotFlags) = [];
                 if ~isempty(wFreq)
+                    fotFlags = getFot(obj.Edges(cst).Subs(:,1)/obj.fs, 1);
+                    lotFlags = getLot(obj.Edges(cst).Subs(:,1)/obj.fs, 1);
+                    % Eliminate only those pulses which are in between the
+                    % pulse, not the end but the beginning.
+                    wFreqs(xor(wTrainBodyFlags , lotFlags) | fotFlags) = [];
                     obj.Edges(cst).Subs = obj.Edges(cst).Subs(~wTrainBodyFlags,:);
                     coupFreq = wFreqs(wFlags(1:length(wFreqs)));
                 end
