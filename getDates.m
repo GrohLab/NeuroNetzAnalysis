@@ -16,7 +16,13 @@ switch class(fileNames)
     otherwise
         error('Unrecognised input format! Must be a string or dir() output!')
 end
-fDates = cellfun(@(x) datetime(x, 'InputFormat', dateFormStr),...
-    fDates);
-fDates.Format = dateFormStr;
+try
+    fDates = cellfun(@(x) datetime(x, 'InputFormat', dateFormStr),...
+        fDates);
+    fDates.Format = dateFormStr;
+catch ME
+    disp(ME)
+    fprintf(1, "Returning string, not date!\n");
+    fDates = [fDates{:}];
+end
 end
