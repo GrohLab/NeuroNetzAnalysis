@@ -2,45 +2,68 @@ function [outputArg1,outputArg2] = analyseBehaviour(behDir, varargin)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
 %% Auxiliary variables
-afPttrn = "ArduinoTriggers*.mat";
-rfPttrn = "RollerSpeed*.mat";
-lPttrn = "Laser*.csv"; pPttrn = "Puff*.csv";
-fnOpts = {'UniformOutput', false};
-axOpts = {'Box','off','Color','none'};
+% Input files
+dlcPttrn = 'roller*filtered.csv';
+rpPttrn = "Roller_position*.csv"; vdPttrn = "roller*.avi";
+% Output files
+afPttrn = "ArduinoTriggers*.mat"; rfPttrn = "RollerSpeed*.mat";
+% lPttrn = "Laser*.csv"; pPttrn = "Puff*.csv";
+fnOpts = {'UniformOutput', false}; axOpts = {'Box','off','Color','none'};
 lgOpts = cat(2, axOpts{1:2}, {'Location','best'});
+flfile = @(x) fullfile(x.folder, x.name); iemty = @(x) isempty(x);
+istxt = @(x) isstring(x) | ischar(x);
 m = 1e-3; k = 1/m;
 %% Input validation
 p = inputParser;
 
 defVW = [-250, 500]*m; %milliseconds
+defRW = [5, 400]*m;
 checkVW = @(x) all([isnumeric(x), numel(x) == 2, x(1)<x(2)]);
 
-defRW = [5, 400]*m;
+% Puff or laser (or whatever these would represent)
+defCond = "P"; % Default condition to center the behavioural signals
+checkCond = @(x) numel(x) == 1 & istxt(x) & (strcmpi(x,"P") | strcmpi(x,"L"));
+
+% If the triggers don't represent the same for all the experiment or if you
+% want to see only a subset of all the triggers.
+defTrigSubs = "all";
+checkTrigSubs = @(x) strcmpi(x,"all") | isPositiveIntegerValuedNumeric(x);
+
+checkPF = @(x) islogical(x) & (ismatrix(x) | isvector(x));
+
+defSpeedTh = 0.1:0.1:3; % Speed thresholds
+checkSpeedTh = @(x) all([diff(x) > 0, x > 0, numel(x) > 1]);
+
 checkTH = @(x) x > 0 & numel(x) == 1;
 defSig = 2.5; % Spontaneous standard deviation
 defSMed = 0.2; % Spontaneous Median
 defMed = 1; % Median in all viewing window
 
-defSpeedTh = 0.1:0.1:3; % Speed thresholds
-checkSpeedTh = @(x) all([diff(x) > 0, x > 0, numel(x) > 1]);
-
-addRequired(p, 'behDir', @(x) ischar(x) | isstring(x))
+addRequired(p, 'behDir', istxt)
 addParameter(p, 'ViewingWindow', defVW, checkVW)
 addParameter(p, 'ResponseWindow', defRW, checkVW)
+addParameter(p, 'Condition', defCond, checkCond)
+addParameter(p, 'TriggerSubscripts', defTrigSubs, checkTrigSubs)
+addParameter(p, 'PairedFlags', 'none', checkPF)
 addParameter(p, 'SpeedTh', defSpeedTh, checkSpeedTh)
 addParameter(p, 'SponSigTh', defSig, checkTH)
 addParameter(p, 'SponMedianTh', defSMed, checkTH)
 addParameter(p, 'MedianTh', defMed, checkTH)
+addParameter(p, 'verbose', true, @(x) islogical(x) & numel(x) == 1)
 
 parse(p, behDir, varargin{:})
 
 behDir = p.Results.behDir;
 bvWin = p.Results.ViewingWindow;
 brWin = p.Results.ResponseWindow;
+chCond = p.Results.Condition;
+trigSubs = p.Results.TriggerSubscripts;
+pairedStim = p.Results.PairedFlags;
 spTh = {p.Results.SpeedTh}; 
 sigTh = p.Results.SponSigTh; 
 sMedTh = p.Results.SponMedianTh;
 tMedTh = p.Results.MedianTh;
+verbose = p.Results.verbose;
 
 if bvWin(1) > brWin(1) || bvWin(2) < brWin(2)
     fprintf(1, 'Given response window lays outside the viewing window!\n')
@@ -55,17 +78,24 @@ if ~exist(behDir, "dir")
     return
 end
 
-%%
+awConfStruct = struct('Condition', chCond, 'Triggers', trigSubs, ...
+    'ViewingWindow', bvWin, 'ResponseWindow', brWin, 'SpeedTh', spTh, ...
+    'Thresholds', struct('SpontSigma', sigTh, 'SpontMedian', sMedTh, ...
+    'MedianTh', tMedTh));
+
+%% Create or read output files
+if verbose
+    fprintf(1,'Time window: %.2f - %.2f ms\n',bvWin*k)
+    fprintf(1,'Response window: %.2f - %.2f ms\n',brWin*k)
+end
 % If only one folder named Behaviour exists, chances are that this is
 % an awake experiment.
-if isempty(dir(fullfile(behDir, afPttrn)))
+if iemty(dir(fullfile(behDir, afPttrn)))
     readAndCorrectArdTrigs(behDir);
 end
-fprintf(1,'Time window: %.2f - %.2f ms\n',bvWin*k)
-fprintf(1,'Response window: %.2f - %.2f ms\n',brWin*k)
 % Roller speed
 rfFiles = dir(fullfile(behDir, rfPttrn));
-if isempty(rfFiles)
+if iemty(rfFiles)
     [~, vf, ~, fr, Texp] = createRollerSpeed(behDir);
     rfFiles = dir(fullfile(behDir, rfPttrn));
 end
@@ -74,23 +104,41 @@ if numel(rfFiles) == 1
     load(rfName) %#ok<LOAD>
     try
         %              Encoder steps  Radius^2
-        en2cm = ((2*pi)/((2^15)-1))*((14.85/2)^2)*rollFs;
-        fr = rollFs;
+        en2cm = ((2*pi)/((2^15)-1))*((14.85/2)^2)*fr;
     catch
         try
             %              Encoder steps  Radius^2
-            en2cm = ((2*pi)/((2^15)-1))*((14.85/2)^2)*fr;
+            en2cm = ((2*pi)/((2^15)-1))*((14.85/2)^2)*rollFs;
+            fr = rollFs;
         catch
             en2cm = ((2*pi)/((2^15)-1))*((14.85/2)^2)*fsRoll;
             fr = fsRoll;
         end
     end
 end
+
+% DLC signals
+dlcFiles = dir(fullfile(behDir, dlcPttrn));
+if ~iemty(dlcFiles)
+    dlcTables = arrayfun(@(x) readDLCData(flfile(x)), dlcFiles, fnOpts{:});
+    a_bodyParts = cellfun(@(x) getBehaviourSignals(x), ...
+        dlcTables, fnOpts{:});
+    behStruct = cellfun(@(x) getWhiskANoseFromTable(x), a_bodyParts);
+    behDLCSignals = cat(1, behStruct(:).Signals);
+    dlcNames = behStruct(1).Names; clearvars behStruct;
+else
+    if verbose
+        fprintf(1, "No filtered .csv DLC files found!\n")
+    end
+    behDLCSignals = [];
+end
+
 % Triggers
 getFilePath = @(x) fullfile(x.folder, x.name);
 atVar = {'atTimes', 'atNames', 'itTimes', 'itNames'};
 afFiles = dir(fullfile(behDir,afPttrn));
-if ~isempty(afFiles)
+if ~iemty(afFiles)
+    % Arduino
     atV = arrayfun(@(x) load(getFilePath(x), atVar{:}), afFiles);
     atT = arrayfun(@(x, z) cellfun(@(y, a) y+a, ...
         x.atTimes, repmat(z,1,length(x.atTimes)), fnOpts{:}), atV', ...
@@ -98,16 +146,58 @@ if ~isempty(afFiles)
     atT = cat(1, atT{:});
     atTimes = arrayfun(@(x) cat(1, atT{:,x}), 1:size(atT,2), fnOpts{:});
     atNames = atV(1).atNames;
+    % Intan
+    itT = arrayfun(@(x, z) cellfun(@(y, a) y+a, ...
+        x.itTimes, repmat(z,size(x.itTimes)), fnOpts{:}), atV', ...
+        num2cell([0, Texp(1:end-1)]), fnOpts{:});
+    itT = cat(2, itT{:})';
+    itTimes = arrayfun(@(x) cat(1, itT{:,x}), 1:size(itT,2), fnOpts{:});
+    itNames = atV(1).itNames;
+end
+%% Analysing the behaviour signals
+aSub = strcmpi(atNames, chCond);
+iSub = strcmpi(itNames, chCond);
+if isnumeric(trigSubs)
+    Ntrig = size(atTimes{aSub},1);
+    triggPassFlag = Ntrig < trigSubs;
+    if any(triggPassFlag)
+        if verbose
+            fprintf(1, "Given subscripts pass the maximum trigger number")
+            fprintf(1, " %d!\n", Ntrig)
+            fprintf(1, "Clipping the given subscripts to the available ")
+            fprintf(1, "range!\n")
+            fprintf(1, "Deleting: %d", trigSubs(triggPassFlag))
+            fprintf(1, "/n")
+        end
+        trigSubs(triggPassFlag) = [];
+    end
+elseif istxt(trigSubs) && strcmpi(trigSubs, "all")
+    trigSubs = 1:size(atTimes{aSub},1);
+end
+% Roller speed
+[~, vStack] = getStacks(false, round(atTimes{aSub}(trigSubs)*fr), 'on', bvWin,...
+    fr, fr, [], vf*en2cm); [Nbt, Ntr] = size(vStack, [2, 3]); Na = Ntr;
+% Whiskers and nose
+[~, dlcStack] = getStacks(false, round(itTimes{iSub}(trigSubs)*fr), 'on', ...
+    bvWin, fr, fr, [], behSignals);
+
+% Connection to DE_Jittering or as a stand-alone function.
+if istxt(pairedStim) && strcmpi(pairedStim, "none")
+    % Stand alone function without stimulus pairing
+    delayFlags = true(Na, 1);
+    Nccond = 1;
+elseif islogical(pairedStim) && size(pairedStim, 1) == Ntr
+    % Connected to DE_Jittering
+    delayFlags = pairedStim;
+    Nccond = size(pairedStim, 2);
 end
 
-lSub = arrayfun(@(x) contains(Conditions(chCond).name, x), atNames);
-[~, vStack] = getStacks(false, round(atTimes{lSub} * fr), 'on', bvWin,...
-    fr, fr, [], vf*en2cm); [Nbt, Ntr] = size(vStack, [2, 3]); Na = Ntr; delayFlags = true(Na, 1);
 tmdl = fit_poly([1,Nbt], bvWin, 1);
 behTx = ((1:Nbt)'.^[1,0])*tmdl;
-% Spontaneous flag
+% Spontaneous flags
 bsFlag = behTx <= 0; brFlag = behTx < brWin;
 brFlag = xor(brFlag(:,1),brFlag(:,2));
+% Measuring trials
 sSig = squeeze(std(vStack(:,bsFlag,:), [], 2));
 sMed = squeeze(median(vStack(:,bsFlag,:), 2));
 tMed = squeeze(median(vStack, 2));
@@ -133,8 +223,8 @@ for ccond = 1:Nccond
     % % Plot speed signals
     fig = figure("Color", "w");
     Nex = sum(xor(sIdx, delayFlags(:,ccond)));
-    rsFigName = sprintf(rsPttrn,consCondNames{ccond}, bvWin,...
-        brWin*1e3, Nex, thrshStr);
+    rsFigName = sprintf(rsPttrn, consCondNames{ccond}, bvWin,...
+        brWin*k, Nex, thrshStr); %#ok<USENS> 
     % Plot all trials
     plot(behTx, squeeze(vStack(:,:,sIdx)), ptOpts{1,:}); hold on;
     % Plot mean of trials
@@ -158,7 +248,7 @@ for ccond = 1:Nccond
     mvFlags{ccond} = compareMaxWithThresh(mvpt{ccond}, spTh);
     gp(ccond) = getAUC(mvFlags{ccond});
     pfName = sprintf(pfPttrn, consCondNames{ccond}, gp(ccond),...
-        brWin*1e3, Nex, thrshStr);
+        brWin*k, Nex, thrshStr);
     fig = plotThetaProgress(mvFlags(ccond), spTh,...
         string(consCondNames{ccond}));
     xlabel("Roller speed \theta [cm/s]");
@@ -179,7 +269,7 @@ lgnd = legend(axs, lObj); set(lgnd, lgOpts{:})
 rsPttrn = "Mean roller speed %s VW%.2f - %.2f s RM%.2f - %.2f ms EX%s %s SEM";
 Nex = Na - sum(xdf);
 rsFigName = sprintf(rsPttrn, sprintf('%s ', consCondNames{:}), bvWin,...
-    brWin*1e3, sprintf('%d ', Nex), thrshStr);
+    brWin*k, sprintf('%d ', Nex), thrshStr);
 saveFigure(fig, fullfile(figureDir, rsFigName), 1)
 
 % Plotting median speed signals together
@@ -194,7 +284,7 @@ set(axs, axOpts{:}); title(axs, "Roller speed for all conditions")
 lgnd = legend(axs, lObj); set(lgnd, lgOpts{:})
 rsPttrn = "Median roller speed %s VW%.2f - %.2f s RM%.2f - %.2f ms EX%s %s IQR";
 rsFigName = sprintf(rsPttrn, sprintf('%s ', consCondNames{:}), bvWin,...
-    brWin*1e3, sprintf('%d ', Nex), thrshStr);
+    brWin*k, sprintf('%d ', Nex), thrshStr);
 saveFigure(fig, fullfile(figureDir, rsFigName), 1)
 
 % Plotting movement threshold crossings
@@ -209,15 +299,18 @@ set(lgnd, lgOpts{:}); ylim(axs, [0,1])
 xlabel(axs, "Roller speed \theta [cm/s]"); ylabel(axs, "Trial proportion")
 title(axs, "Trial proportion crossing \theta")
 pfPttrn = "Move probability %sRW%.2f - %.2f ms %s";
-pfName = sprintf(pfPttrn, sprintf('%s ', ccnGP{:}), brWin*1e3, thrshStr);
+pfName = sprintf(pfPttrn, sprintf('%s ', ccnGP{:}), brWin*k, thrshStr);
 saveFigure(fig, fullfile(figureDir, pfName), 1)
 % Tests for movement
-prms = nchoosek(1:Nccond,2);
-getDistTravel = @(x) squeeze(sum(abs(vStack(:,brFlag,xdf(:,x))),2));
-dstTrav = arrayfun(getDistTravel, 1:Nccond, fnOpts{:});
-[pd, hd, statsd] = arrayfun(@(x) ranksum(dstTrav{prms(x,1)}, ...
-    dstTrav{prms(x,2)}), 1:size(prms,1), fnOpts{:});
-[pm, hm, statsm] = arrayfun(@(x) ranksum(mvpt{prms(x,1)}, ...
-    mvpt{prms(x,2)}), 1:size(prms,1), fnOpts{:});
-%%
+if Nccond > 1
+    prms = nchoosek(1:Nccond,2);
+    getDistTravel = @(x) squeeze(sum(abs(vStack(:,brFlag,xdf(:,x))),2));
+    dstTrav = arrayfun(getDistTravel, 1:Nccond, fnOpts{:});
+    [pd, hd, statsd] = arrayfun(@(x) ranksum(dstTrav{prms(x,1)}, ...
+        dstTrav{prms(x,2)}), 1:size(prms,1), fnOpts{:});
+    [pm, hm, statsm] = arrayfun(@(x) ranksum(mvpt{prms(x,1)}, ...
+        mvpt{prms(x,2)}), 1:size(prms,1), fnOpts{:});
+end
+"gp", "dstTrav", "ccnGP", "mvpt", "xdf", ...
+        "vStack", "spTh", "sigTh", "sMedTh", "tMedTh", "brWin", "bvWin", "prms"
 end
