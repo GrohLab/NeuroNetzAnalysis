@@ -281,9 +281,13 @@ if istxt(pairedStim) && strcmpi(pairedStim, "none")
     consCondNames = cellstr(atNames(aSub));
 elseif islogical(pairedStim) && size(pairedStim, 1) == Ntr
     % Connected to DE_Jittering
+    if sum(pairedStim(:)) ~= Na
+    else
     delayFlags = pairedStim;
     Nccond = size(pairedStim, 2);
+    end
 end
+
 % Whiskers and nose
 [~, dlcStack] = getStacks(false, round(itTimes{iSub}(trigSubs,:)*fr), 'on', ...
     bvWin, fr, fr, [], behDLCSignals');
