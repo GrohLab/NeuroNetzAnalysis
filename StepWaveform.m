@@ -11,21 +11,48 @@ classdef StepWaveform < DiscreteWaveform
     
     methods
         % Constructor
-        function obj = StepWaveform(data, samplingFreq, units, title)
+        function obj = StepWaveform(data, samplingFreq, varargin)
             %STEPWAVEFORM Construct an instance of this class
             %   Detailed explanation goes here
-            if nargin < 3
-                units = 'on-off';
-                title = 'Step Waveform';
-            end
+            p = inputParser;
+            defUnits = 'on-off';
+            defTitle = 'Step Waveform';
+            addRequired(p, 'data');
+            addRequired(p, 'samplingFreq');
+            addOptional(p, 'units', defUnits);
+            addOptional(p, 'title', defTitle);
+            addOptional(p, 'verbose', true, @(x) islogical(x));
+            parse(p, data, samplingFreq, varargin{:});
+            
+            data = p.Results.data;
+            samplingFreq = p.Results.samplingFreq;
+            units = p.Results.units;
+            title = p.Results.title;
+            verbose = p.Results.verbose;
+            
             obj@DiscreteWaveform(data,samplingFreq, units,title);
-            obj.Triggers = computeTriggers(obj);
+            obj.Triggers = computeTriggers(obj, verbose);
         end
         
         % Rising and falling edges
         function RaF = get.Triggers(obj)
             RaF = obj.Triggers;
         end 
+        
+        function subRaF = subTriggers(obj)
+            try
+                subRaF = [find(obj.Triggers(:,1)),find(obj.Triggers(:,2))];
+            catch 
+                subRaF = [];
+                return
+            end
+            invertedFlags = diff(subRaF,1,2) < 0;
+            if any(invertedFlags)
+                fprintf(1,'%d Downwards pulses detected!\n',...
+                    sum(invertedFlags))
+                subRaF(invertedFlags,:) = flip(subRaF(invertedFlags,:),2);
+            end
+        end
 
         % Display object information
         function disp(obj)
@@ -39,15 +66,25 @@ classdef StepWaveform < DiscreteWaveform
     end
     %% Private Methods
     methods (Access = 'private')
-        function RaF = computeTriggers(obj)
+        function RaF = computeTriggers(obj, verbose)
+            fanoFact = @(x) std(x,1)/mean(x);
+            fnOpts = {'UniformOutput', false};
             % Checking the data type
             if isa(obj.Data,'double')
                 % Real valued signal
                 ds = diff(obj.Data);
                 if sum(ds>0) ~= numel(obj.Data)-1
-                    zs2 = (mean(obj.Data)/std(obj.Data))^2;
-                    fprintf(1,'The square z-score of the signal is %.2f\n',zs2)
-                    if zs2 < 0.9
+                    data = obj.Data - mean(obj.Data);
+                    % zs2 = (mean(data)/std(obj.Data))^2;
+                    % if verbose; fprintf(1,'The square z-score of the signal is %.2f\n',zs2); end
+                    zdata = zscore(data); [Zh, zdom] = ksdensity(zdata);
+                    zDist = fitdist(zdata(:), 'Normal');
+                    Dkl = KullbackLeiblerDivergence(Zh, pdf(zDist, zdom));
+                    if verbose; fprintf(1,'KL divergence is %.2f\n',Dkl); 
+                    end
+                    %rostd = range(data)./std(data);
+                    %if zs2 < 0.9 %&& rostd < 7
+                    if log10(Dkl) > -1
                         rise = false(obj.NSamples,1);    % Rising edge times
                         fall = rise;                    % Falling edge times
                         % Maximum value divided by three
@@ -56,31 +93,37 @@ classdef StepWaveform < DiscreteWaveform
                         fall(1:end-1) = ds < min(ds)/3;
                         fall = StepWaveform.cleanEdges(fall);
                         if sum(rise) ~= sum(fall)
-                            warning('The cardinality of the rising edges is different for the falling edges')
-                            if abs(sum(rise) - sum(fall)) == 1
-                                % Determining the missing edge (normally
-                                % would be at the extreme cases; at the
-                                % beguinning or at the end of the time
-                                % series)
+                            if verbose
+                                warning('The cardinality of the rising edges is different for the falling edges')
+                            end
+                            % Determining the missing edges (normally would
+                            % be at the extreme cases; at the beginning or
+                            % at the end of the time series)
+                            if verbose
                                 fprintf(1,'Perhaps it is a truncated pulse...\n')
-                                r = find(rise);
-                                f = find(fall);
-                                dm = distmatrix(r,f);
-                                if numel(r) < numel(f)
-                                    dim = 1;
-                                else
-                                    dim = 2;
-                                end
-                                [~,Sub] = max(min(dm,[],dim));
-                                if dim == 2
-                                    rise(r(Sub)) = false;
-                                else
-                                    fall(f(Sub)) = false;
-                                end
+                            end
+                            r = find(rise); f = find(fall);
+                            dm = distmatrix(r,f); [Nr, Nf] = size(dm);     
+                            Nsft = abs(Nr-Nf); dgSubs = -Nsft:Nsft;
+                            dgdm = arrayfun(@(x) diag(dm, x), dgSubs, ...
+                                fnOpts{:});
+                            dgdm = cat(1, dgdm{:});
+                            Ev = arrayfun(@(x) getEntropyFromPDF( ...
+                                histcounts(diag(dm, x), 'BinLimits', ...
+                                [min(dgdm(:)),max(dgdm(:))])), dgSubs);
+                            ffact = arrayfun(@(x) fanoFact(diag(dm, x)), ...
+                                dgSubs);
+                            qdist = arrayfun(@(x) diff(quantile( ...
+                                diag(dm, x), [0.25, 0.75])), dgSubs);
+                            [~,eSub] = min(vecnorm([Ev;ffact;qdist],2,1));
+                            nSubs = 1:min(Nr, Nf);
+                            if Nf > Nr
+                                f = f(nSubs+abs(dgSubs(eSub)));
+                                fall = false(size(rise)); fall(f) = true;
                             else
-                                fprintf(1,'It might be worth improving ')
-                                fprintf(1,'signal quality\n')
-                            end % abs(sum(rise) - sum(fall)) == 1
+                                r = r(nSubs+abs(dgSubs(eSub)));
+                                rise = false(size(fall)); rise(r) = true;
+                            end % Nf > Nr
                         end % sum(rise) ~= sum(fall)
                         try
                             RaF = [rise, fall];
@@ -90,12 +133,16 @@ classdef StepWaveform < DiscreteWaveform
                             RaF = {rise, fall};
                         end
                     else
-                        fprintf(1,'The input signal seems to be only noise.\n')
-                        fprintf(1,'Consider examining it closely...\n')
+                        if verbose
+                            fprintf(1,'The input signal seems to be only noise.\n')
+                            fprintf(1,'Consider examining it closely...\n')
+                        end
                         RaF = [];
                     end % if zs2 < 0.9 -- Noise-like signal?
                 else
-                    disp('The given data are probably the triggers already!')
+                    if verbose
+                        disp('The given data are probably the triggers already!')
+                    end
                     RaF = obj.Data;
                 end % sum(ds>0) ~= numel(obj.Data)-1 -- Triggers given?
                 obj.Triggers = RaF;

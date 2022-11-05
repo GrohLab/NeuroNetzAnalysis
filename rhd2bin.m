@@ -324,7 +324,7 @@ if (data_present)
 
     t_amplifier = zeros(1, num_amplifier_samples);
 
-    amplifier_data = zeros(num_amplifier_channels, num_amplifier_samples);
+    % amplifier_data = zeros(num_amplifier_channels, num_amplifier_samples);
     aux_input_data = zeros(num_aux_input_channels, num_aux_input_samples);
     supply_voltage_data = zeros(num_supply_voltage_channels, num_supply_voltage_samples);
     temp_sensor_data = zeros(num_temp_sensor_channels, num_supply_voltage_samples);
@@ -338,14 +338,15 @@ if (data_present)
     fprintf(1, 'Reading data from file...\n');
 
     amplifier_index = 1;
-    aux_input_index = 1;
-    supply_voltage_index = 1;
-    board_adc_index = 1;
-    board_dig_in_index = 1;
-    board_dig_out_index = 1;
+    % aux_input_index = 1;
+%     supply_voltage_index = 1;
+    % board_adc_index = 1;
+    % board_dig_in_index = 1;
+    % board_dig_out_index = 1;
 %     datIdx = amplifier_index;
     print_increment = 10;
     percent_done = print_increment;
+    
     for i=1:num_data_blocks
         % In version 1.2, we moved from saving timestamps as unsigned
         % integeters to signed integers to accomidate negative (adjusted)
@@ -357,7 +358,6 @@ if (data_present)
             t_amplifier(amplifier_index:(amplifier_index + num_samples_per_data_block - 1)) = fread(fid, num_samples_per_data_block, 'uint32');
         end
         if (num_amplifier_channels > 0)
-            % amplifier_data(:, amplifier_index:(amplifier_index + num_samples_per_data_block - 1)) = fread(fid, [num_samples_per_data_block, num_amplifier_channels], 'uint16')';
             amplifier_data(:, amplifier_index:(amplifier_index + num_samples_per_data_block - 1)) = fread(fid, [num_samples_per_data_block, num_amplifier_channels], 'uint16')';
         end
         if (num_aux_input_channels > 0)
@@ -379,11 +379,11 @@ if (data_present)
             board_dig_out_raw(board_dig_out_index:(board_dig_out_index + num_samples_per_data_block - 1)) = fread(fid, num_samples_per_data_block, 'uint16');
         end
 
-        fraction_done = 100 * (i / num_data_blocks);
+        fraction_done = 100 * (double(i) / double(num_data_blocks));
         if (fraction_done >= percent_done)
             fprintf(1, '%d%% done...\n', percent_done);
             percent_done = percent_done + print_increment;
-            tempData = int16(int32(amplifier_data(:,1:amplifier_index))-((2^15)-1));
+            tempData = int16(int32(amplifier_data)-((2^15)-1));
             fwrite(fbID,tempData,'int16')
             % datIdx = amplifier_index + 1;
             amplifier_index = 1;
@@ -400,7 +400,7 @@ if (data_present)
     % Make sure we have read exactly the right amount of data.
     bytes_remaining = filesize - ftell(fid);
     if (bytes_remaining ~= 0)
-        %error('Error: End of file not reached.');
+        error('Error: End of file not reached.');
     end
 
 end
@@ -438,13 +438,13 @@ if (data_present)
 %     temp_sensor_data = temp_sensor_data / 100; % units = deg C
 % 
     % Check for gaps in timestamps.
-    num_gaps = sum(diff(t_amplifier) ~= 1);
-    if (num_gaps == 0)
-        fprintf(1, 'No missing timestamps in data.\n');
-    else
-        fprintf(1, 'Warning: %d gaps in timestamp data found.  Time scale will not be uniform!\n', ...
-            num_gaps);
-    end
+%     num_gaps = sum(diff(t_amplifier) ~= 1);
+%     if (num_gaps == 0)
+%         fprintf(1, 'No missing timestamps in data.\n');
+%     else
+%         fprintf(1, 'Warning: %d gaps in timestamp data found.  Time scale will not be uniform!\n', ...
+%             num_gaps);
+%     end
 % 
 %     % Scale time steps (units = seconds).
 %     t_amplifier = t_amplifier / sample_rate;

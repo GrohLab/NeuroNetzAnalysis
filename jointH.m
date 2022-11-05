@@ -8,6 +8,6 @@ for x = 1:row
             hxy(round(im1(x,y)+1),round(im2(x,y))+1) + 1;
     end
 end
-hxy = hxy/sum(hxy(:));
+hxy = hxy./sum(hxy(:));
 end
 

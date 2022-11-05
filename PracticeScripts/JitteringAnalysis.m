@@ -6,7 +6,10 @@ m = 1e-3; % milli
 zs = @(x)mean(x)/std(x);
 addFst = @(x,y)cat(find(size(x)~=1),y,x);
 addLst = @(x,y)cat(find(size(x)~=1),x,y);
+fstCell = @(x) x{1};
+invalidCharacters = {'+','-'};
 uninterestingVals = @(x)~(isempty(x) || isnan(x) || isinf(x) || x == 0);
+findUnpairedPulse = @(x) cat(1,false,reshape(diff(sort(x)) == 0,numel(x)-1,1));
 printFig = @(x,fname) set(x,'RendererMode','manual','Renderer','painters',...
     'PaperOrientation','landscape','Name',fname);
 %% Select data file
@@ -59,7 +62,12 @@ if ~anaFlag
     fsArray = zeros(1,nnz(headIdx));
     for chead = 1:nnz(headIdx)
         fsArray(chead) = 1e6/(varsInFile.(fNames{headSub(chead)}).sampleinterval);
-        newField = erase(varsInFile.(fNames{headSub(chead)}).title,' ');
+        newField = erase(varsInFile.(fNames{headSub(chead)}).title,{' '});
+        if contains(newField,invalidCharacters)
+            newFieldProposal = strrep(newField,invalidCharacters,{'NVS'});
+            wrongName = strfind(newFieldProposal,'NVS');
+            newField = newFieldProposal{~cellfun(@isempty,wrongName)};
+        end
         data.(newField) = varsInFile.(strrep(fNames{headSub(chead)},'head','chan'));
     end
     Ns = mode(structfun(@length,data));
@@ -119,15 +127,8 @@ if ~anaFlag
             triggerIdx(tSub) = [];
             continue
         end
-        if strcmpi(IDsignal{cts},'piezo')
-            Triggers.(sprintf('%s%s',IDsignal{cts},'Up')) =...
-                StepWaveform.SCBrownMotion(auxArray) > 0;
-            Triggers.(sprintf('%s%s',IDsignal{cts},'Dw')) =...
-                StepWaveform.SCBrownMotion(auxArray) < 0;
-        else
-            Triggers.(IDsignal{cts}) =...
-                StepWaveform.SCBrownMotion(auxArray) ~= 0;
-        end
+        Triggers.(IDsignal{cts}) =...
+            StepWaveform.SCBrownMotion(auxArray) ~= 0;
         cellTriggers(tSub) = {auxArray};
         tSub = tSub + 1;
     end
@@ -142,83 +143,84 @@ if ~anaFlag
     % Piezo: Up and down and first pulse of a pulse train
     % condFig = figure('Visible','off','Color',[1,1,1]);
     
-    upIdx = IdxTriggers.piezo(:,1).*data.piezo > 0;
-    upSub = find(upIdx);
-    upFst = StepWaveform.firstOfTrain(upSub/fs);
-    dwIdx = IdxTriggers.piezo(:,2).*data.piezo < 0;
-    dwSub = find(dwIdx);
-    dwFst = StepWaveform.firstOfTrain(dwSub/fs);
-    
-    Conditions = struct('name','piezoTrainUp','Triggers',upSub(upFst));
-    Conditions(2).name = 'piezoTrainDw';
-    Conditions(2).Triggers = dwSub(dwFst);
-    Conditions(3).name = 'piezoTrainUpandDw';
-    Conditions(3).Triggers = union(upSub(upFst),dwSub(dwFst));
-    Conditions(4).name = 'piezoAllUp';Conditions(4).Triggers = upSub;
-    Conditions(5).name = 'piezoAllDw';Conditions(5).Triggers = dwSub;
-    Conditions(6).name = 'piezoAll';Conditions(6).Triggers = union(upSub,dwSub);
+    upIdx = IdxTriggers.piezo .* repmat(data.piezo,1,2) > 0;
+    dwIdx = IdxTriggers.piezo .* repmat(data.piezo,1,2) < 0;
+    pzIdx = upIdx | flip(dwIdx,2);
+    pzSub = [find(pzIdx(:,1)),find(pzIdx(:,2))];
+    pzFst = StepWaveform.firstOfTrain(pzSub(:,1)/fs);
+
+    upSub = [find(upIdx(:,1)),find(upIdx(:,2))];
+    upFst = StepWaveform.firstOfTrain(upSub(:,1)/fs);
+    dwSub = [find(dwIdx(:,2)), find(dwIdx(:,1))];
+    dwFst = StepWaveform.firstOfTrain(dwSub(:,2)/fs);
+   
+    Conditions = struct('name','Piezo','Triggers',union(upSub,dwSub,'rows'));
     
     if isfield(IdxTriggers,'laser')
+        % Searching for frequency stimulation
         lsSub = find(IdxTriggers.laser(:,1));
         lsIpi = diff(lsSub/fs);
         lsFst = StepWaveform.firstOfTrain(lsSub/fs, 5 - 1e-3);
         
         lsIpi = lsIpi(~lsFst(1:end-1));
-        freqCond = round(uniquetol(1./lsIpi,0.01));
-        freqCond = freqCond(freqCond > 0);
+        pulsFreq = 1./diff(lsSub./fs);
+        freqCond = round(uniquetol(pulsFreq,0.1/max(pulsFreq)));
+        freqCond = unique(freqCond(freqCond > 0));
         fprintf(1,'Frequency stimulation:')
-        if isempty(freqCond)
+        
+        if isempty(freqCond) || numel(freqCond) == 1
             freqCond = 0;
-        else
-        for cdl = 1:numel(freqCond)
-            fprintf(1,' %.2f',freqCond(cdl))
-        end
-        fprintf(1,'\n')
-        end
-        try
-            if isempty(lsFst) || ~sum(lsFst)
-                timeDelay = abs(lsSub - Conditions(3).Triggers)/fs;
-            else
-                timeDelay = abs(lsSub(lsFst) - Conditions(3).Triggers)/fs;
-            end
-        catch TDE
-            fprintf(1,'Seems that a pulse was truncated...\n')
-            fprintf(1,'----Please pay attention when you finish recording!\n')
-            if isempty(lsFst) || ~sum(lsFst)
-                maxPulses = min(numel(lsSub),numel(Conditions(3).Triggers));
-                timeDelay = abs(lsSub(1:maxPulses) -...
-                    Conditions(3).Triggers(1:maxPulses))/fs;
-            else
-                maxPulses = min(sum(lsFst),numel(Conditions(3).Triggers));
-                dm = distmatrix(lsSub(lsFst)/fs,Conditions(3).Triggers/fs);
-                srtDelay = sort(dm(:),'ascend');
-                timeDelay = srtDelay(1:maxPulses);
+            fprintf(' None')
+        elseif numel(freqCond) > 1
+            Nfre = numel(freqCond);
+            pulsFreq = 1./diff(lsSub./fs);
+            lsuSub = lsSub(lsFst);
+            lsdSub = find(IdxTriggers.laser(:,2));
+            lsLst = flip(StepWaveform.firstOfTrain(flip(lsdSub)/fs, 5-1e-3));
+            lsdSub = lsdSub(lsLst);
+            lsCon = [lsuSub,lsdSub];
+            lsIdx = false(size(lsCon,1),Nfre);
+            for cdl = 1:Nfre
+                fprintf(1,' %.2f',freqCond(cdl))
             end
         end
-        delays = uniquetol(timeDelay,0.01);
+        fprintf(1,' Hz\n')
+        
+        % Searching for delays in the data with respect to the piezo
+        
+        maxPulses = min(length(lsSub),size(Conditions.Triggers,1));
+        dm = distmatrix(lsSub/fs,Conditions.Triggers(:,1)/fs);
+        [srtDelay, whr] = sort(dm(:),'ascend');
+        [lghtSub, piezSub] = ind2sub(size(dm),whr(1:maxPulses));
+        timeDelay = srtDelay(1:maxPulses);
+        delays = 10.^uniquetol(log10(timeDelay),0.01/log10(max(abs(timeDelay))));
+        delays(delays > 1) = [];
         if std(delays.*1e3) < 1
             delays = mean(delays);
         end
-        fprintf(1,'Delays found:')
-        for cdl = 1:numel(delays)
-            fprintf(1,' %.2f',delays(cdl))
-        end
-        fprintf(1,'\n')
-        Nc = numel(Conditions);
         Ndel = numel(delays);
-        Nfre = numel(freqCond);
-        for ccond = Nc+1:Nc*(Ndel*Nfre+1)
-            subFreq = ceil(((ccond/Nc)-1)*(1/Ndel));
-            subDel = ceil(((ccond/Nc)-1)*(1/Nfre));
-            subCond = mod(ccond-1,Nc)+1;
-            Conditions(ccond).name = cat(2,Conditions(subCond).name,...
-                sprintf('+laser(%d ms & %d Hz)',round(k*delays(subDel)),...
-                freqCond(subFreq)));
-            % TODO: Find the relevant laser + piezo combination!
-            dm = log(distmatrix(lsSub/fs,Conditions(subCond).Triggers/fs));
-            [y,x] = find(ismembertol(dm,min(dm(:)),0.001));
-            Conditions(ccond).Triggers = Conditions(subCond).Triggers(x);
+        fprintf(1,'Delays found:')
+        lsDel = false(length(lsSub),Ndel);
+        Ncond = numel(Conditions);
+        for cdl = 1:Ndel
+            fprintf(1,' %.1f',delays(cdl)*1e3)
+            lsDel(:,cdl) = ismembertol(log10(timeDelay),log10(delays(cdl)),...
+                abs(0.01/log10(max(delays))));
+            Conditions(Ncond + cdl).name = sprintf('Delay %0.3f s',...
+                delays(cdl));
+            Conditions(Ncond + cdl).Triggers =...
+                Conditions(1).Triggers(sort(piezSub(lsDel(:,cdl))),:); 
         end
+        fprintf(1,' ms\n')
+        [~,lghtSub] = min(dm,[],2,'omitnan');
+        [~,piezSub] = min(dm,[],1,'omitnan');
+        piezSub = piezSub';
+        loneLaser = findUnpairedPulse(lghtSub);
+        lonePiezo = reshape(diff(sort(piezSub)) == 0,numel(piezSub)-1,1);
+        Conditions(Ncond + cdl + 1).name = 'Laser Control';
+        Conditions(Ncond + cdl + 1).Triggers = lsOn(find(loneLaser));
+        Conditions(Ncond + cdl + 2).name = 'Puff Control';
+        Conditions(Ncond + cdl + 2).Triggers = pzUp(find(lonePiezo));
     end
     
     %% Spike finding
@@ -267,55 +269,97 @@ else
 end
 
 %%
-% Time window surrounding the trigger [time before, time after] in seconds
-timeLapse = repmat([1.5 , 5.5],3,1);
-timeLapse = [timeLapse; repmat([250,350]*m,3,1)];
-timeLapse = repmat(timeLapse,numel(Conditions)/6,1);
-binSz = ones(3,1)*50*m; % milliseconds or seconds
-binSz = [binSz; repmat(1*m,3,1)];
-binSz = repmat(binSz,numel(Conditions)/6,1);
+% Time window surrounding the trigger [time before, time after] and bin
+% size for the PSTH. Both quantities in seconds.
+timeLapse = [350, 350]*m;
+binSz = 10*m;
 
-%[~,cSt] =...
-%    getStacks(false(1,cols), ltOn, 'on', timeLapse * m, fs ,fs ,[],dataCell);
 ERASE_kIDX = false;
 clID = UMSDataLoader.getClustersID(UMSSpikeStruct,'good');
 subOffst = numel(clID) - 1;
 IDe = IDsignal(...
     ~cellfun(@strcmpi,IDsignal,repmat({'Spikes'},numel(IDsignal),1)));
-IDe = [num2cell([repmat('Cluster ',numel(clID),1),num2str(clID)],2);IDe];
-rID = [num2cell([repmat('Cluster ',numel(clID),1),num2str(clID)],2);...
-    fieldnames(Triggers)];
+rID = num2cell([repmat('Cluster ',numel(clID),1),num2str(clID)],2);
+
+
 ntSub = triggerIdx + subOffst;
 nsSub = signalIdx + subOffst;
 consideredSignalsIdx = false(size(IDe));
 
+consEvnts = struct2cell(Triggers);
+consEvnts(tIdx) = [];
+eID = fieldnames(Triggers);
+tIdx = strcmp(eID,{'piezo'});
 othNeu = setdiff(1:numel(spT),1);
-if isempty(spT(othNeu))
-    consEvnts = struct2cell(Triggers);
-else
-    consEvnts = cat(1,spT(othNeu),struct2cell(Triggers));
+
+if ~(isempty(spT(othNeu)) || isempty(consEvnts))
+    consEvnts = cat(1,spT(othNeu),consEvnts);
 end
 OVW = false; % Overwrite figure flag
+
+expName = [erase(erase(filePath,getParentDir(filePath,1)),filesep),'->',...
+        erase(fileName,'.mat')];
+
+trigSubs = pzSub;
+if contains(fileName,'long')
+    trigSubs = pzSub(pzFst,:);
+else
+    disp('Not long experiment...')
+end
+[dStack, cStack] = getStacks(spT{1},trigSubs,'on',timeLapse,fs,fs,...
+    consEvnts,struct2cell(ContinuousData));
+
+[Ne,~,Na] = size(dStack);
+
+kIdx = false(1, Na);
+interestingEvents = true(1,Ne-2);
 %%
+eIDx = purgeTrials(dStack,timeLapse,tIdx,~tIdx,...
+    false(size(tIdx)),eID,fs);
+if ~sum(eIDx)
+    eIDx = true(Na,1);
+end
+[PSTH, trig, sweeps] =...
+    getPSTH(dStack, timeLapse, ~eIDx, binSz, fs);
+koIdx = true(size(PSTH,1),1);
+koIdx(tIdx) = false;
+prID = rID;
+prID(1) = [];
+plotPSTH(trig, PSTH, sweeps, binSz, timeLapse, expName, [prID;eID(~tIdx)], koIdx,...
+    padarray(tIdx,size(koIdx,1)-size(tIdx,1),'post'), fs);
+
+[relativeSpikeTimes] =...
+    getRasterFromStack(dStack, ~eIDx, interestingEvents, timeLapse,...
+    fs, ERASE_kIDX);
+plotRaster(relativeSpikeTimes,timeLapse,fs,['Raster for ',expName],[rID;eID(~tIdx)]);
+    
+%%
+
+if anaFlag
+    endName = erase(fileName,'analysis.mat');
+else
+    endName = erase(fileName,'.mat');
+end
 for ccon = 1:numel(Conditions)
-    [dSck, cSck] = getStacks(...
+    [dStack, cSck] = getStacks(...
         spT{1},... Main neuron
         Conditions(ccon).Triggers, 'on',... Triggers, onset
         timeLapse(ccon,:), fs, fs,... Time lapse, and sampling frequencies
         consEvnts,... Other discrete events in the experiment.
         struct2cell(ContinuousData)); % Continuous data
-    [Ne,~,Na] = size(dSck);
     
-    kIdx = false(1,Na);
-    interestingEvents = true(1,Ne-2);
+    
+    
+    
     
     [PSTH, trig, sweeps] =...
-        getPSTH(dSck, timeLapse(ccon,:), kIdx, binSz(ccon), fs);
+        getPSTH(dStack, timeLapse(ccon,:), kIdx, binSz(ccon), fs);
     [relativeSpikeTimes] =...
-        getRasterFromStack(dSck, kIdx, interestingEvents, timeLapse(ccon,:),...
+        getRasterFromStack(dStack, kIdx, interestingEvents, timeLapse(ccon,:),...
         fs, ERASE_kIDX);
-    expName = [erase(erase(filePath,getParentDir(filePath,1)),filesep),...
-        erase(fileName,'.mat')];
+    expName = [erase(erase(filePath,getParentDir(filePath,1)),filesep),'->',...
+        endName];
+
     psthFig = plotEasyPSTH(trig, PSTH, sweeps, binSz(ccon),...
         timeLapse(ccon,:), fs);
     set(psthFig.Children.Title,'String',[expName,' ',Conditions(ccon).name])

@@ -45,8 +45,11 @@ axis([timeS(1), timeS(tmSub),...
     tick(Nch)-2*step, tick(1)+2*step])
 ylabel('Channels')
 xlabel('Time [s]')
-labels(strcmp(labels,'A1'))=[];
-labels(strcmp(labels,'A2'))=[];
-set(ax,'YTick',sort(tick),'YTickLabel',labels(Nch:-1:1))
+set(ax,'YTick',sort(tick))
+if ~isempty(labels)
+    labels(strcmp(labels,'A1'))=[];
+    labels(strcmp(labels,'A2'))=[];
+    set(ax,'YTickLabel',labels(Nch:-1:1))
+end
 fhand = fig;
 end

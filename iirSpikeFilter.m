@@ -4,10 +4,11 @@ function [csig] = iirSpikeFilter(signal,sampling_frequency,cutFreq)
 %band pass. 
 %   signal contains a broadband frequency spectra
 %   sampling_frequency has a sensible name
-%   cutFreq is a vector containing the low and high cut frequencies
+%   cutFreq is a vector containing the low and high cut frequencies in this
+%   order
 [b, a] = cheby2(3,30,1/sqrt(2));
-if ~(exist('cutFreq','var') && ~isempty(cutFreq) && length(cutFreq) == 2 &&...
-        cutFreq(1) > cutFreq(2) && diff(cutFreq) > 1e3)
+if ~exist('cutFreq','var') || isempty(cutFreq) || length(cutFreq) ~= 2 ||...
+        cutFreq(1) > cutFreq(2)
     cutFreq = [600, 9e3];
 end
 wo = (2*mean(cutFreq))/sampling_frequency;
@@ -15,6 +16,9 @@ wc = (2*cutFreq)./sampling_frequency;
 fprintf('Spike filter set at: [%.2f, %.2f]\n',cutFreq(1),cutFreq(2))
 [num, den] = iirlp2bp(b, a, wo, wc);
 fprintf('Filtering the signal...')
+if ~isa(signal,'double')
+    signal = double(signal);
+end
 csig = filtfilt(num, den, signal);
 fprintf(' done!\n');
 end
