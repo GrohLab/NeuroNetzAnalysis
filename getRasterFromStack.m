@@ -55,7 +55,7 @@ else
 end
 % Time axis
 spIdx = 1;
-tx = linspace(-timeLapse(1),timeLapse(2),Nt);
+tx = linspace(timeLapse(1),timeLapse(2),Nt);
 for cse = iE
     % For each spike train
     for cap = Na:-1:1
@@ -71,8 +71,10 @@ for cse = iE
                     % If the event contains spikes
                     spikeTimes = tx(squeeze(discreteStack(cse,:,cap)));
                     if tmsORsubsFlag
+                        % Time
                         relativeSpikeTimes(spIdx,cap) = {spikeTimes};
                     else
+                        % Subscripts
                         relativeSpikeTimes(spIdx,cap) =...
                             {round(fs*spikeTimes)};
                     end
@@ -87,7 +89,7 @@ end
 tx = seconds(tx);
 if exist('ERASE_kIDX','var') && ERASE_kIDX
     % If the user chose to erase the kick out alignment trials
-    relativeSpikeTimes(:,cellfun(@isempty,relativeSpikeTimes(1,:))) = [];
+    relativeSpikeTimes(:,kIdx) = [];
 end
 
 

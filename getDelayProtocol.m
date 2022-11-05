@@ -11,10 +11,14 @@ checkSignal = @(x,y) contains(x,y,'IgnoreCase',true);
 findUnpairedPulse = @(x) cat(1,false,reshape(diff(sort(x)) == 0,numel(x)-1,1));
 Conditions = struct('name',{},'Triggers',{});
 Triggers = struct();
-
-binFile = dir(fullfile(expFolder,'*.smrx'));
-[~,expName,~] = fileparts(binFile(1).name);
-if isempty(binFile)
+if ~loadTriggerData(expFolder)
+    fprintf(1,'No condition extracted.\n')
+    return
+end
+%{
+smrxFile = dir(fullfile(expFolder,'*.smrx'));
+[~,expName,~] = fileparts(smrxFile(1).name);
+if isempty(smrxFile)
     warning('There is no experiment in this folder...\n')
     return
 end
@@ -32,8 +36,12 @@ csFile = dir(fullfile(expFolder,'*_CondSig.mat'));
 if ~isempty(csFile)
     stimSig = load(fullfile(csFile(1).folder,csFile(1).name),'chan*','head*');
 else
-    warning('Please create the CondSig.mat file first\n')
-    return
+    try 
+        getConditionSignalsBF(fopen(fullfile(smrxFile(1).folder, smrxFile(1).name)));
+    catch
+        warning('Please create the CondSig.mat file first\n')
+        return
+    end
 end
 
 fsFile = dir(fullfile(expFolder,'*_sampling_frequency.mat'));
@@ -43,8 +51,8 @@ else
     warning('Please create the _sampling_frequency.mat file first\n')
     return
 end
-
-
+%}
+%% Identification of the channels
 
 fields = fieldnames(stimSig);
 chanFlag = cellfun(@contains,fields,repmat({'chan'},numel(fields),1));
@@ -55,16 +63,26 @@ headers = cellfun(@strrep,fields(chanFlag),...
 titles = cell(numel(headers),1);
 whiskFlag = false(numel(titles),1);
 laserFlag = whiskFlag;
+lfpFlag = whiskFlag;
 for chead = 1:numel(headers)
     titles{chead} = stimSig.(headers{chead}).title;
     whiskFlag(chead) = checkSignal(titles{chead},'piezo') |...
         checkSignal(titles{chead},'puff');
     laserFlag(chead) = checkSignal(titles{chead},'laser');
+    lfpFlag(chead) = checkSignal(titles{chead},'lfp');
 end
 %% Possible user interaction and correct assignment of the signals
-% whiskSubs = find(whiskFlag);
+% If the channels are not named in an standard way, the experimenter should
+% aid and select which imported channels correspond to the respective
+% variables.
+whiskSubs = 1:numel(titles);
+laserSubs = whiskSubs;
+lfpSubs = whiskSubs;
+if any(whiskFlag)
+    whiskSubs = find(whiskFlag);
+end
 while sum(whiskFlag) ~= 1
-    wSub = listdlg('ListString',titles,...
+    wSub = listdlg('ListString',titles(whiskSubs),...
         'PromptString','Select the mechanical TTL',...
         'SelectionMode','single');
     if ~isempty(wSub)
@@ -75,10 +93,13 @@ while sum(whiskFlag) ~= 1
     end
 end
 whisk = stimSig.(fields{chanSubs(whiskFlag)});
+whiskHead = stimSig.(headers{whiskFlag});
 
-% laserSubs = find(laserFlag);
+if any(laserFlag)
+    laserSubs = find(laserFlag);
+end
 while sum(laserFlag) ~= 1
-    lSub = listdlg('ListString',titles,...
+    lSub = listdlg('ListString',titles(laserSubs),...
         'PromptString','Select the laser TTL',...
         'SelectionMode','single');
     if ~isempty(lSub)
@@ -90,6 +111,37 @@ while sum(laserFlag) ~= 1
 end
 laser = stimSig.(fields{chanSubs(laserFlag)});
 
+if any(lfpFlag)
+    lfpSubs = find(lfpFlag);
+end
+iOk = true;
+while sum(lfpFlag) ~= 1 && iOk
+    [lSub, iOk] = listdlg('ListString',titles(lfpSubs),...
+        'PromptString','Select the lfp signal',...
+        'SelectionMode','single','CancelString', 'none');
+    if ~isempty(lSub)
+        lfpFlag = false(size(lfpFlag));
+        lfpFlag(lSub) = true;
+    end
+end
+if iOk
+    lfp = stimSig.(fields{chanSubs(lfpFlag)});
+else
+    lfp = 0;
+end
+
+%% Trigger variable construction
+intanDomain = round([whiskHead.start, whiskHead.stop]*whiskHead.SamplingFrequency);
+if intanDomain(2) <= length(lfp) 
+    lfp = lfp(intanDomain(1):intanDomain(2));
+elseif diff(intanDomain) <= length(lfp)
+    try
+        lfp = lfp(intanDomain(1):length(whisk));
+    catch
+        lfp = lfp(intanDomain(1):length(lfp));
+    end
+end
+Triggers.whisker = whisk; Triggers.laser = laser; Triggers.lfp = lfp;
 %% Subscript processing and stimukus finding
 wObj = StepWaveform(whisk,fs,'on/off','Mechanical TTL');
 lObj = StepWaveform(laser,fs,'on/off','Laser TTL');
@@ -105,11 +157,7 @@ if any(glitchInLaser)
     fprintf(1,'There were some ''funky'' triggers in laser... deleting\n')
     lSub(glitchInLaser,:) = [];
 end
-whisk = double(StepWaveform.subs2idx(wSub,length(whisk)));
-laser = double(StepWaveform.subs2idx(lSub,length(laser)));
-Triggers.whisker = whisk;
-Triggers.laser = laser;
-
+%% Condition creation
 Conditions(1).name = 'WhiskerAll';
 Conditions(1).Triggers = wSub;
 Conditions(2).name = 'LaserAll';
@@ -137,10 +185,13 @@ for cdl = 1:Ndel
     Conditions(Ncond + cdl).Triggers =...
         wSub(sort(piezSub(lsDel(:,cdl))),:);
 end
-
- %this is a fix to account for a  file with no delays (e.g. period of whisker stimuli followed by period of laser stimuli)
-if Ndel==0,cdl=0;
-        fprintf(1,' none!')
+%{
+this is a fix to account for a file with no delays (e.g. period of whisker
+stimuli followed by period of laser stimuli)
+%}
+if Ndel==0
+    cdl=0;
+    fprintf(1,' none!\n')
 else
     fprintf(1,' ms\n')
 end 
@@ -153,14 +204,15 @@ Conditions(Ncond + cdl + 1).name = 'Laser Control';
 Conditions(Ncond + cdl + 1).Triggers = lSub(loneLaser,:);
 Conditions(Ncond + cdl + 2).name = 'WhiskerStim Control';
 Conditions(Ncond + cdl + 2).Triggers = wSub(lonePiezo,:);
-
-%if there are no delays, then WhiskerAll is redundant with WhiskerStim
-%Control and  LaserAll is redundant with Laser Control, so just take
-%control condtions
+%{
+if there are no delays, then WhiskerAll is redundant with WhiskerStim
+Control and  LaserAll is redundant with Laser Control, so just take control
+condtions
+%}
 if Ndel==0
     Conditions=Conditions((end-1):end);
 end
-
+%%
 save(fullfile(expFolder,[expName,'analysis.mat']),'Conditions','Triggers')
 end
 

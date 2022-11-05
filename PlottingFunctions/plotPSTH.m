@@ -25,46 +25,45 @@ function ax =...
 %       ax - axis variable in which the PSTH plot is embedded.
 % Emilio Isaias-Camacho @GrohLab 2018
 
-koIdx(tIdx) = false;
 trigID = IDe{tIdx};
 IDe(tIdx) = [];
 if ~exist('ax','var') || isempty(ax)
     fig = figure('Name',['PSTH for ',expName],'Color',[1,1,1]);
     ax = gca;
-else
-    fig = get(ax,'Parent');
+% else
+%     fig = get(ax,'Parent');
 end
-tx_PSTH = linspace(-timeLapse(1),timeLapse(2),size(PSTH,2));
-tx_trig = linspace(-timeLapse(1),timeLapse(2),length(trig));
-set(fig,'defaultAxesColorOrder',[0,0,0;0.2,0.2,0.2])
+tx_PSTH = linspace(timeLapse(1),timeLapse(2),size(PSTH,2));
+tx_trig = linspace(timeLapse(1),timeLapse(2),length(trig));
+% set(fig,'defaultAxesColorOrder',[0,0,0;0.2,0.2,0.2])
 plot(ax,tx_trig,trig,'DisplayName',trigID,'Color',[37, 154, 3]/255);
 ylabel(ax,'Stimulus probability')
 yyaxis(ax,'right');
-clrMap = jet(size(PSTH,1)-1);
+clrMap = jet(size(PSTH,1));
 bar(ax,tx_PSTH,PSTH(1,:)/(sweeps*binSz),1,...
     'EdgeColor','none','FaceColor',[0.2,0.2,0.2],...
     'FaceAlpha',0.3,'DisplayName',IDe{1});
 ylabel(ax,'Firing rate [Hz]')
 hold(ax,'on')
-idIdx = find(koIdx);
-idIdx = reshape(idIdx,1,numel(idIdx));
 binEl = fs * binSz;
 yyaxis(ax,'left')
 xlabel(ax,sprintf('Time_{%.3f} [s]',binSz))
-for cp = idIdx
-    if max(PSTH(cp+1,:)) > sweeps
+cp = 2;
+while cp <= size(PSTH,1)
+    if max(PSTH(cp,:)) > sweeps
         yyaxis(ax,'left')
-        plot(ax,tx_PSTH,(PSTH(cp+1,:))/(binEl*sweeps),...
+        plot(ax,tx_PSTH,(PSTH(cp,:))/(binEl*sweeps),...
             'Color',clrMap(cp,:),'DisplayName',IDe{cp});
     else
         yyaxis(ax,'right')
-        bar(ax,tx_PSTH,PSTH(cp+1,:)./(binSz*sweeps),...
+        bar(ax,tx_PSTH,PSTH(cp,:)./(binSz*sweeps),...
             'EdgeColor','none',...
             'FaceColor',clrMap(cp,:),'DisplayName',IDe{cp},...
             'FaceAlpha',0.2);
     end
+    cp = cp + 1;
 end
 title(ax,[expName,' ',num2str(sweeps),' trials'],'Interpreter','none')
 yyaxis('left')
-axis(ax,[-timeLapse(1),timeLapse(2),0,1.1])
+axis(ax,[timeLapse(1),timeLapse(2),0,1.1])
 legend(ax,'show','Location','best')

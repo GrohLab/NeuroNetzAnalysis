@@ -3,10 +3,12 @@
 % The clearvars command is commented to avoid erasing the information
 % extracted from the smrx file through the UMS_life_script.mlx
 % clearvars
-homedir='D:\Data2\M116C1';
+
+homedir='C:\Users\NeuroNetz\Documents\Data\Sailaja\2019\Alex\M137_4';
 % homedir='E:\Data\';
 cd(homedir)
-fname = 'M116C1_CFA_VPL_L6BroadStim3.5mW+MechStim'; 
+fname = 'M137_C5_Mech_L6 05mW'; 
+
 load([fname,'_all_channels.mat'])
 load([fname,'analysis.mat'],'Conditions','Triggers')
 try
@@ -42,16 +44,27 @@ for i=1:numel(Spikes) % insert cluster numbers here
     figure
       isis=[diff(Spikes{i})*1000]; %in ms
       [hisi isi_bins]=hist(isis,[1:10000]);
+      subplot(2,1,1)
       plot(log10(isi_bins),hisi,'linewidth',2)
        % title(['Cluster: ',num2str(i)])
-      title(['Cluster ID: ',Names{i},' #',num2str(i)],'Interpreter','none') 
+      title(['Cluster ID: ',Names{i},' #',num2str(i)],'Interpreter','none')
+      subplot(2,1,2)
+      abc = string(sortedData(i,1));
+      C = strsplit(abc,'_');
+      D = C(1,1);
+      E = erase(D, 'ch');
+      F = C(1,3);
+      load([fname,'_',num2str(E),'.mat']);
+      plot_waveforms(spikes,str2num(F));
 end
         
 
 %% Possible artifacts (is laser evoking a response or an optoelectric artifact?)
 
 %bads=[1 2 3 14 6]  %1 2 3 14 are light artifacts
-bads=[];
+
+bads=[12 18 19];
+
 noresponse=[];
 bads=[bads noresponse];
 %bads=[]; %uncomment this to have bads empty
@@ -59,7 +72,7 @@ bads=[bads noresponse];
 goods=1:numel(Spikes);
 
 %removes bad units 
-goods=setdiff(goods,bads);
+goods=setdiff(goods,bads)
 
 %% Let us see if the laser evokes a neural response.
 %use these two lines to look at hand-defined lasers response
@@ -75,10 +88,9 @@ goods=setdiff(goods,bads);
 
 %% looking at collected data
 fs = Fs;
-close all
-if any(cellfun(@iscolumn,Spikes) & ~cellfun(@isscalar,Spikes))
-    Spikes = cellfun(@transpose,Spikes,'UniformOutput',false);
-end
+
+%close all
+
 for I=[1:4]
     ppms=fs/1000;
     spikes=cell2mat(Spikes)*1000*ppms; %spikes back in samples
@@ -103,9 +115,12 @@ consIdxs = true(1,lenSpks);
 % bads = [];
 consIdxs(bads) = false;
 crscor = zeros(lenSpks,lenSpks,3);    % Square matrix with Ncl x Ncl
+alex = true;
 for ccl = 1:lenSpks
     xccl = ccl+1;
     % Cross correlation avoiding the autocorrelations and the 'bads'.
+    % AM: Lag-limited cross-correlation and display together with the
+    % distance matrix.
     while consIdxs(ccl) && xccl <= lenSpks
         % auxXCOR = xcorr(Spikes{ccl},Spikes{xccl},'coeff');
         if consIdxs(xccl)
@@ -127,7 +142,8 @@ for ccl = 1:lenSpks
             auxSignal1 = auxSignal1(rWindIdx);
             auxSignal2 = auxSignal2(rWindIdx);
             
-            % Distance matrix
+            % Distance matrix -- AM: promt the user for keeping the current
+            % DM for later processing. (Inter-cluster spike intervals)
             dfMtx = log(distmatrix(Spikes{ccl}',Spikes{xccl}')+1);
             lnIdx = dfMtx < log(16);
             [y,x]=find(lnIdx);
@@ -135,14 +151,47 @@ for ccl = 1:lenSpks
             eqInfo = ['y = ',num2str(mdl(1)),'x ',num2str(mdl(2))];
             display(eqInfo)
             figure('Name',clstrInfo);
+            subplot(2,1,1)
+            ax4 = subplot(2,1,1)
+            colormap(ax4, spring())
             imagesc(dfMtx);hold on;plot(x,yhat,'LineStyle','--',...
-                'LineWidth',3,'Color',[1,0,0]);title([eqInfo,' ',num2str(r2)])
+                'LineWidth',3,'Color',[0,1,0]);title([eqInfo,' ',num2str(r2)])
             crscor(ccl,xccl,1:2) = mdl;
             crscor(ccl,xccl,3) = r2;
+            subplot(2,1,2)
+            abc = string(sortedData(xccl,1));
+            C = strsplit(abc,'_');
+            D = C(1,1);
+            E = erase(D, 'ch');
+            F = C(1,3);
+            load([fname,'_',num2str(E),'.mat']);
+            plot_waveforms(spikes,str2num(F));
+            % used for saving plot + question box
+            cname =...
+                   ['Cl_',num2str(ccl),'_vs_Cl_',num2str(xccl)]
+            if alex
+                answer = questdlg('Do you want to save this comparison?', ['Cluster Comparison ' cname], 'Save', 'No',"Don't ask again", 'No')
+                %Handle response to question
+                switch answer
+                    case 'Save'
+                       return
+                       %save(cname)
+                    case 'No'
+                       %remove the return to run it properly, it is
+                       %just to break the loop
+                       disp(['Not saving: ' cname])
+                    case "Don't ask again"
+                       disp('test')
+                       alex = false;
+                end
+            else
+                disp('no longer asking to save')
+            end
         end
         xccl = xccl + 1;
     end
 end
+% AM: Check out the waveforms of the interesting clusters
 
 %save cross-correlation so that we don't need to redo this constantly
 cd(homedir)
@@ -155,7 +204,7 @@ save CrossCoeffData crscor goods bads
 % due to their high similarity. The possibilities are that they belong to a
 % same unit as busrting spikes, the cell shifted to another channel or any
 % other reasonable cause.
-mergingPackages = {[13,18,4],[8,9],[1,6,16],[5,12]};
+mergingPackages = {[16,17]};
 Npg = numel(mergingPackages);
 mSpikes = cell(1,Npg);
 auxSignal = false(1,length(mech));
@@ -168,7 +217,7 @@ for cpg = 1:Npg
     bads = [bads mergingPackages{cpg}(2:end)];
     Spikes(mergingPackages{cpg}(1)) = {single(mSpikes{cpg})};
 end
-bads = sort(unique(bads));
+bads = sort(unique(bads))
 
 %save merging info
 %SAVE FOR 'NORMAL' PIPELINE
@@ -182,7 +231,8 @@ plotRaster = true; % No raster plot in the figures!!
 close all
 for i=1:numel(Spikes)
     if ~ismember(i,bads)
-        for I=2 %pick out conditions to look at
+
+        for I=4 %pick out conditions to look at
             ppms=fs/1000;
             spikes=(Spikes{i})*1000*ppms; %spikes back in samples
             name=Names{i};
@@ -203,8 +253,43 @@ end
 
 plotRaster = true; % raster plot in the figures!!
 close all
-for i=1:numel(Spikes) % insert cluster numbers here
+
+for i=[1 2 3 4 5 6] % insert cluster numbers here
     for I=1 %pick out conditions to look at
+        ppms=fs/1000;
+        spikes=(Spikes{i})*1000*ppms; %spikes back in samples
+        name=Names{i};
+        timeBefore=5000*ppms;timeAfter=8200*ppms;
+        plotit=1;binsize=10*ppms;
+        triggers=Conditions{I}.Triggers;
+        [sp h bins trig_mech trig_light f]=...
+            triggeredAnalysisMUA(spikes,ppms,triggers,binsize,timeBefore, timeAfter,Conditions{I}.name,mech,light,plotit,plotRaster);
+        title(['Cluster: ',num2str(i)])
+    end
+    %AM: repeated block to be able to look at all conditions simultaneuosly
+    for I=2 %pick out conditions to look at
+        ppms=fs/1000;
+        spikes=(Spikes{i})*1000*ppms; %spikes back in samples
+        name=Names{i};
+        timeBefore=5000*ppms;timeAfter=8200*ppms;
+        plotit=1;binsize=10*ppms;
+        triggers=Conditions{I}.Triggers;
+        [sp h bins trig_mech trig_light f]=...
+            triggeredAnalysisMUA(spikes,ppms,triggers,binsize,timeBefore, timeAfter,Conditions{I}.name,mech,light,plotit,plotRaster);
+        title(['Cluster: ',num2str(i)])
+    end
+    for I=3 %pick out conditions to look at
+        ppms=fs/1000;
+        spikes=(Spikes{i})*1000*ppms; %spikes back in samples
+        name=Names{i};
+        timeBefore=5000*ppms;timeAfter=8200*ppms;
+        plotit=1;binsize=10*ppms;
+        triggers=Conditions{I}.Triggers;
+        [sp h bins trig_mech trig_light f]=...
+            triggeredAnalysisMUA(spikes,ppms,triggers,binsize,timeBefore, timeAfter,Conditions{I}.name,mech,light,plotit,plotRaster);
+        title(['Cluster: ',num2str(i)])
+    end
+    for I=4 %pick out conditions to look at
         ppms=fs/1000;
         spikes=(Spikes{i})*1000*ppms; %spikes back in samples
         name=Names{i};
@@ -257,7 +342,7 @@ for I=1:numel(Conditions)
 end
 t=[-timeBefore:timeAfter]/ppms;
 %% MORE BADS?
-bads = [bads, 5,13];
+bads = [bads, 16];
 bads = unique(bads);
 
 %% get individual responses by condition
@@ -277,6 +362,7 @@ for I=1:numel(Conditions)  %by condition
             name=Names{i};    
             %use same binning etc as pop hist
             [SPIKES{i} h bins trig_mech trig_light f]=triggeredAnalysisMUA(spikes,ppms,triggers,binsize,timeBefore, timeAfter,Conditions{I}.name,mech,light,plotit);
+            title(['Cluster: ',num2str(i)])
         end
     end
     Sp{count}=SPIKES;
@@ -415,7 +501,7 @@ ylim([0 1.5])
 
 %% plot some raw data
 figure
-load 'M137_C5_Mech_L6 05mWanalysis','filteredResponse'
+load('M47_C2_L6Mech+L61mWanalysis','filteredResponse')
 
 v=filteredResponse.data;indices=[10000:(1000*ppms*700)]+30*1000*ppms; v=v/max(v);
 time=indices/ppms/1000;

@@ -21,9 +21,9 @@ parse(p,sonoStruct)
 sonoStruct = p.Results.sonoStruct;
 
 fig = figure('Color',[1,1,1]);
-
-
-
+ax = axes('Parent',fig);
+imagesc(ax, sonoStruct.TimeAxis, sonoStruct.FrequencyAxis,...
+    20*log10(abs(sonoStruct.SpectrumImage))); colormap(gray);
 
 end
 

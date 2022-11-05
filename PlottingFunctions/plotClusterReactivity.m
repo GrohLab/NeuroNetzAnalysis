@@ -31,7 +31,7 @@ function fig =...
 clr = defineColorForStimuli(IDe);
 
 fthAxFlag = false;
-if ~exist('stims','var')
+if ~exist('stims','var') || isempty(stims)
     totlX = 4;
 elseif ~isempty(stims)
     fthAxFlag = true;
@@ -44,32 +44,23 @@ end
 PSTHn = PSTH./max(PSTH,[],2);
 fig = figure('Name',expName,'Color',[1,1,1]);
 ax1 = subplot(totlX,1,1:3,'Parent',fig);
-psthTX = linspace(-timeLapse(1),timeLapse(2),Npt);
-clrmp = defineWhYellRedColormap;
+psthTX = linspace(timeLapse(1),timeLapse(2),Npt);
+clrmp = parula;
+% clrmp = defineWhYellRedColormap;
+% clrmp = defineBlueRedColormap();
 imagesc(ax1,'XData',psthTX,'CData',PSTHn);
 colormap(ax1,clrmp)
 
-trigTX = linspace(-timeLapse(1),timeLapse(2),size(trig,2));
+trigTX = linspace(timeLapse(1),timeLapse(2),size(trig,2));
 
 % Plotting lines for depicting the on- and offset of the trigger
-tObj = StepWaveform(trig,1/mean(diff(trigTX)));
-tSubs = tObj.subTriggers;
-if ~isempty(tSubs)
-    for ct = 1:size(tSubs,1)
-        for nf = 1:size(tSubs,2)
-            line(ax1,'XData',repmat(trigTX(tSubs(ct,nf)),1,2),'YData',[0.5,Ncl+0.5],...
-                'LineStyle',':','Color',clr,'LineWidth',2)
-        end
-    end
-else
-    trig = logical(trig/max(trig(:)));
-    line(ax1,'XData',trigTX,'YData',(Ncl+1.5)*trig - 0.5,...
-        'LineStyle',':','Color',clr,'LineWidth',2)
-end
+trig = logical(trig/max(trig(:)));
+line(ax1,'XData',trigTX,'YData',(Ncl+1.5)*trig - 0.5,...
+    'LineStyle',':','Color',clr,'LineWidth',2)
 
 % Formatting the heatmap
 ax1.YLim = [0.5,size(PSTH,1)+0.5];
-ax1.XLim = [-timeLapse(1)-binSz/2, timeLapse(2)+binSz/2];
+ax1.XLim = timeLapse+([-0.5, 0.5]*binSz);
 ax1.YTick = 1:Ncl;
 ax1.YTickLabel = IDe(2:end);
 ax1.YAxis.Label.String = sprintf('Cluster ID_{%d #clusters}', size(PSTH,1));
@@ -78,31 +69,26 @@ ax1.XAxis.Visible = 'off';
 % Plotting the population PSTH together with the trigger probability
 ax2 = subplot(totlX,1,4,'Parent',fig);
 popPSTH = sum(PSTH,1,'omitnan')/(Ncl * sweeps);
-if max(popPSTH(:)) <= 0.1
-    semilogy(ax2,psthTX,popPSTH,'Color',[0.8,0.8,0.8],'DisplayName','Population PSTH')
-    axLabel = 'Log Population activity';
-else
-    plot(ax2,psthTX,popPSTH,'Color',[0.8,0.8,0.8],'DisplayName','Population PSTH')
-    axLabel = 'Population activity';
-end
+plot(ax2,psthTX,popPSTH,'Color',[0.8,0.8,0.8],'DisplayName','Population PSTH')
+axLabel = 'Population activity';
 yyaxis(ax2,'right')
 plot(ax2,trigTX,trig,'LineWidth',1.5,'Color',clr,'DisplayName',IDe{1},...
     'LineStyle',':')
 
 % Formatting the population PSTH plot
 ax2.YAxis(1).Label.String = axLabel;
-ax2.YAxis(1).Limits = [0,1.01];
+% ax2.YAxis(1).Limits = [0,1.01];
 ax2.YAxis(2).Limits = [0,1.01];
 ax2.YAxis(2).Color = 'k';
 ax2.YAxis(2).Label.String = 'Stimulus probability';
 
 
 ax2.XLabel.String = sprintf('Time_{%.2f ms} [s]',binSz*1e3);
-ax2.XLim = [-timeLapse(1), timeLapse(2)];
+ax2.XLim = [timeLapse(1), timeLapse(2)];
 ax2.Box = 'off';
 ax2.ClippingStyle = 'rectangle';
 
-legend(ax2,'show','Location','best')
+lgnd = legend(ax2,'show'); set(lgnd, 'Location','best', 'Box', 'off');
 linkaxes([ax1,ax2],'x')
 title(ax1,[expName,sprintf(' %d trials',sweeps)])
 
@@ -113,12 +99,14 @@ if fthAxFlag
         stims = stims';
     end
     
+    trigTXc = linspace(timeLapse(1), timeLapse(2), size(stims,1));
+    
     for cs = 1:min(r,c)
         if exist('IDs','var')
-            plot(ax3,trigTX,stims(:,cs),'LineStyle','-.','LineWidth',0.5,...
+            plot(ax3,trigTXc,stims(:,cs),'LineStyle','-.','LineWidth',0.5,...
                 'DisplayName', IDs{cs})
         else
-            plot(ax3,trigTX,stims(:,cs),'LineStyle','-.','LineWidth',0.5)
+            plot(ax3,trigTXc,stims(:,cs),'LineStyle','-.','LineWidth',0.5)
         end
         
         ax3.Children(1).Color = defineColorForStimuli(IDs(cs));
@@ -127,10 +115,9 @@ if fthAxFlag
             ax3.NextPlot = 'add';
         end
     end
-    legend(ax3,'show','Location','best')
-
+    lgnd = legend(ax3,'show'); set(lgnd, 'Location', 'best', 'Box', 'off');
     ax3.Box = 'off';
-    ax3.XLim = [-timeLapse(1), timeLapse(2)];
+    ax3.XLim = [timeLapse(1), timeLapse(2)];
     ax3.XAxis.Visible = 'off';
     ax3.YAxis.Visible = 'off';
     linkaxes([ax1,ax2,ax3],'x')
@@ -148,6 +135,11 @@ else
     clr = [165, 70, 87]/255; 
 end
 end
+
+function clrmp = defineBlueRedColormap()
+clrmp = [linspace(0,1,256)', zeros(256,1), linspace(1,0,256)'];
+end
+
 function clrmp = defineWhYellRedColormap()
 %Helper function to store the color map
 clrmp = [1.0000    1.0000    1.0000

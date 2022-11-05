@@ -1,20 +1,20 @@
-classdef PSTH
-    %UNTITLED10 Summary of this class goes here
+classdef KSrunner < handle
+    %KSInterface Summary of this class goes here
     %   Detailed explanation goes here
     
     properties
-        Alignment
+        Converter SMRXConverter
         
     end
     
     methods
-        function obj = untitled10(inputArg1,inputArg2)
-            %UNTITLED10 Construct an instance of this class
+        function obj = KSrunner(DataDir)
+            %UNTITLED3 Construct an instance of this class
             %   Detailed explanation goes here
             obj.Property1 = inputArg1 + inputArg2;
         end
         
-        function outputArg = method1(obj,inputArg)
+        function outputArg = execute(obj,inputArg)
             %METHOD1 Summary of this method goes here
             %   Detailed explanation goes here
             outputArg = obj.Property1 + inputArg;

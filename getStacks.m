@@ -84,10 +84,17 @@ if exist('consEvents','var') && ~isempty(consEvents)
     end
 end
 %% Preallocation of the discrete stack:
-prevSamples = ceil(timeSpan(1) * fs);
+prevSamples = ceil(abs(timeSpan(1)) * fs);
 postSamples = ceil(timeSpan(2) * fs);
 Nt = prevSamples + postSamples + 1;
-discreteStack = false(2+Ne,Nt,Na);
+try
+    discreteStack = false(2+Ne,Nt,Na);
+catch
+    fprintf(1,'The requested array size exceeds the free RAM memory.\n')
+    fprintf(1,'Please, make note of where this message appeared.\n')
+    discreteStack = [];
+    return;
+end
 % Creation of the logical spike train
 if isnumeric(spT) && ~sum(round(spT) - spT) && nnz(spT) == max(size(spT))
     mxS = spT(end) + Nt;
@@ -106,6 +113,7 @@ end
 fsConv = fsLFP/fs;
 % Signal validation
 Ns = numel(varargin);
+sparseFlag = false;
 if Ns
     if Ns == 1
         [Nrow, Ncol] = size(varargin{1});
@@ -113,9 +121,10 @@ if Ns
             Ns = Nrow * (Nrow < Ncol) + Ncol * (Ncol < Nrow);
         end
     end
-    signalCheck = cellfun(@isnumeric,varargin);
-    signalCheck2 = cellfun(@length,varargin);
+    signalCheck = cellfun(@isnumeric, varargin);
+    signalCheck2 = cellfun(@length, varargin);
     signalCheck3 = cellfun(@iscell, varargin);
+    signalCheck4 = cellfun(@issparse, varargin);
     if any(signalCheck3)
         varargin = varargin{1};
         Ns = numel(varargin);
@@ -161,15 +170,21 @@ if Ns
             MAX_CONT_SAMP = signalCheck2(1);
         end
     end
-%     prevSamplesLFP = ceil(timeSpan(1) * fsLFP);
-%     postSamplesLFP = ceil(timeSpan(2) * fsLFP);
-%     NtLFP = prevSamplesLFP + postSamplesLFP + 1;
-%     continuouStack = zeros(Ns,NtLFP,Na,'single');
+    % prevSamplesLFP = ceil(timeSpan(1) * fsLFP);
+    % postSamplesLFP = ceil(timeSpan(2) * fsLFP);
+    % NtLFP = prevSamplesLFP + postSamplesLFP + 1;
+    % continuouStack = zeros(Ns,NtLFP,Na,'single');
+    if any(signalCheck4)
+        sparseFlag = true;
+    end
 end
-prevSamplesLFP = ceil(timeSpan(1) * fsLFP);
+prevSamplesLFP = ceil(abs(timeSpan(1)) * fsLFP);
 postSamplesLFP = ceil(timeSpan(2) * fsLFP);
 NtLFP = prevSamplesLFP + postSamplesLFP + 1;
 continuouStack = zeros(Ns,NtLFP,Na,'single');
+if sparseFlag
+    fprintf(1,'Ideal case: sparse output\n');
+end
 %% Cutting the events into the desired segments.
 for cap = 1:Na
     % Considering the rising or the falling edge of the step function.
@@ -185,20 +200,27 @@ for cap = 1:Na
     % The segments should be in the range of the spike train.
     % Validations for the discrete stack
     spSeg = false(1,Nt);
-    if segmIdxs(1) >= 1 && segmIdxs(2) <= length(spT)
-        spSeg = spT(segmIdxs(1):segmIdxs(2));
-    elseif segmIdxs(1) <= 0
-        fprintf('The viewing window is out of the signal range.\n')
-        fprintf('%d samples required before the signal. Omitting...\n',...
-            segmIdxs(1))
-        segmIdxs(segmIdxs <= 0) = 1;
-        spSeg(Nt - segmIdxs(2) + 1:Nt) = spT(segmIdxs(1):segmIdxs(2));
-    else
-        fprintf('The viewing window is out of the signal range.\n')
-        fprintf('%d samples required after the signal. Omitting...\n',...
-            segmIdxs(2))
-        segmIdxs(segmIdxs > length(spT)) = length(spT);
-        spSeg(1:diff(segmIdxs)+1) = spT(segmIdxs(1):segmIdxs(2));
+    if numel(spT) ~= 1
+        if segmIdxs(1) >= 1 && segmIdxs(2) <= length(spT)
+            spSeg = spT(segmIdxs(1):segmIdxs(2));
+        elseif segmIdxs(1) <= 0
+            fprintf('The viewing window is out of the signal range.\n')
+            fprintf('%d samples required before the signal. Omitting...\n',...
+                segmIdxs(1))
+            segmIdxs(segmIdxs <= 0) = 1;
+            try
+                spSeg(Nt - segmIdxs(2) + 1:Nt) = spT(segmIdxs(1):segmIdxs(2));
+            catch
+                fprintf(1, 'Not enough samples given to create the trial %d\n',...
+                    cap)
+            end
+        else
+            fprintf('The viewing window is out of the signal range.\n')
+            fprintf('%d samples required after the signal. Omitting...\n',...
+                segmIdxs(2))
+            segmIdxs(segmIdxs > length(spT)) = length(spT);
+            spSeg(1:diff(segmIdxs)+1) = spT(segmIdxs(1):segmIdxs(2));
+        end
     end
     discreteStack(2,:,cap) = spSeg;
     % Find 'overlapping' events in time of interest
@@ -316,6 +338,14 @@ else
     
 end
 contSigSeg = zeros(Ns,Nt,'single');
+
+noSigFlag = cellfun(@(x) isempty(x), signalCell);
+if all(noSigFlag)
+    return
+else
+    signalCell(noSigFlag) = [];
+end
+
 Subs = Idxs;
 if Idxs(1) >= 1 && Idxs(2) <= N
     SegSubs = 1:Nt;
@@ -326,37 +356,53 @@ else
     Subs(Idxs > N) = N;
     SegSubs = 1:diff(Subs)+1;
 end
-signalSegments = getSignalSegments(signalCell, Subs);
+%signalSegments = getSignalSegments(signalCell, Subs);
+signalSegments = getSignalSegments();
 signalMat = cell2mat(signalSegments);
 if Ns == size(signalMat,1)
-    contSigSeg(:,SegSubs) = signalMat;
+    if ~issparse(signalMat)
+        contSigSeg(:,SegSubs) = signalMat;
+    else
+        contSigSeg(:,SegSubs) = full(signalMat);
+    end
 else
     contSigSeg(:,SegSubs) = cell2mat(signalSegments');
 end
-end
 
-function sigSeg = getSignalSegments(signalCell,Idxs)
-Ns = numel(signalCell);
-if Ns == 1
-    [Nrow, Ncol] = size(signalCell{1});
-    if (Nrow ~= 1 && Ncol > Nrow) || (Ncol ~= 1 && Nrow > Ncol)
-        Ns = Nrow * (Nrow < Ncol) + Ncol * (Ncol < Nrow);
+    %function sigSeg = getSignalSegments(signalCell,Subs)
+    function sigSeg = getSignalSegments()
+        
+        % Transpose column vectors
+        transpSign = cellfun(@iscolumn, signalCell);
+        
+        if any(transpSign)
+            try
+                signalCell(transpSign) =...
+                    {signalCell{transpSign}'};
+            catch
+                auxSegm = cellfun(@transpose,signalCell(transpSign),...
+                    'UniformOutput',false);
+                signalCell(transpSign) = auxSegm;
+            end
+        end
+        
+        % Equalize data type (position)
+
+        try
+            sigSeg =...
+                cellfun(...
+                @(x) x(:,round((Subs(1):Subs(2)))),...
+                signalCell, 'UniformOutput', false);
+        catch ME
+            fprintf('The is an issue with the continuous cell array.\n')
+            fprintf('Worth debugging!\n')
+            disp(ME.getReport)
+            dbstop in getStacks at 378
+        end
+   
     end
-end
 
-% Transpose column vectors
-transpSign = cellfun(@isrow,signalCell);
-if ~all(transpSign)
-    try
-        signalCell(~transpSign) =...
-            {signalCell{~transpSign}'};
-    catch
-        auxSegm = cellfun(@transpose,signalCell(~transpSign),...
-            'UniformOutput',false);
-        signalCell(~transpSign) = auxSegm;
-    end
-end
-
+        %{
 % % Equalize data type
 % clss = cellfun(@class, signalCell, 'UniformOutput', false);
 % if numel(unique(clss)) > 1
@@ -365,18 +411,7 @@ end
 %     signalCell(diffTypeFlag) =...
 %         cellfun(@double, signalCell(diffTypeFlag), 'UniformOutput', false);
 % end
-
-try
-    sigSeg =...
-        cellfun(...
-        @(x) x(:,round((Idxs(1):Idxs(2)))),...
-        signalCell, 'UniformOutput', false);
-catch ME
-    fprintf('The is an issue with the continuous cell array.\n')
-    fprintf('Worth debugging!\n')
-    disp(ME.getReport)
-    dbstop
-end
+        %}
 
 end
 

@@ -133,7 +133,7 @@ for cg = 1:Ng
 end
 condFlags(initSub:NTa, Ncond) = true;
 Na = sum(condFlags,1);
-
+% delayFlags = condFlags;
 
 
 %% Counting spikes in given windows and computing the statistical significance

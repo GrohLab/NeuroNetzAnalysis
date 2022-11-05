@@ -1,4 +1,4 @@
-function [ sortedData, clInfo] = ...
+function [ sortedData ] = ...
     importPhyFiles(pathToData, outputName, removeNoise)
 %IMPORTPHYFILES reads the files created by both Kilosort and Phy or Phy2
 %and, depending on the flag configurations, it saves a .mat file. The
@@ -19,12 +19,13 @@ function [ sortedData, clInfo] = ...
 %           in the given folder; either in the pathToData or in the
 %           outputName.
 %  Alexandra Merkel & Emilio Isaias-Camacho @ GrohLab 2019
-% Maximum number of groups. 3 so far: 1 - good, 2 - MUA, and 3 - noise
+% Maximum number of groups. 4 so far: 1 - good, 2 - MUA, 3 - noise, and 4 -
+% <undefined>
 
-MX_CLSS = 3;
+grps = ["good", "mua", "noise", ""];
 % Take Kilosort Data and create *all_channels.map for further analysis
-addpath(genpath('C:\Users\NeuroNetz\Documents\npy-matlab')) % path to npy-matlab
-addpath(genpath('C:\Users\NeuroNetz\Documents\GitHub\NeuroNetzAnalysis')) % path to readTSV
+
+fnOpts = {'UniformOutput', false};
 
 % What is your outputfile called
 if ~exist('outputName','var') || isempty(outputName)
@@ -65,56 +66,15 @@ end
 spkTms = readNPY(fullfile(pathToData, 'spike_times.npy'));
 clID = readNPY(fullfile(pathToData, 'spike_clusters.npy'));
 clGr = readTSV(fullfile(pathToData,'cluster_group.tsv'));
-clAmps = readNPY(fullfile(pathToData, 'amplitudes.npy'));
-% Preparing the information file to get cluster location
-fClInfoID = fopen(fullfile(pathToData, 'cluster_info.tsv'), 'r');
-if fClInfoID <= 0
-    fprintf(1,'There is an issue with reading:\n - ''%s'' -\n',...
-        fullfile(pathToData, 'cluster_info.tsv'))
-    fprintf(1, 'No file written!\n')
-    fclose(fClInfoID);
-    return
-end
-infoHeads = strsplit(fgetl(fClInfoID), '\t');
-chanHeadIdx = contains(infoHeads, 'chan', 'IgnoreCase', true);
-
 
 % Creating a logical index for the user labels
-nIdx = cellfun(@strcmp,clGr(:,2),repmat("noise",size(clGr,1),1));
-gIdx = cellfun(@strcmp,clGr(:,2),repmat("good",size(clGr,1),1));
-mIdx = cellfun(@strcmp,clGr(:,2),repmat("mua",size(clGr,1),1));
-grIdx = [gIdx, mIdx, nIdx];
-
-allClusters = cellfun(@num2str,clGr(:,1),'UniformOutput',false);
-
-spkCell = cell(size(clGr,1),1);
-ampsCell = zeros(size(clGr,1),1);
-clPos = zeros(size(clGr,1), 1);
-for ccln = 1:numel(allClusters)
-    spkIdx = clID == clGr{ccln,1};
-    spkCell(ccln) = {double(spkTms(spkIdx))/fs};
-    ampsCell(ccln) = mean(clAmps(spkIdx));
-    fileVals = strsplit(fgetl(fClInfoID), '\t',...
-        'CollapseDelimiters', false);
-    clPos(ccln) = str2double(fileVals{chanHeadIdx});
-end
-fclose(fClInfoID);
-row = find(grIdx');
-[r,col2] = ind2sub(size(grIdx),row);
-[~,rearrange] = sort(r);
-clGroup = col2(rearrange);
-[row2, ~] = find(grIdx);
-cuts = sum(grIdx,1);
-limits = [0,cumsum(cuts)];
-for cgroup = 1:MX_CLSS
-    clGroup(row2(limits(cgroup)+1:limits(cgroup+1))) = cgroup;
-end
+[~, clGroup] = cellfun(@(x) ismember(x, grps), clGr(:,2));
+allClusters = cellfun(@num2str,clGr(:,1), fnOpts{:});
+spkCell = cellfun(@(x) double(spkTms(clID == x))/fs, clGr(:,1), fnOpts{:});
 sortedData = cat(2,allClusters,spkCell,num2cell(clGroup));
-clInfo = [ampsCell, clPos];
 % Removes the noise from the matrix and saves an alternative output file
 if removeNoise
     sortedData(nIdx,:) = [];
-    clInfo(nIdx,:) = [];
 end
 filename = [outputName, '_all_channels.mat'];
 fname = fullfile(pathToData, filename);
@@ -126,5 +86,5 @@ if exist(fname, 'file')
         return
     end
 end
-save(fname, 'sortedData', 'fs', 'clInfo');
+save(fname, 'sortedData', 'fs');
 end

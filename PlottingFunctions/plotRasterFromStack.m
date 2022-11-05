@@ -9,13 +9,13 @@ function plotRasterFromStack(discreteStack, timeLapse, fs, figTitle, ax)
 [Ne, Nt, Na] = size(discreteStack);
 % Time axis
 tx = 0:1/fs:(Nt-1)/fs;
-tx = tx - timeLapse(1);
+tx = tx + timeLapse(1);
 AX_FLAG = true;
 if ~exist('ax','var') || isempty(ax)
     figure('Name',['Raster Plot ', figTitle],'Color',[1,1,1]);
     AX_FLAG = false;
 end
-cmap = colormap(jet(Ne-1));
+cmap = brighten(copper(Ne-1),-0.8);
 FIRST_FLAG = true;
 for cse = 2:Ne
     % For each spike train
@@ -37,18 +37,19 @@ for cse = 2:Ne
                 if AX_FLAG
                     plot(ax,xspks,lvl*ones(1,numel(xspks)),...
                         'LineStyle','none','Marker','.',...
-                        'MarkerFaceColor',cmap(cse-1,:),'MarkerSize',2)
+                        'MarkerFaceColor',cmap(cse-1,:),'MarkerSize',5,...
+                        'Color',cmap(cse-1,:))
                 else
                     plot(xspks,lvl*ones(1,numel(xspks)),...
                         'LineStyle','none','Marker','.',...
-                        'MarkerFaceColor',cmap(cse-1,:),'MarkerSize',2,...
+                        'MarkerFaceColor',cmap(cse-1,:),'MarkerSize',5,...
                         'Color',cmap(cse-1,:))
                 end
             end
         end
     end
 end
-axis([-timeLapse(1),timeLapse(2),1,Na*(Ne-1)])
+axis([timeLapse(1),timeLapse(2),1,Na*(Ne-1)])
 
 end
 
