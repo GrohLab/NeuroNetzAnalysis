@@ -283,8 +283,8 @@ elseif islogical(pairedStim) && size(pairedStim, 1) == Ntr
     % Connected to DE_Jittering
     if sum(pairedStim(:)) ~= Na
     else
-    delayFlags = pairedStim;
-    Nccond = size(pairedStim, 2);
+        delayFlags = pairedStim;
+        Nccond = size(pairedStim, 2);
     end
 end
 
