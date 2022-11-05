@@ -1,5 +1,6 @@
 classdef FourierSpectrum < handle
-% FOURIERSPECTRUM performs the 
+% FOURIERSPECTRUM performs the Fourier transform on the give signal
+%   Emilio Isaias-Camacho @ GrohLab 2019
     properties (SetAccess = 'private')
         FourierTransform
         Fx

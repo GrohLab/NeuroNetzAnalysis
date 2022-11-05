@@ -11,7 +11,7 @@ function [discreteStack, continuouStack] =...
 % consEvents are 
 discreteStack = NaN;
 continuouStack = NaN;
-%% Computing the size of the PSTH stack
+%% Computing the size of the stack
 if isa(alignP,'logical')
     alWf = StepWaveform(alignP,fs,'on-off','Align triggers');
     alignP = alWf.Triggers;
@@ -25,6 +25,7 @@ switch ONOFF
         disp('Unrecognized trigger selection. Considering onsets')
         ONOFF = 'on';
 end
+
 [auxR,auxC] = size(alignP);
 % if auxR < auxC
 %     alignP = alignP';
@@ -55,9 +56,26 @@ if exist('consEvents','var') && ~isempty(consEvents)
             evntTrain = cellfun(@islogical,consEvents);
             % Converting the logical event trains into indices
             for ce = 1:Ne
-                if evntTrain(ce)
-                    stWv = StepWaveform(consEvents{ce},fs);
-                    consEvents2{ce} = stWv.Triggers;
+                if ~isempty(consEvents2{ce})
+                    if evntTrain(ce)
+                        % Logical event
+                        stWv = StepWaveform(consEvents{ce},fs);
+                        consEvents2{ce} = stWv.Triggers;
+                    elseif ~sum(round(consEvents{ce}) - consEvents{ce})
+                        % Subscript event
+                        consEvents2(ce) = consEvents(ce);
+                    else
+                        % 'Raw' signal
+                        fprintf(1,'Transforming the considered event %d to',ce)
+                        fprintf(1,' logical\n');
+                        aux = abs(consEvents2{ce});
+                        consEvents2{ce} = aux > mean(aux);
+                    end
+                else
+                    % Empty variable will be deleted
+                    fprintf(1,'Input event %d is empty and will be deleted\n',...
+                        ce)
+                    consEvents2(ce) = [];
                 end
             end
             consEvents = consEvents2;
@@ -66,16 +84,27 @@ if exist('consEvents','var') && ~isempty(consEvents)
     end
 end
 %% Preallocation of the discrete stack:
-prevSamples = ceil(timeSpan(1) * fs);
+prevSamples = ceil(abs(timeSpan(1)) * fs);
 postSamples = ceil(timeSpan(2) * fs);
 Nt = prevSamples + postSamples + 1;
-discreteStack = false(2+Ne,Nt,Na);
+try
+    discreteStack = false(2+Ne,Nt,Na);
+catch
+    fprintf(1,'The requested array size exceeds the free RAM memory.\n')
+    fprintf(1,'Please, make note of where this message appeared.\n')
+    discreteStack = [];
+    return;
+end
 % Creation of the logical spike train
-if isnumeric(spT)
+if isnumeric(spT) && ~sum(round(spT) - spT) && nnz(spT) == max(size(spT))
     mxS = spT(end) + Nt;
     spTemp = false(1,mxS);
     spTemp(spT) = true;
     spT = spTemp;
+elseif ~sum(round(spT) - spT) && nnz(spT) == max(size(spT))
+    spT = round(spT * fs);
+    mxS = spT(end) + Nt;
+    spT = StepWaveform.subs2idx(spT,mxS);
 end
 %% Preallocation of the continuous stack:
 if ~exist('fsLFP','var')
@@ -84,27 +113,77 @@ end
 fsConv = fsLFP/fs;
 % Signal validation
 Ns = numel(varargin);
+sparseFlag = false;
 if Ns
-    signalCheck = cellfun(@isnumeric,varargin);
-    signalCheck2 = cellfun(@length,varargin);
-    if sum(signalCheck) ~= Ns
+    if Ns == 1
+        [Nrow, Ncol] = size(varargin{1});
+        if (Nrow ~= 1 && Ncol > Nrow) || (Ncol ~= 1 && Nrow > Ncol)
+            Ns = Nrow * (Nrow < Ncol) + Ncol * (Ncol < Nrow);
+        end
+    end
+    signalCheck = cellfun(@isnumeric, varargin);
+    signalCheck2 = cellfun(@length, varargin);
+    signalCheck3 = cellfun(@iscell, varargin);
+    signalCheck4 = cellfun(@issparse, varargin);
+    if any(signalCheck3)
+        varargin = varargin{1};
+        Ns = numel(varargin);
+        lngths = cellfun(@length,varargin);
+        lnthCheck = std(lngths);
+        if any(lnthCheck./lngths > 1)
+            outlier = zscore(lngths).^2 > 0.5;
+            fprintf(1,'Warning! One of the considered continuous signals')
+            fprintf(1,' length deviates considerably from the rest.\n')
+            fprintf(1,'This signal(s) is (are) going to be deleted!\n')
+            varargin(outlier) = [];
+            Ns = Ns - sum(outlier);
+        end
+        MAX_CONT_SAMP = min(cellfun(@length,varargin));
+        % Convert all signals into a row vector
+        RoC = cellfun(@isrow,varargin);
+        if ~all(RoC)
+            varargin(~RoC) = cellfun(@transpose,varargin(~RoC),...
+                'UniformOutput',false);
+        end
+        % Convert all signals to double
+        clss = cellfun(@class, varargin, 'UniformOutput', false);
+        if numel(unique(clss)) > 1
+            diffTypeFlag = ...
+                ~cellfun(@contains, clss, repmat({'double'},numel(clss),1));
+            varargin(diffTypeFlag) =...
+                cellfun(@double, varargin(diffTypeFlag), 'UniformOutput', false);
+        end
+    end
+    if sum(signalCheck) ~= Ns && ~any(signalCheck3)
         fprintf('Discarding those inputs which are not numeric...\n')
         disp(varargin(~signalCheck))
         varargin(~signalCheck) = [];
         Ns = Ns - sum(~signalCheck);
         signalCheck2(~signalCheck) = [];
     end
-    if std(signalCheck2) ~= 0
-        fprintf('The signals have not the same length...\n')
-        fprintf('Considering the smallest: %d\n',min(signalCheck2))
-        MAX_CONT_SAMP = min(signalCheck2);
-    else
-        MAX_CONT_SAMP = signalCheck2(1);
+    if any(signalCheck)
+        if std(signalCheck2) ~= 0
+            fprintf('The signals have not the same length...\n')
+            fprintf('Considering the smallest: %d\n',min(signalCheck2))
+            MAX_CONT_SAMP = min(signalCheck2);
+        else
+            MAX_CONT_SAMP = signalCheck2(1);
+        end
     end
-    prevSamplesLFP = ceil(timeSpan(1) * fsLFP);
-    postSamplesLFP = ceil(timeSpan(2) * fsLFP);
-    NtLFP = prevSamplesLFP + postSamplesLFP + 1;
-    continuouStack = zeros(Ns,NtLFP,Na,'single');
+    % prevSamplesLFP = ceil(timeSpan(1) * fsLFP);
+    % postSamplesLFP = ceil(timeSpan(2) * fsLFP);
+    % NtLFP = prevSamplesLFP + postSamplesLFP + 1;
+    % continuouStack = zeros(Ns,NtLFP,Na,'single');
+    if any(signalCheck4)
+        sparseFlag = true;
+    end
+end
+prevSamplesLFP = ceil(abs(timeSpan(1)) * fsLFP);
+postSamplesLFP = ceil(timeSpan(2) * fsLFP);
+NtLFP = prevSamplesLFP + postSamplesLFP + 1;
+continuouStack = zeros(Ns,NtLFP,Na,'single');
+if sparseFlag
+    fprintf(1,'Ideal case: sparse output\n');
 end
 %% Cutting the events into the desired segments.
 for cap = 1:Na
@@ -121,20 +200,27 @@ for cap = 1:Na
     % The segments should be in the range of the spike train.
     % Validations for the discrete stack
     spSeg = false(1,Nt);
-    if segmIdxs(1) >= 1 && segmIdxs(2) <= length(spT)
-        spSeg = spT(segmIdxs(1):segmIdxs(2));
-    elseif segmIdxs(1) <= 0
-        fprintf('The viewing window is out of the signal range.\n')
-        fprintf('%d samples required before the signal. Omitting...\n',...
-            segmIdxs(1))
-        segmIdxs(segmIdxs <= 0) = 1;
-        spSeg(Nt - segmIdxs(2) + 1:Nt) = spT(segmIdxs(1):segmIdxs(2));
-    else
-        fprintf('The viewing window is out of the signal range.\n')
-        fprintf('%d samples required after the signal. Omitting...\n',...
-            segmIdxs(2))
-        segmIdxs(segmIdxs > length(spT)) = length(spT);
-        spSeg(1:diff(segmIdxs)+1) = spT(segmIdxs(1):segmIdxs(2));
+    if numel(spT) ~= 1
+        if segmIdxs(1) >= 1 && segmIdxs(2) <= length(spT)
+            spSeg = spT(segmIdxs(1):segmIdxs(2));
+        elseif segmIdxs(1) <= 0
+            fprintf('The viewing window is out of the signal range.\n')
+            fprintf('%d samples required before the signal. Omitting...\n',...
+                segmIdxs(1))
+            segmIdxs(segmIdxs <= 0) = 1;
+            try
+                spSeg(Nt - segmIdxs(2) + 1:Nt) = spT(segmIdxs(1):segmIdxs(2));
+            catch
+                fprintf(1, 'Not enough samples given to create the trial %d\n',...
+                    cap)
+            end
+        else
+            fprintf('The viewing window is out of the signal range.\n')
+            fprintf('%d samples required after the signal. Omitting...\n',...
+                segmIdxs(2))
+            segmIdxs(segmIdxs > length(spT)) = length(spT);
+            spSeg(1:diff(segmIdxs)+1) = spT(segmIdxs(1):segmIdxs(2));
+        end
     end
     discreteStack(2,:,cap) = spSeg;
     % Find 'overlapping' events in time of interest
@@ -164,6 +250,7 @@ for cap = 1:Na
             getContinuousSignalSegment(varargin, segmIdxsLFP, MAX_CONT_SAMP, NtLFP);
     end
 end
+fprintf(1,'Stacks constructed!\n')
 end
 
 % Aligning the events according to the considered time point. The inputs
@@ -241,42 +328,90 @@ end
 end
 
 function contSigSeg = getContinuousSignalSegment(signalCell, Idxs, N, Nt)
-contSigSeg = zeros(numel(signalCell),Nt,'single');
-if Idxs(1) >= 1 && Idxs(2) <= N
-    signalSegments = getSignalSegments(signalCell, Idxs);
-    contSigSeg = single(cell2mat(signalSegments'));
-elseif Idxs(1) <= 0
-    Idxs(Idxs <= 0) = 1;
-    signalSegments = getSignalSegments(signalCell, Idxs);
-    contSigSeg(:,Nt - Idxs(2) + 1:Nt) = single(cell2mat(signalSegments'));
+Ns = numel(signalCell);
+if Ns == 1
+    [Nrow, Ncol] = size(signalCell{1});
+    if (Nrow ~= 1 && Ncol > Nrow) || (Ncol ~= 1 && Nrow > Ncol)
+        Ns = Nrow * (Nrow < Ncol) + Ncol * (Ncol < Nrow);
+    end
 else
-    Idxs(Idxs > N) = N;
-    signalSegments = getSignalSegments(signalCell, Idxs);
-    contSigSeg(:,1:diff(Idxs)+1) = single(cell2mat(signalSegments'));
+    
 end
+contSigSeg = zeros(Ns,Nt,'single');
+
+noSigFlag = cellfun(@(x) isempty(x), signalCell);
+if all(noSigFlag)
+    return
+else
+    signalCell(noSigFlag) = [];
 end
 
-function sigSeg = getSignalSegments(signalCell,Idxs)
-try
-    sigSeg =...
-        cellfun(...
-        @(x) x(round((Idxs(1):Idxs(2)))),...
-        signalCell, 'UniformOutput', false);
-catch ME
-    disp(ME.getReport)
-    fprintf('Very unlikely case: signals with different length\n')
-    fprintf('Worth debugging!\n')
+Subs = Idxs;
+if Idxs(1) >= 1 && Idxs(2) <= N
+    SegSubs = 1:Nt;
+elseif Idxs(1) <= 0
+    Subs(Idxs <= 0) = 1;
+    SegSubs = Nt - Subs(2) + 1:Nt;
+else
+    Subs(Idxs > N) = N;
+    SegSubs = 1:diff(Subs)+1;
 end
-transpSign = cellfun(@isrow,sigSeg);
-if sum(~transpSign)
-    try
-        sigSeg(~transpSign) =...
-            {sigSeg{~transpSign}'};
-    catch
-        auxSegm = cellfun(@transpose,sigSeg(~transpSign),...
-            'UniformOutput',false);
-        sigSeg(~transpSign) = auxSegm;
+%signalSegments = getSignalSegments(signalCell, Subs);
+signalSegments = getSignalSegments();
+signalMat = cell2mat(signalSegments);
+if Ns == size(signalMat,1)
+    if ~issparse(signalMat)
+        contSigSeg(:,SegSubs) = signalMat;
+    else
+        contSigSeg(:,SegSubs) = full(signalMat);
     end
+else
+    contSigSeg(:,SegSubs) = cell2mat(signalSegments');
 end
+
+    %function sigSeg = getSignalSegments(signalCell,Subs)
+    function sigSeg = getSignalSegments()
+        
+        % Transpose column vectors
+        transpSign = cellfun(@iscolumn, signalCell);
+        
+        if any(transpSign)
+            try
+                signalCell(transpSign) =...
+                    {signalCell{transpSign}'};
+            catch
+                auxSegm = cellfun(@transpose,signalCell(transpSign),...
+                    'UniformOutput',false);
+                signalCell(transpSign) = auxSegm;
+            end
+        end
+        
+        % Equalize data type (position)
+
+        try
+            sigSeg =...
+                cellfun(...
+                @(x) x(:,round((Subs(1):Subs(2)))),...
+                signalCell, 'UniformOutput', false);
+        catch ME
+            fprintf('The is an issue with the continuous cell array.\n')
+            fprintf('Worth debugging!\n')
+            disp(ME.getReport)
+            dbstop in getStacks at 378
+        end
+   
+    end
+
+        %{
+% % Equalize data type
+% clss = cellfun(@class, signalCell, 'UniformOutput', false);
+% if numel(unique(clss)) > 1
+%     diffTypeFlag = ...
+%         ~cellfun(@contains, clss, repmat({'double'},numel(clss),1));
+%     signalCell(diffTypeFlag) =...
+%         cellfun(@double, signalCell(diffTypeFlag), 'UniformOutput', false);
+% end
+        %}
+
 end
 

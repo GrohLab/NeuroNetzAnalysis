@@ -1,5 +1,5 @@
 function iOk = import2stack(EphysPath)
-%IMPORT2STACK uses the file system from Anton to create a single
+%IMPORT2STACK uses the file system from Toni to create a single
 %*analysis.mat file.
 %   The function accepts the path to the file system and creates the
 %   non-existent *analysis.mat files. 
@@ -33,10 +33,13 @@ else
                     mkdir(getParentDir(anaFile,1))
                 end
                 %% Continuous signals
-                LFPprobeDepth = ExpDB{{RecDB.AnimalName{cf}}, 'LfpCoord'}(3); %#ok<IDISVAR,USENS>
+                LFPprobeDepth = ExpDB{{RecDB.AnimalName{cf}}, 'LfpCoord'}(3);  %#ok<IDISVAR,USENS>
+                if LFPprobeDepth == 0
+                    LFPprobeDepth = 1600;
+                end
                 [LFP, whisker] = loadLFPAndWhisker(LFPprobeDepth,expName,EphysPath);
                 load(fullfile(EphysPath,searchDirs{1},[expName,'.mat']),'fR','rR')
-                lightSignal = geEphystStimPeriods(expDD,fs,fs,'l');
+                lightSignal = getStimPeriods(expDD,fs,fs,'l');
                 puffSignal = getStimPeriods(expDD,fs,fs,'p');
                 touchSignal = getStimPeriods(expDD,fs,fs,'t');
                 whiskingSignal = getStimPeriods(expDD,fs,fs,'w');
@@ -59,9 +62,14 @@ else
                     'grooming',groomingSignal,'exclude',excludeSignal);
                 notes = RecDB.PhysioNucleus(cf);
                 Conditions = {};
-                save(analysisFile,...
+                %% Finding spikes with Ultra-Mega-Sort Two Thousand
+                UMSObject = UMSDataLoader(filteredResponse.data',fs);
+                UMSObject.UMS2kPipeline;
+                UMSSpikeStruct = UMSObject.SpikeUMSStruct;
+                %% Saving the final file
+                save(anaFile,...
                     'notes','RawResponse','Triggers','filteredResponse','EEG',...
-                    'spikeFindingData','Conditions')
+                    'spikeFindingData','Conditions','UMSSpikeStruct')
             else
                 fprintf('%s Analysis file exists. Skipping experiment...\n',...
                     expName)
@@ -141,16 +149,18 @@ LFPchIdx = LFPsort(find(LFPdepth < 900, 1));
 % Loading only the L5 LFP from the 16 channels file
 LFP_L5 = sprintf('LFPch%d',LFPchIdx);
 try
-    LFP = load([EphysPath, 'LFP\', ExpName, '.mat'],LFP_L5);
+    LFP = load(fullfile(EphysPath, 'LFP', [ExpName, '.mat']),LFP_L5);
     LFP = struct2array(LFP);
 catch
+    fprintf(1,'No LFP found for this experiment...\n')
     LFP = [];
 end
 try
-    whisker = load([EphysPath, 'Whisker\', ExpName, '.mat'],...
+    whisker = load(fullfile(EphysPath, 'Whisker', [ExpName, '.mat']),...
         'WhiskerAngle');
     whisker = struct2array(whisker);
 catch
+    fprintf(1,'No whisker found for this experiment...\n')
     whisker = [];
 end
 end
