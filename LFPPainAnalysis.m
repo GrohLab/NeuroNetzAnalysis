@@ -15,7 +15,8 @@ inDirs = dir(directory);
 ccon = 1;
 ovrlp = 0.95; % percentage
 winSz = 5; % seconds
-
+spectra = {};
+ITPC = {};
 while ccon <= numel(inDirs)
     if inDirs(ccon).name == "." || inDirs(ccon).name == ".." || ...
             ~inDirs(ccon).isdir
@@ -27,10 +28,7 @@ while ccon <= numel(inDirs)
     conNames(ccon) = {inDirs(ccon).name};
     lfpStack = [];
     dirFiles = dir(fullfile(inDirs(ccon).folder,inDirs(ccon).name,'*analysis.mat'));
-    sponSpect = [];
-    mecSpect = [];
-    sponITPC = [];
-    mecITPC = [];
+    
     for cf = 1:length(dirFiles)
         %% Loading and a small preprocessing
         load(fullfile(dirFiles(cf).folder,dirFiles(cf).name),...
@@ -82,20 +80,14 @@ while ccon <= numel(inDirs)
         spnIdx = ~stmIdx;
         mecIdx = StepWaveform.subs2idx(mecSub - sonoCorr,N_subsamp);
         sonoStruct = sonogram(lfpAux,desFs,ovrlp,winSz);
-        [auxSpect1,auxITPC1] = getMeanSpectrumFromSegments(spnIdx, sonoStruct, desFs); 
-        [auxSpect2,auxITPC2] = getMeanSpectrumFromSegments(mecIdx, sonoStruct, desFs);
-        sponSpect = [sponSpect;auxSpect1];
-        sponITPC = [sponITPC;auxITPC1];
-        mecSpect = [mecSpect;auxSpect2];
-        mecITPC = [mecITPC;auxITPC2];
+        [spnSpect,spnITPC] = getMeanSpectrumFromSegments(spnIdx, sonoStruct, desFs);
+        [mecSpect,mecITPC] = getMeanSpectrumFromSegments(mecIdx, sonoStruct, desFs);
+        spectra(ccon,1:2) = {spnSpect,mecSpect};
+        ITPC(ccon,1:2) = {spnITPC,mecITPC};
         
     end
     %% Save results
     lfpConditionsStack(ccon) = {lfpStack};
-    lfpFrequencyStack(ccon,1:2) = {sponSpect,sponITPC};
-    lfpFrequencyStack(ccon,3:4) = {mecSpect,mecITPC};
-    
-    
     ccon = ccon + 1;
 end
 
