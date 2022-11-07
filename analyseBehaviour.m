@@ -22,6 +22,9 @@ behHere = @(x) fullfile(behDir, x);
 flfile = @(x) fullfile(x.folder, x.name); iemty = @(x) isempty(x);
 istxt = @(x) isstring(x) | ischar(x);
 mat2ptch = @(x) [x(1:end,:)*[1;1]; x(end:-1:1,:)*[1;-1]];
+getThreshCross = @(x) sum(x)/size(x,1);
+getSEM = @(x, idx) [squeeze(mean(x(:,idx),2)), ...
+    std(x(:,idx),1,2)./sqrt(sum(idx))];
 m = 1e-3; k = 1/m;
 %% Input validation
 p = inputParser;
@@ -203,6 +206,7 @@ else
     behDLCSignals = [];
     dlcNames = "";
 end
+Nbs = size(behDLCSignals, 2);
 
 % Triggers
 atVar = {'atTimes', 'atNames', 'itTimes', 'itNames'};
@@ -276,28 +280,50 @@ end
 % Connection to DE_Jittering or as a stand-alone function.
 if istxt(pairedStim) && strcmpi(pairedStim, "none")
     % Stand alone function without stimulus pairing
-    delayFlags = true(Na, 1);
+    pairedStim = true(Na, 1);
     Nccond = 1;
     consCondNames = cellstr(atNames(aSub));
 elseif islogical(pairedStim) && size(pairedStim, 1) == Ntr
     % Connected to DE_Jittering
-    if sum(pairedStim(:)) ~= Na
+    NTa = sum(pairedStim(:));
+    if sum(pairedStim(:)) ~= Ntr
+        fprintf(1, "The number of trials in the given flags (%d) do not", ...
+            NTa)
+        fprintf(1, "correspond to the number of trials in behaviour files");
+        fprintf(1, " (%d)!\n", Ntr);
+        dbstop in analyseBehaviour at 287
     else
-        delayFlags = pairedStim;
         Nccond = size(pairedStim, 2);
     end
 end
-
+% Estimating the setpoint for whiskers and nose signals.
+behTx_all = (0:size(behDLCSignals, 1) - 1)/fr;
+spFile = fullfile(behDir, "SetPoint.mat");
+if ~exist(spFile, "file")
+    set_point = arrayfun(@(x) fitSpline(behTx_all, behDLCSignals(:,x), 1, ...
+        0.3, 0.95, false), 1:size(behDLCSignals,2), fnOpts{:});
+    set_point = [set_point{:}];
+    save(spFile, "set_point")
+else
+    set_point = load(spFile,"set_point"); set_point = set_point.set_point;
+end
 % Whiskers and nose
 [~, dlcStack] = getStacks(false, round(itTimes{iSub}(trigSubs,:)*fr), 'on', ...
-    bvWin, fr, fr, [], behDLCSignals');
-behStack = cat(1, dlcStack, vStack);
+    bvWin, fr, fr, [], [behDLCSignals, set_point]');
+behStack = cat(1, dlcStack(1:Nbs,:,:), vStack);
+Nbs = size(behStack, 1);
 behStack = arrayfun(@(x) squeeze(behStack(x, :, :)), (1:size(behStack,1))',...
-    fnOpts{:}); %#ok<*NASGU> 
+    fnOpts{:});
 behNames = [dlcNames, "Roller speed"];
 % Whiskers, nose, and roller speed
+
+%TODO: include user input for the thresholds for whiskers and nose signals.
+% Probability thresholds
 thSet = [repmat({0.5:0.5:40},2,1); {0.4:0.4:20}; spTh];
-sigThSet = [5;5;NaN;sigTh];
+% Exclusion thresholds
+sigThSet = [5;5;0;sigTh];
+sMedTh = [1;1;0;sMedTh];
+tMedTh = [1;1;0;tMedTh];
 
 tmdl = fit_poly([1,Nbt], bvWin, 1);
 behTx = ((1:Nbt)'.^[1,0])*tmdl;
@@ -305,120 +331,45 @@ behTx = ((1:Nbt)'.^[1,0])*tmdl;
 bsFlag = behTx <= 0; brFlag = behTx < brWin;
 brFlag = xor(brFlag(:,1),brFlag(:,2));
 
+% Set-point median for the whiskers and nose
+% Spontaneous
+ssp = [squeeze(median(dlcStack(Nbs:end,bsFlag,:), 2)); zeros(1,Ntr)];
+% Trial
+tsp = [squeeze(median(dlcStack(Nbs:end,:,:), 2)); zeros(1,Ntr)];
+clearvars dlcStack vStack;
 % Measuring trials
-sSig = squeeze(std(vStack(:,bsFlag,:), [], 2));
-sMed = squeeze(median(vStack(:,bsFlag,:), 2));
-tMed = squeeze(median(vStack, 2));
+sSig = cell2mat(cellfun(@(x) squeeze(std(x(bsFlag,:), 1, 1)), behStack, ...
+    fnOpts{:}));
+sMed = cell2mat(cellfun(@(x) squeeze(median(x(bsFlag,:), 1)), behStack, ...
+    fnOpts{:}));
+tMed = cell2mat(cellfun(@(x) squeeze(median(x, 1)), behStack, fnOpts{:}));
 
+thrshStrs = arrayfun(@(x,y,z) sprintf("TH s%.2f sp_m%.2f t_m%.2f", x,y,z), ...
+    sigThSet, sMedTh, tMedTh);
+% Excluding flags: Sigma and median in spontaneous or the whole trial
+% median greater than a given threshold
+excFlag = sSig > sigThSet | abs(sMed-ssp) > sMedTh | abs(tMed-tsp) > tMedTh;
+excFlag = excFlag';
 
-%% Conditions looping through roller speed (for now)
-% Testing trials with the threshold set and excluding unfulfilling.
-thrshStr = sprintf("TH s%.2f sp_m%.2f t_m%.2f", sigTh, sMedTh, tMedTh);
-excFlag = sSig > sigTh | abs(sMed) > sMedTh | abs(tMed) > tMedTh;
 % Loop variables
-gp = zeros(Nccond, 1, 'single');
-rsSgnls = cell(Nccond, 1); mvFlags = cell(Nccond,1); mvpt = mvFlags;
-qSgnls = rsSgnls;
-rsPttrn = "%s roller speed VW%.2f - %.2f s RM%.2f - %.2f ms EX%d %s";
+gp = zeros(Nccond, Nbs+1, 'single');
+bfPttrn = "%s %s VW%.2f - %.2f s RM%.2f - %.2f ms EX%d %s";
 pfPttrn = "%s move probability %.2f RW%.2f - %.2f ms EX%d %s";
+behSgnls = cell(Nccond, Nbs); mvFlags = cell(Nccond, Nbs); mvpt = mvFlags;
+qSgnls = behSgnls;
 
-getThreshCross = @(x) sum(x)/size(x,1);
-xdf = arrayfun(@(x) ~excFlag & delayFlags(:,x), 1:Nccond, ...
-    fnOpts{:});  xdf = cat(2, xdf{:});
+% Turning condition flag per trial flags into a page.
+pageTrialFlag = reshape(pairedStim, size(pairedStim, 1), 1, []);
+% Exclusion flags + paired stimulation/experimental conditions control
+% Used trial flags shape #Trial x Behavioural signals x #Conditions
+xtf = ~excFlag & pageTrialFlag;
+% Excluded flags: #behSign x #Conditions
+Nex = squeeze(sum(xor(xtf, pageTrialFlag)));
 
 for ccond = 1:Nccond
-    sIdx = xdf(:,ccond);
-    % Plot speed signals
-    fig = figure("Color", "w");
-    Nex = sum(xor(sIdx, delayFlags(:,ccond)));
-    rsFigName = sprintf(rsPttrn, consCondNames{ccond}, bvWin,...
-        brWin*k, Nex, thrshStr); 
-    % Plot all trials
-    plot(behTx, squeeze(vStack(:,:,sIdx)), ptOpts{1,:}); hold on;
-    % Plot mean of trials
-    % Standard deviation
-    %rsSgnls{ccond} = [squeeze(mean(vStack(:,:,sIdx),3))',...
-    %squeeze(std(vStack(:,:,sIdx),1,3))'];
-    % S.E.M.
-    rsSgnls{ccond} = [squeeze(mean(vStack(:,:,sIdx),3))',...
-        squeeze(std(vStack(:,:,sIdx),1,3))'./sqrt(sum(sIdx))];
-    qSgnls{ccond} = squeeze(quantile(vStack(:,:,sIdx),3,3));
-    lObj = plot(behTx, rsSgnls{ccond}(:,1), ptOpts{2,:});
-    lgnd = legend(lObj, string(consCondNames{ccond}));
-    set(lgnd, "Box", "off", "Location", "best")
-    set(gca, axOpts{:})
-    title(['Roller speed ',consCondNames{ccond}])
-    xlabel("Time [s]"); ylabel("Roller speed [cm/s]"); xlim(bvWin)
-    saveFigure(fig, fullfile(figureDir, rsFigName), 1)
-    % Probability plots
-    mvpt{ccond} = getMaxAbsPerTrial(squeeze(vStack(:,:,sIdx)), ...
-        brWin, behTx);
-    mvFlags{ccond} = compareMaxWithThresh(mvpt{ccond}, spTh);
-    gp(ccond) = getAUC(mvFlags{ccond});
-    pfName = sprintf(pfPttrn, consCondNames{ccond}, gp(ccond),...
-        brWin*k, Nex, thrshStr);
-    fig = plotThetaProgress(mvFlags(ccond), spTh,...
-        string(consCondNames{ccond}));
-    xlabel("Roller speed \theta [cm/s]");
-    title(sprintf("Trial proportion crossing \\theta: %.3f", gp(ccond)))
-    saveFigure(fig, fullfile(figureDir, pfName), 1)
-end
-clMap = lines(Nccond);
-phOpts = {'EdgeColor', 'none', 'FaceAlpha', 0.25, 'FaceColor'};
-% Plotting mean speed signals together
-fig = figure("Color", "w"); axs = axes("Parent", fig, "NextPlot", "add");
-arrayfun(@(x) patch(axs, behTx([1:end, end:-1:1]),...
-    mat2ptch(rsSgnls{x}), 1, phOpts{:}, clMap(x,:)), 1:Nccond); hold on
-lObj = arrayfun(@(x) plot(axs, behTx, rsSgnls{x}(:,1), "Color", clMap(x,:),...
-    "LineWidth", 1.5, "DisplayName", consCondNames{x}), 1:Nccond);
-xlabel(axs, "Time [s]"); xlim(axs, bvWin); ylabel(axs, "Roller speed [cm/s]")
-set(axs, axOpts{:}); title(axs, "Roller speed for all conditions")
-lgnd = legend(axs, lObj); set(lgnd, lgOpts{:})
-rsPttrn = "Mean roller speed %s VW%.2f - %.2f s RM%.2f - %.2f ms EX%s %s SEM";
-Nex = Na - sum(xdf);
-rsFigName = sprintf(rsPttrn, sprintf('%s ', consCondNames{:}), bvWin,...
-    brWin*k, sprintf('%d ', Nex), thrshStr);
-saveFigure(fig, fullfile(figureDir, rsFigName), 1)
-
-% Plotting median speed signals together
-q2patch = @(x) [x(:,1);x(end:-1:1,3)];
-fig = figure("Color", "w"); axs = axes("Parent", fig, "NextPlot", "add");
-arrayfun(@(x) patch(axs, behTx([1:end, end:-1:1]),...
-    q2patch(qSgnls{x}), 1, phOpts{:}, clMap(x,:)), 1:Nccond); hold on
-lObj = arrayfun(@(x) plot(axs, behTx, qSgnls{x}(:,2), "Color", clMap(x,:),...
-    "LineWidth", 1.5, "DisplayName", consCondNames{x}), 1:Nccond);
-xlabel(axs, "Time [s]"); xlim(axs, bvWin); ylabel(axs, "Roller speed [cm/s]")
-set(axs, axOpts{:}); title(axs, "Roller speed for all conditions")
-lgnd = legend(axs, lObj); set(lgnd, lgOpts{:})
-rsPttrn = "Median roller speed %s VW%.2f - %.2f s RM%.2f - %.2f ms EX%s %s IQR";
-rsFigName = sprintf(rsPttrn, sprintf('%s ', consCondNames{:}), bvWin,...
-    brWin*k, sprintf('%d ', Nex), thrshStr);
-saveFigure(fig, fullfile(figureDir, rsFigName), 1)
-
-% Plotting movement threshold crossings
-fig = figure("Color", "w"); axs = axes("Parent", fig, "NextPlot", "add");
-mvSgnls = cellfun(getThreshCross, mvFlags, fnOpts{:});
-mvSgnls = cat(1, mvSgnls{:}); mvSgnls = mvSgnls';
-plot(axs, spTh{1}, mvSgnls);
-ccnGP = cellfun(@(x, y) [x, sprintf(' AUC%.3f',y)], consCondNames', ...
-    num2cell(gp), fnOpts{:});
-lgnd = legend(axs, ccnGP); set(axs, axOpts{:})
-set(lgnd, lgOpts{:}); ylim(axs, [0,1])
-xlabel(axs, "Roller speed \theta [cm/s]"); ylabel(axs, "Trial proportion")
-title(axs, "Trial proportion crossing \theta")
-pfPttrn = "Move probability %sRW%.2f - %.2f ms %s";
-pfName = sprintf(pfPttrn, sprintf('%s ', ccnGP{:}), brWin*k, thrshStr);
-saveFigure(fig, fullfile(figureDir, pfName), 1)
-% Tests for movement
-if Nccond > 1
-    prms = nchoosek(1:Nccond,2);
-    getDistTravel = @(x) squeeze(sum(abs(vStack(:,brFlag,xdf(:,x))),2));
-    dstTrav = arrayfun(getDistTravel, 1:Nccond, fnOpts{:});
-    [pd, hd, statsd] = arrayfun(@(x) ranksum(dstTrav{prms(x,1)}, ...
-        dstTrav{prms(x,2)}), 1:size(prms,1), fnOpts{:});
-    [pm, hm, statsm] = arrayfun(@(x) ranksum(mvpt{prms(x,1)}, ...
-        mvpt{prms(x,2)}), 1:size(prms,1), fnOpts{:});
-end
-"gp", "dstTrav", "ccnGP", "mvpt", "xdf", ...
-    "vStack", "spTh", "sigTh", "sMedTh", "tMedTh", "brWin", "bvWin", "prms"
+    fig = figure('Name',"Trial by trial", "Color","w");
+    bfNames = arrayfun(@(x, y, z) sprintf(bfPttrn, consCondNames{ccond}, ...
+        x, bvWin, brWin*k, y, z), behNames', Nex(:,ccond), thrshStrs);
+    behSgnls{ccond,:} = arrayfun(@(x) getSEM(behStack{x}, xtf(:,x,ccond)), ...
+        1:Nbs, fnOpts{:});
 end
