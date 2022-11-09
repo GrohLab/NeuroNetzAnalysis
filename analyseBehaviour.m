@@ -379,11 +379,19 @@ pageTrialFlag = reshape(pairedStim, size(pairedStim, 1), 1, []);
 xtf = ~excFlag & pageTrialFlag;
 % Excluded flags: #behSign x #Conditions
 Nex = squeeze(sum(xor(xtf, pageTrialFlag)));
-
-for ccond = 1:Nccond
-    fig = figure('Name',"Trial by trial", "Color","w");
-    bfNames = arrayfun(@(x, y, z) sprintf(bfPttrn, consCondNames{ccond}, ...
-        x, bvWin, brWin*k, y, z), behNames', Nex(:,ccond), thrshStrs);
-    behSgnls{ccond,:} = arrayfun(@(x) getSEM(behStack{x}, xtf(:,x,ccond)), ...
-        1:Nbs, fnOpts{:});
+% Figure names for all signals and conditions
+bfNames = arrayfun(@(y) arrayfun(@(x) sprintf(bfPttrn, behNames(x), ...
+        consCondNames{y}, bvWin, brWin*k, Nex(x,y), thrshStrs(x)), 1:Nbs), ...
+        1:Nccond, fnOpts{:});
+% Computing the SEM and quantiles from the signals per condition.
+behSgnls = arrayfun(@(y) arrayfun(@(x) getSEM(behStack{x}, ...
+    xtf(:, x, y)), 1:Nbs, fnOpts{:}), 1:Nccond, fnOpts{:});
+behSgnls = cat(1, behSgnls{:});
+qSgnls = arrayfun(@(y) arrayfun(@(x) getQs(behStack{x}, xtf(:, x, y)), ...
+    1:Nbs, fnOpts{:}), 1:Nccond, fnOpts{:});
+% Getting maximum speed per trial
+mvpt = arrayfun(@(y) arrayfun(@(x) ...
+    getMaxAbsPerTrial(behStack{x}(:,xtf(:, x, y)), brWin, behTx), ...
+    1:Nbs, fnOpts{:}), 1:Nccond, fnOpts{:});
+mvpt = cat(1, mvpt{:});
 end
