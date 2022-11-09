@@ -315,7 +315,7 @@ behTx_all = (0:size(behDLCSignals, 1) - 1)/fr;
 spFile = fullfile(behDir, "SetPoint.mat");
 if ~exist(spFile, "file")
     set_point = arrayfun(@(x) fitSpline(behTx_all, behDLCSignals(:,x), 1, ...
-        0.3, 0.95, false), 1:size(behDLCSignals,2), fnOpts{:});
+        0.3, 0.95, verbose), 1:size(behDLCSignals,2), fnOpts{:});
     set_point = [set_point{:}];
     save(spFile, "set_point")
 else
