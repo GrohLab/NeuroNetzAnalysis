@@ -295,6 +295,19 @@ elseif islogical(pairedStim) && size(pairedStim, 1) == Ntr
         dbstop in analyseBehaviour at 287
     else
         Nccond = size(pairedStim, 2);
+        while numel(consCondNames) ~= Nccond && all(~cellfun(istxt, consCondNames))
+            consCondNames = consCondNames{:};
+            if ~iscell(consCondNames)
+                fprintf(1, "Considered condition names causing trouble!\n")
+                disp(consCondNames)
+                fprintf(1, "Naming the conditions with a consecutive letter\n")
+                % 'a' has ASCII code 97
+                condCondNames = arrayfun(@(x) sprintf('%s', x), ...
+                    97:97+Nccond-1, fnOpts{:});
+                disp(consCondNames)
+                break
+            end
+        end
     end
 end
 % Estimating the setpoint for whiskers and nose signals.
