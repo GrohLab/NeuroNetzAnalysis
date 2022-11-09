@@ -366,11 +366,11 @@ excFlag = sSig > sigThSet | abs(sMed-ssp) > sMedTh | abs(tMed-tsp) > tMedTh;
 excFlag = excFlag';
 
 % Loop variables
-gp = zeros(Nccond, Nbs+1, 'single');
+gp = zeros(Nccond, Nbs, 'single');
 bfPttrn = "%s %s VW%.2f - %.2f s RM%.2f - %.2f ms EX%d %s";
 pfPttrn = "%s move probability %.2f RW%.2f - %.2f ms EX%d %s";
-behSgnls = cell(Nccond, Nbs); mvFlags = cell(Nccond, Nbs); mvpt = mvFlags;
-qSgnls = behSgnls;
+mvFlags = cell(Nccond, Nbs); mvpt = mvFlags;
+
 
 % Turning condition flag per trial flags into a page.
 pageTrialFlag = reshape(pairedStim, size(pairedStim, 1), 1, []);
