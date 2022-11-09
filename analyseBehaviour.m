@@ -23,8 +23,8 @@ flfile = @(x) fullfile(x.folder, x.name); iemty = @(x) isempty(x);
 istxt = @(x) isstring(x) | ischar(x);
 mat2ptch = @(x) [x(1:end,:)*[1;1]; x(end:-1:1,:)*[1;-1]];
 getThreshCross = @(x) sum(x)/size(x,1);
-getSEM = @(x, idx) [squeeze(mean(x(:,idx),2)), ...
-    std(x(:,idx),1,2)./sqrt(sum(idx))];
+getSEM = @(x, idx) [mean(x(:,idx),2), std(x(:,idx),1,2)./sqrt(sum(idx))];
+getQs = @(x, idx) quantile(x(:,idx),3,2);
 q2patch = @(x) [x(:,1);x(end:-1:1,3)];
 m = 1e-3; k = 1/m;
 %% Input validation
