@@ -13,7 +13,7 @@ dlcVars = {'behDLCSignals', 'dlcNames'};
 % Functional cell array
 fnOpts = {'UniformOutput', false}; 
 % Aesthetic cell arrays
-axOpts = {'Box','off','Color','none'};
+axOpts = {'Box','off','Color','none', 'NextPlot', 'add'};
 lgOpts = cat(2, axOpts{1:2}, {'Location','best'});
 ptOpts = {"Color", 0.7*ones(1,3), "LineWidth", 0.2;...
     "Color", "k", "LineWidth",  1.5};
@@ -329,6 +329,7 @@ Nbs = size(behStack, 1);
 behStack = arrayfun(@(x) squeeze(behStack(x, :, :)), (1:size(behStack,1))',...
     fnOpts{:});
 behNames = [dlcNames, "Roller speed"];
+yLabels = [repmat("Angle [°]", 1, 3), "Roller speed [cm/s]"];
 % Whiskers, nose, and roller speed
 
 %TODO: include user input for the thresholds for whiskers and nose signals.
@@ -365,12 +366,10 @@ thrshStrs = arrayfun(@(x,y,z) sprintf("TH s%.2f sp_m%.2f t_m%.2f", x,y,z), ...
 excFlag = sSig > sigThSet | abs(sMed-ssp) > sMedTh | abs(tMed-tsp) > tMedTh;
 excFlag = excFlag';
 
-% Loop variables
+%% Going through the conditions and signals
 gp = zeros(Nccond, Nbs, 'single');
 bfPttrn = "%s %s VW%.2f - %.2f s RM%.2f - %.2f ms EX%d %s";
 pfPttrn = "%s move probability %.2f RW%.2f - %.2f ms EX%d %s";
-mvFlags = cell(Nccond, Nbs); mvpt = mvFlags;
-
 
 % Turning condition flag per trial flags into a page.
 pageTrialFlag = reshape(pairedStim, size(pairedStim, 1), 1, []);
@@ -389,9 +388,35 @@ behSgnls = arrayfun(@(y) arrayfun(@(x) getSEM(behStack{x}, ...
 behSgnls = cat(1, behSgnls{:});
 qSgnls = arrayfun(@(y) arrayfun(@(x) getQs(behStack{x}, xtf(:, x, y)), ...
     1:Nbs, fnOpts{:}), 1:Nccond, fnOpts{:});
+qSgnls = cat(1, qSgnls{:});
 % Getting maximum speed per trial
 mvpt = arrayfun(@(y) arrayfun(@(x) ...
     getMaxAbsPerTrial(behStack{x}(:,xtf(:, x, y)), brWin, behTx), ...
     1:Nbs, fnOpts{:}), 1:Nccond, fnOpts{:});
 mvpt = cat(1, mvpt{:});
+% Crossing thresholds and movement probability
+mvFlags = arrayfun(@(y) arrayfun(@(x) compareMaxWithThresh(mvpt{y, x}, ...
+    thSet(x)), 1:Nbs, fnOpts{:}), 1:Nccond, fnOpts{:});
+mvFlags = cat(1, mvFlags{:}); mov_prob = cellfun(@getAUC, mvFlags);
+allTrialFigs = gobjects(Nccond, Nbs);
+% Plotting results
+for cbs = 1:Nbs
+    for ccond = 1:Nccond
+        figTtl = sprintf("%s %s", behNames(cbs), consCondNames{ccond});
+        allTrialFigs(ccond, cbs) = figure('Name', figTtl, 'Color', 'w');
+        cax = axes('Parent', allTrialFigs(ccond, cbs), axOpts{:});
+        plot(cax, behTx*k, behStack{cbs}(:, xtf(:, cbs, ccond)), ptOpts{1,:}); 
+        title(cax, figTtl + " Ex:" + string(Nex(cbs, ccond)));
+        mtpObj = plot(cax, behTx*k, behSgnls{ccond, cbs}(:,1), ptOpts{2,:});
+        lgObj = legend(mtpObj, behNames(cbs)); set(lgObj, lgOpts{:});
+        xlabel(cax, "Time [ms]"); ylabel(cax, yLabels(cbs));
+    end
 end
+
+end
+%{
+function [fig, plObj] = figPlot(x, y, opts, axOpts)
+fig = figure; ax = axes('Parent', fig, axOpts{:});
+plObj = plot(ax, x, y, opts{:});
+end
+%}
