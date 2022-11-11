@@ -284,7 +284,7 @@ if istxt(pairedStim) && strcmpi(pairedStim, "none")
     pairedStim = true(Na, 1);
     Nccond = 1;
     consCondNames = cellstr(atNames(aSub));
-elseif islogical(pairedStim) && size(pairedStim, 1) == Ntr
+elseif islogical(pairedStim)
     % Connected to DE_Jittering
     NTa = sum(pairedStim(:));
     if sum(pairedStim(:)) ~= Ntr
@@ -295,6 +295,9 @@ elseif islogical(pairedStim) && size(pairedStim, 1) == Ntr
         dbstop in analyseBehaviour at 287
     else
         Nccond = size(pairedStim, 2);
+        if size(pairedStim,1)~=Ntr
+            pairedStim(all(~pairedStim,2),:) = [];
+        end
         while numel(consCondNames) ~= Nccond && all(~cellfun(istxt, consCondNames))
             consCondNames = consCondNames{:};
             if ~iscell(consCondNames)
