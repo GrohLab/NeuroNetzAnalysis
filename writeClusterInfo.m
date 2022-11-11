@@ -59,7 +59,7 @@ for ccl = 1:Ncl
         else
             % Non-numeric variable (cell, categorical, string...)
             switch varNames(cv)
-                case {"id","KSLabel","group","NeuronType"}
+                case {"cluster_id","id","KSLabel","group","NeuronType"}
                     fprintf(fID,['%s',sep],clInfo{ccl,cv}{1});
                 otherwise
                     try

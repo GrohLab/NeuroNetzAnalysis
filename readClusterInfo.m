@@ -11,9 +11,10 @@ if ~copyfile(fileName,strrep(fileName, '.tsv', '.csv'))
 end
 tempFileName = strrep(fileName, '.tsv', '.csv');
 clInfo = readtable(tempFileName,...
-    'ReadVariableNames', true, 'ReadRowNames', true, 'Delimiter', '\t');
+    'ReadVariableNames', true, 'ReadRowNames', false, 'Delimiter', '\t');
 clInfo.Properties.DimensionNames = {'Clusters', 'Measures'};
 delete(tempFileName)
+
 % Cleaning empty variables
 clInfo(:,all(ismissing(clInfo))) = [];
 end
