@@ -217,9 +217,9 @@ if ~iemty(afFiles)
     jointArdOut = behHere(jointArdPttrn);
     jointArdPath = joinBehDates(afFiles, extractBefore(afPttrn,"*"), ...
         jointArdOut);
+    [~, auxFile] = fileparts(jointArdPath);
     if exist(jointArdPath, "file")
         if verbose
-            [~, auxFile] = fileparts(jointArdPath);
             fprintf(1, "Loading %s... ", auxFile)
         end
         atV = load(jointArdPath, atVar{:});
