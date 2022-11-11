@@ -12,5 +12,6 @@ end
 tempFileName = strrep(fileName, '.tsv', '.csv');
 clInfo = readtable(tempFileName,...
     'ReadVariableNames', true, 'ReadRowNames', true, 'Delimiter', '\t');
+clInfo.Properties.DimensionNames = {'Clusters', 'Measures'};
 delete(tempFileName)
 end
