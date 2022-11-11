@@ -11,9 +11,6 @@ function clusterInfo = getClusterInfo(filename)
 %               each cluster and M columns corresponding to each variable
 %               in the file (e.g. id, amplitude, channel, etc.)
 % Emilio Isaias-Camacho @ GrohLab 2020
-%% Initial and auxiliary variables
-getContFirstCell = @(x) x{1};
-clusterInfo = table;
 
 %% Validation of the input argument; the filename
 % Checking for existence
@@ -32,34 +29,23 @@ if ~strcmp(fext,'.tsv')
 end
 %% Reading the file
 % Open the file for reading
-fID = fopen(filename,'r');
-% Read the header for each column
-heads = getContFirstCell(textscan(fgetl(fID), '%s\t'));
-Nv = length(heads);
-% Read all the values in the file
-conts = getContFirstCell(textscan(fID, '%s', 'Delimiter', '\t',...
-    'Whitespace', ' '));
-emptyIdx = cellfun(@isempty, conts); conts(emptyIdx) = {'0'};
-% Close the file and process the contents
-fclose(fID);
+clusterInfo = readClusterInfo(filename);
+heads = clusterInfo.Properties.VariableNames;
 %% Scanning the extracted contents 
-Ne = length(conts);
-conts_rs = reshape(conts,Nv,Ne/Nv)';
+Nv = size(clusterInfo, 2);
 for cv = 1:Nv
     % Proceeding slightly different for each variable
     switch heads{cv}
         case {'cluster_id','id','KSLabel','group','NeuronType','Region'}
             % Read as string if the header indicates strings
-            vals = cellfun(@(x) getContFirstCell(textscan(x,'%s')),...
-                conts_rs(:,cv));
-        case 'firing_rate'
+            vals = string(clusterInfo{:,cv});
+        case {'firing_rate', 'fr'}
             % Read specially as the values are accompanied by the units
             vals = cell2mat(cellfun(@(x) textscan(x,'%f spk/s'),...
-                conts_rs(:,cv)));
+                clusterInfo{:,cv}));
         otherwise
             % Read simply as a number for the rest of the variables
-            vals = cell2mat(cellfun(@(x) textscan(x,'%f'),...
-                conts_rs(:,cv)));
+            vals = clusterInfo{:,cv};
     end
     % Assigning the values to the corresponding variable for all custers
     clusterInfo.(heads{cv}) = vals;
