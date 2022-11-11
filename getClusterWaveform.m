@@ -55,7 +55,7 @@ end
 clusterID = unique(clusterID);
 %% Getting ready for the file reading
 % Reading the cluster summary
-clTable = getClusterInfo(fullfile(dataDir, 'cluster_info.tsv'));
+clTable = readClusterInfo(fullfile(dataDir, 'cluster_info.tsv'));
 % % Reading the channel map
 try
     fP = fopen(fullfile(dataDir,'params.py'),'r');
