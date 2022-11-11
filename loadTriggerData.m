@@ -99,7 +99,8 @@ catch
 end
 assignin('base','sortedData',sortedData)
 try
-    clInfo = getClusterInfo(fullfile(dataDir,'cluster_info.tsv'));
+    %clInfo = getClusterInfo(fullfile(dataDir,'cluster_info.tsv'));
+    clInfo = readClusterInfo(fullfile(dataDir,'cluster_info.tsv'));
 catch
     fprintf(1, 'No ''cluster_info.tsv'' file found!\n')
     fprintf(1, 'Be sure to save your sorting with phy\n')
