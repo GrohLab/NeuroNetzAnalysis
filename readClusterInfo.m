@@ -14,4 +14,6 @@ clInfo = readtable(tempFileName,...
     'ReadVariableNames', true, 'ReadRowNames', true, 'Delimiter', '\t');
 clInfo.Properties.DimensionNames = {'Clusters', 'Measures'};
 delete(tempFileName)
+% Cleaning empty variables
+clInfo(:,all(ismissing(clInfo))) = [];
 end
