@@ -341,7 +341,7 @@ thSet = [repmat({0.5:0.5:40},2,1); {0.4:0.4:20}; spTh];
 % Exclusion thresholds
 sigThSet = [5;5;100;sigTh];
 sMedTh = [1;1;100;sMedTh];
-tMedTh = [1;1;100;tMedTh];
+tMedTh = [3;3;100;tMedTh];
 
 tmdl = fit_poly([1,Nbt], bvWin, 1);
 behTx = ((1:Nbt)'.^[1,0])*tmdl;
