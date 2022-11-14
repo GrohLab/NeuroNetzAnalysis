@@ -17,6 +17,7 @@ axOpts = {'Box','off','Color','none', 'NextPlot', 'add'};
 lgOpts = cat(2, axOpts{1:2}, {'Location','best'});
 ptOpts = {"Color", 0.7*ones(1,3), "LineWidth", 0.2;...
     "Color", "k", "LineWidth",  1.5};
+phOpts = {'EdgeColor', 'none', 'FaceAlpha', 0.25, 'FaceColor'};
 % Anonymus functions
 behHere = @(x) fullfile(behDir, x);
 flfile = @(x) fullfile(x.folder, x.name); iemty = @(x) isempty(x);
@@ -26,6 +27,7 @@ getThreshCross = @(x) sum(x)/size(x,1);
 getSEM = @(x, idx) [mean(x(:,idx),2), std(x(:,idx),1,2)./sqrt(sum(idx))];
 getQs = @(x, idx) quantile(x(:,idx),3,2);
 q2patch = @(x) [x(:,1);x(end:-1:1,3)];
+getThreshCross = @(x) sum(x)/size(x,1);
 m = 1e-3; k = 1/m;
 %% Input validation
 p = inputParser;
@@ -369,11 +371,29 @@ thrshStrs = arrayfun(@(x,y,z) sprintf("TH s%.2f sp_m%.2f t_m%.2f", x,y,z), ...
 excFlag = sSig > sigThSet | abs(sMed-ssp) > sMedTh | abs(tMed-tsp) > tMedTh;
 excFlag = excFlag';
 
+%% Organising figures in subfolders
+vwKey = sprintf("VW%.2f - %.2f s", bvWin);
+rwKey = sprintf("RW%.2f - %.2f ms", brWin*k);
+subFig = "V%.2f - %.2f s R%.2f - %.2f ms";
+subfigDir = fullfile(figureDir, sprintf(subFig, bvWin, brWin*k));
+if exist(subfigDir, "dir")
+    figureDir = subfigDir;
+else
+    if ~mkdir(subfigDir)
+        if verbose
+            fprintf(1, "Error while creating subfolder!\n")
+            fprintf(1, "Placing the figures in 'Figure' directory.\n")
+        end
+    else
+        figureDir = subfigDir;
+    end
+end
 %% Going through the conditions and signals
-gp = zeros(Nccond, Nbs, 'single');
-bfPttrn = "%s %s VW%.2f - %.2f s RM%.2f - %.2f ms EX%d %s";
-pfPttrn = "%s move probability %.2f RW%.2f - %.2f ms EX%d %s";
-
+bfPttrn = "%s %s %s %s EX%d %s";
+mbfPttrn = "Mean %s %s%s %s EX%s%s";
+mpfPttrn = "Move probability %s %s%s %s";
+pfPttrn = "%s %s move probability %.2f %s EX%d %s";
+clMap = lines(Nccond);
 % Turning condition flag per trial flags into a page.
 pageTrialFlag = reshape(pairedStim, size(pairedStim, 1), 1, []);
 % Exclusion flags + paired stimulation/experimental conditions control
@@ -383,8 +403,13 @@ xtf = ~excFlag & pageTrialFlag;
 Nex = squeeze(sum(xor(xtf, pageTrialFlag)));
 % Figure names for all signals and conditions
 bfNames = arrayfun(@(y) arrayfun(@(x) sprintf(bfPttrn, behNames(x), ...
-        consCondNames{y}, bvWin, brWin*k, Nex(x,y), thrshStrs(x)), 1:Nbs), ...
+        consCondNames{y}, vwKey, rwKey, Nex(x,y), thrshStrs(x)), 1:Nbs), ...
         1:Nccond, fnOpts{:});
+bfNames = cat(1, bfNames{:});
+% Figure names for mean trials per condition
+mbfNames = arrayfun(@(s) sprintf(mbfPttrn, behNames(s), ...
+    sprintf("%s ", consCondNames{:}), vwKey, rwKey, ...
+    sprintf("%d ", Nex(s,:)), thrshStrs(s)), 1:Nbs);
 % Computing the SEM and quantiles from the signals per condition.
 behSgnls = arrayfun(@(y) arrayfun(@(x) getSEM(behStack{x}, ...
     xtf(:, x, y)), 1:Nbs, fnOpts{:}), 1:Nccond, fnOpts{:});
@@ -401,10 +426,44 @@ mvpt = cat(1, mvpt{:});
 mvFlags = arrayfun(@(y) arrayfun(@(x) compareMaxWithThresh(mvpt{y, x}, ...
     thSet(x)), 1:Nbs, fnOpts{:}), 1:Nccond, fnOpts{:});
 mvFlags = cat(1, mvFlags{:}); mov_prob = cellfun(@getAUC, mvFlags);
-allTrialFigs = gobjects(Nccond, Nbs);
-% Plotting results
+movSgnls = cellfun(getThreshCross, mvFlags, fnOpts{:});
+movSgnls = arrayfun(@(s) cat(1, movSgnls{:,s})', 1:Nbs, fnOpts{:});
+ccnMP = arrayfun(@(c) arrayfun(@(s) consCondNames{c}+" "+ ...
+    string(mov_prob(c, s)), 1:Nbs), 1:Nccond, fnOpts{:});
+ccnMP = cat(1, ccnMP{:});
+% Probability figure name with all conditions for all signals
+mpfNames = arrayfun(@(s) sprintf(mpfPttrn, behNames(s), ...
+    sprintf("%s ", ccnMP(:,s)), rwKey, thrshStrs(s)), 1:Nbs);
+% Trial crossing plot per condition and signals
+pfNames = arrayfun(@(y) arrayfun(@(x) sprintf(pfPttrn, behNames(x), ...
+        consCondNames{y}, mov_prob(y, x), rwKey, Nex(x,y), ...
+        thrshStrs(x)), 1:Nbs), 1:Nccond, fnOpts{:});
+pfNames = cat(1, pfNames{:});
+
+%TODO: Tests for roller movement only 
+if Nccond > 1
+    cs = 4; prms = nchoosek(1:Nccond,2);
+    getDistTravel = @(c) squeeze(sum(abs(behStack{cs}(brFlag, ...
+        xtf(:, cs, c))), 1));
+    dstTrav = arrayfun(getDistTravel, 1:Nccond, fnOpts{:});
+    [pd, hd, statsd] = arrayfun(@(p) ranksum(dstTrav{prms(p,1)}, ...
+        dstTrav{prms(p,2)}), 1:size(prms,1), fnOpts{:});
+    [pm, hm, statsm] = arrayfun(@(p) ranksum(mvpt{prms(p,1), cs}, ...
+        mvpt{prms(p,2), cs}), 1:size(prms,1), fnOpts{:});
+    %{
+    resPttrn = "Results %s%s%s %s EX%s%s.mat";
+    resName = sprintf(resPttrn, sprintf("%d ", hm{:}), ...
+        sprintf('%s ',consCondNames{:}), vwKey, rwKey, ...
+        sprintf('%d ', Nex(4,:)), thrshStr);
+    %}
+end
+
+% Plotting results and allocating figure holders
+allTrialFigs = gobjects(Nccond, Nbs); muTrialFigs = gobjects(Nbs, 1);
+mpFigs = allTrialFigs; mppcFigs = muTrialFigs; bpfFigs = mppcFigs;
 for cbs = 1:Nbs
     for ccond = 1:Nccond
+        % Each trial and mean overlaid
         figTtl = sprintf("%s %s", behNames(cbs), consCondNames{ccond});
         allTrialFigs(ccond, cbs) = figure('Name', figTtl, 'Color', 'w');
         cax = axes('Parent', allTrialFigs(ccond, cbs), axOpts{:});
@@ -412,10 +471,43 @@ for cbs = 1:Nbs
         title(cax, figTtl + " Ex:" + string(Nex(cbs, ccond)));
         mtpObj = plot(cax, behTx*k, behSgnls{ccond, cbs}(:,1), ptOpts{2,:});
         lgObj = legend(mtpObj, behNames(cbs)); set(lgObj, lgOpts{:});
-        xlabel(cax, "Time [ms]"); ylabel(cax, yLabels(cbs));
+        xlabel(cax, "Time [ms]"); ylabel(cax, yLabels(cbs)); xlim(cax, ...
+            bvWin*k)
+        mpFigs(ccond, cbs) = plotThetaProgress(mvFlags(ccond, cbs), ...
+            thSet(cbs), string(consCondNames{ccond}));
+        cax = get(mpFigs(ccond, cbs), "CurrentAxes");
+        set(cax, axOpts{:}); xlabel(cax, "\theta "+yLabels(cbs))
+        title(cax, sprintf("Trial proportion %s %.3f", figTtl, ...
+            mov_prob(ccond, cbs)))
     end
+    % Mean for the considered trials
+    muTrialFigs(cbs) = figure('Name', "Mean "+behNames(cbs), "Color", "w");
+    cax = axes("Parent", muTrialFigs(cbs), axOpts{:});
+    arrayfun(@(c) patch(cax, k*behTx([1:end, end:-1:1]),...
+        mat2ptch(behSgnls{c, cbs}), 1, phOpts{:}, clMap(c,:)), 1:Nccond)
+    pObj = arrayfun(@(c) plot(cax, k*behTx, behSgnls{c, cbs}(:,1), "Color", ...
+        clMap(c,:), "LineWidth", 1.5, "DisplayName", consCondNames{c}), ...
+        1:Nccond); lgObj = legend(pObj); set(lgObj, lgOpts{:}); xlim(cax, ...
+        bvWin*k); xlabel(cax, "Time [ms]"); ylabel(cax, yLabels(cbs)); 
+    title(cax, "Mean: "+behNames(cbs))
+    % Movement probability for all conditions
+    mppcFigs(cbs) = figure('Name', "Move prob "+behNames(cbs), "Color", "w");
+    cax = axes("Parent", mppcFigs(cbs), "Colormap", clMap, axOpts{:});
+    plot(cax, thSet{cbs}, movSgnls{cbs}, "LineWidth", 0.7)
+    xlabel(cax, yLabels(cbs)); ylabel(cax, "Trial crossing"); 
+    title(cax, sprintf("Move probability for %s", behNames(cbs)))
+    lgObj = legend(ccnMP(:,cbs)); set(lgObj, lgOpts{:});
+    %TODO: Boxplot for maximum value per condition
+    
 end
-
+% Saving the plots
+figDir = @(x) fullfile(figureDir, x);
+arrayfun(@(c) arrayfun(@(s) saveFigure(allTrialFigs(c, s), ...
+    figDir(bfNames(c, s)), 1), 1:Nbs), 1:Nccond);
+arrayfun(@(c) arrayfun(@(s) saveFigure(mpFigs(c, s), figDir(pfNames(c, s)), ...
+    1), 1:Nbs), 1:Nccond);
+arrayfun(@(s) saveFigure(muTrialFigs(s), figDir(mbfNames(s)), 1), 1:Nbs);
+arrayfun(@(s) saveFigure(mppcFigs(s), figDir(mpfNames(s)), 1), 1:Nbs);
 end
 %{
 function [fig, plObj] = figPlot(x, y, opts, axOpts)
