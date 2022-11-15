@@ -375,7 +375,9 @@ excFlag = excFlag';
 vwKey = sprintf("VW%.2f - %.2f s", bvWin);
 rwKey = sprintf("RW%.2f - %.2f ms", brWin*k);
 subFig = "V%.2f - %.2f s R%.2f - %.2f ms";
+% Configuration subfolder
 subfigDir = fullfile(figureDir, sprintf(subFig, bvWin, brWin*k));
+%TODO: Body part subfolder
 if exist(subfigDir, "dir")
     figureDir = subfigDir;
 else
@@ -498,7 +500,15 @@ for cbs = 1:Nbs
     title(cax, sprintf("Move probability for %s", behNames(cbs)))
     lgObj = legend(ccnMP(:,cbs)); set(lgObj, lgOpts{:});
     %TODO: Boxplot for maximum value per condition
-    
+    bpfFigs(cbs) = figure('Name', "Maximum value per trial "+behNames(cbs), ...
+        'Color',"w"); cax = axes("Parent", bpfFigs(cbs), axOpts{:});
+    arrayfun(@(c) boxchart(cax, c*ones(size(mvpt{c,cbs})), ...
+        mvpt{c, cbs}, 'Notch', 'on'), 1:Nccond)
+    xticks(cax, 1:Nccond); xticklabels(cax, consCondNames)
+    ylim(cax, [0, round(1.05*(max(cellfun(@(x) quantile(x, 0.75) + ...
+            1.5*iqr(x), mvpt))),1)]);
+    ylim([cax.YLim(1), ceil(1.05*max(cellfun(@(c) quantile(c, 3/4) + ...
+        1.5*iqr(c), mvpt(:, cbs))))])
 end
 % Saving the plots
 figDir = @(x) fullfile(figureDir, x);
