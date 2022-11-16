@@ -4,7 +4,7 @@ function [outputArg1,outputArg2] = analyseBehaviour(behDir, varargin)
 %% Auxiliary variables
 % Input files
 dlcPttrn = 'roller*filtered.csv';
-rpPttrn = "Roller_position*.csv"; vdPttrn = "roller*.avi";
+% rpPttrn = "Roller_position*.csv"; vdPttrn = "roller*.avi";
 % Output files
 afPttrn = "ArduinoTriggers*.mat"; rfPttrn = "RollerSpeed*.mat";
 % DLC variables
@@ -23,10 +23,9 @@ behHere = @(x) fullfile(behDir, x);
 flfile = @(x) fullfile(x.folder, x.name); iemty = @(x) isempty(x);
 istxt = @(x) isstring(x) | ischar(x);
 mat2ptch = @(x) [x(1:end,:)*[1;1]; x(end:-1:1,:)*[1;-1]];
-getThreshCross = @(x) sum(x)/size(x,1);
 getSEM = @(x, idx) [mean(x(:,idx),2), std(x(:,idx),1,2)./sqrt(sum(idx))];
-getQs = @(x, idx) quantile(x(:,idx),3,2);
-q2patch = @(x) [x(:,1);x(end:-1:1,3)];
+% getQs = @(x, idx) quantile(x(:,idx),3,2);
+% q2patch = @(x) [x(:,1);x(end:-1:1,3)];
 getThreshCross = @(x) sum(x)/size(x,1);
 m = 1e-3; k = 1/m;
 %% Input validation
@@ -109,7 +108,7 @@ end
 awConfStruct = struct('Condition', chCond, 'Triggers', trigSubs, ...
     'ViewingWindow', bvWin, 'ResponseWindow', brWin, 'SpeedTh', spTh, ...
     'Thresholds', struct('SpontSigma', sigTh, 'SpontMedian', sMedTh, ...
-    'MedianTh', tMedTh));
+    'MedianTh', tMedTh)); %#ok<NASGU> 
 
 % Validation of the figure directory
 [figParentDir, ~] = fileparts(figureDir);
@@ -307,7 +306,7 @@ elseif islogical(pairedStim)
                 disp(consCondNames)
                 fprintf(1, "Naming the conditions with a consecutive letter\n")
                 % 'a' has ASCII code 97
-                condCondNames = arrayfun(@(x) sprintf('%s', x), ...
+                consCondNames = arrayfun(@(x) sprintf('%s', x), ...
                     97:97+Nccond-1, fnOpts{:});
                 disp(consCondNames)
                 break
@@ -416,9 +415,9 @@ mbfNames = arrayfun(@(s) sprintf(mbfPttrn, behNames(s), ...
 behSgnls = arrayfun(@(y) arrayfun(@(x) getSEM(behStack{x}, ...
     xtf(:, x, y)), 1:Nbs, fnOpts{:}), 1:Nccond, fnOpts{:});
 behSgnls = cat(1, behSgnls{:});
-qSgnls = arrayfun(@(y) arrayfun(@(x) getQs(behStack{x}, xtf(:, x, y)), ...
-    1:Nbs, fnOpts{:}), 1:Nccond, fnOpts{:});
-qSgnls = cat(1, qSgnls{:});
+% qSgnls = arrayfun(@(y) arrayfun(@(x) getQs(behStack{x}, xtf(:, x, y)), ...
+%     1:Nbs, fnOpts{:}), 1:Nccond, fnOpts{:});
+% qSgnls = cat(1, qSgnls{:});
 % Getting maximum speed per trial
 mvpt = arrayfun(@(y) arrayfun(@(x) ...
     getMaxAbsPerTrial(behStack{x}(:,xtf(:, x, y)), brWin, behTx), ...
