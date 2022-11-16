@@ -504,6 +504,7 @@ for cbs = 1:Nbs
     xlabel(cax, yLabels(cbs)); ylabel(cax, "Trial crossing"); 
     title(cax, sprintf("Move probability for %s", behNames(cbs)))
     lgObj = legend(ccnMP(:,cbs)); set(lgObj, lgOpts{:});
+    ylim(cax, [0, 1])
     % Boxplot for maximum value per condition
     bpfFigs(cbs) = figure('Name', "Maximum value per trial "+behNames(cbs), ...
         'Color',"w"); cax = axes("Parent", bpfFigs(cbs), axOpts{:});
