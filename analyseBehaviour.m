@@ -445,22 +445,24 @@ pfNames = arrayfun(@(y) arrayfun(@(x) sprintf(pfPttrn, behNames(x), ...
         1:Nbs), 1:Nccond, fnOpts{:});
 pfNames = cat(1, pfNames{:});
 
-%TODO: Tests for roller movement only 
+% Tests for roller movement only 
 if Nccond > 1
     cs = 4; prms = nchoosek(1:Nccond,2);
     getDistTravel = @(c) squeeze(sum(abs(behStack{cs}(brFlag, ...
         xtf(:, cs, c))), 1));
     dstTrav = arrayfun(getDistTravel, 1:Nccond, fnOpts{:});
-    [pd, hd, statsd] = arrayfun(@(p) ranksum(dstTrav{prms(p,1)}, ...
+    [pd, hd] = arrayfun(@(p) ranksum(dstTrav{prms(p,1)}, ...
         dstTrav{prms(p,2)}), 1:size(prms,1), fnOpts{:});
-    [pm, hm, statsm] = arrayfun(@(p) ranksum(mvpt{prms(p,1), cs}, ...
+    [pm, hm] = arrayfun(@(p) ranksum(mvpt{prms(p,1), cs}, ...
         mvpt{prms(p,2), cs}), 1:size(prms,1), fnOpts{:});
-    %{
-    resPttrn = "Results %s%s%s %s EX%s%s.mat";
-    resName = sprintf(resPttrn, sprintf("%d ", hm{:}), ...
-        sprintf('%s ',consCondNames{:}), vwKey, rwKey, ...
-        sprintf('%d ', Nex(4,:)), thrshStr);
-    %}
+    rsstPttrn = "Results %s %s%s"+rwKey+" EX%s%s.mat";
+    rsstName = sprintf(rsstPttrn, behNames(cs), sprintf("%s ", ...
+        consCondNames{:}), sprintf("%.2f ", pm{:}), sprintf("%d ", ...
+        Nex(cs,:)), thrshStrs(cs));
+    rsstPath = behHere(rsstName);
+    if ~exist(rsstPath, "file")
+        save(rsstPath,"pd", "hd", "pm", "hm");
+    end
 end
 
 % Plotting results and allocating figure holders
