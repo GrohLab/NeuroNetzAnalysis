@@ -390,10 +390,10 @@ else
     end
 end
 %% Going through the conditions and signals
-bfPttrn = "%s %s %s %s EX%d %s";
-mbfPttrn = "Mean %s %s%s %s EX%s%s";
-mpfPttrn = "Move probability %s %s%s %s";
-pfPttrn = "%s %s move probability %.2f %s EX%d %s";
+bfPttrn = "%s %s "+vwKey+" "+rwKey+" EX%d %s";
+mbfPttrn = "Mean %s %s"+vwKey+" "+rwKey+" EX%s%s";
+mpfPttrn = "Move probability %s %s"+rwKey+" %s";
+pfPttrn = "%s %s move probability %.2f "+rwKey+" EX%d %s";
 mvdPttrn = "%s dist "+vwKey+" "+rwKey+" EX%s%s";
 clMap = lines(Nccond);
 % Turning condition flag per trial flags into a page.
@@ -405,13 +405,13 @@ xtf = ~excFlag & pageTrialFlag;
 Nex = squeeze(sum(xor(xtf, pageTrialFlag)));
 % Figure names for all signals and conditions
 bfNames = arrayfun(@(y) arrayfun(@(x) sprintf(bfPttrn, behNames(x), ...
-        consCondNames{y}, vwKey, rwKey, Nex(x,y), thrshStrs(x)), 1:Nbs), ...
+        consCondNames{y}, Nex(x,y), thrshStrs(x)), 1:Nbs), ...
         1:Nccond, fnOpts{:});
 bfNames = cat(1, bfNames{:});
 % Figure names for mean trials per condition
 mbfNames = arrayfun(@(s) sprintf(mbfPttrn, behNames(s), ...
-    sprintf("%s ", consCondNames{:}), vwKey, rwKey, ...
-    sprintf("%d ", Nex(s,:)), thrshStrs(s)), 1:Nbs);
+    sprintf("%s ", consCondNames{:}), sprintf("%d ", Nex(s,:)), ...
+    thrshStrs(s)), 1:Nbs);
 % Figure names for max value per trial boxchart
 mvdNames = arrayfun(@(s) sprintf(mvdPttrn, behNames(s), sprintf("%d ", ...
     Nex(s,:)), thrshStrs(s)), 1:Nbs);
@@ -438,11 +438,11 @@ ccnMP = arrayfun(@(c) arrayfun(@(s) consCondNames{c}+" "+ ...
 ccnMP = cat(1, ccnMP{:});
 % Probability figure name with all conditions for all signals
 mpfNames = arrayfun(@(s) sprintf(mpfPttrn, behNames(s), ...
-    sprintf("%s ", ccnMP(:,s)), rwKey, thrshStrs(s)), 1:Nbs);
+    sprintf("%s ", ccnMP(:,s)), thrshStrs(s)), 1:Nbs);
 % Trial crossing plot per condition and signals
 pfNames = arrayfun(@(y) arrayfun(@(x) sprintf(pfPttrn, behNames(x), ...
-        consCondNames{y}, mov_prob(y, x), rwKey, Nex(x,y), ...
-        thrshStrs(x)), 1:Nbs), 1:Nccond, fnOpts{:});
+        consCondNames{y}, mov_prob(y, x), Nex(x,y), thrshStrs(x)), ...
+        1:Nbs), 1:Nccond, fnOpts{:});
 pfNames = cat(1, pfNames{:});
 
 %TODO: Tests for roller movement only 
