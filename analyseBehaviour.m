@@ -394,6 +394,7 @@ bfPttrn = "%s %s %s %s EX%d %s";
 mbfPttrn = "Mean %s %s%s %s EX%s%s";
 mpfPttrn = "Move probability %s %s%s %s";
 pfPttrn = "%s %s move probability %.2f %s EX%d %s";
+mvdPttrn = "%s dist "+vwKey+" "+rwKey+" EX%s%s";
 clMap = lines(Nccond);
 % Turning condition flag per trial flags into a page.
 pageTrialFlag = reshape(pairedStim, size(pairedStim, 1), 1, []);
@@ -411,6 +412,9 @@ bfNames = cat(1, bfNames{:});
 mbfNames = arrayfun(@(s) sprintf(mbfPttrn, behNames(s), ...
     sprintf("%s ", consCondNames{:}), vwKey, rwKey, ...
     sprintf("%d ", Nex(s,:)), thrshStrs(s)), 1:Nbs);
+% Figure names for max value per trial boxchart
+mvdNames = arrayfun(@(s) sprintf(mvdPttrn, behNames(s), sprintf("%d ", ...
+    Nex(s,:)), thrshStrs(s)), 1:Nbs);
 % Computing the SEM and quantiles from the signals per condition.
 behSgnls = arrayfun(@(y) arrayfun(@(x) getSEM(behStack{x}, ...
     xtf(:, x, y)), 1:Nbs, fnOpts{:}), 1:Nccond, fnOpts{:});
@@ -498,16 +502,19 @@ for cbs = 1:Nbs
     xlabel(cax, yLabels(cbs)); ylabel(cax, "Trial crossing"); 
     title(cax, sprintf("Move probability for %s", behNames(cbs)))
     lgObj = legend(ccnMP(:,cbs)); set(lgObj, lgOpts{:});
-    %TODO: Boxplot for maximum value per condition
+    % Boxplot for maximum value per condition
     bpfFigs(cbs) = figure('Name', "Maximum value per trial "+behNames(cbs), ...
         'Color',"w"); cax = axes("Parent", bpfFigs(cbs), axOpts{:});
     arrayfun(@(c) boxchart(cax, c*ones(size(mvpt{c,cbs})), ...
         mvpt{c, cbs}, 'Notch', 'on'), 1:Nccond)
     xticks(cax, 1:Nccond); xticklabels(cax, consCondNames)
-    ylim(cax, [0, round(1.05*(max(cellfun(@(x) quantile(x, 0.75) + ...
-            1.5*iqr(x), mvpt))),1)]);
-    ylim([cax.YLim(1), ceil(1.05*max(cellfun(@(c) quantile(c, 3/4) + ...
-        1.5*iqr(c), mvpt(:, cbs))))])
+    mxLevl = ceil(1.05*max(cellfun(@(c) quantile(c, 3/4) + ...
+        1.5*iqr(c), mvpt(:, cbs))));
+    if mxLevl <= cax.YLim(1)
+        mxLevl = cax.YLim(2);
+    end
+    ylim(cax, [cax.YLim(1), mxLevl]); ylabel(cax, yLabels(cbs));
+    title(cax, behNames(cbs)+" max val distribution"); 
 end
 % Saving the plots
 figDir = @(x) fullfile(figureDir, x);
@@ -517,6 +524,7 @@ arrayfun(@(c) arrayfun(@(s) saveFigure(mpFigs(c, s), figDir(pfNames(c, s)), ...
     1), 1:Nbs), 1:Nccond);
 arrayfun(@(s) saveFigure(muTrialFigs(s), figDir(mbfNames(s)), 1), 1:Nbs);
 arrayfun(@(s) saveFigure(mppcFigs(s), figDir(mpfNames(s)), 1), 1:Nbs);
+arrayfun(@(s) saveFigure(bpfFigs(s), figDir(mvdNames(s)), 1), 1:Nbs);
 end
 %{
 function [fig, plObj] = figPlot(x, y, opts, axOpts)
