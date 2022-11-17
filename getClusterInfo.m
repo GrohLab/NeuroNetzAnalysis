@@ -41,8 +41,12 @@ for cv = 1:Nv
             vals = string(clusterInfo{:,cv});
         case {'firing_rate', 'fr'}
             % Read specially as the values are accompanied by the units
-            vals = cell2mat(cellfun(@(x) textscan(x,'%f spk/s'),...
-                clusterInfo{:,cv}));
+            if isnumeric(clusterInfo{:,cv})
+                vals = clusterInfo{:,cv};
+            else
+                vals = cell2mat(cellfun(@(x) textscan(x,'%f spk/s'),...
+                    clusterInfo{:,cv}));
+            end
         otherwise
             % Read simply as a number for the rest of the variables
             vals = clusterInfo{:,cv};
