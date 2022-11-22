@@ -288,12 +288,12 @@ if istxt(pairedStim) && strcmpi(pairedStim, "none")
 elseif islogical(pairedStim)
     % Connected to DE_Jittering
     NTa = sum(pairedStim(:));
-    if sum(pairedStim(:)) ~= Ntr
+    if size(pairedStim, 1) ~= Ntr
         fprintf(1, "The number of trials in the given flags (%d) do not", ...
             NTa)
         fprintf(1, "correspond to the number of trials in behaviour files");
         fprintf(1, " (%d)!\n", Ntr);
-        dbstop in analyseBehaviour at 287
+        dbstop in analyseBehaviour at 290
     else
         Nccond = size(pairedStim, 2);
         if size(pairedStim,1)~=Ntr
