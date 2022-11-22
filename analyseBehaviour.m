@@ -299,7 +299,7 @@ elseif islogical(pairedStim)
         if size(pairedStim,1)~=Ntr
             pairedStim(all(~pairedStim,2),:) = [];
         end
-        while numel(consCondNames) ~= Nccond && all(~cellfun(istxt, consCondNames))
+        while numel(consCondNames) ~= Nccond || all(~cellfun(istxt, consCondNames))
             consCondNames = consCondNames{:};
             if ~iscell(consCondNames)
                 fprintf(1, "Considered condition names causing trouble!\n")
