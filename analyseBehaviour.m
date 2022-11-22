@@ -528,6 +528,14 @@ arrayfun(@(c) arrayfun(@(s) saveFigure(mpFigs(c, s), figDir(pfNames(c, s)), ...
 arrayfun(@(s) saveFigure(muTrialFigs(s), figDir(mbfNames(s)), 1), 1:Nbs);
 arrayfun(@(s) saveFigure(mppcFigs(s), figDir(mpfNames(s)), 1), 1:Nbs);
 arrayfun(@(s) saveFigure(bpfFigs(s), figDir(mvdNames(s)), 1), 1:Nbs);
+
+%{
+TODO: 
+1.- Organise parameters in tructures:
+    1.1.- Inputs (signal processing, exclusion)
+    1.2.- Outputs (Tests, values, maybe stacks)
+2.- Organise figures in further subfolders per bodypart
+%}
 end
 %{
 function [fig, plObj] = figPlot(x, y, opts, axOpts)
