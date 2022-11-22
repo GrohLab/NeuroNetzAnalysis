@@ -234,18 +234,36 @@ if ~iemty(afFiles)
     else
         % Arduino
         atV = arrayfun(@(x) load(flfile(x), atVar{:}), afFiles);
+        Nrecs = length(atV);
         atT = arrayfun(@(x, z) cellfun(@(y, a) y+a, ...
             x.atTimes, repmat(z,1,length(x.atTimes)), fnOpts{:}), atV', ...
             num2cell([0, Texp(1:end-1)]), fnOpts{:});
+        trig_per_recording = cellfun(@(x) size(x,2), atT);
+        [max_trigs, record_most_trigs] = max(trig_per_recording);
+        record_trig_cont_ID = arrayfun(@(x) ...
+            contains(atV(record_most_trigs).atNames, x.atNames), ...
+            atV(1:Nrecs), fnOpts{:}); outCell = cell(Nrecs, max_trigs);
+        for cr = 1:Nrecs
+            outCell(cr,record_trig_cont_ID{cr}) = atT{cr};
+        end
+        atTimes = arrayfun(@(x) cat(1, outCell{:,x}), 1:size(outCell,2), ...
+            fnOpts{:});
+        atNames = atV(1).atNames;
+        %{
         atT = cat(1, atT{:});
         atTimes = arrayfun(@(x) cat(1, atT{:,x}), 1:size(atT,2), fnOpts{:});
         atNames = atV(1).atNames;
+        %}
         % Intan
         itT = arrayfun(@(x, z) cellfun(@(y, a) y+a, ...
             x.itTimes, repmat(z,size(x.itTimes)), fnOpts{:}), atV', ...
             num2cell([0, Texp(1:end-1)]), fnOpts{:});
-        itT = cat(2, itT{:})';
-        itTimes = arrayfun(@(x) cat(1, itT{:,x}), 1:size(itT,2), fnOpts{:});
+        outCell = cell(Nrecs, max_trigs);
+        for cr = 1:Nrecs
+            outCell(cr,record_trig_cont_ID{cr}) = itT{cr};
+        end
+        itTimes = arrayfun(@(x) cat(1, outCell{:,x}), 1:size(outCell,2), ...
+            fnOpts{:});
         itNames = atV(1).itNames;
         if numel(afFiles) > 1
             if verbose
