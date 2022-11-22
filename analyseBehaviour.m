@@ -402,7 +402,7 @@ pageTrialFlag = reshape(pairedStim, size(pairedStim, 1), 1, []);
 % Used trial flags shape #Trial x Behavioural signals x #Conditions
 xtf = ~excFlag & pageTrialFlag;
 % Excluded flags: #behSign x #Conditions
-Nex = squeeze(sum(xor(xtf, pageTrialFlag)));
+Nex = reshape(sum(xor(xtf, pageTrialFlag)),Nbs, Nccond);
 % Figure names for all signals and conditions
 bfNames = arrayfun(@(y) arrayfun(@(x) sprintf(bfPttrn, behNames(x), ...
         consCondNames{y}, Nex(x,y), thrshStrs(x)), 1:Nbs), ...
