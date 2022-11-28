@@ -363,10 +363,13 @@ classdef ProtocolGetter < handle
             end
         end
         
-        function obj = getFrequencyEdges(obj)
+        function obj = getFrequencyEdges(obj, minIpi)
             %GETFREQUENCYEDGES looks for train of stimulus in both signals
             %and saves the position and frequency of the train.
             % Whisker, piezo, mechanical
+            if ~exist("minIpi", "var")
+                minIpi = 1;
+            end
             getFot = @(x,y) StepWaveform.firstOfTrain(x,y);
             getLot = @(x,y) StepWaveform.lastOfTrain(x,y);
             for cst = 1:size(obj.Edges, 2)
@@ -389,8 +392,8 @@ classdef ProtocolGetter < handle
                 % Auxiliary flags to eliminate the frequencies associated
                 % to each pulse and keeping only the last of the train.
                 if ~isempty(wFreq)
-                    fotFlags = getFot(obj.Edges(cst).Subs(:,1)/obj.fs, 1);
-                    lotFlags = getLot(obj.Edges(cst).Subs(:,1)/obj.fs, 1);
+                    fotFlags = getFot(obj.Edges(cst).Subs(:,1)/obj.fs, minIpi);
+                    lotFlags = getLot(obj.Edges(cst).Subs(:,1)/obj.fs, minIpi);
                     % Eliminate only those pulses which are in between the
                     % pulse, not the end but the beginning.
                     wFreqs(xor(wTrainBodyFlags , lotFlags) | fotFlags) = [];
