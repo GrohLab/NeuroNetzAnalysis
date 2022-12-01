@@ -4,7 +4,7 @@ function [outputArg1,outputArg2] = analyseBehaviour(behDir, varargin)
 %% Auxiliary variables
 % Input files
 dlcPttrn = 'roller*filtered.csv';
-rpPttrn = "Roller_position*.csv"; vdPttrn = "roller*.avi";
+% rpPttrn = "Roller_position*.csv"; vdPttrn = "roller*.avi";
 % Output files
 afPttrn = "ArduinoTriggers*.mat"; rfPttrn = "RollerSpeed*.mat";
 % DLC variables
@@ -13,15 +13,20 @@ dlcVars = {'behDLCSignals', 'dlcNames'};
 % Functional cell array
 fnOpts = {'UniformOutput', false}; 
 % Aesthetic cell arrays
-axOpts = {'Box','off','Color','none'};
+axOpts = {'Box','off','Color','none', 'NextPlot', 'add'};
 lgOpts = cat(2, axOpts{1:2}, {'Location','best'});
 ptOpts = {"Color", 0.7*ones(1,3), "LineWidth", 0.2;...
     "Color", "k", "LineWidth",  1.5};
+phOpts = {'EdgeColor', 'none', 'FaceAlpha', 0.25, 'FaceColor'};
 % Anonymus functions
 behHere = @(x) fullfile(behDir, x);
 flfile = @(x) fullfile(x.folder, x.name); iemty = @(x) isempty(x);
 istxt = @(x) isstring(x) | ischar(x);
 mat2ptch = @(x) [x(1:end,:)*[1;1]; x(end:-1:1,:)*[1;-1]];
+getSEM = @(x, idx) [mean(x(:,idx),2), std(x(:,idx),1,2)./sqrt(sum(idx))];
+% getQs = @(x, idx) quantile(x(:,idx),3,2);
+% q2patch = @(x) [x(:,1);x(end:-1:1,3)];
+getThreshCross = @(x) sum(x)/size(x,1);
 m = 1e-3; k = 1/m;
 %% Input validation
 p = inputParser;
@@ -103,7 +108,7 @@ end
 awConfStruct = struct('Condition', chCond, 'Triggers', trigSubs, ...
     'ViewingWindow', bvWin, 'ResponseWindow', brWin, 'SpeedTh', spTh, ...
     'Thresholds', struct('SpontSigma', sigTh, 'SpontMedian', sMedTh, ...
-    'MedianTh', tMedTh));
+    'MedianTh', tMedTh)); %#ok<NASGU> 
 
 % Validation of the figure directory
 [figParentDir, ~] = fileparts(figureDir);
@@ -203,6 +208,7 @@ else
     behDLCSignals = [];
     dlcNames = "";
 end
+Nbs = size(behDLCSignals, 2);
 
 % Triggers
 atVar = {'atTimes', 'atNames', 'itTimes', 'itNames'};
@@ -212,9 +218,9 @@ if ~iemty(afFiles)
     jointArdOut = behHere(jointArdPttrn);
     jointArdPath = joinBehDates(afFiles, extractBefore(afPttrn,"*"), ...
         jointArdOut);
+    [~, auxFile] = fileparts(jointArdPath);
     if exist(jointArdPath, "file")
         if verbose
-            [~, auxFile] = fileparts(jointArdPath);
             fprintf(1, "Loading %s... ", auxFile)
         end
         atV = load(jointArdPath, atVar{:});
@@ -228,18 +234,36 @@ if ~iemty(afFiles)
     else
         % Arduino
         atV = arrayfun(@(x) load(flfile(x), atVar{:}), afFiles);
+        Nrecs = length(atV);
         atT = arrayfun(@(x, z) cellfun(@(y, a) y+a, ...
             x.atTimes, repmat(z,1,length(x.atTimes)), fnOpts{:}), atV', ...
             num2cell([0, Texp(1:end-1)]), fnOpts{:});
+        trig_per_recording = cellfun(@(x) size(x,2), atT);
+        [max_trigs, record_most_trigs] = max(trig_per_recording);
+        record_trig_cont_ID = arrayfun(@(x) ...
+            contains(atV(record_most_trigs).atNames, x.atNames), ...
+            atV(1:Nrecs), fnOpts{:}); outCell = cell(Nrecs, max_trigs);
+        for cr = 1:Nrecs
+            outCell(cr,record_trig_cont_ID{cr}) = atT{cr};
+        end
+        atTimes = arrayfun(@(x) cat(1, outCell{:,x}), 1:size(outCell,2), ...
+            fnOpts{:});
+        atNames = atV(1).atNames;
+        %{
         atT = cat(1, atT{:});
         atTimes = arrayfun(@(x) cat(1, atT{:,x}), 1:size(atT,2), fnOpts{:});
         atNames = atV(1).atNames;
+        %}
         % Intan
         itT = arrayfun(@(x, z) cellfun(@(y, a) y+a, ...
             x.itTimes, repmat(z,size(x.itTimes)), fnOpts{:}), atV', ...
             num2cell([0, Texp(1:end-1)]), fnOpts{:});
-        itT = cat(2, itT{:})';
-        itTimes = arrayfun(@(x) cat(1, itT{:,x}), 1:size(itT,2), fnOpts{:});
+        outCell = cell(Nrecs, max_trigs);
+        for cr = 1:Nrecs
+            outCell(cr,record_trig_cont_ID{cr}) = itT{cr};
+        end
+        itTimes = arrayfun(@(x) cat(1, outCell{:,x}), 1:size(outCell,2), ...
+            fnOpts{:});
         itNames = atV(1).itNames;
         if numel(afFiles) > 1
             if verbose
@@ -276,28 +300,67 @@ end
 % Connection to DE_Jittering or as a stand-alone function.
 if istxt(pairedStim) && strcmpi(pairedStim, "none")
     % Stand alone function without stimulus pairing
-    delayFlags = true(Na, 1);
+    pairedStim = true(Na, 1);
     Nccond = 1;
     consCondNames = cellstr(atNames(aSub));
-elseif islogical(pairedStim) && size(pairedStim, 1) == Ntr
+elseif islogical(pairedStim)
     % Connected to DE_Jittering
-    if sum(pairedStim(:)) ~= Na
+    NTa = sum(pairedStim(:));
+    if size(pairedStim, 1) ~= Ntr
+        fprintf(1, "The number of trials in the given flags (%d) do not", ...
+            NTa)
+        fprintf(1, "correspond to the number of trials in behaviour files");
+        fprintf(1, " (%d)!\n", Ntr);
+        dbstop in analyseBehaviour at 290
     else
-        delayFlags = pairedStim;
         Nccond = size(pairedStim, 2);
+        if size(pairedStim,1)~=Ntr
+            pairedStim(all(~pairedStim,2),:) = [];
+        end
+        while numel(consCondNames) ~= Nccond || all(~cellfun(istxt, consCondNames))
+            consCondNames = consCondNames{:};
+            if ~iscell(consCondNames)
+                fprintf(1, "Considered condition names causing trouble!\n")
+                disp(consCondNames)
+                fprintf(1, "Naming the conditions with a consecutive letter\n")
+                % 'a' has ASCII code 97
+                consCondNames = arrayfun(@(x) sprintf('%s', x), ...
+                    97:97+Nccond-1, fnOpts{:});
+                disp(consCondNames)
+                break
+            end
+        end
     end
 end
-
+% Estimating the setpoint for whiskers and nose signals.
+behTx_all = (0:size(behDLCSignals, 1) - 1)/fr;
+spFile = fullfile(behDir, "SetPoint.mat");
+if ~exist(spFile, "file")
+    set_point = arrayfun(@(x) fitSpline(behTx_all, behDLCSignals(:,x), 1, ...
+        0.3, 0.95, verbose), 1:size(behDLCSignals,2), fnOpts{:});
+    set_point = [set_point{:}];
+    save(spFile, "set_point")
+else
+    set_point = load(spFile,"set_point"); set_point = set_point.set_point;
+end
 % Whiskers and nose
 [~, dlcStack] = getStacks(false, round(itTimes{iSub}(trigSubs,:)*fr), 'on', ...
-    bvWin, fr, fr, [], behDLCSignals');
-behStack = cat(1, dlcStack, vStack);
+    bvWin, fr, fr, [], [behDLCSignals, set_point]');
+behStack = cat(1, dlcStack(1:Nbs,:,:), vStack);
+Nbs = size(behStack, 1);
 behStack = arrayfun(@(x) squeeze(behStack(x, :, :)), (1:size(behStack,1))',...
-    fnOpts{:}); %#ok<*NASGU> 
+    fnOpts{:});
 behNames = [dlcNames, "Roller speed"];
+yLabels = [repmat("Angle [°]", 1, 3), "Roller speed [cm/s]"];
 % Whiskers, nose, and roller speed
+
+%TODO: include user input for the thresholds for whiskers and nose signals.
+% Probability thresholds
 thSet = [repmat({0.5:0.5:40},2,1); {0.4:0.4:20}; spTh];
-sigThSet = [5;5;NaN;sigTh];
+% Exclusion thresholds
+sigThSet = [5;5;100;sigTh];
+sMedTh = [1;1;100;sMedTh];
+tMedTh = [3;3;100;tMedTh];
 
 tmdl = fit_poly([1,Nbt], bvWin, 1);
 behTx = ((1:Nbt)'.^[1,0])*tmdl;
@@ -305,120 +368,196 @@ behTx = ((1:Nbt)'.^[1,0])*tmdl;
 bsFlag = behTx <= 0; brFlag = behTx < brWin;
 brFlag = xor(brFlag(:,1),brFlag(:,2));
 
+% Set-point median for the whiskers and nose
+% Spontaneous
+ssp = [squeeze(median(dlcStack(Nbs:end,bsFlag,:), 2)); zeros(1,Ntr)];
+% Trial
+tsp = [squeeze(median(dlcStack(Nbs:end,:,:), 2)); zeros(1,Ntr)];
+clearvars dlcStack vStack;
 % Measuring trials
-sSig = squeeze(std(vStack(:,bsFlag,:), [], 2));
-sMed = squeeze(median(vStack(:,bsFlag,:), 2));
-tMed = squeeze(median(vStack, 2));
+sSig = cell2mat(cellfun(@(x) squeeze(std(x(bsFlag,:), 1, 1)), behStack, ...
+    fnOpts{:}));
+sMed = cell2mat(cellfun(@(x) squeeze(median(x(bsFlag,:), 1)), behStack, ...
+    fnOpts{:}));
+tMed = cell2mat(cellfun(@(x) squeeze(median(x, 1)), behStack, fnOpts{:}));
 
+thrshStrs = arrayfun(@(x,y,z) sprintf("TH s%.2f sp_m%.2f t_m%.2f", x,y,z), ...
+    sigThSet, sMedTh, tMedTh);
+% Excluding flags: Sigma and median in spontaneous or the whole trial
+% median greater than a given threshold
+excFlag = sSig > sigThSet | abs(sMed-ssp) > sMedTh | abs(tMed-tsp) > tMedTh;
+excFlag = excFlag';
 
-%% Conditions looping through roller speed (for now)
-% Testing trials with the threshold set and excluding unfulfilling.
-thrshStr = sprintf("TH s%.2f sp_m%.2f t_m%.2f", sigTh, sMedTh, tMedTh);
-excFlag = sSig > sigTh | abs(sMed) > sMedTh | abs(tMed) > tMedTh;
-% Loop variables
-gp = zeros(Nccond, 1, 'single');
-rsSgnls = cell(Nccond, 1); mvFlags = cell(Nccond,1); mvpt = mvFlags;
-qSgnls = rsSgnls;
-rsPttrn = "%s roller speed VW%.2f - %.2f s RM%.2f - %.2f ms EX%d %s";
-pfPttrn = "%s move probability %.2f RW%.2f - %.2f ms EX%d %s";
-
-getThreshCross = @(x) sum(x)/size(x,1);
-xdf = arrayfun(@(x) ~excFlag & delayFlags(:,x), 1:Nccond, ...
-    fnOpts{:});  xdf = cat(2, xdf{:});
-
-for ccond = 1:Nccond
-    sIdx = xdf(:,ccond);
-    % Plot speed signals
-    fig = figure("Color", "w");
-    Nex = sum(xor(sIdx, delayFlags(:,ccond)));
-    rsFigName = sprintf(rsPttrn, consCondNames{ccond}, bvWin,...
-        brWin*k, Nex, thrshStr); 
-    % Plot all trials
-    plot(behTx, squeeze(vStack(:,:,sIdx)), ptOpts{1,:}); hold on;
-    % Plot mean of trials
-    % Standard deviation
-    %rsSgnls{ccond} = [squeeze(mean(vStack(:,:,sIdx),3))',...
-    %squeeze(std(vStack(:,:,sIdx),1,3))'];
-    % S.E.M.
-    rsSgnls{ccond} = [squeeze(mean(vStack(:,:,sIdx),3))',...
-        squeeze(std(vStack(:,:,sIdx),1,3))'./sqrt(sum(sIdx))];
-    qSgnls{ccond} = squeeze(quantile(vStack(:,:,sIdx),3,3));
-    lObj = plot(behTx, rsSgnls{ccond}(:,1), ptOpts{2,:});
-    lgnd = legend(lObj, string(consCondNames{ccond}));
-    set(lgnd, "Box", "off", "Location", "best")
-    set(gca, axOpts{:})
-    title(['Roller speed ',consCondNames{ccond}])
-    xlabel("Time [s]"); ylabel("Roller speed [cm/s]"); xlim(bvWin)
-    saveFigure(fig, fullfile(figureDir, rsFigName), 1)
-    % Probability plots
-    mvpt{ccond} = getMaxAbsPerTrial(squeeze(vStack(:,:,sIdx)), ...
-        brWin, behTx);
-    mvFlags{ccond} = compareMaxWithThresh(mvpt{ccond}, spTh);
-    gp(ccond) = getAUC(mvFlags{ccond});
-    pfName = sprintf(pfPttrn, consCondNames{ccond}, gp(ccond),...
-        brWin*k, Nex, thrshStr);
-    fig = plotThetaProgress(mvFlags(ccond), spTh,...
-        string(consCondNames{ccond}));
-    xlabel("Roller speed \theta [cm/s]");
-    title(sprintf("Trial proportion crossing \\theta: %.3f", gp(ccond)))
-    saveFigure(fig, fullfile(figureDir, pfName), 1)
+%% Organising figures in subfolders
+vwKey = sprintf("VW%.2f - %.2f s", bvWin);
+rwKey = sprintf("RW%.2f - %.2f ms", brWin*k);
+subFig = "V%.2f - %.2f s R%.2f - %.2f ms";
+% Configuration subfolder
+subfigDir = fullfile(figureDir, sprintf(subFig, bvWin, brWin*k));
+%TODO: Body part subfolder
+if exist(subfigDir, "dir")
+    figureDir = subfigDir;
+else
+    if ~mkdir(subfigDir)
+        if verbose
+            fprintf(1, "Error while creating subfolder!\n")
+            fprintf(1, "Placing the figures in 'Figure' directory.\n")
+        end
+    else
+        figureDir = subfigDir;
+    end
 end
+%% Going through the conditions and signals
+bfPttrn = "%s %s "+vwKey+" "+rwKey+" EX%d %s";
+mbfPttrn = "Mean %s %s"+vwKey+" "+rwKey+" EX%s%s";
+mpfPttrn = "Move probability %s %s"+rwKey+" %s";
+pfPttrn = "%s %s move probability %.2f "+rwKey+" EX%d %s";
+mvdPttrn = "%s dist "+vwKey+" "+rwKey+" EX%s%s";
 clMap = lines(Nccond);
-phOpts = {'EdgeColor', 'none', 'FaceAlpha', 0.25, 'FaceColor'};
-% Plotting mean speed signals together
-fig = figure("Color", "w"); axs = axes("Parent", fig, "NextPlot", "add");
-arrayfun(@(x) patch(axs, behTx([1:end, end:-1:1]),...
-    mat2ptch(rsSgnls{x}), 1, phOpts{:}, clMap(x,:)), 1:Nccond); hold on
-lObj = arrayfun(@(x) plot(axs, behTx, rsSgnls{x}(:,1), "Color", clMap(x,:),...
-    "LineWidth", 1.5, "DisplayName", consCondNames{x}), 1:Nccond);
-xlabel(axs, "Time [s]"); xlim(axs, bvWin); ylabel(axs, "Roller speed [cm/s]")
-set(axs, axOpts{:}); title(axs, "Roller speed for all conditions")
-lgnd = legend(axs, lObj); set(lgnd, lgOpts{:})
-rsPttrn = "Mean roller speed %s VW%.2f - %.2f s RM%.2f - %.2f ms EX%s %s SEM";
-Nex = Na - sum(xdf);
-rsFigName = sprintf(rsPttrn, sprintf('%s ', consCondNames{:}), bvWin,...
-    brWin*k, sprintf('%d ', Nex), thrshStr);
-saveFigure(fig, fullfile(figureDir, rsFigName), 1)
+% Turning condition flag per trial flags into a page.
+pageTrialFlag = reshape(pairedStim, size(pairedStim, 1), 1, []);
+% Exclusion flags + paired stimulation/experimental conditions control
+% Used trial flags shape #Trial x Behavioural signals x #Conditions
+xtf = ~excFlag & pageTrialFlag;
+% Excluded flags: #behSign x #Conditions
+Nex = reshape(sum(xor(xtf, pageTrialFlag)),Nbs, Nccond);
+% Figure names for all signals and conditions
+bfNames = arrayfun(@(y) arrayfun(@(x) sprintf(bfPttrn, behNames(x), ...
+        consCondNames{y}, Nex(x,y), thrshStrs(x)), 1:Nbs), ...
+        1:Nccond, fnOpts{:});
+bfNames = cat(1, bfNames{:});
+% Figure names for mean trials per condition
+mbfNames = arrayfun(@(s) sprintf(mbfPttrn, behNames(s), ...
+    sprintf("%s ", consCondNames{:}), sprintf("%d ", Nex(s,:)), ...
+    thrshStrs(s)), 1:Nbs);
+% Figure names for max value per trial boxchart
+mvdNames = arrayfun(@(s) sprintf(mvdPttrn, behNames(s), sprintf("%d ", ...
+    Nex(s,:)), thrshStrs(s)), 1:Nbs);
+% Computing the SEM and quantiles from the signals per condition.
+behSgnls = arrayfun(@(y) arrayfun(@(x) getSEM(behStack{x}, ...
+    xtf(:, x, y)), 1:Nbs, fnOpts{:}), 1:Nccond, fnOpts{:});
+behSgnls = cat(1, behSgnls{:});
+% qSgnls = arrayfun(@(y) arrayfun(@(x) getQs(behStack{x}, xtf(:, x, y)), ...
+%     1:Nbs, fnOpts{:}), 1:Nccond, fnOpts{:});
+% qSgnls = cat(1, qSgnls{:});
+% Getting maximum speed per trial
+mvpt = arrayfun(@(y) arrayfun(@(x) ...
+    getMaxAbsPerTrial(behStack{x}(:,xtf(:, x, y)), brWin, behTx), ...
+    1:Nbs, fnOpts{:}), 1:Nccond, fnOpts{:});
+mvpt = cat(1, mvpt{:});
+% Crossing thresholds and movement probability
+mvFlags = arrayfun(@(y) arrayfun(@(x) compareMaxWithThresh(mvpt{y, x}, ...
+    thSet(x)), 1:Nbs, fnOpts{:}), 1:Nccond, fnOpts{:});
+mvFlags = cat(1, mvFlags{:}); mov_prob = cellfun(@getAUC, mvFlags);
+movSgnls = cellfun(getThreshCross, mvFlags, fnOpts{:});
+movSgnls = arrayfun(@(s) cat(1, movSgnls{:,s})', 1:Nbs, fnOpts{:});
+ccnMP = arrayfun(@(c) arrayfun(@(s) consCondNames{c}+" "+ ...
+    string(mov_prob(c, s)), 1:Nbs), 1:Nccond, fnOpts{:});
+ccnMP = cat(1, ccnMP{:});
+% Probability figure name with all conditions for all signals
+mpfNames = arrayfun(@(s) sprintf(mpfPttrn, behNames(s), ...
+    sprintf("%s ", ccnMP(:,s)), thrshStrs(s)), 1:Nbs);
+% Trial crossing plot per condition and signals
+pfNames = arrayfun(@(y) arrayfun(@(x) sprintf(pfPttrn, behNames(x), ...
+        consCondNames{y}, mov_prob(y, x), Nex(x,y), thrshStrs(x)), ...
+        1:Nbs), 1:Nccond, fnOpts{:});
+pfNames = cat(1, pfNames{:});
 
-% Plotting median speed signals together
-q2patch = @(x) [x(:,1);x(end:-1:1,3)];
-fig = figure("Color", "w"); axs = axes("Parent", fig, "NextPlot", "add");
-arrayfun(@(x) patch(axs, behTx([1:end, end:-1:1]),...
-    q2patch(qSgnls{x}), 1, phOpts{:}, clMap(x,:)), 1:Nccond); hold on
-lObj = arrayfun(@(x) plot(axs, behTx, qSgnls{x}(:,2), "Color", clMap(x,:),...
-    "LineWidth", 1.5, "DisplayName", consCondNames{x}), 1:Nccond);
-xlabel(axs, "Time [s]"); xlim(axs, bvWin); ylabel(axs, "Roller speed [cm/s]")
-set(axs, axOpts{:}); title(axs, "Roller speed for all conditions")
-lgnd = legend(axs, lObj); set(lgnd, lgOpts{:})
-rsPttrn = "Median roller speed %s VW%.2f - %.2f s RM%.2f - %.2f ms EX%s %s IQR";
-rsFigName = sprintf(rsPttrn, sprintf('%s ', consCondNames{:}), bvWin,...
-    brWin*k, sprintf('%d ', Nex), thrshStr);
-saveFigure(fig, fullfile(figureDir, rsFigName), 1)
-
-% Plotting movement threshold crossings
-fig = figure("Color", "w"); axs = axes("Parent", fig, "NextPlot", "add");
-mvSgnls = cellfun(getThreshCross, mvFlags, fnOpts{:});
-mvSgnls = cat(1, mvSgnls{:}); mvSgnls = mvSgnls';
-plot(axs, spTh{1}, mvSgnls);
-ccnGP = cellfun(@(x, y) [x, sprintf(' AUC%.3f',y)], consCondNames', ...
-    num2cell(gp), fnOpts{:});
-lgnd = legend(axs, ccnGP); set(axs, axOpts{:})
-set(lgnd, lgOpts{:}); ylim(axs, [0,1])
-xlabel(axs, "Roller speed \theta [cm/s]"); ylabel(axs, "Trial proportion")
-title(axs, "Trial proportion crossing \theta")
-pfPttrn = "Move probability %sRW%.2f - %.2f ms %s";
-pfName = sprintf(pfPttrn, sprintf('%s ', ccnGP{:}), brWin*k, thrshStr);
-saveFigure(fig, fullfile(figureDir, pfName), 1)
-% Tests for movement
+% Tests for roller movement only 
 if Nccond > 1
-    prms = nchoosek(1:Nccond,2);
-    getDistTravel = @(x) squeeze(sum(abs(vStack(:,brFlag,xdf(:,x))),2));
+    cs = 4; prms = nchoosek(1:Nccond,2);
+    getDistTravel = @(c) squeeze(sum(abs(behStack{cs}(brFlag, ...
+        xtf(:, cs, c))), 1));
     dstTrav = arrayfun(getDistTravel, 1:Nccond, fnOpts{:});
-    [pd, hd, statsd] = arrayfun(@(x) ranksum(dstTrav{prms(x,1)}, ...
-        dstTrav{prms(x,2)}), 1:size(prms,1), fnOpts{:});
-    [pm, hm, statsm] = arrayfun(@(x) ranksum(mvpt{prms(x,1)}, ...
-        mvpt{prms(x,2)}), 1:size(prms,1), fnOpts{:});
+    [pd, hd] = arrayfun(@(p) ranksum(dstTrav{prms(p,1)}, ...
+        dstTrav{prms(p,2)}), 1:size(prms,1), fnOpts{:});
+    [pm, hm] = arrayfun(@(p) ranksum(mvpt{prms(p,1), cs}, ...
+        mvpt{prms(p,2), cs}), 1:size(prms,1), fnOpts{:});
+    rsstPttrn = "Results %s %s%s"+rwKey+" EX%s%s.mat";
+    rsstName = sprintf(rsstPttrn, behNames(cs), sprintf("%s ", ...
+        consCondNames{:}), sprintf("%.2f ", pm{:}), sprintf("%d ", ...
+        Nex(cs,:)), thrshStrs(cs));
+    rsstPath = behHere(rsstName);
+    if ~exist(rsstPath, "file")
+        save(rsstPath,"pd", "hd", "pm", "hm");
+    end
 end
-"gp", "dstTrav", "ccnGP", "mvpt", "xdf", ...
-    "vStack", "spTh", "sigTh", "sMedTh", "tMedTh", "brWin", "bvWin", "prms"
+
+% Plotting results and allocating figure holders
+allTrialFigs = gobjects(Nccond, Nbs); muTrialFigs = gobjects(Nbs, 1);
+mpFigs = allTrialFigs; mppcFigs = muTrialFigs; bpfFigs = mppcFigs;
+for cbs = 1:Nbs
+    for ccond = 1:Nccond
+        % Each trial and mean overlaid
+        figTtl = sprintf("%s %s", behNames(cbs), consCondNames{ccond});
+        allTrialFigs(ccond, cbs) = figure('Name', figTtl, 'Color', 'w');
+        cax = axes('Parent', allTrialFigs(ccond, cbs), axOpts{:});
+        plot(cax, behTx*k, behStack{cbs}(:, xtf(:, cbs, ccond)), ptOpts{1,:}); 
+        title(cax, figTtl + " Ex:" + string(Nex(cbs, ccond)));
+        mtpObj = plot(cax, behTx*k, behSgnls{ccond, cbs}(:,1), ptOpts{2,:});
+        lgObj = legend(mtpObj, behNames(cbs)); set(lgObj, lgOpts{:});
+        xlabel(cax, "Time [ms]"); ylabel(cax, yLabels(cbs)); xlim(cax, ...
+            bvWin*k)
+        mpFigs(ccond, cbs) = plotThetaProgress(mvFlags(ccond, cbs), ...
+            thSet(cbs), string(consCondNames{ccond}));
+        cax = get(mpFigs(ccond, cbs), "CurrentAxes");
+        set(cax, axOpts{:}); xlabel(cax, "\theta "+yLabels(cbs))
+        title(cax, sprintf("Trial proportion %s %.3f", figTtl, ...
+            mov_prob(ccond, cbs)))
+    end
+    % Mean for the considered trials
+    muTrialFigs(cbs) = figure('Name', "Mean "+behNames(cbs), "Color", "w");
+    cax = axes("Parent", muTrialFigs(cbs), axOpts{:});
+    arrayfun(@(c) patch(cax, k*behTx([1:end, end:-1:1]),...
+        mat2ptch(behSgnls{c, cbs}), 1, phOpts{:}, clMap(c,:)), 1:Nccond)
+    pObj = arrayfun(@(c) plot(cax, k*behTx, behSgnls{c, cbs}(:,1), "Color", ...
+        clMap(c,:), "LineWidth", 1.5, "DisplayName", consCondNames{c}), ...
+        1:Nccond); lgObj = legend(pObj); set(lgObj, lgOpts{:}); xlim(cax, ...
+        bvWin*k); xlabel(cax, "Time [ms]"); ylabel(cax, yLabels(cbs)); 
+    title(cax, "Mean: "+behNames(cbs))
+    % Movement probability for all conditions
+    mppcFigs(cbs) = figure('Name', "Move prob "+behNames(cbs), "Color", "w");
+    cax = axes("Parent", mppcFigs(cbs), "Colormap", clMap, axOpts{:});
+    plot(cax, thSet{cbs}, movSgnls{cbs}, "LineWidth", 0.7)
+    xlabel(cax, yLabels(cbs)); ylabel(cax, "Trial crossing"); 
+    title(cax, sprintf("Move probability for %s", behNames(cbs)))
+    lgObj = legend(ccnMP(:,cbs)); set(lgObj, lgOpts{:});
+    ylim(cax, [0, 1])
+    % Boxplot for maximum value per condition
+    bpfFigs(cbs) = figure('Name', "Maximum value per trial "+behNames(cbs), ...
+        'Color',"w"); cax = axes("Parent", bpfFigs(cbs), axOpts{:});
+    arrayfun(@(c) boxchart(cax, c*ones(size(mvpt{c,cbs})), ...
+        mvpt{c, cbs}, 'Notch', 'on'), 1:Nccond)
+    xticks(cax, 1:Nccond); xticklabels(cax, consCondNames)
+    mxLevl = ceil(1.05*max(cellfun(@(c) quantile(c, 3/4) + ...
+        1.5*iqr(c), mvpt(:, cbs))));
+    if mxLevl <= cax.YLim(1)
+        mxLevl = cax.YLim(2);
+    end
+    ylim(cax, [cax.YLim(1), mxLevl]); ylabel(cax, yLabels(cbs));
+    title(cax, behNames(cbs)+" max val distribution"); 
 end
+% Saving the plots
+figDir = @(x) fullfile(figureDir, x);
+arrayfun(@(c) arrayfun(@(s) saveFigure(allTrialFigs(c, s), ...
+    figDir(bfNames(c, s)), 1), 1:Nbs), 1:Nccond);
+arrayfun(@(c) arrayfun(@(s) saveFigure(mpFigs(c, s), figDir(pfNames(c, s)), ...
+    1), 1:Nbs), 1:Nccond);
+arrayfun(@(s) saveFigure(muTrialFigs(s), figDir(mbfNames(s)), 1), 1:Nbs);
+arrayfun(@(s) saveFigure(mppcFigs(s), figDir(mpfNames(s)), 1), 1:Nbs);
+arrayfun(@(s) saveFigure(bpfFigs(s), figDir(mvdNames(s)), 1), 1:Nbs);
+
+%{
+TODO: 
+1.- Organise parameters in tructures:
+    1.1.- Inputs (signal processing, exclusion)
+    1.2.- Outputs (Tests, values, maybe stacks)
+2.- Organise figures in further subfolders per bodypart
+%}
+end
+%{
+function [fig, plObj] = figPlot(x, y, opts, axOpts)
+fig = figure; ax = axes('Parent', fig, axOpts{:});
+plObj = plot(ax, x, y, opts{:});
+end
+%}
