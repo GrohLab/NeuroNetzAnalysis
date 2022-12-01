@@ -455,7 +455,8 @@ classdef ProtocolGetter < handle
                 timeDelay = strDelay(1:mxPulses);
                 % The delay will usually be milliseconds long, so a logarithmic
                 % scale will be useful.
-                delays = 10.^uniquetol(log10(timeDelay),0.01/log10(max(abs(timeDelay))));
+                tol = (1e-4*~obj.awaken + 0.2*obj.awaken)/max(timeDelay);
+                delays = 10.^uniquetol(log10(timeDelay), tol);
                 % Removing delays that are greater than 1 second.
                 delays(delays > 1) = [];
                 if std(delays.*1e3) < (1*~obj.awaken + 20*obj.awaken)
