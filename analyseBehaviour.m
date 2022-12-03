@@ -1,4 +1,4 @@
-function [outputArg1,outputArg2] = analyseBehaviour(behDir, varargin)
+function [outputArg1, outputArg2] = analyseBehaviour(behDir, varargin)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
 %% Auxiliary variables
@@ -237,7 +237,7 @@ if ~iemty(afFiles)
         Nrecs = length(atV);
         atT = arrayfun(@(x, z) cellfun(@(y, a) y+a, ...
             x.atTimes, repmat(z,1,length(x.atTimes)), fnOpts{:}), atV', ...
-            num2cell([0, Texp(1:end-1)]), fnOpts{:});
+            num2cell(cumsum([0, Texp(1:end-1)])), fnOpts{:});
         trig_per_recording = cellfun(@(x) size(x,2), atT);
         [max_trigs, record_most_trigs] = max(trig_per_recording);
         record_trig_cont_ID = arrayfun(@(x) ...
@@ -257,7 +257,7 @@ if ~iemty(afFiles)
         % Intan
         itT = arrayfun(@(x, z) cellfun(@(y, a) y+a, ...
             x.itTimes, repmat(z,size(x.itTimes)), fnOpts{:}), atV', ...
-            num2cell([0, Texp(1:end-1)]), fnOpts{:});
+            num2cell(cumsum([0, Texp(1:end-1)])), fnOpts{:});
         outCell = cell(Nrecs, max_trigs);
         for cr = 1:Nrecs
             outCell(cr,record_trig_cont_ID{cr}) = itT{cr};
@@ -311,7 +311,7 @@ elseif islogical(pairedStim)
             NTa)
         fprintf(1, "correspond to the number of trials in behaviour files");
         fprintf(1, " (%d)!\n", Ntr);
-        dbstop in analyseBehaviour at 290
+        dbstop
     else
         Nccond = size(pairedStim, 2);
         if size(pairedStim,1)~=Ntr
