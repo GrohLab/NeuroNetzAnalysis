@@ -339,10 +339,13 @@ if ~exist(spFile, "file")
     set_point = arrayfun(@(x) fitSpline(behTx_all, behDLCSignals(:,x), 1, ...
         0.3, 0.95, verbose), 1:size(behDLCSignals,2), fnOpts{:});
     set_point = [set_point{:}];
-    save(spFile, "set_point")
+    if ~isempty(set_point)
+        save(spFile, "set_point")
+    end
 else
     set_point = load(spFile,"set_point"); set_point = set_point.set_point;
 end
+
 % Whiskers and nose
 [~, dlcStack] = getStacks(false, round(itTimes{iSub}(trigSubs,:)*fr), 'on', ...
     bvWin, fr, fr, [], [behDLCSignals, set_point]');
@@ -350,18 +353,27 @@ behStack = cat(1, dlcStack(1:Nbs,:,:), vStack);
 Nbs = size(behStack, 1);
 behStack = arrayfun(@(x) squeeze(behStack(x, :, :)), (1:size(behStack,1))',...
     fnOpts{:});
-behNames = [dlcNames, "Roller speed"];
-yLabels = [repmat("Angle [°]", 1, 3), "Roller speed [cm/s]"];
+behNames = [dlcNames, "Roller speed"]; behNames(~strlength(behNames))=[];
+rollYL = "Roller speed [cm/s]";
+if size(behNames,2)>1
+    yLabels = [repmat("Angle [°]", 1, 3), rollYL];
+else
+    yLabels = rollYL;
+end
+
 % Whiskers, nose, and roller speed
 
 %TODO: include user input for the thresholds for whiskers and nose signals.
-% Probability thresholds
-thSet = [repmat({0.5:0.5:40},2,1); {0.4:0.4:20}; spTh];
-% Exclusion thresholds
-sigThSet = [5;5;100;sigTh];
-sMedTh = [1;1;100;sMedTh];
-tMedTh = [3;3;100;tMedTh];
-
+if Nbs>1
+    % Probability thresholds
+    thSet = [repmat({0.5:0.5:40},2,1); {0.4:0.4:20}; spTh];
+    % Exclusion thresholds
+    sigThSet = [5;5;100;sigTh];
+    sMedTh = [1;1;100;sMedTh];
+    tMedTh = [3;3;100;tMedTh];
+else
+    thSet = spTh; sigThSet = sigTh;
+end
 tmdl = fit_poly([1,Nbt], bvWin, 1);
 behTx = ((1:Nbt)'.^[1,0])*tmdl;
 % Spontaneous flags
