@@ -3,13 +3,14 @@ clearvars
 % Experiment folder search
 experimentDir = uigetdir('Z:\Jesus\LTP_Jesus_Emilio',...
     'Select an experiment directory');
+fnOpts = {'UniformOutput', false};
 if experimentDir == 0
     return
 end
 % Folders existing in the selected directory
 expFolders = dir(experimentDir);
 expFolders(1:2) = [];
-folderNames = arrayfun(@(x) x.name, expFolders, 'UniformOutput', 0);
+folderNames = arrayfun(@(x) x.name, expFolders, fnOpts{:});
 folderFlag = arrayfun(@(x) x.isdir, expFolders);
 % Selection of the considered experiments
 [fSel, iOk] = listdlg('ListString', folderNames(folderFlag),...
@@ -29,7 +30,7 @@ Nexp = numel(chExp);
 %     "fr", "firing_rate"];
 % Function for performing ONLY autocorrelograms
 corrWin = 0.05;
-fnOpts = {'UniformOutput', false};
+
 getCondNames = @(y) arrayfun(@(x) x.name, y, fnOpts{:});
 matchConditionNames = @(x, y) ismember(x, y) |...
     contains(x, y, "IgnoreCase", true);
@@ -357,9 +358,9 @@ for cexp = reshape(chExp, 1, [])
     if ~isempty(corrFiles) && any(corrCorr)
         load(fullfile(corrFiles(corrCorr).folder,corrFiles(corrCorr).name),...
             'corrs')
-        eaCorr = cellfun(@(x) x(1,:), corrs, 'UniformOutput', 0);
+        eaCorr = cellfun(@(x) x(1,:), corrs, fnOpts{:});
     else
-        eaCorr = arrayfun(autoCorr, spkSubs, 'UniformOutput', 0);
+        eaCorr = arrayfun(autoCorr, spkSubs, fnOpts{:});
         eaCorr = cat(1, eaCorr{:});
     end
     eaCorr = cat(1, eaCorr{:});
@@ -371,7 +372,7 @@ for cexp = reshape(chExp, 1, [])
     NaCount = 1;
     % Experiment firing rate and ISI per considered condition
     efr = zeros(Ncl, size(consideredConditions,2), 'single');
-    eisi = cellfun(@(x) diff(x), spkSubs, 'UniformOutput', 0);
+    eisi = cellfun(@(x) diff(x), spkSubs, fnOpts{:});
     econdIsi = cell(Ncl, size(consideredConditions,2));
     econdSpks = econdIsi;
     trainDuration = 1; % 1 second
@@ -389,8 +390,8 @@ for cexp = reshape(chExp, 1, [])
     % Getting the clusters' waveforms
     sewf = getClusterWaveform(gclID, dataDir);
     sewf(:,1) = cellfun(@(x) [sprintf('%d_',cexp), x], sewf(:,1),...
-        'UniformOutput', 0);
-    mswf = cellfun(@(x) mean(x,2), sewf(:,2),'UniformOutput', 0);
+        fnOpts{:});
+    mswf = cellfun(@(x) mean(x,2), sewf(:,2), fnOpts{:});
     mswf = cat(2, mswf{:});
     cwID = sewf(:,1);
     %% Building the population stack
@@ -402,7 +403,7 @@ for cexp = reshape(chExp, 1, [])
         auxCStack(:,:,emtyRow) = [];
     end
     clInfo{:,1} = cellfun(@(x) [sprintf('%d_',cexp), x], clInfo{:,1},...
-        'UniformOutput', 0);
+        fnOpts{:});
     clInfo.Properties.RowNames = clInfo{:,1};
     if cexp == chExp(1)
         % First assignment
