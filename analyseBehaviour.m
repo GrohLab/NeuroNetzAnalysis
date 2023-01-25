@@ -1,4 +1,4 @@
-function [outputArg1, outputArg2] = analyseBehaviour(behDir, varargin)
+function [resStruct] = analyseBehaviour(behDir, varargin)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
 %% Auxiliary variables
@@ -308,10 +308,9 @@ elseif islogical(pairedStim)
     NTa = sum(pairedStim(:));
     if size(pairedStim, 1) ~= Ntr
         fprintf(1, "The number of trials in the given flags (%d) do not", ...
-            NTa)
-        fprintf(1, "correspond to the number of trials in behaviour files");
+            NTr)
+        fprintf(1, " correspond to the number of trials in behaviour files");
         fprintf(1, " (%d)!\n", Ntr);
-        dbstop
     else
         Nccond = size(pairedStim, 2);
         if size(pairedStim,1)~=Ntr
@@ -474,7 +473,8 @@ pfNames = arrayfun(@(y) arrayfun(@(x) sprintf(pfPttrn, behNames(x), ...
         consCondNames{y}, mov_prob(y, x), Nex(x,y), thrshStrs(x)), ...
         1:Nbs), 1:Nccond, fnOpts{:});
 pfNames = cat(1, pfNames{:});
-
+resStruct = struct('Name', cellstr(behNames), 'Maximum_value', mvpt, ...
+    'MovProb', num2cell(mov_prob));
 % Tests for roller movement only 
 if Nccond > 1
     cs = 4; prms = nchoosek(1:Nccond,2);
@@ -561,7 +561,7 @@ arrayfun(@(s) saveFigure(bpfFigs(s), figDir(mvdNames(s)), 1), 1:Nbs);
 
 %{
 TODO: 
-1.- Organise parameters in tructures:
+1.- Organise parameters in structures:
     1.1.- Inputs (signal processing, exclusion)
     1.2.- Outputs (Tests, values, maybe stacks)
 2.- Organise figures in further subfolders per bodypart
