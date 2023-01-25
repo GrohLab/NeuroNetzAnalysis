@@ -1,4 +1,4 @@
-function [resStruct] = analyseBehaviour(behDir, varargin)
+function [summStruct] = analyseBehaviour(behDir, varargin)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
 %% Auxiliary variables
@@ -69,6 +69,7 @@ addParameter(p, 'SponMedianTh', defSMed, checkTH)
 addParameter(p, 'MedianTh', defMed, checkTH)
 addParameter(p, 'FigureDirectory', "Figures", istxt)
 addParameter(p, 'verbose', true, @(x) islogical(x) & numel(x) == 1)
+addParameter(p, 'showPlots', true, @(x) islogical(x) & numel(x) == 1)
 
 parse(p, behDir, varargin{:})
 
@@ -85,6 +86,7 @@ sMedTh = p.Results.SponMedianTh;
 tMedTh = p.Results.MedianTh;
 figureDir = p.Results.FigureDirectory;
 verbose = p.Results.verbose;
+spFlag = p.Results.showPlots;
 
 if bvWin(1) > brWin(1) || bvWin(2) < brWin(2)
     if verbose
@@ -151,7 +153,8 @@ if iemty(rfFiles)
     rfFiles = dir(behHere(rfPttrn));
 end
 if numel(rfFiles) == 1
-    rfName = fullfile(rfFiles.folder, rfFiles.name);
+    rfName = flfile(rfFiles);
+
     load(rfName) %#ok<LOAD>
     try
         %              Encoder steps  Radius^2
@@ -164,6 +167,13 @@ if numel(rfFiles) == 1
         catch
             en2cm = ((2*pi)/((2^15)-1))*((14.85/2)^2)*fsRoll;
             fr = fsRoll;
+        end
+    end
+    if ~exist('Texp','var')
+        if exist('Nt','var')
+            Texp = Nt;
+        else
+            Texp = length(vf)/fr;
         end
     end
 end
@@ -213,6 +223,7 @@ Nbs = size(behDLCSignals, 2);
 % Triggers
 atVar = {'atTimes', 'atNames', 'itTimes', 'itNames'};
 afFiles = dir(behHere(afPttrn));
+
 if ~iemty(afFiles)
     jointArdPttrn = "JointArduinoTriggers%s%s.mat";
     jointArdOut = behHere(jointArdPttrn);
@@ -305,7 +316,7 @@ if istxt(pairedStim) && strcmpi(pairedStim, "none")
     consCondNames = cellstr(atNames(aSub));
 elseif islogical(pairedStim)
     % Connected to DE_Jittering
-    NTa = sum(pairedStim(:));
+    %NTa = sum(pairedStim(:));
     if size(pairedStim, 1) ~= Ntr
         fprintf(1, "The number of trials in the given flags (%d) do not", ...
             NTr)
@@ -424,6 +435,7 @@ mbfPttrn = "Mean %s %s"+vwKey+" "+rwKey+" EX%s%s";
 mpfPttrn = "Move probability %s %s"+rwKey+" %s";
 pfPttrn = "%s %s move probability %.2f "+rwKey+" EX%d %s";
 mvdPttrn = "%s dist "+vwKey+" "+rwKey+" EX%s%s";
+% summPttrn = "Summary";
 clMap = lines(Nccond);
 % Turning condition flag per trial flags into a page.
 pageTrialFlag = reshape(pairedStim, size(pairedStim, 1), 1, []);
@@ -473,8 +485,14 @@ pfNames = arrayfun(@(y) arrayfun(@(x) sprintf(pfPttrn, behNames(x), ...
         consCondNames{y}, mov_prob(y, x), Nex(x,y), thrshStrs(x)), ...
         1:Nbs), 1:Nccond, fnOpts{:});
 pfNames = cat(1, pfNames{:});
-resStruct = struct('Name', cellstr(behNames), 'Maximum_value', mvpt, ...
-    'MovProb', num2cell(mov_prob));
+try
+    summStruct = struct('Name', cellstr(behNames), 'Maximum_value', mvpt, ...
+        'MovProb', num2cell(mov_prob));
+catch ME
+    dbstop in analyseBehaviour at 482
+    disp(ME)
+end
+
 % Tests for roller movement only 
 if Nccond > 1
     cs = 4; prms = nchoosek(1:Nccond,2);
@@ -502,7 +520,8 @@ for cbs = 1:Nbs
     for ccond = 1:Nccond
         % Each trial and mean overlaid
         figTtl = sprintf("%s %s", behNames(cbs), consCondNames{ccond});
-        allTrialFigs(ccond, cbs) = figure('Name', figTtl, 'Color', 'w');
+        allTrialFigs(ccond, cbs) = figure('Name', figTtl, 'Color', 'w',...
+            'Visible', spFlag);
         cax = axes('Parent', allTrialFigs(ccond, cbs), axOpts{:});
         plot(cax, behTx*k, behStack{cbs}(:, xtf(:, cbs, ccond)), ptOpts{1,:}); 
         title(cax, figTtl + " Ex:" + string(Nex(cbs, ccond)));
@@ -518,7 +537,8 @@ for cbs = 1:Nbs
             mov_prob(ccond, cbs)))
     end
     % Mean for the considered trials
-    muTrialFigs(cbs) = figure('Name', "Mean "+behNames(cbs), "Color", "w");
+    muTrialFigs(cbs) = figure('Name', "Mean "+behNames(cbs), ...
+        "Color", "w", 'Visible', spFlag);
     cax = axes("Parent", muTrialFigs(cbs), axOpts{:});
     arrayfun(@(c) patch(cax, k*behTx([1:end, end:-1:1]),...
         mat2ptch(behSgnls{c, cbs}), 1, phOpts{:}, clMap(c,:)), 1:Nccond)
@@ -528,7 +548,8 @@ for cbs = 1:Nbs
         bvWin*k); xlabel(cax, "Time [ms]"); ylabel(cax, yLabels(cbs)); 
     title(cax, "Mean: "+behNames(cbs))
     % Movement probability for all conditions
-    mppcFigs(cbs) = figure('Name', "Move prob "+behNames(cbs), "Color", "w");
+    mppcFigs(cbs) = figure('Name', "Move prob "+behNames(cbs), ...
+        "Color", "w", 'Visible', spFlag);
     cax = axes("Parent", mppcFigs(cbs), "Colormap", clMap, axOpts{:});
     plot(cax, thSet{cbs}, movSgnls{cbs}, "LineWidth", 0.7)
     xlabel(cax, yLabels(cbs)); ylabel(cax, "Trial crossing"); 
@@ -537,7 +558,8 @@ for cbs = 1:Nbs
     ylim(cax, [0, 1])
     % Boxplot for maximum value per condition
     bpfFigs(cbs) = figure('Name', "Maximum value per trial "+behNames(cbs), ...
-        'Color',"w"); cax = axes("Parent", bpfFigs(cbs), axOpts{:});
+        'Color',"w", 'Visible', spFlag);
+    cax = axes("Parent", bpfFigs(cbs), axOpts{:});
     arrayfun(@(c) boxchart(cax, c*ones(size(mvpt{c,cbs})), ...
         mvpt{c, cbs}, 'Notch', 'on'), 1:Nccond)
     xticks(cax, 1:Nccond); xticklabels(cax, consCondNames)
