@@ -23,5 +23,5 @@ if isdatetime(dt)
     end
 else
     fprintf(1, "Debugging needed!\n")
-    dbstop in joinBehDates at 23
+    dbstop in joinBehDates at 27
 end
