@@ -319,26 +319,23 @@ elseif islogical(pairedStim)
     %NTa = sum(pairedStim(:));
     if size(pairedStim, 1) ~= Ntr
         fprintf(1, "The number of trials in the given flags (%d) do not", ...
-            NTr)
+            Ntr)
         fprintf(1, " correspond to the number of trials in behaviour files");
         fprintf(1, " (%d)!\n", Ntr);
-    else
-        Nccond = size(pairedStim, 2);
-        if size(pairedStim,1)~=Ntr
-            pairedStim(all(~pairedStim,2),:) = [];
-        end
-        while numel(consCondNames) ~= Nccond || all(~cellfun(istxt, consCondNames))
-            consCondNames = consCondNames{:};
-            if ~iscell(consCondNames)
-                fprintf(1, "Considered condition names causing trouble!\n")
-                disp(consCondNames)
-                fprintf(1, "Naming the conditions with a consecutive letter\n")
-                % 'a' has ASCII code 97
-                consCondNames = arrayfun(@(x) sprintf('%s', x), ...
-                    97:97+Nccond-1, fnOpts{:});
-                disp(consCondNames)
-                break
-            end
+        pairedStim(all(~pairedStim,2),:) = [];
+    end
+    Nccond = size(pairedStim, 2);
+    while numel(consCondNames) ~= Nccond || all(~cellfun(istxt, consCondNames))
+        consCondNames = consCondNames{:};
+        if ~iscell(consCondNames)
+            fprintf(1, "Considered condition names causing trouble!\n")
+            disp(consCondNames)
+            fprintf(1, "Naming the conditions with a consecutive letter\n")
+            % 'a' has ASCII code 97
+            consCondNames = arrayfun(@(x) sprintf('%s', x), ...
+                97:97+Nccond-1, fnOpts{:});
+            disp(consCondNames)
+            break
         end
     end
 end
@@ -435,13 +432,16 @@ mbfPttrn = "Mean %s %s"+vwKey+" "+rwKey+" EX%s%s";
 mpfPttrn = "Move probability %s %s"+rwKey+" %s";
 pfPttrn = "%s %s move probability %.2f "+rwKey+" EX%d %s";
 mvdPttrn = "%s dist "+vwKey+" "+rwKey+" EX%s%s";
+ttPttrn = "%s in %d trials";
 % summPttrn = "Summary";
 clMap = lines(Nccond);
 % Turning condition flag per trial flags into a page.
 pageTrialFlag = reshape(pairedStim, size(pairedStim, 1), 1, []);
 % Exclusion flags + paired stimulation/experimental conditions control
 % Used trial flags shape #Trial x Behavioural signals x #Conditions
-xtf = ~excFlag & pageTrialFlag;
+xtf = ~excFlag & pageTrialFlag; 
+% Final number of trials
+Na = reshape(sum(xtf, 1), Nbs, Nccond);
 % Excluded flags: #behSign x #Conditions
 Nex = reshape(sum(xor(xtf, pageTrialFlag)),Nbs, Nccond);
 % Figure names for all signals and conditions
@@ -511,12 +511,33 @@ if Nccond > 1
         save(rsstPath,"pd", "hd", "pm", "hm");
     end
 end
+% Auxiliary variables for trial-by-trial plot. Choosing the same number of
+% trials per condition for a given behavioural signal
+[psSubs, b_c] = find(xtf); psSubs = arrayfun(@(x) psSubs(b_c==x), ...
+    unique(b_c), fnOpts{:}); psSubs = reshape(psSubs, Nbs, Nccond);
+Nma = min(Na, [], 2); rtSubs = arrayfun(@(b) arrayfun(@(c) ...
+    sort(randperm(Na(b,c), Nma(b)),'ascend'), 1:Nccond, fnOpts{:}), ...
+    1:Nbs, fnOpts{:}); rtSubs = cat(1, rtSubs{:});
+stSubs = cellfun(@(x, y) x(y), psSubs, rtSubs, fnOpts{:});
+mvprt = max(cellfun(@(x, y) max(x(y)), mvpt, rtSubs'));
+ttNames = arrayfun(@(b) sprintf(ttPttrn, behNames(b), Nma(b)), 1:Nbs);
 
 % Plotting results and allocating figure holders
 allTrialFigs = gobjects(Nccond, Nbs); muTrialFigs = gobjects(Nbs, 1);
 mpFigs = allTrialFigs; mppcFigs = muTrialFigs; bpfFigs = mppcFigs;
+tptFigs = gobjects(Nbs,1); ttax = gobjects(Nccond,1);
 for cbs = 1:Nbs
+    tptFigs(cbs) = figure('Name', behNames(cbs), 'Color', 'w', ...
+        'Visible', spFlag);
     for ccond = 1:Nccond
+        % Equal (random) trials for all conditions
+        ttax(ccond) = subplot(1, Nccond, ccond, axOpts{:}, ...
+            'Parent', tptFigs(cbs)); image(ttax(ccond), behTx*k, [], ...
+            128+(behStack{cbs}(:,stSubs{cbs, ccond})'*(128/mvprt(cbs))))
+        title(ttax(ccond), consCondNames{ccond}); 
+        ylim(ttax(ccond), [0.5,Nma(cbs)+0.5]); 
+        xlim(ttax(ccond), behTx([1,end])*k); 
+        colormap(ttax(ccond),bwg_cm(256))
         % Each trial and mean overlaid
         figTtl = sprintf("%s %s", behNames(cbs), consCondNames{ccond});
         allTrialFigs(ccond, cbs) = figure('Name', figTtl, 'Color', 'w',...
@@ -535,6 +556,11 @@ for cbs = 1:Nbs
         title(cax, sprintf("Trial proportion %s %.3f", figTtl, ...
             mov_prob(ccond, cbs)))
     end
+    xlabel(ttax, "Time [ms]"); ylabel(ttax(1), "Trials"); 
+    ttax(Nccond).YAxis.Visible = 'off';
+    colorbar(ttax(Nccond), axOpts{1:2}, 'Location', 'west', ...
+        'TickDirection', 'none', 'Ticks', [13, 243], 'TickLabels', ...
+        {'Backward', 'Forward'}, 'AxisLocation', 'out');
     % Mean for the considered trials
     muTrialFigs(cbs) = figure('Name', "Mean "+behNames(cbs), ...
         "Color", "w", 'Visible', spFlag);
@@ -579,6 +605,7 @@ arrayfun(@(c) arrayfun(@(s) saveFigure(mpFigs(c, s), figDir(pfNames(c, s)), ...
 arrayfun(@(s) saveFigure(muTrialFigs(s), figDir(mbfNames(s)), 1), 1:Nbs);
 arrayfun(@(s) saveFigure(mppcFigs(s), figDir(mpfNames(s)), 1), 1:Nbs);
 arrayfun(@(s) saveFigure(bpfFigs(s), figDir(mvdNames(s)), 1), 1:Nbs);
+arrayfun(@(s) saveFigure(tptFigs(s), figDir(ttNames(s)), 1), 1:Nbs);
 
 %{
 TODO: 
