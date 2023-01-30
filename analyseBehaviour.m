@@ -491,7 +491,12 @@ summStruct = cell2mat(arrayfun(@(x) ...
     'Results', struct('BehSigName', cellstr(behNames), ...
     'MaxValuePerTrial', mvpt(x,:), ...
     'MovProbability', num2cell(mov_prob(x,:)))), 1:Nccond, fnOpts{:}));
-
+summFile = behHere("Simple summary.mat");
+if exist(summFile,"file")
+    fprintf(1, "File exists, not saving summary numbers.\n")
+else
+    save(summFile, "summStruct")
+end
 % Tests for roller movement only 
 if Nccond > 1
     cs = 4; prms = nchoosek(1:Nccond,2);
