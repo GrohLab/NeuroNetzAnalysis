@@ -109,7 +109,7 @@ if Ncond > 1
     permFig = figure(figOpts{:}); permP = {'Parent', permFig};
     % Comparison between conditions
     permCond = nchoosek(1:Ncond,2); Nperm = size(permCond,1);
-    prmAx = gobjects(Nperm*2,1);
+    prmAx = gobjects(Nperm*2,1); MImu = zeros(Nperm, 1);
     for cperm = 1:Nperm
         % MI per cluster
         imgMat = [cperm, 0; cperm, Nperm];
@@ -124,21 +124,26 @@ if Ncond > 1
         miSpSub = Nperm + cperm;
         prmAx(miSpSub) = subplot(3, Nperm, [2, cperm]*[Nperm;1], permP{:});
         condMI = getMI(condPsth(:,permCond(cperm,:)),2);
-        condMI(isnan(condMI)) = 0;
-        bar(prmAx(miSpSub), tx(condMI>0), condMI(condMI>0), posBar{:});
+        condMI(isnan(condMI)) = 0; MImu(cperm) = mean(condMI,"omitnan");
+        bP = bar(prmAx(miSpSub), tx(condMI>0), condMI(condMI>0), posBar{:}, ...
+            'DisplayName', 'Potentiation');
         set(prmAx(miSpSub),'NextPlot','add');
-        bar(prmAx(miSpSub), tx(condMI<=0), condMI(condMI<=0), negBar{:});
-        set(prmAx(miSpSub),'Color','none');
+        bN = bar(prmAx(miSpSub), tx(condMI<=0), condMI(condMI<=0), negBar{:}, ...
+            'DisplayName', 'Depression');
+        set(prmAx(miSpSub),'Color','none','Clipping',"off");
         xticks(prmAx(miSpSub), log10(xtks)-3); 
         xticklabels(prmAx(miSpSub), 10.^(xticks+3))
+        yline(prmAx(miSpSub), MImu(cperm),'--','Color', 0.15*ones(1,3)); 
+        title("Mean MI: "+string(MImu(cperm)))
     end
+    permFig.UserData = [permCond, MImu];
     ylabel(prmAx(1), 'Clusters')
     arrayfun(@(x) xlim(x, PSTHstruct.Log10TimeAxis([1,Nbin])), prmAx(1:Nperm*2));
     arrayfun(@(x) set(x.XAxis,'Visible','off'), prmAx(1:Nperm));
     arrayfun(@(x) set(x.YAxis,'Visible','off'), prmAx(2:Nperm));
     arrayfun(@(x) box(x, 'off'), prmAx);
     linkaxes(prmAx, 'x'); linkaxes(prmAx(Nperm+1:Nperm*2), 'xy')
-    lgnd = legend(prmAx(Nperm*2), {'Potentiation','Depression'});
+    lgnd = legend(prmAx(Nperm*2), [bP, bN]);
     lgnd.Location = 'best'; lgnd.Box = 'off';
     ylabel(prmAx(Nperm+1), 'Modulation Index')
     permFig.Visible = 'on';
