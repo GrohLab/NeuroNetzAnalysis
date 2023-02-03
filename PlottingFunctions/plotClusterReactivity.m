@@ -48,7 +48,7 @@ psthTX = linspace(timeLapse(1),timeLapse(2),Npt);
 clrmp = parula;
 % clrmp = defineWhYellRedColormap;
 % clrmp = defineBlueRedColormap();
-imagesc(ax1,'XData',psthTX,'CData',PSTHn);
+imagesc(ax1,'XData',psthTX,'CData',PSTHn, 'Interpolation', 'bilinear');
 colormap(ax1,clrmp)
 
 trigTX = linspace(timeLapse(1),timeLapse(2),size(trig,2));
