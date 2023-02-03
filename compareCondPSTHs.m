@@ -33,7 +33,7 @@ xline(0, zlOpts{:}, 0.35*ones(1,3))
 xlabel(axs(end), 'Time [ms]'); ylabel(axs(end), "Z-score")
 arrayfun(@(x) set(get(x, 'YAxis'), 'Visible','off'), ...
     axs(setdiff(1:(Nccond + 1), [1, Nccond + 1])));
-set(axs, axOpts{:}); linkaxes(axs, 'x');
+set(axs, axOpts{:}); linkaxes(axs, 'x'); xlim(axs, vWin*1e3)
 axPos = axs(Nccond).Position; cbPos = [0.9589, axPos(2), 0.0200, axPos(4)];
 cb = colorbar(axs(Nccond), axOpts{1:2}, 'Position', cbPos, ...
     'TickDirection', 'none', 'AxisLocation', 'in', 'Color', 0.15*ones(1,3));
