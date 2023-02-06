@@ -408,11 +408,11 @@ excFlag = sSig > sigThSet | abs(sMed-ssp) > sMedTh | abs(tMed-tsp) > tMedTh;
 excFlag = excFlag';
 
 %% Organising figures in subfolders
-vwKey = sprintf("VW%.2f - %.2f s", bvWin);
-rwKey = sprintf("RW%.2f - %.2f ms", brWin*k);
-subFig = "V%.2f - %.2f s R%.2f - %.2f ms";
+vwKey = sprintf("V%.2f - %.2f s", bvWin);
+rwKey = sprintf("R%.2f - %.2f ms", brWin*k);
+subFig = "%s %s";
 % Configuration subfolder
-subfigDir = fullfile(figureDir, sprintf(subFig, bvWin, brWin*k));
+subfigDir = fullfile(figureDir, sprintf(subFig, vwKey, rwKey));
 %TODO: Body part subfolder
 if exist(subfigDir, "dir")
     figureDir = subfigDir;
