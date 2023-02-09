@@ -2,9 +2,9 @@ function [Figs, Results] =...
     scatterSignificance(Results, Counts, CondNames, Delta_t, clID)
 %SCATTERSIGNIFICANCE takes the statistical results from the statTests and
 %plots them against each other (conditions)
+fnOpts = {'UniformOutput', false};
 
-
-meanfr = cellfun(@(x) mean(x,2)/Delta_t, Counts, 'UniformOutput', false);
+meanfr = cellfun(@(x) mean(x,2)/Delta_t, Counts, fnOpts{:});
 mxfr = cellfun(@max, meanfr);
 mxfr = round(mxfr*1.15, -1);
 % mxfr = max(mxfr);
