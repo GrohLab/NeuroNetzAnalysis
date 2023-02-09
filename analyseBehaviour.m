@@ -524,7 +524,7 @@ Nma = min(Na, [], 2); rtSubs = arrayfun(@(b) arrayfun(@(c) ...
     sort(randperm(Na(b,c), Nma(b)),'ascend'), 1:Nccond, fnOpts{:}), ...
     1:Nbs, fnOpts{:}); rtSubs = cat(1, rtSubs{:});
 stSubs = cellfun(@(x, y) x(y), psSubs, rtSubs, fnOpts{:});
-mvprt = max(cellfun(@(x, y) max(x(y)), mvpt, rtSubs'));
+mvprt = max(cellfun(@(x, y) max(x(y)), mvpt, rtSubs'),[],1);
 ttNames = arrayfun(@(b) sprintf(ttPttrn, behNames(b), Nma(b)), 1:Nbs);
 
 % Plotting results and allocating figure holders
