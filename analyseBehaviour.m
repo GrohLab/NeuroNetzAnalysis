@@ -472,6 +472,7 @@ mvpt = cat(1, mvpt{:});
 mvFlags = arrayfun(@(y) arrayfun(@(x) compareMaxWithThresh(mvpt{y, x}, ...
     thSet(x)), 1:Nbs, fnOpts{:}), 1:Nccond, fnOpts{:});
 mvFlags = cat(1, mvFlags{:}); mov_prob = cellfun(@getAUC, mvFlags);
+mov_prob(isnan(mov_prob)) = 0;
 movSgnls = cellfun(getThreshCross, mvFlags, fnOpts{:});
 movSgnls = arrayfun(@(s) cat(1, movSgnls{:,s})', 1:Nbs, fnOpts{:});
 ccnMP = arrayfun(@(c) arrayfun(@(s) consCondNames{c}+" "+ ...
@@ -503,17 +504,19 @@ if Nccond > 1
     getDistTravel = @(c) squeeze(sum(abs(behStack{cs}(brFlag, ...
         xtf(:, cs, c))), 1));
     dstTrav = arrayfun(getDistTravel, 1:Nccond, fnOpts{:});
-    [pd, hd] = arrayfun(@(p) ranksum(dstTrav{prms(p,1)}, ...
-        dstTrav{prms(p,2)}), 1:size(prms,1), fnOpts{:});
-    [pm, hm] = arrayfun(@(p) ranksum(mvpt{prms(p,1), cs}, ...
-        mvpt{prms(p,2), cs}), 1:size(prms,1), fnOpts{:});
-    rsstPttrn = "Results %s %s%s"+rwKey+" EX%s%s.mat";
-    rsstName = sprintf(rsstPttrn, behNames(cs), sprintf("%s ", ...
-        consCondNames{:}), sprintf("%.2f ", pm{:}), sprintf("%d ", ...
-        Nex(cs,:)), thrshStrs(cs));
-    rsstPath = behHere(rsstName);
-    if ~exist(rsstPath, "file")
-        save(rsstPath,"pd", "hd", "pm", "hm");
+    if all(~cellfun(@isempty, dstTrav),"all")
+        [pd, hd] = arrayfun(@(p) ranksum(dstTrav{prms(p,1)}, ...
+            dstTrav{prms(p,2)}), 1:size(prms,1), fnOpts{:});
+        [pm, hm] = arrayfun(@(p) ranksum(mvpt{prms(p,1), cs}, ...
+            mvpt{prms(p,2), cs}), 1:size(prms,1), fnOpts{:});
+        rsstPttrn = "Results %s %s%s"+rwKey+" EX%s%s.mat";
+        rsstName = sprintf(rsstPttrn, behNames(cs), sprintf("%s ", ...
+            consCondNames{:}), sprintf("%.2f ", pm{:}), sprintf("%d ", ...
+            Nex(cs,:)), thrshStrs(cs));
+        rsstPath = behHere(rsstName);
+        if ~exist(rsstPath, "file")
+            save(rsstPath,"pd", "hd", "pm", "hm");
+        end
     end
 end
 % Auxiliary variables for trial-by-trial plot. Choosing the same number of
