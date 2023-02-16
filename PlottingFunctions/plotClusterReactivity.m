@@ -48,8 +48,12 @@ psthTX = linspace(timeLapse(1),timeLapse(2),Npt);
 clrmp = parula;
 % clrmp = defineWhYellRedColormap;
 % clrmp = defineBlueRedColormap();
-imagesc(ax1,'XData',psthTX,'CData',PSTHn, 'Interpolation', 'bilinear');
-colormap(ax1,clrmp)
+mVer = version('-release');
+psthPC = {'XData', psthTX, 'CData', PSTHn};
+if mVer >= "2021b"
+    psthPC = [psthPC{:}', {'Interpolation'}, {'bilinear'}];
+end
+imagesc(ax1, psthPC{:}); colormap(ax1,clrmp)
 
 trigTX = linspace(timeLapse(1),timeLapse(2),size(trig,2));
 
