@@ -58,7 +58,17 @@ else
 end
 logMeanEdges = [2,1; 3,0]*[Ncond;1];
 natAx(Ncond + 1) = subplot(3, Ncond, expSubs(logMeanEdges), natP{:});
-semilogx(natAx(Ncond + 1), PSTHstruct.TimeAxis*1e3, condPsth);
+semilogx(natAx(Ncond + 1), PSTHstruct.TimeAxis*1e3, condPsth, ...
+    'LineWidth', 1.3);
+try
+    % Decreasing the contrast of colormap since the highest value is a
+    % bright yellow that is almost invisible
+    natAx(Ncond + 1).ColorOrder = plasma( ceil( Ncond *1.1));
+catch
+    fprintf(1, "tsipkens/cmap repository not in MATLAB's path!\n")
+    fprintf(1, "Using copper colormap.\n")
+    natAx(Ncond + 1).ColorOrder = copper(Ncond);
+end
 xticklabels(natAx(Ncond + 1), xticks(natAx(Ncond + 1)));
 xlim(natAx(Ncond + 1), tmWinMS); xlabel(natAx(Ncond + 1), 'Log time [ms]');
 if strcmpi(PSTHstruct.Normalization, 'prob')
@@ -76,7 +86,11 @@ lgnd = legend(natAx(Ncond + 1), PSTHstruct.ConditionNames.cellstr);
 set(lgnd, lgOpts{:}); set(natAx(Ncond + 1), axOpts{:}); 
 % Plotting PSTH per cluster
 tx = PSTHstruct.Log10TimeAxis; mxClr = max(PSTHstruct.LogPSTH(:));
-clrMp = rocket(2^8);
+try
+    clrMp = rocket(2^8);
+catch
+    clrMp = hot(2^8);
+end
 for ccond = 1:Ncond
     imgMat = [ccond, 0; ccond, Ncond];
     natAx(ccond) = subplot(3, Ncond, imgMat * [1;1], natP{:}); 
