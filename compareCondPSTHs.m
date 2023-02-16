@@ -5,14 +5,31 @@ function [ppFig, PSTHall] = compareCondPSTHs(PSTH, Na, binSz, vWin, condNames)
 axOpts = {'Box', 'off', 'Color', 'none'};
 lgOpts = [axOpts(:)', {'Location'}, {'best'}, {'AutoUpdate'}, {'off'}];
 zlOpts = {'LineStyle','--','Color'};
-rwN = 4; axSbs = (0:rwN-2)'; clrMap = rocket(256);
+rwN = 4; axSbs = (0:rwN-2)'; 
 [Nt, Nccond] = size(PSTH, [2,3]);
 psthTx = (0:Nt-1) * binSz + vWin(1);
 PSTHall = PSTH ./ reshape(Na*binSz, 1, 1, Nccond);
 zPSTH = zscore(PSTHall, 1, [2,3]); zPopPSTH = squeeze(mean(zPSTH, 1));
+if isvector(zPopPSTH) && isrow(zPopPSTH)
+    zPopPSTH = zPopPSTH(:);
+end
 Mxe = max(zPopPSTH, [], "all"); Mne = min(zPopPSTH, [], "all");
 ppFig = figure('Color', 'w', 'Name', 'Conditions PSTH');
-axs = gobjects(Nccond+1,1); lnsCM = lines(Nccond);
+axs = gobjects(Nccond+1,1); 
+
+try
+    % Decreasing the contrast of colormap since the highest value is a
+    % bright yellow that is almost invisible
+    lnsCM = plasma( ceil( Nccond *1.1));
+    clrMap = rocket;
+catch
+    fprintf(1, "tsipkens/cmap repository not in MATLAB's path!\n")
+    fprintf(1, "Using copper colormap.\n")
+    lnsCM = lines(Nccond);
+    clrMap = hot;
+end
+
+
 for cc = 1:Nccond
     axs(cc) = subplot(rwN, Nccond, (axSbs.^[1,0])*[Nccond;cc], ...
         'Parent', ppFig);
