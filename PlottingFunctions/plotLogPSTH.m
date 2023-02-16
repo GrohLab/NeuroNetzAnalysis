@@ -47,7 +47,6 @@ condPsth = squeeze(mean(PSTHstruct.LogPSTH, 1, 'omitnan'));
 if strcmpi(PSTHstruct.Normalization, 'prob')
     % Probability
     condPsth = condPsth./sum(condPsth, 'omitnan');
-%     cbLabel = 'Probability';
 else
     % Firing rate with inhomogenous bin sizes
     [~, lgEdg] = prepareLogBinEdges(PSTHstruct.TimeAxis([1,Nbin]), Nbin);
@@ -56,9 +55,6 @@ else
         condPsth = condPsth';
     end
     condPsth = condPsth./tmBinWdth;
-%     PSTHstruct.LogPSTH = PSTHstruct.LogPSTH.*reshape(condPsth, [1, Nbin, Ncond]);
-%     PSTHstruct.LogPSTH = PSTHstruct.LogPSTH./tmBinWdth';
-%     cbLabel = 'Firing rate [Hz]';
 end
 logMeanEdges = [2,1; 3,0]*[Ncond;1];
 natAx(Ncond + 1) = subplot(3, Ncond, expSubs(logMeanEdges), natP{:});
