@@ -45,7 +45,11 @@ PSTHn = PSTH./max(PSTH,[],2);
 fig = figure('Name',expName,'Color',[1,1,1]);
 ax1 = subplot(totlX,1,1:3,'Parent',fig);
 psthTX = linspace(timeLapse(1),timeLapse(2),Npt);
-clrmp = parula;
+try
+    clrmp = inferno;
+catch
+    clrmp = hot;
+end
 % clrmp = defineWhYellRedColormap;
 % clrmp = defineBlueRedColormap();
 mVer = version('-release');
