@@ -55,7 +55,7 @@ end
 mVer = version('-release');
 psthPC = {'XData', psthTX, 'CData', PSTHn};
 if mVer >= "2021b"
-    psthPC = [psthPC{:}', {'Interpolation'}, {'bilinear'}];
+    psthPC = [psthPC(:)', {'Interpolation'}, {'bilinear'}];
 end
 imagesc(ax1, psthPC{:}); colormap(ax1,clrmp)
 
