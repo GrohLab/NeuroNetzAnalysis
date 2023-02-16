@@ -31,6 +31,8 @@ PSTHstruct = p.Results.PSTHstruct;
 expSubs = @(x) x(1):x(2);
 fnOpts = {'UniformOutput',false};
 figOpts = {'Visible','on','Color','w'};
+lgOpts = {'Location','best','Box','off'};
+axOpts = [lgOpts(3:4)', figOpts(3:4)'];
 getMI = @(x, d) diff(x,1,d)./sum(x,d,'omitnan');
 
 [Ncl, Nbin, Ncond] = size(PSTHstruct.LogPSTH);
@@ -75,8 +77,7 @@ else
 end
 xtks = xticks(natAx(Ncond + 1)); 
 lgnd = legend(natAx(Ncond + 1), PSTHstruct.ConditionNames.cellstr);
-set(lgnd,'Location','best','Box','off');
-box(natAx(Ncond + 1), 'off'); 
+set(lgnd, lgOpts{:}); set(natAx(Ncond + 1), axOpts{:}); 
 % Plotting PSTH per cluster
 tx = PSTHstruct.Log10TimeAxis; mxClr = max(PSTHstruct.LogPSTH(:));
 clrMp = rocket(2^8);
@@ -99,7 +100,7 @@ ylabel(natAx(1), 'Clusters');
 arrayfun(@(x) xlim(x, PSTHstruct.Log10TimeAxis([1,Nbin])), natAx(1:Ncond));
 arrayfun(@(x) set(x.YAxis, 'Visible', 'off'),...
     natAx(setdiff(1:(Ncond + 1), [1, Ncond + 1])), fnOpts{:});
-arrayfun(@(x) set(x,'Color','none'), natAx);
+arrayfun(@(x) set(x,axOpts{:}), natAx);
 natFig.Visible = 'on';
 figs(1) = natFig;
 %% Figure for displaying a comparison between condition permutations
@@ -143,8 +144,7 @@ if Ncond > 1
     arrayfun(@(x) set(x.YAxis,'Visible','off'), prmAx(2:Nperm));
     arrayfun(@(x) box(x, 'off'), prmAx);
     linkaxes(prmAx, 'x'); linkaxes(prmAx(Nperm+1:Nperm*2), 'xy')
-    lgnd = legend(prmAx(Nperm*2), [bP, bN]);
-    lgnd.Location = 'best'; lgnd.Box = 'off';
+    lgnd = legend(prmAx(Nperm*2), [bP, bN]); set(lgnd, lgOpts{:})
     ylabel(prmAx(Nperm+1), 'Modulation Index')
     permFig.Visible = 'on';
     figs(2) = permFig;
