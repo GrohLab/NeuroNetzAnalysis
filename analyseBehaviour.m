@@ -409,10 +409,13 @@ subFig = "%s %s";
 % Configuration subfolder
 subfigDir = fullfile(figureDir, sprintf(subFig, vwKey, rwKey));
 %TODO: Body part subfolder
+metaNameFlag = false;
 if exist(subfigDir, "dir")
     figureDir = subfigDir;
 else
     if ~mkdir(subfigDir)
+        % Print metadata on figure name
+        metaNameFlag = true;
         if verbose
             fprintf(1, "Error while creating subfolder!\n")
             fprintf(1, "Placing the figures in 'Figure' directory.\n")
@@ -427,7 +430,20 @@ mbfPttrn = "Mean %s %s"+vwKey+" "+rwKey+" EX%s%s";
 mpfPttrn = "Move probability %s %s"+rwKey+" %s";
 pfPttrn = "%s %s move probability %.2f "+rwKey+" EX%d %s";
 mvdPttrn = "%s dist "+vwKey+" "+rwKey+" EX%s%s";
-ttPttrn = "%s in %d trials";
+ttPttrn = "%s in %d/%d trials";
+if metaNameFlag
+    bfPttrn = bfPttrn+vwKey+" "+rwKey;
+    mbfPttrn = mbfPttrn+vwKey+" "+rwKey;
+    mpfPttrn = mpfPttrn+rwKey;
+    pfPttrn = pfPttrn+rwKey;
+    mvdPttrn = mvdPttrn+vwKey+" "+rwKey;
+end
+bfPttrn = bfPttrn + " EX%d %s";
+mbfPttrn = mbfPttrn + " EX%s%s";
+mpfPttrn = mpfPttrn + " %s";
+pfPttrn = pfPttrn + " EX%d %s";
+mvdPttrn = mvdPttrn + " EX%s%s";
+
 % summPttrn = "Summary";
 clMap = lines(Nccond);
 % Turning condition flag per trial flags into a page.
