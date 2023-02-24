@@ -260,11 +260,6 @@ if ~iemty(afFiles)
         atTimes = arrayfun(@(x) cat(1, outCell{:,x}), 1:size(outCell,2), ...
             fnOpts{:});
         atNames = atV(1).atNames;
-        %{
-        atT = cat(1, atT{:});
-        atTimes = arrayfun(@(x) cat(1, atT{:,x}), 1:size(atT,2), fnOpts{:});
-        atNames = atV(1).atNames;
-        %}
         % Intan
         itT = arrayfun(@(x, z) cellfun(@(y, a) y+a, ...
             x.itTimes, repmat(z,size(x.itTimes)), fnOpts{:}), atV', ...
