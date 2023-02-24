@@ -1,4 +1,5 @@
 function [iOk, vf, rollTx, fr, Texp] = createRollerSpeed(behDir)
+%% Auxiliary variables and functions
 iOk = false;
 fnOpts = {'UniformOutput', false};
 if ~exist(behDir, "dir")
