@@ -2,28 +2,21 @@ function [iOk, vf, rollTx, fr, Texp] = createRollerSpeed(behDir)
 %% Auxiliary variables and functions
 iOk = false;
 fnOpts = {'UniformOutput', false};
+crtName = @(x) fullfile(behDir, x);
+getName = @(x, y) crtName(x(y).name);
+flfa = @(x) fullfile(x.folder, x.name);
+readCSV = @(x) readtable(x, "Delimiter", ",");
+vars2load = {'Nt', 'atTimes', 'atNames', 'itTimes', 'itNames', 'minOfSt'};
+search4This = @(x) dir(fullfile(behDir, x));
 if ~exist(behDir, "dir")
-    fprintf(1, "%s doesn't exist!\n", behDir)
-    return
+    fprintf(1, "%s doesn't exist!\n", behDir); return
 end
-eFiles = dir(fullfile(behDir, "Roller_position*.csv"));
-vFiles = dir(fullfile(behDir, "*.avi"));
-aFiles = dir(fullfile(behDir, "ArduinoTriggers*.mat"));
-Ne = numel(eFiles);
-Nv = numel(vFiles);
-Na = numel(aFiles);
-if Ne ~= Nv
-    fprintf(1, "# encoder/arduino files different from video files!\n")
-    fprintf(1, "Encoder %d Video %d\n", Ne, Nv)
-    return
-end
-if Ne ~= Na
-    fprintf(1, "# encoder files different from Trigger files!\n")
-    fprintf(1, "Encoder %d Triggers %d\n", Ne, Na)
-    fprintf(1, "Run 'readAndCorrectArdTrigs' first to create Trigger files\n")
-    return
-end
-    function minOfSt= getArd_IntOffset()
+eFiles = search4This("Roller_position*.csv");
+vFiles = search4This("*.avi"); fFiles = search4This("FrameID*.csv");
+aFiles = search4This("ArduinoTriggers*.mat");
+Ne = numel(eFiles); Nv = numel(vFiles); Na = numel(aFiles); 
+Nf = numel(fFiles);
+function minOfSt= getArd_IntOffset()
         % Trigger correspondance between cells
         [iS, aS] = arrayfun(@(x) find(x.atNames == x.itNames), tStruct, ...
             fnOpts{:});
@@ -33,18 +26,32 @@ end
             tStruct, aS, iS, fnOpts{:});
         minOfSt = cellfun(@min, ofSts);
     end
+%% Validation
+if Ne ~= Nv
+    fprintf(1, "# encoder/arduino files different from video files!\n")
+    fprintf(1, "Encoder %d Video %d\n", Ne, Nv); return
+end
+if Ne ~= Na
+    fprintf(1, "# encoder files different from Trigger files!\n")
+    fprintf(1, "Encoder %d Triggers %d\n", Ne, Na)
+    fprintf(1, "Run 'readAndCorrectArdTrigs' first to create Trigger files\n")
+    return
+end
+if Ne ~= Nf
+    fprintf(1, "# encoder files different from frame ID files!\n")
+    fprintf(1, "Encoder %d FrameID %d\n", Ne, Nf)
+    fprintf(1, "Search and ensure you have these files\n"); return
+end
+    
 %% Read and create roller 
 [dt, dateFormStr] = getDates(eFiles, 'Roller_position');
-crtName = @(x) fullfile(behDir, x);
-getName = @(x, y) crtName(x(y).name);
-flfa = @(x) fullfile(x.folder, x.name);
-vars2load = {'Nt', 'atTimes', 'atNames', 'itTimes', 'itNames', 'minOfSt'};
 dy = dt(1); dy.Format = 'yyyy-MM-dd'; dt.Format = '''T''HH_mm_ss';
 auxStr = [];
 for cdt = 1:numel(dt)-1
     auxStr = [auxStr, sprintf('%s+', dt(cdt))];
 end
 auxStr = [auxStr, sprintf('%s', dt(end))];
+dt.Format = dateFormStr;
 rsName = crtName(sprintf('RollerSpeed%s%s.mat', dy, auxStr));
 if exist(rsName,"file")
     fprintf(1, "File exists! No new file created!\n")
@@ -53,7 +60,13 @@ end
 tStruct = arrayfun(@(x) load(flfa(x),vars2load{:}), aFiles);
 fr = arrayfun(@(x) VideoReader(getName(vFiles,x)), 1:Nv, fnOpts{:});
 fr = cellfun(@(x) x.FrameRate, fr);
-dt.Format = dateFormStr;
+% Reading the camera metadata and estimating a frame rate.
+vidTx = arrayfun(@(x) readCSV(flfa(x)), fFiles, fnOpts{:});
+vidTx = cellfun(@(x) x.Var2/1e9, vidTx, fnOpts{:}); % nanoseconds
+estFr = cellfun(@(x) 1/mean(diff(x)), vidTx);
+if any(fr(:) ~= estFr(:))
+    fr(fr(:) ~= estFr(:)) = estFr(fr(:) ~= estFr(:));
+end
 efName = string(arrayfun(@(x) getName(eFiles, x), 1:Ne, fnOpts{:}));
 rp = arrayfun(@(x) readRollerPositionsFile(x), efName, fnOpts{:});
 [vf, rollTx] = arrayfun(@(x) getRollerSpeed(rp{x}, fr(x)), 1:Ne, ...
