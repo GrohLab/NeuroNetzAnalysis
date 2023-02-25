@@ -405,7 +405,7 @@ excFlag = excFlag';
 %% Organising figures in subfolders
 vwKey = sprintf("V%.2f - %.2f s", bvWin);
 rwKey = sprintf("R%.2f - %.2f ms", brWin*k);
-subFig = "%s %s";
+subFig = "Beh %s %s";
 % Configuration subfolder
 subfigDir = fullfile(figureDir, sprintf(subFig, vwKey, rwKey));
 %TODO: Body part subfolder
