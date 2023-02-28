@@ -430,7 +430,7 @@ mbfPttrn = "Mean %s %s"+vwKey+" "+rwKey+" EX%s%s";
 mpfPttrn = "Move probability %s %s"+rwKey+" %s";
 pfPttrn = "%s %s move probability %.2f "+rwKey+" EX%d %s";
 mvdPttrn = "%s dist "+vwKey+" "+rwKey+" EX%s%s";
-ttPttrn = "%s in %d/%d trials";
+ttPttrn = "%s in %d from %d trials";
 if metaNameFlag
     bfPttrn = bfPttrn+vwKey+" "+rwKey;
     mbfPttrn = mbfPttrn+vwKey+" "+rwKey;
@@ -539,7 +539,8 @@ Nma = min(Na, [], 2); rtSubs = arrayfun(@(b) arrayfun(@(c) ...
     1:Nbs, fnOpts{:}); rtSubs = cat(1, rtSubs{:});
 stSubs = cellfun(@(x, y) x(y), psSubs, rtSubs, fnOpts{:});
 mvprt = max(cellfun(@(x, y) max(x(y)), mvpt, rtSubs'),[],1);
-ttNames = arrayfun(@(b) sprintf(ttPttrn, behNames(b), Nma(b)), 1:Nbs);
+ttNames = arrayfun(@(b) sprintf(ttPttrn, behNames(b), Nma(b), ...
+    Nma(b)+Nex(b)), 1:Nbs);
 
 % Plotting results and allocating figure holders
 allTrialFigs = gobjects(Nccond, Nbs); muTrialFigs = gobjects(Nbs, 1);
