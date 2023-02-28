@@ -267,7 +267,7 @@ while ~feof(fID) && cchan <= size(chs2read,1)
     % clFeat = pcFeat(spkIdx(:,cchan), :, pcIdx);
     fprintf(1,'Reading channel %d ',chs2read(cchan))
     % Jumping to the channel
-    fseek(fID, 2*(ch2read(cchan)), 'bof');
+    fseek(fID, 2*chs2read(cchan), 'bof');
     % Getting all clusters from the considered channel
     clustChanIdx = ch2read == chs2read(cchan); Nccl = sum(clustChanIdx);
     Nspks = cellfun(@(x) size(x,1), spkSubs(clustChanIdx));
