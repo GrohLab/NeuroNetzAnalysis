@@ -1,4 +1,5 @@
-function [outputArg1,outputArg2] = CNTP2NWB(channelMapPath, varargin)
+function [electrode_table, electrode_group, device] = ...
+    CNTP2NWB(channelMapPath, varargin)
 %CNTP2NWB creates 'electrodes' object for the NWB framework.
 %   [electrodesObj, deviceObj] = CNTP2NWB(channelMapPath);
 % INPUTS:
@@ -19,13 +20,13 @@ function [outputArg1,outputArg2] = CNTP2NWB(channelMapPath, varargin)
 %                  company of the silicon probe.
 %        Filtering - string or char variable describing the filtering
 %                    information used to record the session.
-%        Comment - String or char variable used to comment any observation.
 % OUTPUTS:
 %        electrodesObj - NWB object containing the electrodes metadata for
 %                        the given session.
 %        deviceObj - NWB object containing the device metadata for the
 %                    session.
 % Emilio Isaias-Camacho @ GrohLab 2023
+
 %% Validation of input variables
 p = inputParser; p.CaseSensitive = false; p.KeepUnmatched = true;
 
@@ -40,7 +41,6 @@ addParameter(p, 'BrainStructure', 'unknown', validateString)
 addParameter(p, 'Coordinates', [0,0,0], validateCoords)
 addParameter(p, 'Company', 'Cambridge NeuroTech',validateString)
 addParameter(p, 'Filtering', 'unknown', validateString)
-addParameter(p, 'Comment', '', validateString)
 
 parse(p, channelMapPath, varargin{:});
 
@@ -49,10 +49,9 @@ channelMapPath = p.Results.channelMapPath;
 coords = p.Results.Coordinates;
 brainStructure = p.Results.BrainStructure;
 company = p.Results.Company;
-filtering = p.Results.Filtering;    
-comment = p.Results.Comment;
-%% Auxiliary functions and 
-%fnOpts = {'UniformOutput', false};
+filtering = p.Results.Filtering;
+%% Auxiliary functions
+fnOpts = {'UniformOutput', false};
 varsInCMF = {'chanMap', 'chanMap0ind', 'connected', 'kcoords', 'name', ...
     'shankInd', 'xcoords', 'ycoords'};
 
@@ -61,39 +60,39 @@ varsFlags = contains(varsInCMF, who(cmMF), "IgnoreCase", true);
 % Assuming 1 shank if shankInd wasn't specified.
 nshanks = 1;
 if varsFlags(6)
-    shID = cmMF.shankInd;
+    shID = cmMF.shankInd; shID = shID(:);
     nshanks = unique(shID);
 end
 if varsFlags(5); probeName = cmMF.name; end
+%% Creation of NWB objects
+device = types.core.Device('description', probeName, ...
+    'manufacturer', company);
 
-variables = {'x', 'y', 'z', 'imp', 'location', 'filtering', 'group', 'label'};
-tbl = cell2table(cell(0, length(variables)), 'VariableNames', variables);
-device = types.core.Device(...
-    'description', probeName, ...
-    'manufacturer', company...
-);
-%nwb.general_devices.set('array', device);
 % x, y, and z represent medio-lateral, antero-posterior, and dorso-ventral
 % axes respectively.
-x = coords(1) + cmMF.xcoords; y = coords(2); z = coords(3) + cmMF.ycoords;
-for ishank = 1:nshanks
-    electrode_group = types.core.ElectrodeGroup( ...
-        'description', ['electrode group for shank' num2str(ishank)], ...
-        'location', brainStructure, ...
-        'device', types.untyped.SoftLink(device) ...
-    );
-    nwb.general_extracellular_ephys.set(['shank' num2str(ishank)], electrode_group);
-    group_object_view = types.untyped.ObjectView(electrode_group);
-    shFlag = shID == ishank;
-    nchannels_per_shank = sum(shFlag);
-    for ielec = 1:nchannels_per_shank
-        electrode_label = ['shank' num2str(ishank) 'elec' num2str(ielec)];
-        tbl = [...
-            tbl; ...
-            {5.3, 1.5, 8.5, NaN, brainStructure, filtering, group_object_view, electrode_label} ...
-        ];
-    end
-end
+x = cmMF.xcoords; y = cmMF.ycoords;
+eCoords = [x(:), zeros(length(cmMF.xcoords),1), y(:)] + coords;
+electrode_group = arrayfun(@(sh) types.core.ElectrodeGroup( ...
+    'description', ['electrode group for shank' num2str(sh)], ...
+    'location', brainStructure, ...
+    'device', types.untyped.SoftLink(device)), nshanks);
+group_object_view = arrayfun(@(e) types.untyped.ObjectView(e), ...
+    electrode_group); 
+shFlags = shID == nshanks(:)';
+group_object_views = arrayfun(@(sh) ...
+    group_object_view(shFlags(shFlags(:,sh),sh)*sh), nshanks, fnOpts{:});
+group_object_views = cat(1, group_object_views{:});
+% Ordering the electrode labels
+eNum = arrayfun(@(s) cumsum(shFlags(shFlags(:,s),s)), nshanks, fnOpts{:});
+eNum = cat(1, eNum{:}); eSubs = zeros(size(shFlags));eSubs(shFlags) = eNum;
+electrode_labels = arrayfun(@(s,e) "shank"+string(s)+"elec"+string(e), ...
+    shID, sum(eSubs,2));
+
+variables = {'x', 'y', 'z', 'imp', 'location', 'filtering', 'group', 'label'};
+rm = @(x) repmat(x, size(shID,1), 1);
+tbl = table(eCoords(:,1), eCoords(:,2), eCoords(:,3), nan(size(eCoords,1),1), ...
+    rm(brainStructure), rm(filtering), group_object_views, electrode_labels, ...
+    'VariableNames',variables);
 electrode_table = util.table2nwb(tbl, 'all electrodes');
 
-end 
+end
