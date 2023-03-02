@@ -72,8 +72,7 @@ catch
 end
 
 Nch = double(getLastCell(textscan(ln,'%s = %d'))-1);
-necessaryFiles = {...
-    'channel_map.npy', 'spike_templates.npy', 'spike_clusters.npy'};
+necessaryFiles = {'channel_map.npy', 'spike_clusters.npy'};
 necessaryFiles = cellfun(@(s) fullfile(dataDir, s), necessaryFiles);
 if isstring(necessaryFiles); necessaryFiles = cellstr(necessaryFiles); end
 allOk = cellfun(@(x) exist(x,'file'), necessaryFiles);
@@ -89,19 +88,20 @@ end
 % Reading the channel order
 chanMap = readNPY(necessaryFiles{1});
 % Preparatory variables for organising the output
-spkTmls = readNPY(necessaryFiles{2});
-spkCls = readNPY(necessaryFiles{3});
+% spkTmls = readNPY(necessaryFiles{2});
+% spkCls = readNPY(necessaryFiles{3});
+spkCls = readNPY(necessaryFiles{2});
 %% Input arguments verification
 % Logical variables for clusters (clIdx) and spikes (spkIdx)
 clIdx = false(size(clTable, 1), numel(clusterID));
 spkIdx = false(size(spkCls,1), numel(clusterID));
-clTempSubs = cell(numel(clusterID),1);
+%clTempSubs = cell(numel(clusterID),1);
 % Verifying if the given clusters exist in this experiment
 for ccl = 1:numel(clusterID)
     clIdx(:,ccl) = strcmp(clTable{:,1}, clusterID(ccl));
     spkIdx(:,ccl) = spkCls == str2double(clusterID(ccl));
     % Determining the template for the given cluster
-    clTempSubs{ccl} = mode(spkTmls(spkIdx(:,ccl)));
+    %clTempSubs{ccl} = mode(spkTmls(spkIdx(:,ccl)));
 end
 missClustFlag = ~any(clIdx,1);
 if ~all(~missClustFlag)
@@ -123,7 +123,7 @@ end
 clusterID(missClustFlag) = [];
 clIdx(:,missClustFlag) = [];
 spkIdx(:, missClustFlag) = [];
-clTempSubs(missClustFlag) = [];
+%clTempSubs(missClustFlag) = [];
 [clSub,~] = find(clIdx);
 % Determining hosting channels
 % ch2read = chanMap(clTable{clusterID, 'channel'} + 1);
@@ -152,8 +152,8 @@ if ~isempty(waveFile)
         clOutput = cell(Nstcl+Nbncl,2);
         % Reading the clusters from the file
         cl_fromBin = fetchWaveforms_fromBin(dataDir, clusterID(missingClSubs),...
-            chanMap, Nch, clSub(missingClSubs), clTempSubs(missingClSubs),...
-            spkIdx(:,missingClSubs), ch2read(missingClSubs));
+            chanMap, Nch, clSub(missingClSubs), spkIdx(:,missingClSubs), ...
+            ch2read(missingClSubs));
         % Ordering the clusters alfabetically due to the string nature of the
         % ID
         reqClID = [clWaveforms(:,1); cl_fromBin(:,1)];
@@ -177,7 +177,7 @@ if ~isempty(waveFile)
     end
 else
     clWaveforms = fetchWaveforms_fromBin(dataDir, clusterID,...
-        chanMap, Nch, clSub, clTempSubs, spkIdx, ch2read);
+        chanMap, Nch, clSub, spkIdx, ch2read);
     % Naming the waveform file
     binFile = dir(fullfile(dataDir,'*.bin'));
     smrxFile = dir(fullfile(dataDir, '*.smrx'));
@@ -216,7 +216,7 @@ end
 
 function clWaveforms =...
     fetchWaveforms_fromBin(dataDir, clusterID,...
-    chanMap, Nch, clSub, clTempSubs, spkIdx, ch2read)
+    chanMap, Nch, clSub, spkIdx, ch2read)
 afOpt = {'UniformOutput', 0};
 %% Reading the binary file
 clWaveforms = cell(numel(clusterID),2);
