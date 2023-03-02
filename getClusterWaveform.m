@@ -72,9 +72,10 @@ catch
 end
 
 Nch = double(getLastCell(textscan(ln,'%s = %d'))-1);
-necessaryFiles = {fullfile(dataDir, 'channel_map.npy');...
-    fullfile(dataDir, 'spike_templates.npy');...
-    fullfile(dataDir, 'spike_clusters.npy')};
+necessaryFiles = {...
+    'channel_map.npy', 'spike_templates.npy', 'spike_clusters.npy'};
+necessaryFiles = cellfun(@(s) fullfile(dataDir, s), necessaryFiles);
+if isstring(necessaryFiles); necessaryFiles = cellstr(necessaryFiles); end
 allOk = cellfun(@(x) exist(x,'file'), necessaryFiles);
 if ~all(allOk)
     fprintf(1,'The following files were not found:\n')
