@@ -28,6 +28,8 @@ if ~exist(dataDir, 'dir')
     fprintf(1,'Please provide the data directory\n')
     return
 end
+look4this = @(x) dir(fullfile(dataDir,x));
+expandName = @(x) fullfile(x.folder, x.name);
 % MATLAB version control
 mVer = version('-release');
 if mVer >= "2021b"
@@ -187,37 +189,46 @@ else
     clWaveforms = fetchWaveforms_fromBin(dataDir, clusterID,...
         chanMap, Nch, clSub, spkIdx, ch2read);
     % Naming the waveform file
-    binFile = dir(fullfile(dataDir,'*.bin'));
-    smrxFile = dir(fullfile(dataDir, '*.smrx'));
-    if numel(binFile) == 1
-        % As the binary file
-        [~,baseName] = fileparts(fullfile(binFile.folder,binFile.name));
-    elseif numel(smrxFile) == 1
-        % As the smrx file
-        [~,baseName] = fileparts(fullfile(smrxFile.folder,smrxFile.name));
-    elseif numel(binFile) > 1 || numel(smrxFile) > 1
-        % User dependent name
-        [~, bbaseNames] = arrayfun(@(x) fileparts(x.name), binFile,...
-            'UniformOutput', 0);
-        [~, sbaseNames] = arrayfun(@(x) fileparts(x.name), smrxFile,...
-            'UniformOutput', 0);
-        bsBaseNames = [bbaseNames;sbaseNames];
-        [bnSub, iOk] = listdlg('ListString', bsBaseNames,...
-            'PromptString', 'Output name:',...
-            'CancelString', 'None of these');
-        if ~iOk
-            slfnans = questdlg('Would you like to name it yourself?',...
-                'File name','Yes','No','Yes');
-            if strcmp(slfnans,'Yes')
-                slfName = inputdlg('File name:','Write a title',[16,200],...
-                    bsBaseNames{1});
-                [~,baseName] = fileparts(slfName);
+    foFiles = look4this('*_fileOrder.txt');
+    if ~isempty(foFiles) && numel(foFiles) == 1
+        fID = fopen(expandName(foFiles), "r");
+        if fID >= 3
+            baseName = textscan(fID,"%s\n"); baseName = string(baseName{:});
+            [~, baseName] = fileparts(baseName(end));
+            fclose(fID);
+        end
+    else
+        binFile = look4this('*.bin'); smrxFile = look4this('*.smrx');
+        if numel(binFile) == 1
+            % As the binary file
+            [~,baseName] = fileparts(fullfile(binFile.folder,binFile.name));
+        elseif numel(smrxFile) == 1
+            % As the smrx file
+            [~,baseName] = fileparts(fullfile(smrxFile.folder,smrxFile.name));
+        elseif numel(binFile) > 1 || numel(smrxFile) > 1
+            % User dependent name
+            [~, bbaseNames] = arrayfun(@(x) fileparts(x.name), binFile,...
+                'UniformOutput', 0);
+            [~, sbaseNames] = arrayfun(@(x) fileparts(x.name), smrxFile,...
+                'UniformOutput', 0);
+            bsBaseNames = [bbaseNames;sbaseNames];
+            [bnSub, iOk] = listdlg('ListString', bsBaseNames,...
+                'PromptString', 'Output name:',...
+                'CancelString', 'None of these');
+            if ~iOk
+                slfnans = questdlg('Would you like to name it yourself?',...
+                    'File name','Yes','No','Yes');
+                if strcmp(slfnans,'Yes')
+                    slfName = inputdlg('File name:','Write a title',[16,200],...
+                        bsBaseNames{1});
+                    [~,baseName] = fileparts(slfName);
+                end
+            else
+                baseName = bsBaseNames{bnSub};
             end
-        else
-            baseName = bsBaseNames{bnSub};
         end
     end
-    waveFileName = fullfile(dataDir, [baseName, '_waveforms.mat']);
+    waveFileName = fullfile(dataDir, baseName + "_waveforms.mat");
     save(waveFileName, 'clWaveforms')
 end
 end
@@ -226,15 +237,18 @@ function clWaveforms =...
     fetchWaveforms_fromBin(dataDir, clusterID,...
     chanMap, Nch, clSub, spkIdx, ch2read)
 afOpt = {'UniformOutput', 0};
+look4this = @(x)dir(fullfile(dataDir,x));
+expandName = @(x) fullfile(x.folder, x.name);
+pathHere = @(x) fullfile(dataDir, x);
 %% Reading the binary file
 clWaveforms = cell(numel(clusterID),2);
 % Determinig the spike times for the given clusters
-spikeFile = dir(fullfile(dataDir,'*_all_channels.mat'));
+spikeFile = look4this('*_all_channels.mat');
 if ~isempty(spikeFile)
-    load(fullfile(dataDir, spikeFile.name), 'sortedData', 'fs')
+    load(pathHere(spikeFile.name), 'sortedData', 'fs')
     if ~exist('fs','var')
-        fsFile = dir(fullfile(dataDir,'*_sampling_frequency.mat'));
-        load(fullfile(dataDir, fsFile.name), 'fs')
+        fsFile = look4this('*_sampling_frequency.mat');
+        load(pathHere(fsFile.name), 'fs')
     end
 end
 % Taking ~1.25 ms around the spike.
@@ -249,25 +263,36 @@ end
 % pcFeat = readNPY(fullfile(dataDir, 'pc_features.npy'));
 % pcInd = readNPY(fullfile(dataDir, 'pc_feature_ind.npy'));
 spkSubs = cellfun(@(x) round(x.*fs),sortedData(clSub,2),...
-    'UniformOutput',false);
+    afOpt{:});
 % [chs2read, readOrder, repeatChs] = unique(ch2read);
 chs2read = unique(ch2read);
 answ = 1; 
-if numel(binFile) > 1
-    [answ, iOk] = listdlg(...
-        'ListString', arrayfun(@(x) x.name, binFile,'UniformOutput', 0),...
-        'SelectionMode', 'single');
-    if ~iOk
-        strAns = questdlg('Are you sure you want to cancel?','Quit?',...
-            'Yes','No','No');
-        if strcmpi(strAns,'Yes')
-            fprintf(1, 'Quitting!\n')
-            return
+
+foFiles = look4this('*_fileOrder.txt');
+if ~isempty(foFiles) && numel(foFiles) == 1
+    fID = fopen(expandName(foFiles), "r");
+    if fID >= 3
+        binFile = textscan(fID,"%s\n"); fclose(fID);
+        binFile = string(binFile{:}); binFile = binFile(end);
+    end
+else
+    if numel(binFile) > 1
+        [answ, iOk] = listdlg(...
+            'ListString', arrayfun(@(x) x.name, binFile, afOpt{:}),...
+            'SelectionMode', 'single');
+        if ~iOk
+            strAns = questdlg('Are you sure you want to cancel?','Quit?',...
+                'Yes','No','No');
+            if strcmpi(strAns,'Yes')
+                fprintf(1, 'Quitting!\n')
+                return
+            end
+            answ = 1;
         end
-        answ = 1;
+        binFile = binFile(answ).name;
     end
 end
-fID = fopen(fullfile(dataDir, binFile(answ).name), 'r');
+fID = fopen(pathHere(binFile), 'r');
 cchan = 1;
 % Main loop
 while ~feof(fID) && cchan <= size(chs2read,1)
