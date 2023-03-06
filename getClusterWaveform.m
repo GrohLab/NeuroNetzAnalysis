@@ -16,6 +16,7 @@ function clWaveforms = getClusterWaveform(clusterID, dataDir)
 clWaveforms = cell(1,2);
 checkNature = @(x) [iscell(x); ischar(x); isnumeric(x)];
 getLastCell = @(x) x{numel(x)};
+fnOpts = {'UniformOutput', false};
 if ~any(checkNature(clusterID))
     fprintf(1,'Unsupported input!\n')
     fprintf(1,'Be sure you input either the cluster ID as a ')
@@ -73,8 +74,15 @@ end
 
 Nch = double(getLastCell(textscan(ln,'%s = %d'))-1);
 necessaryFiles = {'channel_map.npy', 'spike_clusters.npy'};
-necessaryFiles = cellfun(@(s) fullfile(dataDir, s), necessaryFiles);
-if isstring(necessaryFiles); necessaryFiles = cellstr(necessaryFiles); end
+necessaryFiles = cellfun(@(s) fullfile(dataDir, s), necessaryFiles, ...
+    fnOpts{:});
+if isstring(necessaryFiles)
+    necessaryFiles = cellstr(necessaryFiles);
+else
+    if ~iscellstr(necessaryFiles) %#ok<ISCLSTR> 
+        necessaryFiles = cellstr([necessaryFiles{:}]);
+    end
+end
 allOk = cellfun(@(x) exist(x,'file'), necessaryFiles);
 if ~all(allOk)
     fprintf(1,'The following files were not found:\n')
