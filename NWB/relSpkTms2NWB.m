@@ -1,17 +1,28 @@
 function [outputArg1,outputArg2] = relSpkTms2NWB(relSpkTms, confStruct)
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
-outputArg1 = relSpkTms;
-outputArg2 = confStruct;
 
-nwb.units = types.core.Units('colnames',...
+%%
+% You can find more information about hashes and how they're used on the
+% <https://crcns.org/data-sets/motor-cortex/alm-3/about-alm-3 ALM-3 about page>.
+fprintf('Processing Data Structure `%s`\n', datastructure_loc);
+loaded = load(datastructure_loc, 'obj');
+data = loaded.obj;
+
+% wherein each cell is one trial. We must populate this way because trials
+% may not be in trial order.
+% Trial timeseries will be a compound type under intervals/trials.
+
+%% Units
+units = types.core.Units('colnames',...
     {'spike_times', 'trials', 'waveforms'},...
     'description', 'Analysed Spike Events');
 
-nwb.units.spike_times = types.hdmf_common.VectorData(...
+units.spike_times = types.hdmf_common.VectorData(...
     'description', 'timestamps of spikes');
+
 % Line in a loop
-nwb.units.addRow(...
+units.addRow(...
         'id', ids(i), 'trials', eventTrials,'spike_times', eventTimes, 'waveforms', ses_ref,...
         'tablepath', '/units');
 
