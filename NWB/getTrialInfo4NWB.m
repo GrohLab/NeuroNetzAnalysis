@@ -1,7 +1,38 @@
-function [trialsNWB] = getTrialInfo2NWB(sessionPath)
+function [nwbObj, trial_timeseries] = ...
+    getTrialInfo4NWB(nwbObj, sessionPath, varargin)
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
 
+%% Validate inputs
+p = inputParser();
+validateCondSel = @(x) isPositiveIntegerValuedNumeric(x) | (isstring(x) | ...
+    ischar(x));
+
+addRequired(p, "nwbObj", @(x) isa(x, "NwbFile"))
+addRequired(p, "sessionPath", @(x) exist(x, 'dir'))
+addParameter(p, "ConditionSelect", "all", validateCondSel)
+
+parse(p, nwbObj, sessionPath)
+
+nwbObj = p.Results.nwbObj;
+sessionPath = p.Results.sessionPath;
+
+%% Auxiliary functions and variables
+pathHere = @(x) fullfile(sessionPath, x);
+look4this = @(x) dir(pathHere(x));
+expandName = @(x) fullfile(x.folder, x.name);
+% Validating for files in the ephys directory
+cFiles = look4this("*analysis.mat");
+if isempty(cFiles)
+    fprintf(1, "Warning! No analysis file found in given directory!\n")
+    fprintf(1, "Cannot continue!\n")
+    return
+end
+cMF = matfile(expandName(cFiles));
+Conditions = cMF.Conditions; Triggers = cMF.Triggers;
+
+
+% Variable storing continuous signals from the trials.
 trial_timeseries = cell(size(data.trialIds)); 
 
 %%
