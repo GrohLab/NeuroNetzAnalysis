@@ -1,22 +1,22 @@
-function [outputArg1,outputArg2] = assignSpkTms2NWB(nwbObj, rstNWB)
+function [nwbObj,outputArg2] = assignSpkTms2NWB(nwbObj, rstNWB, trial_timeseries)
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
 
 %% Units
-nwb.units = types.core.Units('colnames',...
+nwbObj.units = types.core.Units('colnames',...
     {'spike_times', 'trials', 'waveforms'},...
     'description', 'Analysed Spike Events');
 esHash = data.eventSeriesHash;
 ids = regexp(esHash.keyNames, '^unit(\d+)$', 'once', 'tokens');
 ids = str2double([ids{:}]);
-nwb.units.spike_times = types.hdmf_common.VectorData(...
+nwbObj.units.spike_times = types.hdmf_common.VectorData(...
     'description', 'timestamps of spikes');
 
 for i=1:length(ids)
     esData = esHash.value{i};
     % add trials ID reference
     
-    good_trials_mask = ismember(esData.eventTrials, nwb.intervals_trials.id.data);
+    good_trials_mask = ismember(esData.eventTrials, nwbObj.intervals_trials.id.data);
     eventTrials = esData.eventTrials(good_trials_mask);
     eventTimes = esData.eventTimes(good_trials_mask);
     waveforms = esData.waveforms(good_trials_mask,:);
@@ -39,8 +39,8 @@ for i=1:length(ids)
     if ~isempty(esData.cellType)
         ses.comments = ['cellType: ' esData.cellType{1}];
     end
-    nwb.analysis.set(ses_name, ses);
-    nwb.units.addRow(...
+    nwbObj.analysis.set(ses_name, ses);
+    nwbObj.units.addRow(...
         'id', ids(i), 'trials', eventTrials,'spike_times', eventTimes, 'waveforms', ses_ref);
         %'tablepath', '/units');
     
