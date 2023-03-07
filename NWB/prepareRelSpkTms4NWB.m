@@ -1,7 +1,19 @@
 function [rstNWB] = prepareRelSpkTms4NWB(sessionPath, configStruct, varargin)
 %prepareRelSpkTms4NWB prepares the spike times in the structure to add them
 %to the NWB framework.
-%   [rstNWB] = prepareRelSpkTms4NWB(sessionPath, configStruct, varargin)
+%   [rstNWB] = prepareRelSpkTms4NWB(sessionPath, configStruct)
+%       INPUTS:
+%           sessionPath - string or char variable pointing at the directory
+%           containing all ephys files for a roller session.
+%           configStruct - structure containing metadata about the analysis
+%           parameter configuration.
+%           Name-Value pair:
+%               ConditionSelection - string, char or cell string indicating
+%               which conditions to consider in the given session.
+%       OUTPUTS:
+%           rstNWB - a structure containing the information required by NWB
+%           about the sorted units.
+%Emilio Isaias-Camacho @ GrohLab 2023
 
 %% Input validation
 p = inputParser();
@@ -12,12 +24,12 @@ istxt = @(x) isstring(x) | ischar(x) | iscellstr(x);
 
 addRequired(p, "sessionPath", @(x) exist(x, "dir"))
 addRequired(p, "configStruct", validateCS)
-addParameter(p, 'ConditionSelect', "all", istxt)
+addParameter(p, 'ConditionSelection', "all", istxt)
 parse(p, sessionPath, configStruct, varargin{:});
 
 sessionPath = p.Results.sessionPath;
 configStruct = p.Results.configStruct;
-condSel = p.Results.ConditionSelect;
+condSel = p.Results.ConditionSelection;
 
 %% Auxiliary functions and variables
 fnOpts = {'UniformOutput', false};

@@ -36,8 +36,11 @@ subject = types.core.Subject(...
     'description', 'IBF');
 nwbObj.general_subject = subject;
 
-nwbObj = getTrialInfo4NWB(nwbObj, sessionPath, ...
-    'ConditionSelection', 'Control Puff');
+condSel = {'ConditionSelection', 'Control Puff'};
+[nwbObj, trial_timeseries, configStructure] = getTrialInfo4NWB(nwbObj, ...
+    sessionPath, condSel{:});
 
+rstNWB = prepareRelSpkTms4NWB(sessionPath, configStructure, condSel{:});
 
+[outputArg1,outputArg2] = assignSpkTms2NWB(nwbObj, rstNWB);
 end

@@ -1,8 +1,23 @@
 function [nwbObj, trial_timeseries, configStructure] = ...
     getTrialInfo4NWB(nwbObj, sessionPath, varargin)
-%UNTITLED Summary of this function goes here
-%   Detailed explanation goes here
-
+%getTrialInfo4NWB Summary of this function goes here
+%   [nwbObj, trial_timeseries, configStructure] = getTrialInfo4NWB(nwbObj, sessionPath)
+%   ... = getTrialInfo4NWB(..., 'Name','Value')
+%       INPUTS:
+%           nwbObj - NwbFile object
+%           sessionPath - string or char indicating the folder with all
+%           ephys files for a session on the roller.
+%           Name-Value:
+%               ConditionSelection - string, char or cellstr variable
+%               indicating the condition names to consider in the session
+%       OUTPUTS:
+%           nwbObj - NwbFile object
+%           trial_timeseries - cell array with necessary information per
+%           trial for NWB framework. Will be used in |assignSpkTms2NWB|
+%           function.
+%           configStructure - structure with analysis metadata for the
+%           session.
+%Emilio Isaias-Camacho @GrohLab 2023
 %% Validate inputs
 p = inputParser();
 
@@ -11,13 +26,13 @@ validateCondSel = @(x) isPositiveIntegerValuedNumeric(x) | istxt(x);
 
 addRequired(p, "nwbObj", @(x) isa(x, "NwbFile"))
 addRequired(p, "sessionPath", @(x) exist(x, 'dir'))
-addParameter(p, "ConditionSelect", "all", validateCondSel)
+addParameter(p, "ConditionSelection", "all", validateCondSel)
 
 parse(p, nwbObj, sessionPath, varargin{:})
 
 nwbObj = p.Results.nwbObj;
 sessionPath = p.Results.sessionPath;
-condSel = p.Results.ConditionSelect;
+condSel = p.Results.ConditionSelection;
 
 %% Auxiliary functions and variables
 fnOpts = {'UniformOutput', false};
@@ -99,7 +114,7 @@ trial_type = arrayfun(@(tt, tm) repmat(string(tt), tm, 1), ...
     consCondNames, Na, fnOpts{:}); trial_type = cat(1, trial_type{:});
 %% Variable storing continuous signals from the trials.
 % Trial timeseries
-% trial_timeseries = cell(sum(Na),1);
+
 timeseries_aux = cellfun(@(c) reshape(transpose(c), numel(c), []), ...
         chopped_timeseries, fnOpts{:});
 timeseries_aux = arrayfun(@(x) single(cat(1, timeseries_aux{x,:})), ...
@@ -108,17 +123,9 @@ timeseries_aux = arrayfun(@(x) single(cat(1, timeseries_aux{x,:})), ...
 ts_ref = arrayfun(@(x) types.untyped.ObjectView("/stimulus/presentation/"+x), tsNames);
 for cfn = tsNames(:)'
     ccfn = ismember(tsNames, cfn);
-    
     if strcmpi(cfn,'laser')
         ts_aux = types.core.OptogeneticSeries();
         ts_aux.site = types.untyped.SoftLink("/general/optogenetics/"+cfn);
-%         ts_aux = types.core.OptogeneticSeries(...
-%             'data', timeseries_aux(:,ccfn), ...
-%             'data_unit', 'ADC_16bit', ...
-%             'description', cfn+" stimulation", ...
-%             'timestamps', timestamps, ...
-%             'timestamps_unit', 'seconds', ...
-%             'site', types.untyped.SoftLink("/general/optogenetics/"+cfn));
     else
         ts_aux = types.core.TimeSeries();
     end
@@ -133,7 +140,7 @@ end
 trial_timeseries = arrayfun(@(x) {ts_ref(1) int64(x) int64(trial_samples); ...
                ts_ref(2) int64(x) int64(trial_samples)}, ...
                cat(1, trial_start_sample{:}), fnOpts{:});
-%% Trial epoch
+%% Trial epoch - from tutorial
 % Though TimeIntervals is a subclass of the DynamicTable type, we opt for
 % populating the Dynamic Table data by column instead of using `addRow`
 % here because of how the data is formatted. DynamicTable is flexible
