@@ -42,5 +42,5 @@ condSel = {'ConditionSelection', 'Control Puff'};
 
 rstNWB = prepareRelSpkTms4NWB(sessionPath, configStructure, condSel{:});
 
-[outputArg1,outputArg2] = assignSpkTms2NWB(nwbObj, rstNWB);
+nwbObj = assignSpkTms2NWB(nwbObj, rstNWB, trial_timeseries);
 end
