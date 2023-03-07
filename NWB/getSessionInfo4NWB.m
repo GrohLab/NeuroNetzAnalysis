@@ -1,6 +1,17 @@
 function [nwbObj] = getSessionInfo4NWB(sessionPath, varargin)
 %GETSESSIONINFO4NWB prepares a NwbFile object to store all information for
 %the PLOS Biology SC anatomy paper.
+%           nwbObj = getSessionInfo4NWB(sessionPath)
+%           nwbObj = getSessionInfo4NWB(sessionPath, 'Comment', comment)
+%   INPUT:
+%       sessionPath - string or char variable containing the ephys data of
+%       the current session to convert to NWB.
+%       Name-Value pair: Comment - string or char variable adding
+%       information about the session.
+%   OUTPUT:
+%       nwbObj - initialised NwbFile object 
+% Emilio Isaías-Camacho @ GrohLab 2023
+
 %% Validate inputs
 p = inputParser;
 addRequired(p, 'sessionPath', @(x) exist(x, 'dir'))
