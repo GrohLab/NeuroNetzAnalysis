@@ -1,7 +1,8 @@
 function [nwbObj, electrode_table, electrode_group, device] = ...
     CNTP2NWB(nwbObj, channelMapPath, varargin)
 %CNTP2NWB creates 'electrodes' object for the NWB framework.
-%   [electrodesObj, deviceObj] = CNTP2NWB(channelMapPath);
+%   [nwbObj, electrodesObj, deviceObj] = CNTP2NWB(nwbObj, channelMapPath);
+%    = CNTP2NWB(..., 'Name', 'Value');
 % INPUTS:
 %        nwbObj - NwbFile object with ideally the session information.
 %        channelMapPath - char or string variable containing the path to
