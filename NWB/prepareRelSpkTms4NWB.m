@@ -61,11 +61,11 @@ load(expandName(rstFiles), "relativeSpkTmsStruct")
 condNames = arrayfun(@(x) string(x.name), relativeSpkTmsStruct);
 if strcmp(condSel, "all")
     % All conditions into the NWB file
-    condSel = condNames;
+    condSel = condNames(:);
 else
     % Selected conditions by their name or it might be a cell array
     % with char arrays or strings
-    condSel = condSel(ismember(condNames, condSel));
+    condSel = condNames(ismember(condNames, condSel));
 end
 
 condFlags = arrayfun(@(rst) ismember(string(rst.name), string(condSel)), ...
@@ -88,5 +88,6 @@ lin_spkTms = arrayfun(@(rst) arrayfun(@(t) cat(2, rst.SpikeTimes{t,:}), ...
     fnOpts{:});
 % NWB output
 rstNWB = struct('TrialType', string(condSel), 'TrialID', {trialID_per_unit},...
-    'UnitID',gclID,'SpikeTimes', {lin_spkTms}, 'NumTrials', Na, 'NumUnits', Ncl(1));
+    'UnitID',gclID,'SpikeTimes', {lin_spkTms}, 'NumTrials', Na, ...
+    'NumUnits', Ncl(1));
 end

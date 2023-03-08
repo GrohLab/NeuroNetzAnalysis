@@ -12,12 +12,11 @@ function [nwbObj, electrode_table, electrode_group, device] = ...
 %                         region.
 %        Coordinates - 3x1 or 1x3 numeric array containing the coordinates
 %                      from the micromanipulator in micrometers. The
-%                      representation is as follows: (ML, AP, DV), where ML
-%                      is medio-lateral, AP is antero-posterior, and DV is
-%                      dorso-ventral and must be negative.
-%                      Assuming animal and electrodes facing experimenter,
-%                      the given coordinates are considered to be the
-%                      left-most shank.
+%                      representation is as follows: (+x = posterior, +y =
+%                      inferior, +z = subject’s right). Assuming animal and
+%                      electrodes facing experimenter, the given
+%                      coordinates are considered to be the left-most
+%                      shank.
 %        Company - string or char variable containing the manufacturing
 %                  company of the silicon probe.
 %        Filtering - string or char variable describing the filtering
@@ -59,7 +58,8 @@ filtering = p.Results.Filtering;
 fnOpts = {'UniformOutput', false};
 varsInCMF = {'chanMap', 'chanMap0ind', 'connected', 'kcoords', 'name', ...
     'shankInd', 'xcoords', 'ycoords'};
-
+tblVars = {'x', 'y', 'z', 'imp', 'location', 'filtering', 'group', ...
+    'label', 'rel_x', 'rel_y', 'rel_z'};
 cmMF = matfile(channelMapPath);
 varsFlags = contains(varsInCMF, who(cmMF), "IgnoreCase", true);
 % Assuming 1 shank if shankInd wasn't specified.
@@ -74,10 +74,27 @@ device = types.core.Device('description', probeName, ...
     'manufacturer', company);
 nwbObj.general_devices.set('array', device);
 
-% x, y, and z represent medio-lateral, antero-posterior, and dorso-ventral
-% axes respectively.
 x = cmMF.xcoords; y = cmMF.ycoords;
-eCoords = [x(:), zeros(length(cmMF.xcoords),1), y(:)] + coords;
+% (+x = posterior, +y = inferior, +z = subject’s right).
+shFlags = shID == nshanks(:)';
+elec_tbl = cell2table(cell(0, length(tblVars)), 'VariableNames', tblVars);
+for csh = 1:nshanks
+    electrode_group = types.core.ElectrodeGroup(...
+        'description', ['electrode group for shank' num2str(csh)],...
+        'location', brainStructure,...
+        'device', types.untyped.SoftLink(device));
+    nwbObj.general_extracellular_ephys.set(['shank' num2str(csh)], ...
+        electrode_group);
+    group_object_view = types.untyped.ObjectView(electrode_group);
+    for ce = find(shFlags(:,csh))'
+        electrode_label = ['shank' num2str(csh) 'elec' num2str(ce)];
+        elec_tbl = [elec_tbl; ...
+            {coords(1), coords(2), coords(3), NaN, brainStructure, ...
+            filtering, group_object_view, electrode_label, 0, y(ce),...
+            x(ce)}];
+    end
+end
+%{
 electrode_group = arrayfun(@(sh) types.core.ElectrodeGroup( ...
     'description', ['electrode group for shank' num2str(sh)], ...
     'location', brainStructure, ...
@@ -99,11 +116,13 @@ eNum = cat(1, eNum{:}); eSubs = zeros(size(shFlags));eSubs(shFlags) = eNum;
 electrode_labels = arrayfun(@(s,e) "shank"+string(s)+"elec"+string(e), ...
     shID, sum(eSubs,2));
 
-variables = {'x', 'y', 'z', 'imp', 'location', 'filtering', 'group', 'label'};
+
 rm = @(x) repmat(x, size(shID,1), 1);
+
 tbl = table(eCoords(:,1), eCoords(:,2), eCoords(:,3), nan(size(eCoords,1),1), ...
     rm(brainStructure), rm(filtering), group_object_views, electrode_labels, ...
-    'VariableNames',variables);
-electrode_table = util.table2nwb(tbl, 'all electrodes');
+    'VariableNames',tblVars);
+%}
+electrode_table = util.table2nwb(elec_tbl, 'all electrodes');
 nwbObj.general_extracellular_ephys_electrodes = electrode_table;
 end
