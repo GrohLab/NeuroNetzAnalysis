@@ -110,7 +110,7 @@ for cu=1:length(ids)
         t_count = sum(j_loc);
         
         trial_timeseries{trial}(end+1, :) = ...
-            {ses_ref(cu) int64(t_start) int64(t_count)};
+            {int32(t_start) int32(t_count) ses_ref(cu)};
     end
 end
 end
