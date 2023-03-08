@@ -31,19 +31,19 @@ function [nwbObj, electrode_table, electrode_group, device] = ...
 %% Validation of input variables
 p = inputParser; p.CaseSensitive = false; p.KeepUnmatched = true;
 
-validateString = @(x) isstring(x) | ischar(x);
-validatePath = @(x) validateString(x) & exist(x,"file");
+istxt = @(x) isstring(x) | ischar(x);
+validatePath = @(x) istxt(x) & exist(x,"file");
 validateNWB = @(x) isa(x, 'NwbFile');
-% Coordinates are three dimensional; (ML, AP, DV); DV must always be
-% negative.
-validateCoords = @(x) isnumeric(x) & numel(x)==3 & isvector(x) & x(3)<=0;
+% Coordinates are three dimensional; (+x = posterior, +y = inferior, 
+% +z = subject s right).
+validateCoords = @(x) isnumeric(x) & numel(x)==3 & isvector(x);
 
 addRequired(p, "nwbObj", validateNWB)
 addRequired(p, 'channelMapPath', validatePath)
-addParameter(p, 'BrainStructure', 'unknown', validateString)
+addParameter(p, 'BrainStructure', 'unknown', istxt)
 addParameter(p, 'Coordinates', [0,0,0], validateCoords)
-addParameter(p, 'Company', 'Cambridge NeuroTech',validateString)
-addParameter(p, 'Filtering', 'unknown', validateString)
+addParameter(p, 'Company', 'Cambridge NeuroTech',istxt)
+addParameter(p, 'Filtering', 'unknown', istxt)
 
 parse(p, nwbObj, channelMapPath, varargin{:});
 
@@ -59,7 +59,7 @@ fnOpts = {'UniformOutput', false};
 varsInCMF = {'chanMap', 'chanMap0ind', 'connected', 'kcoords', 'name', ...
     'shankInd', 'xcoords', 'ycoords'};
 tblVars = {'x', 'y', 'z', 'imp', 'location', 'filtering', 'group', ...
-    'label', 'rel_x', 'rel_y', 'rel_z'};
+    'label', 'rel_x', 'rel_y', 'rel_z', 'group_name'};
 cmMF = matfile(channelMapPath);
 varsFlags = contains(varsInCMF, who(cmMF), "IgnoreCase", true);
 % Assuming 1 shank if shankInd wasn't specified.
@@ -91,7 +91,7 @@ for csh = 1:nshanks
         elec_tbl = [elec_tbl; ...
             {coords(1), coords(2), coords(3), NaN, brainStructure, ...
             filtering, group_object_view, electrode_label, 0, y(ce),...
-            x(ce)}]; %#ok<AGROW> 
+            x(ce), electrode_label}]; %#ok<AGROW> 
     end
 end
 %{
