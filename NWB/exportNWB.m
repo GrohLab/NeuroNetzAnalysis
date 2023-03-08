@@ -45,7 +45,7 @@ trial_timeseries = arrayfun(@(c) cat(1, trial_timeseries{:,c}), ...
     1:size(trial_timeseries, 2), fnOpts{:});
 
 nwbObj.intervals_trials.timeseries.data = table(trial_timeseries{:}, ...
-    'VariableNames', {'timeseries', 'idx_start', 'count'});
+    'VariableNames', {'idx_start', 'count', 'timeseries'});
 
 outDest = fullfile(outDir, [nwbObj.identifier '.nwb']);
 if 2 == exist(outDest, 'file')
