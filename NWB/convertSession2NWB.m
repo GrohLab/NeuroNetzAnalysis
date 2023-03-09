@@ -1,6 +1,8 @@
 function [nwbObj] = convertSession2NWB(sessionPath, varargin)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
+
+%% Input parsing
 p = inputParser;
 
 istxt = @(x) isstring(x) | ischar(x);
@@ -8,25 +10,47 @@ istxt = @(x) isstring(x) | ischar(x);
 % +z = subject s right).
 validateCoords = @(x) isnumeric(x) & numel(x)==3 & isvector(x);
 
+validSexes = {'female', 'male', 'unknown', 'undefined'};
+validateSex = @(x) ischar(validatestring(x, validSexes));
+
+validGeometries = {'E1','E2','E','F','H3','H5'};
+validateGeometry = @(x) validatestring(x, validGeometries);
+
 addRequired(p, "sessionPath", @(x) istxt(x) & exist(x, "dir"));
-addParameter(p, "Birthdate", datetime, @isdatetime)
+addParameter(p, "SessionDate", [], @isdatetime);
+addParameter(p, "Birthdate", [], @isdatetime);
 addParameter(p, "Coordinates", zeros(3,1), validateCoords)
 addParameter(p, "OutDir", "Z:\SC Anatomy paper data", istxt);
-addParameter(p, "ConditionSelection", "all", @(x) istxt(x) | iscellstr(x)) %#ok<ISCLSTR> 
-addParameter(p, "MouseSource", 'IBF', istxt)
-addParameter(p, "MouseSex", 'male', istxt)
+addParameter(p, "ExperimentDescription", '', istxt);
+addParameter(p, "Identifier", '', @(x) istxt(x) & contains(x,'_'));
+addParameter(p, "ConditionSelection", "all", @(x) istxt(x) | iscellstr(x)); %#ok<ISCLSTR> 
+addParameter(p, "MouseSource", 'IBF', istxt);
+addParameter(p, "MouseSex", 'female', validateSex);
+addParameter(p, "chanMapGeometry", '', validateGeometry);
+
+for cin = 1:2:length(varargin)
+    switch varargin{cin}
+        case "Identifier"
+        case "chanMapGeometry"
+        case "SessionDate"
+    end
+end
 
 parse(p, sessionPath, varargin{:});
 
 sessionPath = p.Results.sessionPath;
+sessionDate = p.Results.SessionDate;
 birthdate = p.Results.Birthdate;
 coords = p.Results.Coordinates;
 outDir = p.Results.OutDir;
+experimentDescription = p.Results.ExperimentDescription;
+identifier = p.Results.Identifier;
 consCondName = p.Results.ConditionSelection;
 mouseSource = p.Results.MouseSource;
 mouseSex = p.Results.MouseSex;
-%TODO: Implement the session specific data.
-%%
+chanMapGeometry = p.Results.chanMapGeometry;
+
+%% Organising metadata
 expandName = @(x) fullfile(x.folder, x.name);
 
 chanMapDir = "Z:\Emilio";
@@ -35,16 +59,22 @@ chanMapPaths(arrayfun(@(x) contains(x.name, "old"), chanMapPaths)) = [];
 chanMapTypes = extractBetween(arrayfun(@(x) string(x.name), ...
     chanMapPaths), "Cambridge_NeuroTech_",".mat");
 
-[~, ephSes] = fileparts(sessionPath);
-chanMapUsed = extractAfter(ephSes,"ephys_");
+if isempty(chanMapGeometry)
+    [~, ephSes] = fileparts(sessionPath);
+    chanMapUsed = extractAfter(ephSes,"ephys_");
+else
+    chanMapUsed = chanMapGeometry;
+end
 cmFlag = contains(chanMapTypes, chanMapUsed);
 % Metadata for the electrode object.
 metaData = {'BrainStructure', 'Superior colliculus',...
             'Coordinates', coords, ...
             'Filtering', 'anti-aliasing'};
+%% Creating NWB Object
 % Initialise NwbFile object
 nwbObj = getSessionInfo4NWB(sessionPath, ...
-    'Comment', 'Awake head-fixed; contra-lateral whiskers puffed from behind');
+    'Comment', experimentDescription, 'Identifier', identifier, ...
+    'SessionDate', sessionDate);
 % Subject info
 subject = types.core.Subject(...
     'subject_id', extractBefore(nwbObj.identifier,'_'), ...
