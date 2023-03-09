@@ -98,9 +98,13 @@ for cu=1:length(ids)
             'data', channel));
     
     nwbObj.analysis.set(char(ses_name(cu)), ses);
-    nwbObj.units.addRow('id', ids(cu), 'trials', eventTrials, ...
-        'spike_times', eventTimes);
-    
+    nwbObj.units.addRow(...
+        'id', ids(cu), 'trials', eventTrials, 'spike_times', eventTimes);
+    %{
+    nwbObj.units.addRow(...
+        'id', types.hdmf_common.ElementIdentifiers('data',ids(cu)), ...
+        'trials', eventTrials, 'spike_times', eventTimes);
+    %}
     %add this timeseries into the trials table as well. (From tutorial)
     [s_trials, ~, trials_to_data] = unique(eventTrials);
     for j=1:length(s_trials)
