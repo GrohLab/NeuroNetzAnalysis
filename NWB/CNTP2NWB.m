@@ -55,7 +55,7 @@ brainStructure = p.Results.BrainStructure;
 company = p.Results.Company;
 filtering = p.Results.Filtering;
 %% Auxiliary functions
-fnOpts = {'UniformOutput', false};
+% fnOpts = {'UniformOutput', false};
 varsInCMF = {'chanMap', 'chanMap0ind', 'connected', 'kcoords', 'name', ...
     'shankInd', 'xcoords', 'ycoords'};
 tblVars = {'x', 'y', 'z', 'imp', 'location', 'filtering', 'group', ...
