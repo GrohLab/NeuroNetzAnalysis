@@ -97,7 +97,7 @@ N_signals = numel(tsNames); N_trial_types = numel(consCondNames);
 chopped_timeseries = cell(N_signals, N_trial_types);
 % Chopping signals around the triggers
 for cfn = tsNames(:)'
-    sgn = Triggers.(cfn);
+    sgn = Triggers.(cfn); sgn = sgn(:)';
     chopped_timeseries_aux = cellfun(@(c) arrayfun(@(t) ...
         sgn(t:t+trial_samples-1), c, fnOpts{:}), ...
         trial_start_sample, fnOpts{:});
