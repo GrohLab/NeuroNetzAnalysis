@@ -26,6 +26,7 @@ addParameter(p, "Identifier", '', @(x) istxt(x) & contains(x,'_'));
 addParameter(p, "ConditionSelection", "all", @(x) istxt(x) | iscellstr(x)); %#ok<ISCLSTR> 
 addParameter(p, "MouseSource", 'IBF', istxt);
 addParameter(p, "MouseSex", 'female', validateSex);
+addParameter(p, "Genotype", '', istxt);
 addParameter(p, "chanMapGeometry", '', validateGeometry);
 
 for cin = 1:2:length(varargin)
@@ -48,6 +49,7 @@ identifier = p.Results.Identifier;
 consCondName = p.Results.ConditionSelection;
 mouseSource = p.Results.MouseSource;
 mouseSex = p.Results.MouseSex;
+genotype = p.Results.Genotype;
 chanMapGeometry = p.Results.chanMapGeometry;
 
 %% Organising metadata
@@ -81,7 +83,8 @@ subject = types.core.Subject(...
     'date_of_birth', birthdate, ...
     'species', 'mus musculus', ...
     'sex', mouseSex, ...
-    'description', mouseSource);
+    'description', mouseSource, ...
+    'genotype', genotype);
 nwbObj.general_subject = subject;
 % Add silicon probe information
 nwbObj = CNTP2NWB(nwbObj, expandName(chanMapPaths(cmFlag)), metaData{:});
