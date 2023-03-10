@@ -1,15 +1,25 @@
 outDir = 'Z:\SC Anatomy paper data\Anaesthetised';
-sessionPath = "Z:\Emilio\SuperiorColliculusExperiments\Anaesthetised\M12_190414_SC_E1\M12.1_DV1600_ML1000_AP3800";
+% Session path
+sessionPath = fullfile("Z:\Emilio\SuperiorColliculusExperiments\Anaesthetised\M24_220224_SC-E1_IO&Freq");
+% Coordinates from file name or labbook
 %(+x = posterior AP, +y = inferior DV, +z = subject s right ML)
-coords = [3800, 1600, 1000];
+coords = [3600, 2000, 1500];
+% Used probe
 cmGeometry = 'E';
-sessionDate = datetime('190414','InputFormat','yyMMdd'); sessionDate.Format = 'yyMMdd';
-birthdate = datetime('06.11.19','InputFormat','dd.MM.yy');
+% Date (and time) of session start
+sessionDate = datetime('220224','InputFormat','yyMMdd'); sessionDate.Format = 'yyMMdd';
+% Identifier
+identifier = ['Rbp4-24_' char(sessionDate)];
+genotype = 'Rbp4cre-ChR2';
+
+birthdate = datetime(sessionDate,'InputFormat','dd.MM.yy');
+
 mouseSource = 'IBF';
-mouseSex = 'female';
-selected_condition = 'Control Laser';
+mouseSex = 'unknown';
+
+selected_condition = '32 mW';
 experimentDescription = 'MC- and BC-L5 optogenetic stimulation in an Rbp4cre ChR2 mouse';
-identifier = ['Rbp4-12.1_' char(sessionDate)];
+
 nwbObj = convertSession2NWB(sessionPath, ...
     "SessionDate", sessionDate, ...
     "Coordinates", coords, ...
@@ -20,4 +30,5 @@ nwbObj = convertSession2NWB(sessionPath, ...
     "ExperimentDescription", experimentDescription, ...
     "MouseSex", mouseSex, ...
     "MouseSource", mouseSource, ...
+    "Genotype", genotype, ...
     "chanMapGeometry", cmGeometry);
