@@ -55,11 +55,14 @@ allCond = contains(condNames, "all", "IgnoreCase", true);
 if istxt(condSel)
     if strcmp(condSel, "all")
         % All conditions into the NWB file
-        condSel = setdiff(1:numel(Conditions),find(allCond));
+        condSelFlag = setdiff(1:numel(Conditions),find(allCond));
     else
         % Selected conditions by their name or it might be a cell array
         % with char arrays or strings
-        condSel = ismember(condNames, condSel);
+        condSelFlag = ismember(condNames, condSel);
+        if ~all(condSelFlag)
+            condSelFlag = contains(condNames, condSel);
+        end
     end
 elseif any(condSel-sum(allCond) > sum(~allCond))
     % in development.
@@ -67,12 +70,12 @@ end
 
 %% Loading and preparing data
 % Triggers per selected condition
-trigPerCond = arrayfun(@(x) x.Triggers(:,1), Conditions(condSel), ...
+trigPerCond = arrayfun(@(x) x.Triggers(:,1), Conditions(condSelFlag), ...
     fnOpts{:});
 % Number of trials per condition
 Na = cellfun(@(c) size(c,1), trigPerCond);
 % Trial types: Condition names
-consCondNames = arrayfun(@(c) string(c.name), Conditions(condSel));
+consCondNames = arrayfun(@(c) string(c.name), Conditions(condSelFlag));
 load(expandName(fFiles), "fs")
 load(expandName(pFiles), "configStructure")
 

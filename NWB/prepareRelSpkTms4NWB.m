@@ -65,7 +65,11 @@ if strcmp(condSel, "all")
 else
     % Selected conditions by their name or it might be a cell array
     % with char arrays or strings
-    condSel = condNames(ismember(condNames, condSel));
+    condSel_aux = condNames(ismember(condNames, condSel));
+    if isempty(condSel_aux)
+        condSel_aux = condNames(contains(condNames, condSel));
+    end
+    condSel = condSel_aux;
 end
 
 condFlags = arrayfun(@(rst) ismember(string(rst.name), string(condSel)), ...
