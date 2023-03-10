@@ -149,9 +149,15 @@ for cfn = tsNames(:)'
     nwbObj.stimulus_presentation.set(cfn, ts_aux);
 end
 
+trial_timeseries = arrayfun(@(x) arrayfun(@(ref) ...
+    {int32(x) int32(trial_samples) ref}, ts_ref, fnOpts{:}), ...
+cat(1, trial_start_sample{:}), fnOpts{:}); 
+trial_timeseries = cellfun(@(c) cat(1, c{:}), trial_timeseries, fnOpts{:});
+%{
 trial_timeseries = arrayfun(@(x) {int32(x) int32(trial_samples) ts_ref(1); ...
                int32(x) int32(trial_samples) ts_ref(2)}, ...
                cat(1, trial_start_sample{:}), fnOpts{:});
+%}
 %% Trial epoch - from tutorial
 % Though TimeIntervals is a subclass of the DynamicTable type, we opt for
 % populating the Dynamic Table data by column instead of using `addRow`
