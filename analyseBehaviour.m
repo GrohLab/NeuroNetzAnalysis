@@ -425,11 +425,11 @@ else
     end
 end
 %% Going through the conditions and signals
-bfPttrn = "%s %s "+vwKey+" "+rwKey+" EX%d %s";
-mbfPttrn = "Mean %s %s"+vwKey+" "+rwKey+" EX%s%s";
-mpfPttrn = "Move probability %s %s"+rwKey+" %s";
-pfPttrn = "%s %s move probability %.2f "+rwKey+" EX%d %s";
-mvdPttrn = "%s dist "+vwKey+" "+rwKey+" EX%s%s";
+bfPttrn = "%s %s ";
+mbfPttrn = "Mean %s %s";
+mpfPttrn = "Move probability %s %s";
+pfPttrn = "%s %s move probability %.2f ";
+mvdPttrn = "%s dist ";
 ttPttrn = "%s in %d from %d trials";
 if metaNameFlag
     bfPttrn = bfPttrn+vwKey+" "+rwKey;
