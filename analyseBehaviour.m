@@ -1,4 +1,4 @@
-function [summStruct] = analyseBehaviour(behDir, varargin)
+function [summStruct, figureDir] = analyseBehaviour(behDir, varargin)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
 %% Auxiliary variables
