@@ -4,7 +4,7 @@ function [fDates, dateFormStr] = getDates(fileNames, baseName, endng)
 % Roller_position2021-12-19T15_32_12.csv, for example. "Roller_position"
 % would be the baseName, and an array with structures from dir function.
 dateFormStr = 'yyyy-MM-dd''T''HH_mm_ss';
-fnOpts = {"UniformOutput", false};
+fnOpts = {'UniformOutput', false};
 if ~exist("endng", "var")
     endng = ".";
 end
