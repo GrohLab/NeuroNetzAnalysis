@@ -63,7 +63,8 @@ fpd = @plotData;
             1:Nccond);
         pShape = arrayfun(@(p) polyshape(p.Vertices(:,1), p.Vertices(:,2)), pObj);
         pAreas = area(pShape); set(ax, axOpts{:}, 'Visible', 'off')
-        axis(ax, (2*btmx*(btmx<0.5) + btmx>0.5)*[-1,1,-1,1], 'square'); 
+        axis(ax, (2*btmx*double(btmx<0.5) + double(btmx>0.5))*[-1,1,-1,1], ...
+            'square'); 
         lgObj = legend(pObj, consCondNames + " " + string(round(pAreas,3))); 
         set(lgObj, lgOpts{:})
     end
