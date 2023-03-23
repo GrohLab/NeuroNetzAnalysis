@@ -302,7 +302,7 @@ elseif istxt(trigSubs) && strcmpi(trigSubs, "all")
 end
 % Roller speed
 [~, vStack] = getStacks(false, round(atTimes{aSub}(trigSubs)*fr), 'on', bvWin,...
-    fr, fr, [], vf*en2cm); [Nbt, Ntr] = size(vStack, [2, 3]); Na = Ntr;
+    fr, fr, [], vf*en2cm); [~, Nbt, Ntr] = size(vStack); Na = Ntr;
 % Connection to DE_Jittering or as a stand-alone function.
 if istxt(pairedStim) && strcmpi(pairedStim, "none")
     % Stand alone function without stimulus pairing
