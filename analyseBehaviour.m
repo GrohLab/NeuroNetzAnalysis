@@ -378,9 +378,11 @@ else
 end
 tmdl = fit_poly([1,Nbt], bvWin, 1);
 behTx = ((1:Nbt)'.^[1,0])*tmdl;
+
 % Spontaneous flags
-bsFlag = behTx <= 0; brFlag = behTx < brWin;
-brFlag = xor(brFlag(:,1),brFlag(:,2));
+bsWin = -flip(brWin);
+bsFlag = behTx < bsWin; bsFlag = xor(bsFlag(:,1), bsFlag(:,2));
+brFlag = behTx < brWin; brFlag = xor(brFlag(:,1), brFlag(:,2));
 
 % Set-point median for the whiskers and nose
 % Spontaneous
