@@ -236,7 +236,7 @@ end
 function clWaveforms =...
     fetchWaveforms_fromBin(dataDir, clusterID,...
     chanMap, Nch, clSub, spkIdx, ch2read)
-afOpt = {'UniformOutput', 0};
+afOpt = {'UniformOutput', false};
 look4this = @(x)dir(fullfile(dataDir,x));
 expandName = @(x) fullfile(x.folder, x.name);
 pathHere = @(x) fullfile(dataDir, x);
@@ -290,6 +290,8 @@ else
             answ = 1;
         end
         binFile = binFile(answ).name;
+    else
+        binFile = binFile.name;
     end
 end
 fID = fopen(pathHere(binFile), 'r');
