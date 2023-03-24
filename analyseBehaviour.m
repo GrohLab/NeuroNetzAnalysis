@@ -391,7 +391,7 @@ ssp = [squeeze(median(dlcStack(Nbs:end,bsFlag,:), 2)); zeros(1,Ntr)];
 tsp = [squeeze(median(dlcStack(Nbs:end,:,:), 2)); zeros(1,Ntr)];
 clearvars dlcStack vStack;
 % Measuring trials
-sSig = cell2mat(cellfun(@(x) squeeze(std(x(bsFlag,:), 1, 1)), behStack, ...
+sSig = cell2mat(cellfun(@(x) squeeze(std(x(bsFlag,:), 0, 1)), behStack, ...
     fnOpts{:}));
 sMed = cell2mat(cellfun(@(x) squeeze(median(x(bsFlag,:), 1)), behStack, ...
     fnOpts{:}));
@@ -546,6 +546,7 @@ if Nccond > 1
     end
 end
 
+%% Figure creation
 % Plotting results and allocating figure holders
 allTrialFigs = gobjects(Nccond, Nbs); muTrialFigs = gobjects(Nbs, 1);
 mpFigs = allTrialFigs; mppcFigs = muTrialFigs; bpfFigs = mppcFigs;
