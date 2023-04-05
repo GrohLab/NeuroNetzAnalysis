@@ -389,7 +389,7 @@ brFlag = behTx < brWin; brFlag = xor(brFlag(:,1), brFlag(:,2));
 ssp = [squeeze(median(dlcStack(Nbs:end,bsFlag,:), 2)); zeros(1,Ntr)];
 % Trial
 tsp = [squeeze(median(dlcStack(Nbs:end,:,:), 2)); zeros(1,Ntr)];
-clearvars dlcStack vStack;
+%clearvars dlcStack vStack;
 % Measuring trials
 sSig = cell2mat(cellfun(@(x) squeeze(std(x(bsFlag,:), 0, 1)), behStack, ...
     fnOpts{:}));
