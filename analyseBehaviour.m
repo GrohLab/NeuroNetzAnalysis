@@ -363,6 +363,9 @@ else
     yLabels = rollYL;
 end
 
+% Movement probability
+movStruct = computeMovementProbability(behStack, pairedStim, bvWin, fr);
+
 % Whiskers, nose, and roller speed
 
 %TODO: include user input for the thresholds for whiskers and nose signals.
