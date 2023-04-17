@@ -153,10 +153,13 @@ fs = 3e4;
             xyM = zeros(Nti(cc),3);
             for ci = naiveSubs
                 iFlag = unqePrs(:,1) == ci;
-                [~, iSb] = max(lk(iFlag));
-                xyM(ci,:) = unqePrs(find(cumsum(iFlag) == iSb, 1, ...
-                    "first"),:);
+                if sum(iFlag)
+                    [~, iSb] = max(lk(iFlag));
+                    xyM(ci,:) = unqePrs(find(cumsum(iFlag) == iSb, 1, ...
+                        "first"),:);
+                end
             end
+            xyM(~any(xyM,2),:) = [];
             unqePrs = xyM;
             % Initialization of the logical reduction loop
             allFlag = unqePrs(:,1:2) == reshape(naiveSubs, 1,1,[]);
@@ -165,7 +168,7 @@ fs = 3e4;
                 [~, IoASub] = min([Nti(cc),Nta(cc)]); IoA = false(2,1);
                 IoA(IoASub) = true;
             end
-            
+            scndFlag = false;
             auxCnt = 1;
             % Logical reduction of possibilities
             while auxCnt <= mxSub && ~isempty(unqePrs)
@@ -215,7 +218,7 @@ fs = 3e4;
                 unavFlags = arrayfun(@(x) any(unqePrs(:,x) == snglPairs(:,x)',2), 1:2,...
                     "UniformOutput", false); unavFlags = [unavFlags{:}];
                 unqePrs(any(unavFlags,2),:) = [];
-                if isempty(unqePrs)
+                if isempty(unqePrs) && ~scndFlag
                     if nnz(snglPairs) < numel(snglPairs)
                         snglPairs = zeros(mxSub, 2); auxCnt = 1;
                         fprintf(1, "There was a miscalculation in the ")
@@ -236,10 +239,12 @@ fs = 3e4;
                         unavFlags = arrayfun(@(x) any(unqePrs(:,x) == snglPairs(:,x)',2), 1:2,...
                             "UniformOutput", false); unavFlags = [unavFlags{:}];
                         unqePrs(any(unavFlags,2),:) = [];
+                        scndFlag = true;
                         continue
                     end
                 end
             end
+            snglPairs(~any(snglPairs,2),:) = [];
             snglPairs = sortrows(snglPairs, 1);
             raFlag = [1;diff(snglPairs(:,2))]<1; % repeated arduino trigger
             snglPairs(raFlag,:) = [];
