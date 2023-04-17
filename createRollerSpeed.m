@@ -37,10 +37,12 @@ if Ne ~= Na
     fprintf(1, "Run 'readAndCorrectArdTrigs' first to create Trigger files\n")
     return
 end
+fiFlag = true;
 if Ne ~= Nf
     fprintf(1, "# encoder files different from frame ID files!\n")
     fprintf(1, "Encoder %d FrameID %d\n", Ne, Nf)
-    fprintf(1, "Search and ensure you have these files\n"); return
+    fprintf(1, "The framerate estimation is better with these files\n");
+    fiFlag = false;
 end
     
 %% Read and create roller 
@@ -59,11 +61,15 @@ if exist(rsName,"file")
 end
 tStruct = arrayfun(@(x) load(flfa(x),vars2load{:}), aFiles);
 fr = arrayfun(@(x) VideoReader(getName(vFiles,x)), 1:Nv, fnOpts{:});
-fr = cellfun(@(x) x.FrameRate, fr);
 % Reading the camera metadata and estimating a frame rate.
-vidTx = arrayfun(@(x) readCSV(flfa(x)), fFiles, fnOpts{:});
-vidTx = cellfun(@(x) x.Var2/1e9, vidTx, fnOpts{:}); % nanoseconds
-estFr = cellfun(@(x) 1/mean(diff(x)), vidTx);
+if fiFlag
+    vidTx = arrayfun(@(x) readCSV(flfa(x)), fFiles, fnOpts{:});
+    vidTx = cellfun(@(x) x.Var2/1e9, vidTx, fnOpts{:}); % nanoseconds
+    estFr = cellfun(@(x) 1/mean(diff(x)), vidTx);
+else
+    estFr = cellfun(@(x) x.NumFrames/x.Duration, fr);
+end
+fr = cellfun(@(x) x.FrameRate, fr);
 if any(fr(:) ~= estFr(:))
     fr(fr(:) ~= estFr(:)) = estFr(fr(:) ~= estFr(:));
 end
