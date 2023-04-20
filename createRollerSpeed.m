@@ -65,7 +65,7 @@ fr = arrayfun(@(x) VideoReader(getName(vFiles,x)), 1:Nv, fnOpts{:});
 if fiFlag
     vidTx = arrayfun(@(x) readCSV(flfa(x)), fFiles, fnOpts{:});
     vidTx = cellfun(@(x) x.Var2/1e9, vidTx, fnOpts{:}); % nanoseconds
-    estFr = cellfun(@(x) 1/mean(diff(x)), vidTx);
+    estFr = cellfun(@(x) 1/median(diff(x)), vidTx);
 else
     estFr = cellfun(@(x) x.NumFrames/x.Duration, fr);
 end
