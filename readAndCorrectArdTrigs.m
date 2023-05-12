@@ -17,8 +17,8 @@ fs = 3e4;
 % Function to get the edges from the trigger signals in the trigger file.
     function tSubs = getSubsFromTriggers(trig)
         % Unstable line! Display function not working!
-        tObj = arrayfun(@(x) StepWaveform(trig(x,:), 3e4, units='',...
-            title='', verbose=false), [1;2]);
+        tObj = arrayfun(@(x) StepWaveform(trig(x,:), 3e4, ...
+            'verbose',false), [1;2]);
         tSubs = arrayfun(@(x) x.subTriggers, tObj, fnOpts{:});
         tObj(2).MinIEI = 1; fot = tObj(2).FirstOfTrain;
         % if the laser signal has no frequency, fot will be populated by
