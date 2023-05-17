@@ -258,11 +258,7 @@ else
         % Reading those times which correspond only to the specific trigger
         tTimes = cellfun(@(x) rollTrigTimes.Time_us(trigSubs(x)), tFlags,...
             fnOpts{:});
-        if iscolumn(trigLetter)
-            tTimes = cat(1, tTimes, cellstr(trigLetter'));
-        else
-            tTimes = cat(1, tTimes, cellstr(trigLetter));
-        end
+        tTimes = cat(1, tTimes(:)', cellstr(trigLetter(:)'));
     end
 end
 end
