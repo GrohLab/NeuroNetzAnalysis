@@ -15,6 +15,10 @@ elseif isa(rollerPositions, "numeric")
     rt = rollerPositions*diag([1,us]);
 end
 rt(isnan(rt(:,1)), :) = [];
+if isempty(rt)
+    fprintf(1, "No roller position information!\n")
+    vf = 0; rollTx = 0; return
+end
 rollTx = rt(1,2):1/fsRoll:rt(end,2); 
 rxx = interp1(rt(:,2), rt(:,1), rollTx, "pchip");
 % Filtering for 18 Hz
