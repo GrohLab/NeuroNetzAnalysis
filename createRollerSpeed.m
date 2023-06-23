@@ -108,7 +108,7 @@ if isfield(tStruct, 'Nt')
 end
 vf = cellfun(@(x) x(:), vf, fnOpts{:}); Ns = cellfun(@(x) numel(x), vf);
 vf = cat(1, vf{:});
-if std(fr) < 1e-6
+if std(fr) < 1e-4
     fr = mean(fr);
 else
     fprintf(1, "Frame rates heterogeneous!\n")
