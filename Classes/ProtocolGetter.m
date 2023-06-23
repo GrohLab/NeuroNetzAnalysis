@@ -386,7 +386,7 @@ classdef ProtocolGetter < handle
                 end
                 % Getting the pulses in between the train with 0.5 Hz of
                 % tolerance.
-                wTrainBodyFlags = ismembertol(wFreqs, wFreq, 0.5/max(wFreqs));
+                wTrainBodyFlags = ismembertol(wFreqs, wFreq, 0.9/max(wFreqs));
                 % Eliminating the pulses in between the train
                 wFlags(wTrainBodyFlags) = [];
                 % Auxiliary flags to eliminate the frequencies associated
@@ -417,13 +417,16 @@ classdef ProtocolGetter < handle
             end
         end
         
-        function obj = pairStimulus(obj)
+        function obj = pairStimulus(obj, mxDel)
             %PAIRSTIMULUS looks at the temporal relationships between both
             %stimulus. In other words, the delay between each other.
             % Regardless of the pairing or condition, all stimuli from one
             % signal are going to be grouped in the first conditions and
             % labeled as '<signal_name>All', replacing <signal_name> by the
             % actual name of your signal.
+            if ~exist("mxDel", "var")
+                mxDel = 1;
+            end
             fetchSubs = @(idx, bf, subOrd, subs) ...
                 subs(sort(subOrd(bf(:,idx))),:);
             wSub = obj.Edges(1).Subs;lSub = obj.Edges(2).Subs;
@@ -455,10 +458,10 @@ classdef ProtocolGetter < handle
                 timeDelay = strDelay(1:mxPulses);
                 % The delay will usually be milliseconds long, so a logarithmic
                 % scale will be useful.
-                tol = (1e-4*~obj.awaken + 0.2*obj.awaken)/max(timeDelay);
+                tol = (1e-4*~obj.awaken + 0.1*obj.awaken)/max(log10(timeDelay));
                 delays = 10.^uniquetol(log10(timeDelay), tol);
                 % Removing delays that are greater than 1 second.
-                delays(delays > 1) = [];
+                delays(delays > mxDel) = [];
                 if std(delays.*1e3) < (1*~obj.awaken + 20*obj.awaken)
                     % Validation for similarity between the delays. If the
                     % standard deviation of the delays is smaller than 1 ms,
@@ -472,19 +475,21 @@ classdef ProtocolGetter < handle
                 fprintf(1,'%d Delays found:', Ndel)
                 % Logical matrix indicating membership of the subscripts to one
                 % or the other delays.
-                lsDel = false(length(timeDelay),Ndel);
+                % lsDel = false(length(timeDelay),Ndel);
                 Ncond = numel(obj.Conditions);
-                tol = (1e-4*~obj.awaken + 2e-2*obj.awaken)/max(timeDelay);
+                %tol = (1e-4*~obj.awaken + 2e-2*obj.awaken)/max(timeDelay);
                 if isinf(tol)
-                    tol = 1./eps;
+                    tol = 1e-6;
                 end
+                lgDst = log10(timeDelay(:)./delays(:)');
+                lsDel = lgDst < 0.11 & lgDst >= 0;
                 for cdl = 1:Ndel
                     % Starting from the last condition on
                     fprintf(1,' %.1f',delays(cdl)*1e3)
                     % Assign the boolean membership
                     % lsDel(:,cdl) = ismembertol(log10(timeDelay),log10(delays(cdl)),...
                     %     abs(0.01/log10(max(delays))));
-                    lsDel(:, cdl) = ismembertol(timeDelay, delays(cdl), tol);
+                    % lsDel(:, cdl) = ismembertol(timeDelay, delays(cdl), tol);
                     dlSubs = fetchSubs(cdl, lsDel, wSubOrd, wSub);
                     % Does this experiment contain any frequency?
                     if any(freqExpFlag)
@@ -522,32 +527,33 @@ classdef ProtocolGetter < handle
                         for cps = 1:size(pairedFreqs,1)
                             % fqFlags = fqDel == cps;
                             cpFqs = pairedFreqs(cps,:);
-                            obj.Conditions(Ncond + cdl + cps - 1).name =...
+                            obj.Conditions(Ncond + 1).name =...
                                 sprintf('Delay %0.3f s', delays(cdl));
                             if cpFqs(1) % Laser
-                                obj.Conditions(Ncond + cdl + cps - 1).name =...
-                                    [obj.Conditions(Ncond + cdl + cps - 1).name,...
+                                obj.Conditions(Ncond + 1).name =...
+                                    [obj.Conditions(Ncond + 1).name,...
                                     sprintf(' + L%.1f', cpFqs(1))];
                             end
                             if cpFqs(2) % Whisker
-                                obj.Conditions(Ncond + cdl + cps - 1).name =...
+                                obj.Conditions(Ncond + 1).name =...
                                     [obj.Conditions(Ncond + cdl + cps - 1).name,...
                                     sprintf(' + W%.1f', cpFqs(2))];
                             end
                             % fqDelFlags = fqDel ~= 0;
-                            obj.Conditions(Ncond + cdl + cps - 1).Triggers = ...
+                            obj.Conditions(Ncond + 1).Triggers = ...
                                 dlSubs(fqPairs == cps,:);
+                            Ncond = numel(obj.Conditions);
                         end
                     else
                         % No, no frequency at all. Using the boolean membership
                         % to find the subscripts that belong to the current
                         % condition.
                         % Create the name of the condition
-                        obj.Conditions(Ncond + cdl).name =...
+                        obj.Conditions(Ncond + 1).name =...
                             sprintf('Delay %0.3f s', delays(cdl));
-                        obj.Conditions(Ncond + cdl).Triggers = dlSubs;
+                        obj.Conditions(Ncond + 1).Triggers = dlSubs;
                             % fetchSubs(cdl, lsDel, wSubOrd, wSub)
-                        
+                        Ncond = numel(obj.Conditions);
                     end
                 end
                 fprintf(1, ' ms\n')
