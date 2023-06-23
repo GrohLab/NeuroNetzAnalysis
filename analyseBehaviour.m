@@ -314,7 +314,7 @@ elseif islogical(pairedStim)
     %NTa = sum(pairedStim(:));
     if size(pairedStim, 1) ~= Ntr
         fprintf(1, "The number of trials in the given flags (%d) do not", ...
-            Ntr)
+            size(pairedStim, 1))
         fprintf(1, " correspond to the number of trials in behaviour files");
         fprintf(1, " (%d)!\n", Ntr);
         pairedStim(all(~pairedStim,2),:) = [];
