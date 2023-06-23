@@ -547,7 +547,15 @@ if Nccond > 1
             Nex(cs,:)), thrshStrs(cs));
         rsstPath = behHere(rsstName);
         if ~exist(rsstPath, "file")
-            save(rsstPath,"pd", "hd", "pm", "hm");
+            try
+                save(rsstPath,"pd", "hd", "pm", "hm");
+            catch
+                rsstName = sprintf(rsstPttrn, behNames(cs), sprintf("%d ", ...
+                    numel(consCondNames)), sprintf("%.2f ", pm{:}), sprintf("%d ", ...
+                    Nex(cs,:)), thrshStrs(cs));
+                rsstPath = behHere(rsstName);
+                save(rsstPath,"pd", "hd", "pm", "hm");
+            end
         end
     end
 end
