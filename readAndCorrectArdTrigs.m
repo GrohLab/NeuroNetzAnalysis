@@ -30,11 +30,24 @@ fs = 3e4;
 % Function to get arduino trigger times
     function [atTimes, atNames] = getArduinoTriggers(rpFilePath)
         atTimes = cell(1,1); atNames = "";
+        mics = 1e-6;
         % Read the roller position file
         [rp, tTimes] = readRollerPositionsFile(rpFilePath);
         % Converting the trigger times from microseconds to seconds
         if ~isempty(tTimes)
-            tTimes(1,:) = cellfun(@(x) (x - rp(1,2))/1e6, tTimes(1,:), fnOpts{:});
+            if ~isempty(rp)
+                offSt = rp(1,2)*mics;
+                % tTimes(1,:) = cellfun(@(x) (x - rp(1,2))/1e6, tTimes(1,:), ...
+                    % fnOpts{:});
+            else
+                rpStruct = dir(rpFilePath);
+                dmodf = datetime(rpStruct.date, "InputFormat", ...
+                    "dd-MMM-uuuu HH:mm:ss");
+                dstrt = getDates(string(rpFilePath), "Roller_position", ".csv");
+                recDur = seconds(dmodf - dstrt);
+                offSt = recDur - max(cat(1,tTimes{1,:}))*mics;
+            end
+            tTimes(1,:) = cellfun(@(x) x*mics + offSt, tTimes(1,:), fnOpts{:});
             % Deleting noise entries to the arduino (times with less than 1 second
             % difference)
             delFlags = cellfun(@(x) [false;diff(x) < 1], tTimes(1,:), fnOpts{:});
