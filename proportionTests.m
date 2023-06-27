@@ -11,81 +11,40 @@ parse(p, behRes, Na, varargin{:})
 
 behRes = p.Results.behRes;
 Na = p.Results.Na;
-alpha = p.Results.alpha;
+alph = p.Results.alpha;
 
 fnOpts = {'UniformOutput', false};
 Nccond = numel(Na);
 mt = arrayfun(@(c) [behRes(c).Results.MovProbability].*Na(c), 1:Nccond, ...
-            fnOpts{:}); mt = cat(1, mt{:})';
+    fnOpts{:}); mt = cat(1, mt{:})';
+
     function ztest_prop()
         zDist = makedist("Normal", "mu", 0, "sigma", 1);
         p_hat = sum(mt,2)/sum(Na);
         Z = sum(mt./Na, 2) ./ sqrt(p_hat .* (1 - p_hat) * sum(1./Na));
 
         p = (1 - cdf(zDist, Z)) + cdf(zDist, -Z);
-        h = p < alpha;
+        h = p < alph;
     end
-    function chi2test()
+
+    function chiSqTest()
         mt_aux = mt';
         contingencyTbl = cat(3, mt_aux, Na' - mt_aux);
-        sumCol = sum(contingencyTbl, 1); sumCol = squeeze(sumCol);
-        expectedTrials = arrayfun(@(r) (sumRow(:,r) * Na)./sum(Na), 1:size(sumRow,2), fnOpts{:});
         contingencyTbl = permute(contingencyTbl, [1,3,2]);
-        
-        mt = arrayfun(@(c) [behRes(c).Results.MovProbability].*Na(c), 1:Nccond, ...
-fnOpts{:}); mt = cat(1, mt{:})';
-mt
-mt_aux = mt';
-mt_aux
-Na' - mt_aux
-contingencyTbl = cat(3, mt_aux, Na' - mt_aux);
-contingencyTbl
-sum(contingencyTbl, 1)
-sum(contingencyTbl, 2)
-sum(contingencyTbl, 3)
-sumRow = sum(contingencyTbl, 3)
-sumCol = sum(contingencyTbl, 1);
-sumCol
-sum(contingencyTbl, [1,2])
-sum(contingencyTbl, [1,3])
-size(sumRow
-size(sumRow)
-size(sumCol)
-size(contingencyTbl)
-sumRow
-sumCol * sumRow
-pagetimes(sumCol, sumRow)
-pagemtimes(sumCol, sumRow)
-sumCol
-sumCol = squeeze(sumCol);
-sumCol
-size(sumCol)
-sumRow
-mt_aux
-contingencyTbl
-mt_aux
-sumRow(:,1) * Na
-(sumRow(:,1) * Na)./sum(Na)
-(sumRow(:,1) * reshape(Na, 1,1,size(Na,2))./sum(Na)
-(sumRow(:,1) * reshape(Na, 1,1,size(Na,2))./sum(Na))
-(sumRow * reshape(Na, 1,1,size(Na,2))./sum(Na))
-tensorprod(sumRow, Na)
-arrayfun(@(r) (sumRow(:,r) * Na)./sum(Na), 1:size(sumRow,2), fnOpts{:})
-expectedTrials = arrayfun(@(r) (sumRow(:,r) * Na)./sum(Na), 1:size(sumRow,2), fnOpts{:});
-contingencyTbl
-transp(contingencyTbl)
-pagetransp(contingencyTbl)
-permute(contingencyTbl, [1,3,2])
-contingencyTbl
-contingencyTbl = permute(contingencyTbl, [1,3,2]);
-contingencyTbl
-expectedTrials
-expectedTrials = cat(3, expectedTrials{:});
-expectedTrials
-resChi = ((contingencyTbl - expectedTrials).^2) ./ expectedTrials
-sum(resChi, [1,2])
-chi2pdf(sum(resChi, [1,2]), 1)
-chi2pdf(sum(resChi, [1,2]), 1) < 0.05
-    
+        if any(contingencyTbl<=5, "all") && ...
+                all(size(contingencyTbl,[1,2])==[2,2])
+            [h, p] = arrayfun(@(ct) fishertest(round(contingencyTbl(:,:,ct))), ...
+                1:size(contingencyTbl,3));
+        else
+            sumCol = sum(contingencyTbl, 1); sumCol = squeeze(sumCol);
+            expectedTrials = arrayfun(@(r) (sumCol(:,r) * Na)./ ...
+                sum(contingencyTbl(:,:,r), "all"), 1:size(sumCol,2), fnOpts{:});
+            expectedTrials = cat(3, expectedTrials{:});
+            Chi2 = ((contingencyTbl - expectedTrials).^2)./expectedTrials;
+            Chi2 = sum(Chi2, [1,2]);
+            p = chi2pdf(squeeze(Chi2), prod(size(contingencyTbl, [1,2])-1));
+            h = p < alph;
+        end
     end
+        
 end
