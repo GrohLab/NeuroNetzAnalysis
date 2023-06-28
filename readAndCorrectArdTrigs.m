@@ -36,7 +36,7 @@ fs = 3e4;
         % Converting the trigger times from microseconds to seconds
         if ~isempty(tTimes)
             if ~isempty(rp)
-                offSt = rp(1,2)*mics;
+                offSt = -rp(1,2)*mics;
                 % tTimes(1,:) = cellfun(@(x) (x - rp(1,2))/1e6, tTimes(1,:), ...
                     % fnOpts{:});
             else
