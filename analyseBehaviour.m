@@ -317,7 +317,7 @@ elseif islogical(pairedStim)
             size(pairedStim, 1))
         fprintf(1, " correspond to the number of trials in behaviour files");
         fprintf(1, " (%d)!\n", Ntr);
-        fprintf(1, "Removing empty rows... (%d)", sum(all(~pairedStim,2)))
+        fprintf(1, "Removing empty rows... (%d)\n", sum(all(~pairedStim,2)))
         pairedStim(all(~pairedStim,2),:) = [];
     end
     Nccond = size(pairedStim, 2);
