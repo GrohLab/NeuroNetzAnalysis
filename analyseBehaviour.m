@@ -1,7 +1,9 @@
-function [summStruct, figureDir] = analyseBehaviour(behDir, varargin)
+function [summStruct, figureDir, aInfo] = analyseBehaviour(behDir, varargin)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
 %% Auxiliary variables
+% 'Software' version
+softVer = 2.01;
 % Input files
 dlcPttrn = 'roller*filtered.csv';
 % rpPttrn = "Roller_position*.csv"; vdPttrn = "roller*.avi";
@@ -13,14 +15,14 @@ dlcVars = {'behDLCSignals', 'dlcNames'};
 % Functional cell array
 fnOpts = {'UniformOutput', false}; 
 % Aesthetic cell arrays
-axOpts = {'Box','off','Color','none', 'NextPlot', 'add'};
-lgOpts = cat(2, axOpts{1:2}, {'Location','best'});
+axOpts = {'Box', 'off', 'Color', 'none', 'NextPlot', 'add'};
+lgOpts = cat(2, axOpts{1:4}, {'Location', 'best'});
 ptOpts = {"Color", 0.7*ones(1,3), "LineWidth", 0.2;...
     "Color", "k", "LineWidth",  1.5};
 phOpts = {'EdgeColor', 'none', 'FaceAlpha', 0.25, 'FaceColor'};
 % Anonymus functions
 behHere = @(x) fullfile(behDir, x);
-flfile = @(x) fullfile(x.folder, x.name); iemty = @(x) isempty(x);
+flfile = @(x) fullfile(x.folder, x.name); iemty = @(x)isempty(x);
 istxt = @(x) isstring(x) | ischar(x);
 mat2ptch = @(x) [x(1:end,:)*[1;1]; x(end:-1:1,:)*[1;-1]];
 getSEM = @(x, idx) [mean(x(:,idx),2), std(x(:,idx),1,2)./sqrt(sum(idx))];
@@ -538,10 +540,18 @@ summStruct = cell2mat(arrayfun(@(x) ...
     'MovProbability', num2cell(movProb(:,x)'),...
     'MovStrucure', ms(:)')), 1:Nccond, fnOpts{:}));
 summFile = behHere("Simple summary.mat");
+aInfo = struct('AnalysisTime', datetime(), 'Version', softVer, ...
+    'Evoked', rwKey, 'VieWin', vwKey);
 if exist(summFile,"file")
-    fprintf(1, "File exists, not saving summary numbers.\n")
+    behFile = load(summFile);
+    if ~any(contains(fieldnames(behFile), 'aInfo')) || ...
+            ~compareSoftVers(behFile.aInfo, aInfo)
+        save(summFile, "summStruct", "aInfo", "-append")
+    else
+        fprintf(1, "File exists, not saving summary numbers.\n")
+    end
 else
-    save(summFile, "summStruct")
+    save(summFile, "summStruct", "aInfo", "-v7.3")
 end
 % Tests for roller movement only 
 if Nccond > 1
@@ -602,7 +612,7 @@ for cbs = 1:Nbs
         xlabel(cax, "Time [ms]"); ylabel(cax, yLabels(cbs)); xlim(cax, ...
             bvWin*k)
         mpFigs(ccond, cbs) = plotThetaProgress(mvFlags(ccond, cbs), ...
-            thSet(cbs), string(consCondNames{ccond}));
+            thSet(cbs), string(consCondNames{ccond}), 'showPlots', spFlag);
         cax = get(mpFigs(ccond, cbs), "CurrentAxes");
         set(cax, axOpts{:}); xlabel(cax, "\theta "+yLabels(cbs))
         title(cax, sprintf("Trial proportion %s %.3f", figTtl, ...
