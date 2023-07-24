@@ -18,21 +18,22 @@ for ec = 1:numel(expDirs)
 
     behDir = fullfile(getChildFolder(expDirs(ec)), 'Behaviour');
     figureDir = recursiveFolderSearch(getChildFolder(expDirs(ec)), 'Figures');
+    if ~isempty(figureDir)
+        [behRes, behFigDir] = analyseBehaviour(behDir, 'Condition', 'P', ...
+            'PairedFlags', pairedStim, 'FigureDirectory', figureDir, ...
+            'ConditionsNames', cellstr(consCondNames), 'verbose', false, ...
+            'showPlots', false);
 
-    [behRes, behFigDir] = analyseBehaviour(behDir, 'Condition', 'P', ...
-        'PairedFlags', pairedStim, 'FigureDirectory', figureDir, ...
-        'ConditionsNames', cellstr(consCondNames), 'verbose', false, ...
-        'showPlots', false);
+        biFigPttrn = "BehIndex%s";
+        biFigPttrn = sprintf(biFigPttrn, sprintf(" %s (%%.3f)", consCondNames));
+        [pAreas, ~, behAreaFig] = createBehaviourIndex(behRes);
+        behRes = arrayfun(@(bs, ba) setfield(bs,'BehIndex', ba), behRes, pAreas);
+        set(behAreaFig, 'UserData', behRes)
 
-    biFigPttrn = "BehIndex%s";
-    biFigPttrn = sprintf(biFigPttrn, sprintf(" %s (%%.3f)", consCondNames));
-    [pAreas, ~, behAreaFig] = createBehaviourIndex(behRes);
-    behRes = arrayfun(@(bs, ba) setfield(bs,'BehIndex', ba), behRes, pAreas);
-    set(behAreaFig, 'UserData', behRes)
+        biFN = sprintf(biFigPttrn, pAreas);
 
-    biFN = sprintf(biFigPttrn, pAreas);
-
-    saveFigure(behAreaFig, fullfile(behFigDir, biFN), true, true);
-    close all;
-    mBehRes{ec} = behRes;
+        saveFigure(behAreaFig, fullfile(behFigDir, biFN), true, true);
+        close all;
+        mBehRes{ec} = behRes;
+    end
 end
