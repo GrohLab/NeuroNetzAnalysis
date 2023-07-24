@@ -3,7 +3,7 @@ function [summStruct, figureDir, aInfo] = analyseBehaviour(behDir, varargin)
 %   Detailed explanation goes here
 %% Auxiliary variables
 % 'Software' version
-softVer = 2.01;
+softVer = 2.02;
 % Input files
 dlcPttrn = 'roller*filtered.csv';
 % rpPttrn = "Roller_position*.csv"; vdPttrn = "roller*.avi";
@@ -304,11 +304,11 @@ elseif istxt(trigSubs) && strcmpi(trigSubs, "all")
 end
 % Roller speed
 [~, vStack] = getStacks(false, round(atTimes{aSub}(trigSubs)*fr), 'on', bvWin,...
-    fr, fr, [], vf*en2cm); [~, Nbt, Ntr] = size(vStack); Na = Ntr;
+    fr, fr, [], vf*en2cm); [~, Nbt, Ntr] = size(vStack);
 % Connection to DE_Jittering or as a stand-alone function.
 if istxt(pairedStim) && strcmpi(pairedStim, "none")
     % Stand alone function without stimulus pairing
-    pairedStim = true(Na, 1);
+    pairedStim = true(Ntr, 1);
     Nccond = 1;
     consCondNames = cellstr(atNames(aSub));
 elseif islogical(pairedStim)
@@ -528,7 +528,8 @@ ttNames = arrayfun(@(b) sprintf(ttPttrn, behNames(b), Nma(b), ...
     Nma(b)+Nex(b)), 1:Nbs);
 
 % Structuring output of the movement
-movProb = cell2mat(arrayfun(@(ms) sum(ms.MovmentFlags)./sum(pairedStim), ...
+Nae = sum(pairedStim, 1);
+movProb = cell2mat(arrayfun(@(ms) sum(ms.MovmentFlags)./Nae, ...
     movStruct, fnOpts{:}));
 ms = mat2cell(movStruct, ones(size(movStruct)));
 summStruct = cell2mat(arrayfun(@(x) ...
@@ -538,7 +539,8 @@ summStruct = cell2mat(arrayfun(@(x) ...
     'Z_Amplitude', zamp(x,:), ...
     'AmplitudeIndex', num2cell(mov_prob(x,:)), ...
     'MovProbability', num2cell(movProb(:,x)'),...
-    'MovStrucure', ms(:)')), 1:Nccond, fnOpts{:}));
+    'MovStrucure', ms(:)'), ...
+    'NTrials', Nae(x)), 1:Nccond, fnOpts{:}));
 summFile = behHere("Simple summary.mat");
 aInfo = struct('AnalysisTime', datetime(), 'Version', softVer, ...
     'Evoked', rwKey, 'VieWin', vwKey);
