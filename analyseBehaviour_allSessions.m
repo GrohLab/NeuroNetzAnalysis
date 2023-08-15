@@ -4,9 +4,18 @@ fnOpts = {'UniformOutput', false};
 getChildFolder = @(x) fullfile(x.folder, x.name);
 
 mBehRes = cell(numel(expDirs),1);
+delSub = [];
 for ec = 1:numel(expDirs)
     % Load *analysis.mat file from the ephys_* folder.
     cndFile = dir(fullfile(getChildFolder(expDirs(ec)), "*\*analysis.mat"));
+    cmts = dir(fullfile(getChildFolder(expDirs(ec)), 'Comments.txt'));
+    if isempty(cndFile) || ~isempty(cmts)
+        fprintf(1, 'Experiment not analysed!\n')
+        [~, mouseName] = fileparts(expDirs(ec).folder);
+        fprintf(1, '%s\n', [mouseName, ' ', expDirs(ec).name])
+        delSub = [delSub, ec];
+        continue
+    end
     load(getChildFolder(cndFile), 'Conditions')
 
     pairedStim = arrayfun(@(x) Conditions(1).Triggers(:,1) == ...
@@ -37,3 +46,4 @@ for ec = 1:numel(expDirs)
         mBehRes{ec} = behRes;
     end
 end
+mBehRes(delSub) = [];
