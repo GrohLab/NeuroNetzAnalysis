@@ -13,7 +13,7 @@ condID = unique(condIDs); Nccond = numel(condID);
 Nbs = numel(behStack); [Nbt, Ntr] = size(behStack{1}); 
 tmdl = fit_poly([1, Nbt], bvWin, 1); behTx = ((1:Nbt)'.^[1,0])*tmdl;
 
-myRng = @(x) range(x, "all");
+myRng = @(x) range(x(behTx<0,:), "all");
 mvRng = cellfun(myRng, behStack);
 
 pk_loc = cellfun(@(bs, m) getWaveformCriticalPoints(bs, fr), behStack, fnOpts{:});
@@ -55,7 +55,7 @@ for cbs = 1:Nbs
                         pdFlag(ctr, ccond, cbs) = ansaribradley(sVal-median(sVal), ...
                             rVal-median(rVal));
                         if froFlag(ctr, ccond, cbs)
-                            % Is outlier at least a 10th of the signal range?
+                            % Are outliers at least a 10th of the signal range?
                             rgFlag(ctr, ccond, cbs) = mean(abs((cumsum(any((...
                                 pk_dist{ctr, ccond, cbs}(:, frPkSubs) > (mvRng(cbs)/10)), ...
                                 2)).^[1,0]) * fit_poly([0, size(sVal,1)], [0,1], 1))) ...
