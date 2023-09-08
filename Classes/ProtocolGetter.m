@@ -482,7 +482,7 @@ classdef ProtocolGetter < handle
                     tol = 1e-6;
                 end
                 lgDst = log10(timeDelay(:)./delays(:)');
-                lsDel = lgDst < 0.11 & lgDst >= 0;
+                lsDel = lgDst < 0.11 & lgDst >= -0.11;
                 for cdl = 1:Ndel
                     % Starting from the last condition on
                     fprintf(1,' %.1f',delays(cdl)*1e3)
