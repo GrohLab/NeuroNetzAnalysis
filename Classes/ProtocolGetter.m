@@ -600,8 +600,10 @@ classdef ProtocolGetter < handle
                     names = cell(fsubs);
                     msFlag = false(size(freqs,1),Nf);
                     for cf = 1:Nf
-                        msFlag(:,cf) = ismembertol(freqs,freqVals(cf),...
-                            0.11, 'DataScale', 1);
+                        msFlag(:, cf) = log10(freqs(:)./freqVals(cf)) < ...
+                            0.1 & log10(freqs(:)./freqVals(cf)) > -0.1;
+                        % msFlag(:,cf) = ismembertol(freqs,freqVals(cf),...
+                        %    0.11, 'DataScale', 1);
                         fsubs{cf} = subs(msFlag(:,cf),:);
                         names{cf} = sprintf('%.1f Hz', freqVals(cf));
                     end
