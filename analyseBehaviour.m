@@ -684,4 +684,22 @@ function [fig, plObj] = figPlot(x, y, opts, axOpts)
 fig = figure; ax = axes('Parent', fig, axOpts{:});
 plObj = plot(ax, x, y, opts{:});
 end
+
+i = 1;
+for t = find(pairedStim(:,1))'
+figure(i); plot(behTx, behStack{4}(:,t), "Color", 0.4*ones(1,3)); hold on; plot(behTx(behTx<0), behTx(behTx<0).^[1,0] * smdl(:,i), 'b');
+plot(behTx(behTx>0), behTx(behTx>0).^[1,0] * emdl(:,i), "r")
+ssme = sqrt(sum(((behStack{4}(behTx<0,t) - (behTx(behTx<0).^[1,0] * smdl(:,i))).^2)))/abs(behTx(1));
+esme = sqrt(sum(((behStack{4}(behTx>0,t) - (behTx(behTx>0).^[1,0] * emdl(:,i))).^2)))/abs(behTx(end));
+xline(0, '--k')
+[~, mxVel] = min(abs(zipt{t,2}));
+xline(zipt{t,2}(mxVel),'g')
+scatter(zipt{t,2}, interp1(behTx, behStack{4}(:,t), zipt{t,2}), '.m')
+scatter(zipt{t,1}, interp1(behTx, behStack{4}(:,t), zipt{t,1}), 'xk')
+text(behTx(1), behStack{4}(1,t), string(ssme))
+text(behTx(end), behStack{4}(end,t), string(esme))
+title(sprintf('%d, %.3f, %.3f', rsm(t,1), mvpt_rs(t), (-ssme+esme)/(esme+ssme)))
+i = i+1;
+end
+
 %}
