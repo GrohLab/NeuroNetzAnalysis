@@ -20,7 +20,7 @@ fs = 3e4;
         tObj = arrayfun(@(x) StepWaveform(trig(x,:), 3e4, ...
             'verbose',false), [1;2]);
         tSubs = arrayfun(@(x) x.subTriggers, tObj, fnOpts{:});
-        tObj(2).MinIEI = 1; fot = tObj(2).FirstOfTrain;
+        tObj(2).MinIEI = 0.8; fot = tObj(2).FirstOfTrain;
         % if the laser signal has no frequency, fot will be populated by
         % zeroes.
         if sum(fot)
