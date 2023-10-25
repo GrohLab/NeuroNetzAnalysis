@@ -378,8 +378,8 @@ classdef ProtocolGetter < handle
                 % (wFlags), and frequency by pulse (wFreqs)
                 [wFreq, wFlags, wFreqs] = ProtocolGetter.extractFrequencyTrains(...
                     obj.Edges(cst).Subs, obj.fs); wFreqs = [0;wFreqs]; %#ok<AGROW>
-                if obj.awaken && any(wFreq == 1)
-                    wFreq(wFreq == 1) = [];
+                if obj.awaken && any(wFreq < 2)
+                    wFreq(wFreq < 2) = [];
                     if isempty(wFreq)
                         wFlags = false(size(wFlags));
                     end
