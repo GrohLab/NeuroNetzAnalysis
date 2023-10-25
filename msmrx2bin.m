@@ -1,6 +1,7 @@
 function iOk = msmrx2bin(dataDir, outBaseName, chanGroup)
 iOk = -1;
 impStr = 'Rhd';
+istxt = @(x) ischar(x) | isstring(x);
 
 if ~exist('chanGroup','var') || isempty(chanGroup)
     chanGroup = "";
@@ -49,7 +50,7 @@ end
 clearvars nSmrxFiles nFileOrder
 % Creating a .bin file
 if ~exist('outBaseName','var') || isempty(outBaseName) ||...
-        ~ischar(outBaseName)
+        ~istxt(outBaseName)
     fprintf(1,'No outname given. Computing a name...\n')
     pathPieces = strsplit(dataDir,filesep);
     outBaseName = [pathPieces{end},'.bin'];
