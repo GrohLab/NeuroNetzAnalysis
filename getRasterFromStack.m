@@ -51,7 +51,7 @@ if isempty(iE)
     iE = 2;
 else
     iE = reshape(iE,1,numel(iE));
-    iE = [2, 2 + iE];
+    %iE = [2, 2 + iE];
 end
 % Time axis
 spIdx = 1;
