@@ -1,6 +1,6 @@
 function [rollerposition, tTimes, rollTrigTimes] = readRollerPositionsFile(filepath)
-%READROLLERPOSITIONSFILE corrects the arduino serial communication CVS file
-%from Bonsai-rx.
+%READROLLERPOSITIONSFILE  reads and corrects the arduino serial
+%communication CVS file errors from Bonsai-rx.
 %   INPUTS:
 %       filepath - string indicating the location of the file to read.
 %   OUTPUTS:
@@ -15,8 +15,8 @@ function [rollerposition, tTimes, rollTrigTimes] = readRollerPositionsFile(filep
 %                       when these occurred in microseconds.
 %Emilio Isaias-Camacho @ GrohLab 2021
 tTimes = [];
-clean4Date = @(x) extractBefore(extractAfter(x,','), '+');
-clean4LV = @(x) extractBefore(x,',');
+clean4Date = @(x) extractBefore(extractAfter(x,','), '+'); % String between ',' and '+'
+clean4LV = @(x) extractBefore(x,','); 
 dateFormStr = 'uuuu-MM-dd''T''HH:mm:ss.SSSS';
 dtOpts = {'InputFormat', dateFormStr};
 fnOpts = {'UniformOutput', false};
@@ -167,7 +167,7 @@ else
     ops.DataLines = [1, Inf];
     ops.Delimiter = ",";
     ops.MissingRule = "fill";
-    ops.VariableNames = ["RoT", "Time_us"];
+    ops.VariableNames = ["RoT", "Time_us"]; % "R"oller "o"r "T"rigger, time in microseconds
     ops.VariableTypes = ["string", "double"];
     ops.ExtraColumnsRule = "ignore";
     ops.EmptyLineRule = "read";
@@ -179,10 +179,10 @@ else
         isnan(rollTrigTimes.Time_us)], 2);
     trigLetter = unique(rollTrigTimes.RoT(trigFlag));
     % Rescuing ill-written rows
-    nanSubs = find(trigFlag & strlength(rollTrigTimes.RoT) > 1);
+    nanSubs = find(trigFlag & strlength(rollTrigTimes.RoT) > 1); % Error hunting, subscripts for errors
     fID = fopen(filepath, "r"); ln = 1;
     for cns = nanSubs'
-        while ln < cns
+        while ln < cns % Read all lines until nanSubs.
             prevLn = fgetl(fID); ln = ln + 1; %#ok<NASGU>
         end
         strLn = fgetl(fID); ln = ln + 1;
@@ -191,7 +191,8 @@ else
         Ncell = size(strCell,2);
         % Searching for the cell which has a letter.
         clFlag = cellfun(@(x) isnan(str2double(x)), strCell);
-        % Character outside numeric ASCII range on the second cell.
+        % Character outside numeric ASCII range on the second cell. '9' is
+        % 57 in ASCII
         if any(clFlag)
             chRepFlag = strCell{clFlag} > 57;
         end
