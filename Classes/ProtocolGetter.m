@@ -377,7 +377,7 @@ classdef ProtocolGetter < handle
                 % Frequencies found (wFreq), First pulse of the trains
                 % (wFlags), and frequency by pulse (wFreqs)
                 [wFreq, wFlags, wFreqs] = ProtocolGetter.extractFrequencyTrains(...
-                    obj.Edges(cst).Subs, obj.fs); wFreqs = [0;wFreqs]; %#ok<AGROW>
+                    obj.Edges(cst).Subs, obj.fs, minIpi); wFreqs = [0;wFreqs]; %#ok<AGROW>
                 if obj.awaken && any(wFreq < 2)
                     wFreq(wFreq < 2) = [];
                     if isempty(wFreq)
@@ -458,7 +458,7 @@ classdef ProtocolGetter < handle
                 timeDelay = strDelay(1:mxPulses);
                 % The delay will usually be milliseconds long, so a logarithmic
                 % scale will be useful.
-                tol = (1e-3*~obj.awaken + 0.1*obj.awaken)/max(log10(timeDelay));
+                tol = (1e-2*~obj.awaken + 0.1*obj.awaken)/max(log10(timeDelay));
                 delays = 10.^uniquetol(log10(timeDelay), tol);
                 % Removing delays that are greater than 1 second.
                 delays(delays > mxDel) = [];
@@ -482,7 +482,7 @@ classdef ProtocolGetter < handle
                     tol = 1e-6;
                 end
                 lgDst = log10(timeDelay(:)./delays(:)');
-                lsDel = lgDst < 0.11 & lgDst >= -0.11;
+                lsDel = abs(lgDst) < 0.25;
                 for cdl = 1:Ndel
                     % Starting from the last condition on
                     fprintf(1,' %.1f',delays(cdl)*1e3)
@@ -764,16 +764,19 @@ classdef ProtocolGetter < handle
         end
         
         function [freqCond, fstSubs, pulsFreq] =...
-                extractFrequencyTrains(subs, fs)
+                extractFrequencyTrains(subs, fs, minIpi)
             freqCond = []; fstSubs = false(size(subs,1),1);
             pulsFreq = [];
+            if ~exist("minIpi","var")
+                minIpi = 1;
+            end
             if ~isempty(subs)
                 tms = subs(:,1)/fs;
                 % Inverse of the time difference between pulses (frequency)
                 pulsFreq = 1./diff(tms);
                 % Logical index pointing at the first pulse of a frequency
                 % train
-                fstSubs = StepWaveform.firstOfTrain(tms);
+                fstSubs = StepWaveform.firstOfTrain(tms, minIpi);
                 freqCond = round(uniquetol(pulsFreq, 0.9/max(pulsFreq)), 1);
                 freqCond = freqCond(freqCond >= 1); % Empty for no frequency
             else
