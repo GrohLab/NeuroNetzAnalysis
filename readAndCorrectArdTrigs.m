@@ -9,11 +9,11 @@ function [atTimes, atNames, itTimes, itNames, Nt] = readAndCorrectArdTrigs(dataD
 fnOpts = {"UniformOutput", false};
 dateFormStr = 'yyyy-MM-dd''T''HH_mm_ss';
 outFileFormat = "ArduinoTriggers%s.mat";
-derv = @(x) diff(x(:,1));
-dsmt = @(x,y) distmatrix(x, y, 2);
-erOpts = {"ErrorHandler", @falseLaserDetection};
+derv = @(x) diff(x(:,1)); % derivative of a first column of x
+dsmt = @(x,y) distmatrix(x, y, 2); % Euclidian distance matrix from x to y
+erOpts = {"ErrorHandler", @falseLaserDetection}; % Error handling in an anonymus function
 
-fs = 3e4;
+fs = 3e4; % FIX! Sampling frequency from file or somewhere robust.
 % Function to get the edges from the trigger signals in the trigger file.
     function tSubs = getSubsFromTriggers(trig)
         % Unstable line! Display function not working!
@@ -73,10 +73,10 @@ fs = 3e4;
 % Function to compute 2 matrices: similarity between trigger intervals
 % (ddm) and similarity between trigger times (dm)
     function [ddm, dm] = computeSimilarityMatrices()
-        atDelta = cellfun(derv, atTimes, fnOpts{:}, erOpts{:});
-        itDelta = cellfun(derv, itTimes, fnOpts{:}, erOpts{:});
-        ddm = cellfun(dsmt, itDelta, flip(atDelta'), fnOpts{:});
-        dm = cellfun(@(x,y) y-x(:,1)', itTimes, flip(atTimes'),fnOpts{:});
+        atDelta = cellfun(derv, atTimes, fnOpts{:}, erOpts{:}); % Time distances between arduino pulses: delta arduino
+        itDelta = cellfun(derv, itTimes, fnOpts{:}, erOpts{:}); % Time distances between intan pulses: delta intan
+        ddm = cellfun(dsmt, itDelta, flip(atDelta'), fnOpts{:}); % Difference between delta arduino and delta intan
+        dm = cellfun(@(x,y) y-x(:,1)', itTimes, flip(atTimes'),fnOpts{:}); % Difference between arduino and intan pulses
     end
 % Read the trigger file and compute the triggers directly without keeping
 % the trigger signals in memory
@@ -315,7 +315,7 @@ end
 % Search pattern for the rest of the files
 sp = fullfile(dataDir, "**");
 % Does the folder have files with roller positions?
-rpFiles = dir(fullfile(sp, "Roller_position*.csv"));
+rpFiles = dir(fullfile(sp, "Roller_position*.csv")); % "r"oller "p"osition FILES
 if isempty(rpFiles)
     fprintf(1, "No roller position files found in:\n%s\n", dataDir)
     return
@@ -356,11 +356,11 @@ fobPthIdx = @(x, y) fullfile(x(y).folder, x(y).name);
 fobPth = @(x) fullfile(x.folder, x.name);
 lcFiles = dir(flfl(string(dataDir), "Laser*.csv"));
 pcFiles = dir(flfl(string(dataDir), "Puff*.csv"));
-for cfp = 1:numel(rpFiles)
+for cfp = 1:numel(rpFiles) % "c"urrent "f"ile "p"ath
     itNames = ["P"; "L"];
     flipFlag = false;
     atFileName = flfl(rpFiles(cfp).folder,...
-        sprintf(outFileFormat, string(rpDates(cfp), dateFormStr)));
+        sprintf(outFileFormat, string(rpDates(cfp), dateFormStr))); % Naming output file
     atMObj = matfile(atFileName); varIn = who(atMObj);
     if ~exist(atFileName, "file") || ~all(contains(varIn,var2Check))
         % Read file for *arduino* trigger times and names
