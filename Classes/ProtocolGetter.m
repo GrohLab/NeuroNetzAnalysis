@@ -508,7 +508,7 @@ classdef ProtocolGetter < handle
                             % delay including the non-frequency pulses?
                             cdFreqL = fetchSubs(cdl, lsDel, lSubOrd, lFreqs);
                             cdFreqL(cdFreqL < 1) = 0;
-                            cdLFreqs = uniquetol(cdFreqL, 0.2/max(lFreqs));
+                            cdLFreqs = uniquetol(cdFreqL, 0.9/max(lFreqs));
                         end
                         % Is it the whisker (or other) that contains frequency?
                         if freqExpFlag(1)
@@ -519,9 +519,9 @@ classdef ProtocolGetter < handle
                         end
                         % Getting the paired frequencies
                         pairedFreqs = uniquetol([cdFreqL, cdFreqW],...
-                            0.2/max([lFreqs; wFreqs]), 'ByRows', 1);
+                            0.9/max([lFreqs; wFreqs]), 'ByRows', 1);
                         [~, fqPairs] = ismembertol([cdFreqL, cdFreqW],...
-                            pairedFreqs, 0.2/max([lFreqs;wFreqs]),'ByRows', 1);
+                            pairedFreqs, 0.9/max([lFreqs;wFreqs]),'ByRows', 1);
                         %This might be buggy
                         fqDel(lsDel(:,cdl)) = fqPairs;
                         % Looping through the frequencies and assigning their
