@@ -58,15 +58,22 @@ refTime = 0; refRoT = 'C'; nxtRoT = '';
             tmPos{1} = cat(2, tmPos{1}, char(nxtRoT));
             rollTrigTimes.RoT(cns+1) = cat(2, '-', tmPos{2});
             rollTrigTimes.Time_us(cns) = str2double(tmPos{1});
+            rollTrigTimes.Time_us(cns+1) = str2double(strCell{end});
         else
             % Difficult to separate position and time. In development
-            refRoT = createRefRoT();
-            rollTrigTimes.Time_us(cns) = strCell{end};
-            rollTrigTimes.RoT(cns+1) = num2str(refRoT);
+            createRefRoT();
+            newTme = str2double(strCell{end});
+            if ~isnan(newTme)
+                rollTrigTimes.Time_us(cns) = newTme;
+            else
+                % Invent a time for the current line.
+            end
+            if any(clFlag) && any(chRepFlag)
+                rollTrigTimes.RoT(cns) = string(strCell{clFlag}(chRepFlag));
+            end
             % TODO: Implement a way to recognise the time from the position
             % numPatDm = (strCell{2} - num2str(refRoT)') == 0;
         end
-        rollTrigTimes.Time_us(cns+1) = str2double(strCell{end});
     end
 
     function correctTimeAndReplacePosWithTrigger()
