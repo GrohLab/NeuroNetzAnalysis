@@ -68,7 +68,7 @@ line(ax1,'XData',trigTX,'YData',(Ncl+1.5)*trig - 0.5,...
 
 % Formatting the heatmap
 ax1.YLim = [0.5,size(PSTH,1)+0.5];
-ax1.XLim = timeLapse+([-0.5, 0.5]*binSz);
+ax1.XLim = timeLapse+([1, -1]*(binSz/2));
 ax1.YTick = 1:Ncl;
 ax1.YTickLabel = IDe(2:end);
 ax1.YAxis.Label.String = sprintf('Cluster ID_{%d #clusters}', size(PSTH,1));
@@ -76,9 +76,9 @@ ax1.XAxis.Visible = 'off';
 
 % Plotting the population PSTH together with the trigger probability
 ax2 = subplot(totlX,1,4,'Parent',fig);
-popPSTH = sum(PSTH,1,'omitnan')/(Ncl * sweeps);
+popPSTH = sum(PSTH,1,'omitnan')/(Ncl * sweeps * binSz);
 plot(ax2,psthTX,popPSTH,'Color',[0.8,0.8,0.8],'DisplayName','Population PSTH')
-axLabel = 'Population activity';
+axLabel = 'Firing rate [Hz]';
 yyaxis(ax2,'right')
 plot(ax2,trigTX,trig,'LineWidth',1.5,'Color',clr,'DisplayName',IDe{1},...
     'LineStyle',':')
