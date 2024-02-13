@@ -28,7 +28,7 @@ function [PSTH, trig, sweeps, timeAxis] =...
 %   Emilio Isaias-Camacho @ GrohLab 2019
 
 if binSz > 1
-    disp('Assuming bin size given in milliseconds.')
+    disp('Assuming bin size given in milliseconds and not in seconds.')
     binSz = binSz * 1e-3;
 end
 
