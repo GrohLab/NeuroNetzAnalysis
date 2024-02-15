@@ -17,20 +17,25 @@ fFilt = p.Results.Filter;
 
 timeLapse = confStruct.Viewing_window_s;
 binSz = confStruct.BinSize_s;
-
 fnOpts = {'UniformOutput', false};
 psthOpts = {'BinLimits', timeLapse, 'BinWidth', binSz, 'Normalization', ...
-    'countdensity'};
+    'count'};
 
-% Convolution kernel: Gaussian window
-conv_kernel = gausswin(5, pi);
-conv_kernel = conv_kernel/sum(conv_kernel);
+if fFilt
+    % Convolution kernel: Gaussian window
+    conv_kernel = gausswin(5, pi);
+    conv_kernel = conv_kernel/sum(conv_kernel);
 
-% Creating a smooth histogram per trial per unit.
-PSTH_unit_trial = arrayfun(@(x) ...
-    cellfun(@(y) conv(histcounts(y, psthOpts{:}), conv_kernel, 'same'), ...
-    x.SpikeTimes, fnOpts{:}), ...
-    relSpkTmsStruct, fnOpts{:});
+    % Creating a smooth histogram per trial per unit.
+    PSTH_unit_trial = arrayfun(@(x) ...
+        cellfun(@(y) conv(histcounts(y, psthOpts{:}), conv_kernel, 'same'), ...
+        x.SpikeTimes, fnOpts{:}), ...
+        relSpkTmsStruct, fnOpts{:});
+else
+    PSTH_unit_trial = arrayfun(@(x) ...
+        cellfun(@(y) histcounts(y, psthOpts{:}), x.SpikeTimes, fnOpts{:}), ...
+        relSpkTmsStruct, fnOpts{:});
+end
 
 % Converting trials of a single unit in a matrix
 PSTH_unit_trial = cellfun(@(x) ...
