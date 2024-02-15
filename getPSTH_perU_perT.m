@@ -1,11 +1,20 @@
-function [PSTH_unit_trial] = getPSTH_perU_perT(relSpkTmsStruct, confStruct, varargin)
+function [PSTH_unit_trial, psth_tx, Na] = ...
+    getPSTH_perU_perT(relSpkTmsStruct, confStruct, varargin)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
-
-
+%Emilio Isaías-Camacho @GrohLab 2022
 p = inputParser();
 
-p.addRequired('relSpkTmsStruct')
+addRequired(p, 'relSpkTmsStruct', @checkRelSpkTmsStruct)
+addRequired(p, 'confStruct', @checkConfigStruct)
+addParameter(p, 'Filter', false, @(x) all([islogical(x), numel(x) == 1]))
+
+parse(p, relSpkTmsStruct, confStruct, varargin{:});
+
+relSpkTmsStruct = p.Results.relSpkTmsStruct;
+confStruct = p.Results.confStruct;
+fFilt = p.Results.Filter;
+
 timeLapse = confStruct.Viewing_window_s;
 binSz = confStruct.BinSize_s;
 
