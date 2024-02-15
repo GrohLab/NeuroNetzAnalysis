@@ -46,4 +46,10 @@ PSTH_unit_trial = cellfun(@(x) ...
 % Trials x Bins x Units
 PSTH_unit_trial = cellfun(@(x) cat(3, x{:}), ...
     PSTH_unit_trial, fnOpts{:});
+
+% Output of time axis, and number of trials per condition
+[Na, Nt, ~] = cellfun(@(c) size(c), PSTH_unit_trial); Nt = Nt(1);
+mdl = fit_poly([1, Nt], timeLapse + [1,-1]*(binSz/2), 1);
+psth_tx = ( (1:Nt)'.^[1,0] ) * mdl;
+
 end
