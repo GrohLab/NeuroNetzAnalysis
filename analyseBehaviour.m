@@ -1,4 +1,4 @@
-function [summStruct, figureDir, aInfo, behData] = analyseBehaviour(behDir, varargin)
+function [summStruct, figureDir, aInfo] = analyseBehaviour(behDir, varargin)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
 %% Auxiliary variables
@@ -465,8 +465,8 @@ Na = reshape(sum(xtf, 1), Nbs, Nccond);
 Nex = reshape(sum(xor(xtf, pageTrialFlag)),Nbs, Nccond);
 
 % Exporting data 
-behData = struct('Data', behStack, 'Conditions', pairedStim, ...
-    'ConditionNames', condNames, 'Considered', xtf);
+%behData = struct('Data', behStack, 'Conditions', pairedStim, ...
+    %'ConditionNames', consCondNames, 'Considered', xtf);
 
 % Figure names for all signals and conditions
 bfNames = arrayfun(@(y) arrayfun(@(x) sprintf(bfPttrn, behNames(x), ...
