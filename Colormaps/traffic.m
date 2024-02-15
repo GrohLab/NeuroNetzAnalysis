@@ -4,11 +4,15 @@ function [clrMap] = traffic(Nlvls)
 p = inputParser;
 
 checkLevels =...
-    @(x) any([isnumeric(Nlvls), ~(round(Nlvls) - Nlvls), Nlvls > 0]);
+    @(x) any([isnumeric(x), ~(round(x) - x), x > 0]);
 
-p.addRequired('Nlvls', checkLevels)
+addParameter(p, 'Nlvls', 256, checkLevels)
 
-p.parse(Nlvls);
+if exist("Nlvls", "var")
+    parse(p, Nlvls);
+else
+    parse(p);
+end
 
 Nlvls = p.Results.Nlvls;
 
