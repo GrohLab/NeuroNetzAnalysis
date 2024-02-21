@@ -72,7 +72,7 @@ end
 xticklabels(natAx(Ncond + 1), xticks(natAx(Ncond + 1)));
 xlim(natAx(Ncond + 1), tmWinMS); xlabel(natAx(Ncond + 1), 'Log time [ms]');
 if strcmpi(PSTHstruct.Normalization, 'prob')
-    ylabel(natAx(Ncond + 1), 'Firing probability [p(spike|bin)]')
+    ylabel(natAx(Ncond + 1), 'Firing probability [p(spike_{bin})]')
     yyaxis(natAx(Ncond + 1), 'right');
     natAx(Ncond + 1).ColorOrder = lines(Ncond);
     natAx(Ncond + 1).LineStyleOrder = '--';
