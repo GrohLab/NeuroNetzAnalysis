@@ -104,19 +104,7 @@ for cf = 1:Nf
         heads(chTypes~=1) = []; heads = cat(1, heads{:});
         heads = arrayfun(@(x) setfield(heads(x), "FileChannel", x),...
             (1:size(heads,1))');
-%         for ch = ch1:mxChans
-%             if chTypes(ch) == 1
-%                 fch = fch + 1;
-%                 try
-%                     heads(ch) = SONXChannelInfo(fhand,ch,fch);
-%                 catch
-%                     auxHead = SONXChannelInfo(fhand,ch,fch);
-%                     hdsFN = fieldnames(heads); auxFN = fieldnames(auxHead);
-%                     [inH, inA] = ismember(hdsFN, auxFN);
-% 
-%                 end
-%             end
-%         end
+
         chanNames = string({heads.title}');
         desChans = contains(chanNames, chanGroup);
         heads = heads(desChans);
