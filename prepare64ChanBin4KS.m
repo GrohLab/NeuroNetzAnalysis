@@ -15,10 +15,18 @@ checkFs = @(x) all([isnumeric(x), x > 0, numel(x) == 1]);
 defChan = 64;
 checkChan = @(x) all([isPositiveIntegerValuedNumeric(x), numel(x) == 1]);
 
+defMedFilt = false;
+checkMF = @(x) all([islogical(x), numel(x) == 1]);
+
+defAllBinFiles = true;
+checkABF = checkMF;
+
 p.addRequired('dataDir', checkDataDir)
 p.addParameter('BinFileName', defOutBinName, checkOutBinName);
 p.addParameter('fs', defFs, checkFs);
 p.addParameter('ChanNumber', defChan, checkChan);
+p.addParameter('MedianFilt', defMedFilt, checkMF);
+p.addParameter('AllBinFiles', defAllBinFiles, checkABF);
 
 parse(p, dataDir, varargin{:});
 
@@ -26,6 +34,8 @@ dataDir = p.Results.dataDir;
 outBinName = p.Results.BinFileName;
 fs = p.Results.fs;
 Nch = p.Results.ChanNumber;
+medianFilterFlag = p.Results.MedianFilt;
+abfFlag = p.Results.AllBinFiles;
 
 %% Validation of inputs
 iOk = false; getName = @(x) string(x.name);
@@ -59,7 +69,7 @@ end
 Nrf = numel(recFiles);
 % If there are more than 1 files in the folder, ask the used which are
 % going to be merged.
-if Nrf > 1
+if Nrf > 1 && ~abfFlag
     selFile = listdlg("ListString", arrayfun(getName, recFiles));
     % Of course, if the user presses cancel, the function ends without
     % creating any file.
@@ -70,16 +80,14 @@ if Nrf > 1
     % Getting only those desired files.
     recFiles = recFiles(selFile); Nrf = numel(recFiles);
     fNames = arrayfun(getName, recFiles);
-    if Nrf > 1
-        % Merging in a given order
-        fileOrder = (1:Nrf)';
-        defInput = num2cell(num2str(fileOrder));
-        answr = inputdlg(fNames,'File order',[1, 60], defInput);
-        nFileOrder = str2double(answr);
-        if ~isempty(answr) && sum(abs(fileOrder - nFileOrder)) ~= 0
-            fprintf(1,'File order changed...\n')
-            recFiles = recFiles(nFileOrder);
-        end
+    % Merging in a given order
+    fileOrder = (1:Nrf)';
+    defInput = num2cell(num2str(fileOrder));
+    answr = inputdlg(fNames,'File order',[1, 60], defInput);
+    nFileOrder = str2double(answr);
+    if ~isempty(answr) && sum(abs(fileOrder - nFileOrder)) ~= 0
+        fprintf(1,'File order changed...\n')
+        recFiles = recFiles(nFileOrder);
     end
 end
 fNames = arrayfun(getName, recFiles);
@@ -92,6 +100,8 @@ catch
 end
 % Overwrite the output file.
 fPerm = 'w';
+rdf = {@readDataFile, @readDataFileAndMedianFilter};
+
 for cf = 1:Nrf
     fprintf(1, "File: %s\n", fNames(cf));
     % How many bytes is this file?
@@ -103,7 +113,7 @@ for cf = 1:Nrf
         mxBytes = fWeight;
     end
     % Number of samples in the file with Nch channels. 2 bytes from uint16.
-    % 4 from int32 and considering the samples that fit in memory. 
+    % 4 from int32 and considering the samples that fit in memory.
     Ns = fWeight/(2*Nch); Nms = mxBytes/(4*Nch);
     if Ns > Nms
         % If the file has more samples than the memory allows, then take
@@ -120,11 +130,16 @@ for cf = 1:Nrf
     while ~feof(dfID)
         fprintf(1, "Reading batch %d...\n", chnk)
         chnk = chnk + 1;
-        dataBuff = readDataFileAndMedianFilter(dfID, Ns, Nch);
-        ofID = createOutputFile(outFullName, fPerm);
+        dataBuff = rdf{medianFilterFlag+1}(dfID, Ns, Nch);
+        ofID = createOrOpenOutputFile(outFullName, fPerm);
         fprintf(1, "Writing...\n")
-        fwrite(ofID, dataBuff, "int16")
-        fPerm = 'a'; fclose(ofID);
+        if ofID > 2
+            fwrite(ofID, dataBuff, "int16")
+            fPerm = 'a'; fclose(ofID);
+        else
+            fprintf(1, 'Error: %d\nCould not write output file!\n', ofID)
+            return
+        end
     end
     fclose(dfID);
 end
@@ -158,7 +173,16 @@ buffMed = median(dataBuff);
 dataBuff = int16(dataBuff - buffMed);
 end
 
-function fID = createOutputFile(fPath,fPerm)
+function [dataBuff] = readDataFile(fID, Ne, Nch)
+% As a result to removing the median of the channels, the data will take
+% negative values. This is why I need to convert the data to signed 32-bit
+% integers before substracting the median. Once the data is median  free,
+% then it can be converted back to signed 16-bit integer.
+dataBuff = fread(fID, [Nch, Ne], 'uint16=>int32');
+dataBuff = int16(dataBuff - median(dataBuff, 2));
+end
+
+function fID = createOrOpenOutputFile(fPath,fPerm)
 fID = fopen(fPath, fPerm);
 if fID < 3
     fprintf(1, 'Unable to create/open output file!\n');
