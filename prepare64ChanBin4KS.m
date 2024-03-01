@@ -177,8 +177,8 @@ for cf = 1:Nrf
 end
 iOk = true;
 %% Writing useful files
-ffoID = fopen(fullfile(dataDir,outBinName + "_fileOrder.txt"),'w');
-fprintf(ffoID,"%s\n",arrayfun(getName, recFiles));
+ffoID = fopen(fullfile(dataDir, outBinName + "_fileOrder.txt"), 'w');
+fprintf(ffoID, "%s\n", arrayfun(getName, recFiles));
 fprintf(ffoID, "%s.bin", outBinName); fclose(ffoID);
 save(fullfile(dataDir, outBinName + "_sampling_frequency.mat"), 'fs')
 
@@ -242,38 +242,3 @@ if fID < 3
     return
 end % Median File identifier validation
 end
-
-%{
-if numel(recFile) < 2
-    % One recording file in directory
-    dfID = openDataFile(fullfile(dataDir, recFile.name));
-    memObj = memory;
-    if 0.85*memObj.MaxPossibleArrayBytes > 2*recFile.bytes
-        % It is possible to allocate the whole recording.
-        [data, expMedian] = readDataFileAndMedianFilter(dfID, Inf);
-        fclose(dfID);
-        ofID = createOutputFile(fullfile(dataDir, [outBinName, '.bin']));
-        fwrite(ofID, data, 'int16'); fclose(ofID);
-        mfID = createMedianFile(fullfile(dataDir, 'ExperimentMedian.bin'));
-        fwrite(mfID, expMedian, 'int16'); fclose(mfID); fs = 3e4; 
-        save(fullfile(dataDir, [outBinName, '_sampling_frequency.mat']),...
-            'fs')
-        iOk = true;
-    else
-        % Read a big chunk of data, and write in disk. Use while loop.
-        % TODO: Implement this functionality
-        
-    end % Memory validation
-else
-    % Deal with more than one recording file
-    % TODO: Allow the user to select one recording file from the folder.
-    fprintf(1, 'There''s more than 1 recording in the folder!/n')
-    % Choosing files. If the user selects more than one, the function will
-    % ask in which order to merge.
-    recFileSubs = listdlg('ListString', arrayfun(@(x) x.name, recFile));
-    Nrf = numel(recFileSubs);
-    if Nrf > 1
-    end
-end % More than one Recording* file in the directory
-
-%}
