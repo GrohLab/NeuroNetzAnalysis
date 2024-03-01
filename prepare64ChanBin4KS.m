@@ -103,6 +103,26 @@ if Nrf > 1 && ~abfFlag
     end
 end
 fNames = arrayfun(getName, recFiles);
+rDates = getDates(fNames, 'Recording', '.bin');
+
+% Remove artifacts from triggers - first part: reading the triggers
+if raFlag
+    trgPttrn = "TriggerSignals*.bin";
+    % Search for Trigger*.bin files
+    trgFiles = searchFileHere( trgPttrn );
+    trgffNames = arrayfun(@(x) getFullName( x ), trgFiles);
+    tDates = getDates( trgffNames, 'TriggerSignals', '.bin');
+    [tordSubs, ~] = find( rDates == tDates);
+    trgFiles = trgFiles(tordSubs);
+    if isempty(trgFiles) && verbose
+        fprintf(1, 'No trigger files!\n')
+        fprintf(1, 'Cannot remove artifacts without the trigger times!\n')
+    end
+    trigCells = getTriggersFromFiles();
+else
+    % I feel like this else is going to be needed
+end
+
 try
     mem = memory;
     mFlag = true;
