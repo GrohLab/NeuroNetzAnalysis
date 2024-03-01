@@ -45,9 +45,14 @@ raFlag = p.Results.RemoveArtifacts;
 verbose = p.Results.verbose;
 
 %% Validation of inputs
-iOk = false; getName = @(x) string(x.name);
+iOk = false;
+getName = @(x) string(x.name);
+getFullName = @(x) string( fullfile(x.folder, x.name) );
+fnOpts = {'UniformOutput', false};
+searchFileIn = @(inDir, pttrn) dir( fullfile( inDir, pttrn ) );
+searchFileHere = @(pttrn) searchFileIn( dataDir, pttrn );
 % Search for Recording*.bin files in the given folder
-recFiles = dir(fullfile(dataDir, 'Recording*.bin'));
+recFiles = searchFileHere('Recording*.bin');
 if isempty(recFiles)
     fprintf(1, 'No recording file found!\n')
     fprintf(1, 'Make sure you provide a directory with a recording file');
@@ -112,7 +117,7 @@ rdf = {@readDataFile, @readDataFileAndMedianFilter};
 for cf = 1:Nrf
     fprintf(1, "File: %s\n", fNames(cf));
     % How many bytes is this file?
-    fWeight = recFiles.bytes;
+    fWeight = recFiles(cf).bytes;
     % How many bytes are available in this computer. Occupying 85%
     if mFlag
         mxBytes = 0.8 * mem.MaxPossibleArrayBytes;
@@ -156,6 +161,17 @@ ffoID = fopen(fullfile(dataDir,outBinName + "_fileOrder.txt"),'w');
 fprintf(ffoID,"%s\n",arrayfun(getName, recFiles));
 fprintf(ffoID, "%s.bin", outBinName); fclose(ffoID);
 save(fullfile(dataDir, outBinName + "_sampling_frequency.mat"), 'fs')
+
+%% Insider functions
+    function trigCell = getTriggersFromFiles()
+        fIDs = arrayfun(@(x) openDataFile( getFullName(x) ), trgFiles );
+        trigs = arrayfun(@(x) readDataFile( x, Inf, 2), fIDs, fnOpts{:} );
+        [~] = arrayfun(@(x) fclose(x), fIDs);
+        dwObj = cellfun(@(c) arrayfun(@(x) StepWaveform(c(x,:), fs, ...
+            'verbose', verbose), 1:size(c, 1) ), trigs, fnOpts{:} );
+        trigCell = cellfun(@(x) arrayfun(@(y) y.subTriggers, x, fnOpts{:} ), ...
+            dwObj, fnOpts{:} );
+    end
 end
 
 function fID = openDataFile(fPath)
