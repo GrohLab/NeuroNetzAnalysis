@@ -21,12 +21,17 @@ checkMF = @(x) all([islogical(x), numel(x) == 1]);
 defAllBinFiles = true;
 checkABF = checkMF;
 
+defRemArt = false;
+checkRA = checkMF;
+
 p.addRequired('dataDir', checkDataDir)
 p.addParameter('BinFileName', defOutBinName, checkOutBinName);
 p.addParameter('fs', defFs, checkFs);
 p.addParameter('ChanNumber', defChan, checkChan);
 p.addParameter('MedianFilt', defMedFilt, checkMF);
 p.addParameter('AllBinFiles', defAllBinFiles, checkABF);
+p.addParameter('RemoveArtifacts', defRemArt, checkRA);
+p.addParameter('verbose', true, checkRA);
 
 parse(p, dataDir, varargin{:});
 
@@ -36,6 +41,8 @@ fs = p.Results.fs;
 Nch = p.Results.ChanNumber;
 medianFilterFlag = p.Results.MedianFilt;
 abfFlag = p.Results.AllBinFiles;
+raFlag = p.Results.RemoveArtifacts;
+verbose = p.Results.verbose;
 
 %% Validation of inputs
 iOk = false; getName = @(x) string(x.name);
