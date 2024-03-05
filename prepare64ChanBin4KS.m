@@ -10,16 +10,22 @@ defOutBinName = 'MedianFiltered_int16';
 checkOutBinName = @(x) all([~isempty(x), ischar(x) | isstring(x)]);
 
 defFs = 3e4;
-checkFs = @(x) all([isnumeric(x), x > 0, numel(x) == 1]);
+checkFs = @(x) isnumeric(x) && (x > 0) && isscalar(x);
 
 defChan = 64;
-checkChan = @(x) all([isPositiveIntegerValuedNumeric(x), numel(x) == 1]);
+checkChan = @(x) isPositiveIntegerValuedNumeric(x) && isscalar(x);
 
 defMedFilt = false;
-checkMF = @(x) all([islogical(x), numel(x) == 1]);
+checkMF = @(x) islogical(x) && isscalar(x);
 
 defAllBinFiles = true;
 checkABF = checkMF;
+
+defRemArt = false;
+checkRA = checkMF;
+
+defTrigWin = 3; % Equivalent to 1.6 ms
+checkTW = checkFs;
 
 p.addRequired('dataDir', checkDataDir)
 p.addParameter('BinFileName', defOutBinName, checkOutBinName);
@@ -27,6 +33,9 @@ p.addParameter('fs', defFs, checkFs);
 p.addParameter('ChanNumber', defChan, checkChan);
 p.addParameter('MedianFilt', defMedFilt, checkMF);
 p.addParameter('AllBinFiles', defAllBinFiles, checkABF);
+p.addParameter('RemoveArtifacts', defRemArt, checkRA);
+p.addParameter('TriggerWindow', defTrigWin, checkTW);
+p.addParameter('verbose', true, checkRA);
 
 parse(p, dataDir, varargin{:});
 
@@ -36,11 +45,19 @@ fs = p.Results.fs;
 Nch = p.Results.ChanNumber;
 medianFilterFlag = p.Results.MedianFilt;
 abfFlag = p.Results.AllBinFiles;
+raFlag = p.Results.RemoveArtifacts;
+triggSpread = p.Results.TriggerWindow;
+verbose = p.Results.verbose;
 
 %% Validation of inputs
-iOk = false; getName = @(x) string(x.name);
+iOk = false;
+getName = @(x) string(x.name);
+getFullName = @(x) string( fullfile(x.folder, x.name) );
+fnOpts = {'UniformOutput', false};
+searchFileIn = @(inDir, pttrn) dir( fullfile( inDir, pttrn ) );
+searchFileHere = @(pttrn) searchFileIn( dataDir, pttrn );
 % Search for Recording*.bin files in the given folder
-recFiles = dir(fullfile(dataDir, 'Recording*.bin'));
+recFiles = searchFileHere('Recording*.bin');
 if isempty(recFiles)
     fprintf(1, 'No recording file found!\n')
     fprintf(1, 'Make sure you provide a directory with a recording file');
@@ -63,6 +80,7 @@ if exist(outFullName,'file')
         fprintf('No file written.\n')
         return
     end
+
 end
 %% Processing files
 % How many files are in the folder
@@ -91,6 +109,27 @@ if Nrf > 1 && ~abfFlag
     end
 end
 fNames = arrayfun(getName, recFiles);
+rDates = getDates(fNames, 'Recording', '.bin');
+
+% Remove artifacts from triggers - first part: reading the triggers
+if raFlag
+    trgPttrn = "TriggerSignals*.bin";
+    % Search for Trigger*.bin files
+    trgFiles = searchFileHere( trgPttrn );
+    trgffNames = arrayfun(@(x) getFullName( x ), trgFiles);
+    tDates = getDates( trgffNames, 'TriggerSignals', '.bin');
+    [tordSubs, ~] = find( rDates == tDates);
+    trgFiles = trgFiles(tordSubs);
+    if isempty(trgFiles) && verbose
+        fprintf(1, 'No trigger files!\n')
+        fprintf(1, 'Cannot remove artifacts without the trigger times!\n')
+    end
+    trigCells = getTriggersFromFiles();
+else
+    % I feel like this else is going to be needed
+
+end
+
 try
     mem = memory;
     mFlag = true;
@@ -105,7 +144,7 @@ rdf = {@readDataFile, @readDataFileAndMedianFilter};
 for cf = 1:Nrf
     fprintf(1, "File: %s\n", fNames(cf));
     % How many bytes is this file?
-    fWeight = recFiles.bytes;
+    fWeight = recFiles(cf).bytes;
     % How many bytes are available in this computer. Occupying 85%
     if mFlag
         mxBytes = 0.8 * mem.MaxPossibleArrayBytes;
@@ -131,6 +170,9 @@ for cf = 1:Nrf
         fprintf(1, "Reading batch %d...\n", chnk)
         chnk = chnk + 1;
         dataBuff = rdf{medianFilterFlag+1}(dfID, Ns, Nch);
+        if raFlag
+            dataBuff = removeArtifacts(dataBuff, trigCells{cf}, triggSpread);
+        end
         ofID = createOrOpenOutputFile(outFullName, fPerm);
         fprintf(1, "Writing...\n")
         if ofID > 2
@@ -145,10 +187,21 @@ for cf = 1:Nrf
 end
 iOk = true;
 %% Writing useful files
-ffoID = fopen(fullfile(dataDir,outBinName + "_fileOrder.txt"),'w');
-fprintf(ffoID,"%s\n",arrayfun(getName, recFiles));
+ffoID = fopen(fullfile(dataDir, outBinName + "_fileOrder.txt"), 'w');
+fprintf(ffoID, "%s\n", arrayfun(getName, recFiles));
 fprintf(ffoID, "%s.bin", outBinName); fclose(ffoID);
 save(fullfile(dataDir, outBinName + "_sampling_frequency.mat"), 'fs')
+
+%% Insider functions
+    function trigCell = getTriggersFromFiles()
+        fIDs = arrayfun(@(x) openDataFile( getFullName(x) ), trgFiles );
+        trigs = arrayfun(@(x) readDataFile( x, Inf, 2), fIDs, fnOpts{:} );
+        [~] = arrayfun(@(x) fclose(x), fIDs);
+        dwObj = cellfun(@(c) arrayfun(@(x) StepWaveform(c(x,:), fs, ...
+            'verbose', verbose), 1:size(c, 1) ), trigs, fnOpts{:} );
+        trigCell = cellfun(@(x) arrayfun(@(y) y.subTriggers, x, fnOpts{:} ), ...
+            dwObj, fnOpts{:} );
+    end
 end
 
 function fID = openDataFile(fPath)
@@ -157,7 +210,7 @@ if fID < 3
     % Error by opening data file
     [~, fName] = fileparts(fPath);
     fprintf(1, 'Unable to open %s!\n', fName)
-    fprintf(1, 'Verify that no other process is running with it and')
+    fprintf(1, 'Verify that no other processes are running with it and')
     fprintf(1, ' try again.\n');
     return
 end
@@ -200,37 +253,19 @@ if fID < 3
 end % Median File identifier validation
 end
 
-%{
-if numel(recFile) < 2
-    % One recording file in directory
-    dfID = openDataFile(fullfile(dataDir, recFile.name));
-    memObj = memory;
-    if 0.85*memObj.MaxPossibleArrayBytes > 2*recFile.bytes
-        % It is possible to allocate the whole recording.
-        [data, expMedian] = readDataFileAndMedianFilter(dfID, Inf);
-        fclose(dfID);
-        ofID = createOutputFile(fullfile(dataDir, [outBinName, '.bin']));
-        fwrite(ofID, data, 'int16'); fclose(ofID);
-        mfID = createMedianFile(fullfile(dataDir, 'ExperimentMedian.bin'));
-        fwrite(mfID, expMedian, 'int16'); fclose(mfID); fs = 3e4; 
-        save(fullfile(dataDir, [outBinName, '_sampling_frequency.mat']),...
-            'fs')
-        iOk = true;
-    else
-        % Read a big chunk of data, and write in disk. Use while loop.
-        % TODO: Implement this functionality
-        
-    end % Memory validation
-else
-    % Deal with more than one recording file
-    % TODO: Allow the user to select one recording file from the folder.
-    fprintf(1, 'There''s more than 1 recording in the folder!/n')
-    % Choosing files. If the user selects more than one, the function will
-    % ask in which order to merge.
-    recFileSubs = listdlg('ListString', arrayfun(@(x) x.name, recFile));
-    Nrf = numel(recFileSubs);
-    if Nrf > 1
+function dataBuff = removeArtifacts(dataBuff, triggSubs, triggSpred)
+triggSubs = cat(1, triggSubs{:}); triggSubs = sort(triggSubs(:), 'ascend');
+triggWin = -triggSpred:triggSpred;
+Sw = blackmanharris(numel(triggWin));
+for ct = triggSubs'
+    for cch = 1:64 % Careful with files with other channel number!
+        segm = double(dataBuff(cch, ct + triggWin));
+        m = (segm(end) - segm(1))./(triggSpred*2);
+        b = segm(1) + m*triggSpred; L = triggWin*m + b;
+        segm = int16( round( segm(:) .* ...
+            ( ( 1 - Sw(:) ) + Sw(:).*exp(-zscore(double(segm(:))).^2) ) + ...
+            Sw(:).*L(:)/2 ) );
+        dataBuff(cch, ct + triggWin) = segm;
     end
-end % More than one Recording* file in the directory
-
-%}
+end
+end

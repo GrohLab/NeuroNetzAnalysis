@@ -7,7 +7,7 @@ p = inputParser();
 
 addRequired(p, 'relSpkTmsStruct', @checkRelSpkTmsStruct)
 addRequired(p, 'confStruct', @checkConfigStruct)
-addParameter(p, 'Filter', false, @(x) all([islogical(x), numel(x) == 1]))
+addParameter(p, 'Filter', false, @(x) islogical(x) && isscalar(x))
 
 parse(p, relSpkTmsStruct, confStruct, varargin{:});
 
