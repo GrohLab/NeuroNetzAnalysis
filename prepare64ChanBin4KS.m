@@ -24,6 +24,9 @@ checkABF = checkMF;
 defRemArt = false;
 checkRA = checkMF;
 
+defTrigWin = 3; % Equivalent to 1.6 ms
+checkTW = checkFs;
+
 p.addRequired('dataDir', checkDataDir)
 p.addParameter('BinFileName', defOutBinName, checkOutBinName);
 p.addParameter('fs', defFs, checkFs);
@@ -31,6 +34,7 @@ p.addParameter('ChanNumber', defChan, checkChan);
 p.addParameter('MedianFilt', defMedFilt, checkMF);
 p.addParameter('AllBinFiles', defAllBinFiles, checkABF);
 p.addParameter('RemoveArtifacts', defRemArt, checkRA);
+p.addParameter('TriggerWindow', defTrigWin, checkTW);
 p.addParameter('verbose', true, checkRA);
 
 parse(p, dataDir, varargin{:});
@@ -42,6 +46,7 @@ Nch = p.Results.ChanNumber;
 medianFilterFlag = p.Results.MedianFilt;
 abfFlag = p.Results.AllBinFiles;
 raFlag = p.Results.RemoveArtifacts;
+triggSpread = p.Results.TriggerWindow;
 verbose = p.Results.verbose;
 
 %% Validation of inputs
@@ -75,6 +80,7 @@ if exist(outFullName,'file')
         fprintf('No file written.\n')
         return
     end
+
 end
 %% Processing files
 % How many files are in the folder
@@ -121,6 +127,7 @@ if raFlag
     trigCells = getTriggersFromFiles();
 else
     % I feel like this else is going to be needed
+
 end
 
 try
@@ -163,6 +170,9 @@ for cf = 1:Nrf
         fprintf(1, "Reading batch %d...\n", chnk)
         chnk = chnk + 1;
         dataBuff = rdf{medianFilterFlag+1}(dfID, Ns, Nch);
+        if raFlag
+            dataBuff = removeArtifacts(dataBuff, trigCells{cf}, triggSpread);
+        end
         ofID = createOrOpenOutputFile(outFullName, fPerm);
         fprintf(1, "Writing...\n")
         if ofID > 2
@@ -241,4 +251,21 @@ if fID < 3
     fprintf(1, 'Please verify the file and directory!\n');
     return
 end % Median File identifier validation
+end
+
+function dataBuff = removeArtifacts(dataBuff, triggSubs, triggSpred)
+triggSubs = cat(1, triggSubs{:}); triggSubs = sort(triggSubs(:), 'ascend');
+triggWin = -triggSpred:triggSpred;
+Sw = blackmanharris(numel(triggWin));
+for ct = triggSubs'
+    for cch = 1:64 % Careful with files with other channel number!
+        segm = double(dataBuff(cch, ct + triggWin));
+        m = (segm(end) - segm(1))./(triggSpred*2);
+        b = segm(1) + m*triggSpred; L = triggWin*m + b;
+        segm = int16( round( segm(:) .* ...
+            ( ( 1 - Sw(:) ) + Sw(:).*exp(-zscore(double(segm(:))).^2) ) + ...
+            Sw(:).*L(:)/2 ) );
+        dataBuff(cch, ct + triggWin) = segm;
+    end
+end
 end
