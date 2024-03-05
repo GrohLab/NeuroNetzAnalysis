@@ -210,7 +210,7 @@ if fID < 3
     % Error by opening data file
     [~, fName] = fileparts(fPath);
     fprintf(1, 'Unable to open %s!\n', fName)
-    fprintf(1, 'Verify that no other process is running with it and')
+    fprintf(1, 'Verify that no other processes are running with it and')
     fprintf(1, ' try again.\n');
     return
 end
