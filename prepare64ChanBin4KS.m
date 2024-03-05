@@ -10,13 +10,13 @@ defOutBinName = 'MedianFiltered_int16';
 checkOutBinName = @(x) all([~isempty(x), ischar(x) | isstring(x)]);
 
 defFs = 3e4;
-checkFs = @(x) all([isnumeric(x), x > 0, numel(x) == 1]);
+checkFs = @(x) isnumeric(x) && (x > 0) && isscalar(x);
 
 defChan = 64;
-checkChan = @(x) all([isPositiveIntegerValuedNumeric(x), numel(x) == 1]);
+checkChan = @(x) isPositiveIntegerValuedNumeric(x) && isscalar(x);
 
 defMedFilt = false;
-checkMF = @(x) all([islogical(x), numel(x) == 1]);
+checkMF = @(x) islogical(x) && isscalar(x);
 
 defAllBinFiles = true;
 checkABF = checkMF;
