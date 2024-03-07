@@ -3,12 +3,11 @@ function [clrMap] = traffic(Nlvls)
 %   Detailed explanation goes here
 p = inputParser;
 
-checkLevels =...
-    @(x) any([isnumeric(x), ~(round(x) - x), x > 0]);
+checkLvls = @(x) isPositiveIntegerValuedNumeric(x) && x > 1;
 
-addParameter(p, 'Nlvls', 256, checkLevels)
+p.addOptional('Nlvls', 256, checkLvls)
 
-if exist("Nlvls", "var")
+if nargin
     parse(p, Nlvls);
 else
     parse(p);
