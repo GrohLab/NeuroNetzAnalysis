@@ -1,4 +1,5 @@
-function [summStruct, figureDir, aInfo] = analyseBehaviour(behDir, varargin)
+function [summStruct, figureDir, behData, aInfo] = ...
+    analyseBehaviour(behDir, varargin)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
 %% Auxiliary variables
@@ -39,21 +40,23 @@ checkVW = @(x) all([isnumeric(x), numel(x) == 2, x(1)<x(2)]);
 
 % Puff or laser (or whatever these would represent)
 defCond = "P"; % Default condition to center the behavioural signals
-checkCond = @(x) numel(x) == 1 & istxt(x) & (strcmpi(x,"P") | strcmpi(x,"L"));
+checkCond = @(x) isscalar(x) && istxt(x) && (strcmpi(x,"P") || strcmpi(x,"L"));
 
 % If the triggers don't represent the same for all the experiment or if you
 % want to see only a subset of all the triggers.
 defTrigSubs = "all";
-checkTrigSubs = @(x) strcmpi(x,"all") | isPositiveIntegerValuedNumeric(x);
+checkTrigSubs = @(x) strcmpi(x,"all") || isPositiveIntegerValuedNumeric(x);
 % Check paired stimulus
-checkPF = @(x) islogical(x) & (ismatrix(x) | isvector(x));
+checkPF = @(x) islogical(x) & (ismatrix(x) || isvector(x));
 % Check conditions names
-checkCondNames = @(x) (iscell(x) | istxt(x)) & numel(x) >= 1;
+checkCondNames = @(x) (iscell(x) || istxt(x)) && numel(x) >= 1;
 
 defSpeedTh = 0.1:0.1:3; % Speed thresholds
 checkSpeedTh = @(x) all([diff(x) > 0, x > 0, numel(x) > 1]);
 
-checkTH = @(x) x > 0 & numel(x) == 1;
+checkLogicFlags = @(x) islogical(x) && isscalar(x);
+
+checkTH = @(x) x > 0 && isscalar(x);
 defSig = 2.5; % Spontaneous standard deviation
 defSMed = 0.2; % Spontaneous Median
 defMed = 1; % Median in all viewing window
@@ -70,8 +73,8 @@ addParameter(p, 'SponSigTh', defSig, checkTH)
 addParameter(p, 'SponMedianTh', defSMed, checkTH)
 addParameter(p, 'MedianTh', defMed, checkTH)
 addParameter(p, 'FigureDirectory', "Figures", istxt)
-addParameter(p, 'verbose', true, @(x) islogical(x) & numel(x) == 1)
-addParameter(p, 'showPlots', true, @(x) islogical(x) & numel(x) == 1)
+addParameter(p, 'verbose', true, checkLogicFlags)
+addParameter(p, 'showPlots', true, checkLogicFlags)
 
 parse(p, behDir, varargin{:})
 
@@ -351,9 +354,16 @@ else
     set_point = load(spFile,"set_point"); set_point = set_point.set_point;
 end
 
-% Whiskers and nose
+% Mean and standard deviation of all signals
+[~, mu_dlc, sig_dlc] = zscore( behDLCSignals, 0, 1);
+[~, mu_r, sig_r] = zscore( vf*en2cm , 0, 1 );
+
+% Whiskers and nose; video data
 [~, dlcStack] = getStacks(false, round(itTimes{iSub}(trigSubs,:)*fr), 'on', ...
     bvWin, fr, fr, [], [behDLCSignals, set_point]');
+[~, dlcDiffStack] = getStacks(false, round(itTimes{iSub}(trigSubs,:)*fr), 'on', ...
+bvWin, fr, fr, [], diff(behDLCSignals,1,1)');
+
 behStack = cat(1, dlcStack(1:Nbs,:,:), vStack);
 Nbs = size(behStack, 1);
 behStack = arrayfun(@(x) squeeze(behStack(x, :, :)), (1:size(behStack,1))',...
@@ -465,8 +475,9 @@ Na = reshape(sum(xtf, 1), Nbs, Nccond);
 Nex = reshape(sum(xor(xtf, pageTrialFlag)),Nbs, Nccond);
 
 % Exporting data 
-%behData = struct('Data', behStack, 'Conditions', pairedStim, ...
-    %'ConditionNames', consCondNames, 'Considered', xtf);
+behData = struct('Data', cat(3, behStack{:}), 'Conditions', pairedStim, ...
+    'ConditionNames', string(consCondNames), 'Considered', xtf, ...
+    'ZValues', [mu_dlc(:), sig_dlc(:); mu_r(:), sig_r(:)]);
 
 % Figure names for all signals and conditions
 bfNames = arrayfun(@(y) arrayfun(@(x) sprintf(bfPttrn, behNames(x), ...
