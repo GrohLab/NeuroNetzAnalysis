@@ -392,7 +392,7 @@ if Nbs>1
 else
     thSet = spTh; sigThSet = sigTh;
 end
-tmdl = fit_poly([1,Nbt], bvWin, 1);
+tmdl = fit_poly([1,Nbt], bvWin + [1,-1] * (1/(fr*2)), 1);
 behTx = ((1:Nbt)'.^[1,0])*tmdl;
 
 % Spontaneous flags
