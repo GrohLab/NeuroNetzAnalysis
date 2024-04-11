@@ -417,8 +417,9 @@ thrshStrs = arrayfun(@(x,y,z) sprintf("TH s%.2f sp_m%.2f t_m%.2f", x,y,z), ...
     sigThSet, sMedTh, tMedTh);
 % Excluding flags: Sigma and median in spontaneous or the whole trial
 % median greater than a given threshold
-excFlag = sSig > sigThSet | abs(sMed-ssp) > sMedTh | abs(tMed-tsp) > tMedTh;
-excFlag = excFlag';
+%excFlag = sSig > sigThSet | abs(sMed-ssp) > sMedTh | abs(tMed-tsp) > tMedTh;
+%excFlag = excFlag';
+excFlag = false(Ntr, Nbs);
 
 %% Organising figures in subfolders
 vwKey = sprintf("V%.2f - %.2f s", bvWin);
