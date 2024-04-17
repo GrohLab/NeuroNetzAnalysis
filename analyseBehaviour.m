@@ -11,7 +11,7 @@ dlcPttrn = 'roller*filtered.csv';
 % Output files
 afPttrn = "ArduinoTriggers*.mat"; rfPttrn = "RollerSpeed*.mat";
 % DLC variables
-dlcVars = {'behDLCSignals', 'dlcNames'};
+dlcVars = {'behDLCSignals', 'dlcNames', 'vidTx', 'fr'};
 % lPttrn = "Laser*.csv"; pPttrn = "Puff*.csv";
 % Functional cell array
 fnOpts = {'UniformOutput', false}; 
@@ -184,7 +184,10 @@ if numel(rfFiles) == 1
 end
 
 % DLC signals
-dlcFiles = dir(behHere(dlcPttrn));
+readCSV = @(x) readtable(x, "Delimiter", ",");
+dlcFiles = dir( behHere( dlcPttrn ) );
+fid_paths = dir( behHere( "FrameID*.csv" ) );
+
 if ~iemty(dlcFiles)
     behPttrn = "BehaveSignals%s%s.mat";
     endng = "DLC" + string(extractBetween(dlcFiles(1).name, "DLC", ".csv"));
@@ -194,6 +197,8 @@ if ~iemty(dlcFiles)
         if verbose
             fprintf(1, "Computing signals... \n")
         end
+        vidTx = arrayfun(@(x) readCSV( flfile( x ) ), fid_paths, fnOpts{:} );
+        vidTx = cellfun(@(x) x.Var2/1e9, vidTx, fnOpts{:} ); % nanoseconds
         dlcTables = arrayfun(@(x) readDLCData(flfile(x)), dlcFiles, fnOpts{:});
         a_bodyParts = cellfun(@(x) getBehaviourSignals(x), ...
             dlcTables, fnOpts{:});
