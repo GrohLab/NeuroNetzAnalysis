@@ -48,11 +48,12 @@ end
 %% Read and create roller 
 [dt, dateFormStr] = getDates(eFiles, 'Roller_position');
 dy = dt(1); dy.Format = 'yyyy-MM-dd'; dt.Format = '''T''HH_mm_ss';
-auxStr = [];
-for cdt = 1:numel(dt)-1
-    auxStr = [auxStr, sprintf('%s+', dt(cdt))];
-end
-auxStr = [auxStr, sprintf('%s', dt(end))];
+% auxStr = [];
+% for cdt = 1:numel(dt)-1
+%     auxStr = [auxStr, sprintf('%s+', dt(cdt))];
+% end
+% auxStr = [auxStr, sprintf('%s', dt(end))];
+auxStr = join( string( dt ) , "+");
 dt.Format = dateFormStr;
 rsName = crtName(sprintf('RollerSpeed%s%s.mat', dy, auxStr));
 if exist(rsName,"file")
@@ -65,7 +66,10 @@ fr = arrayfun(@(x) VideoReader(getName(vFiles,x)), 1:Nv, fnOpts{:});
 if fiFlag
     vidTx = arrayfun(@(x) readCSV(flfa(x)), fFiles, fnOpts{:});
     vidTx = cellfun(@(x) x.Var2/1e9, vidTx, fnOpts{:}); % nanoseconds
-    estFr = cellfun(@(x) 1/median(diff(x)), vidTx);
+    estFr = cellfun(@(x) median( 1 ./ diff(x) ), vidTx);
+    % estFr = cellfun(@(x) mode( 1 ./ diff( x ) ), vidTx);
+    % estFr = cellfun(@(x) mean( [ mode( 1 ./ diff( x ) ), ...
+        % median( 1 ./ diff( x ) ) ] ), vidTx );
 else
     estFr = cellfun(@(x) x.NumFrames/x.Duration, fr);
 end
