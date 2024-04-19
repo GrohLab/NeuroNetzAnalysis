@@ -190,20 +190,26 @@ readCSV = @(x) readtable(x, "Delimiter", ",");
 dlcFiles = dir( behHere( dlcPttrn ) );
 fid_paths = dir( behHere( "FrameID*.csv" ) );
 
-exp_path = getParentDir( behDir, 1);
-tf_paths = dir( fullfile( exp_path, "**", "TriggerSignals*.bin") );
-fsf_path = dir( fullfile( exp_path, "**", "*_sampling_frequency.mat") );
-
-fs_ephys = load( flfile( fsf_path ), "fs" ); fs_ephys = fs_ephys.fs;
-Ns_intan = [tf_paths.bytes]' ./ 4; % 2 signals x 2 bytes per sample.
-Texp_ephys = Ns_intan ./ fs_ephys;
-
-
 if ~iemty(dlcFiles)
     behPttrn = "BehaveSignals%s%s.mat";
     endng = "DLC" + string(extractBetween(dlcFiles(1).name, "DLC", ".csv"));
     behPath = joinBehDates(dlcFiles, "roller", behHere(behPttrn), ...
         endng);
+
+    exp_path = getParentDir( behDir, 1);
+    tf_paths = dir( fullfile( behDir, "TriggerSignals*.bin") );
+    fsf_path = dir( fullfile( behDir, "*_sampling_frequency.mat") );
+    if isempty( fsf_path )
+        fsf_path = dir( fullfile( exp_path, "ephys*", "*_sampling_frequency.mat") );
+    end
+    if isempty( tf_paths )
+        tf_paths = dir( fullfile( exp_path, "ephys*", "TriggerSignals*.bin") );
+    end
+
+    fs_ephys = load( flfile( fsf_path ), "fs" ); fs_ephys = fs_ephys.fs;
+    Ns_intan = [tf_paths.bytes]' ./ 4; % 2 signals x 2 bytes per sample.
+    Texp_ephys = Ns_intan ./ fs_ephys;
+
     if ~exist(behPath, "file")
         if verbose
             fprintf(1, "Computing signals... \n")
