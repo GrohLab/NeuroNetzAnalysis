@@ -431,6 +431,12 @@ bsWin = -flip(brWin);
 bsFlag = behTx < bsWin; bsFlag = xor(bsFlag(:,1), bsFlag(:,2));
 brFlag = behTx < brWin; brFlag = xor(brFlag(:,1), brFlag(:,2));
 
+brWin_aux = [0, diff( brWin )] + 0.12; 
+if brWin_aux(2) > bvWin(2) 
+    brWin_aux(2) = bvWin(2);
+end
+brWin = [brWin_aux; repmat( brWin, 3, 1)];
+
 % Set-point median for the whiskers and nose
 % Spontaneous
 ssp = [squeeze(median(dlcStack(Nbs:end,bsFlag,:), 2)); zeros(1,Ntr)];
