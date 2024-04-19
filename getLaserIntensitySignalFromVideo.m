@@ -9,7 +9,7 @@ mu_lcoords = round( mean( dlc_table.laser ) );
 
 mem = memory; maxMem = mem.MemAvailableAllArrays;
 frameByte = ht * wd * 3;
-bufferFrames = floor((maxMem/frameByte) * 0.6);
+bufferFrames = floor( (maxMem/frameByte) * 0.4 );
 
 frames = zeros(ht, wd, 3, bufferFrames, 'uint8');
 
