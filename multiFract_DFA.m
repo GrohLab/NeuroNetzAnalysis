@@ -16,7 +16,7 @@ function [profile,...   Auxiliary output
 
 % Determining the profile as in Kantelhardt et al. 2002
 if iscolumn(signal)
-    signal = signal';
+    signal = signal(:);
 end
 profile = cumsum(signal - mean(signal));
 % profile = cumsum(profile - mean(profile));
