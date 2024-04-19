@@ -5,7 +5,7 @@ function [summStruct, figureDir, behData, aInfo] = ...
 
 %% Auxiliary variables
 % 'Software' version
-softVer = 2.03;
+softVer = 2.04;
 % Input files
 dlcPttrn = 'roller*filtered.csv';
 % rpPttrn = "Roller_position*.csv"; vdPttrn = "roller*.avi";
