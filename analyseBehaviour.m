@@ -188,6 +188,15 @@ readCSV = @(x) readtable(x, "Delimiter", ",");
 dlcFiles = dir( behHere( dlcPttrn ) );
 fid_paths = dir( behHere( "FrameID*.csv" ) );
 
+exp_path = getParentDir( behDir, 1);
+tf_paths = dir( fullfile( exp_path, "**", "TriggerSignals*.bin") );
+fsf_path = dir( fullfile( exp_path, "**", "*_sampling_frequency.mat") );
+
+fs_ephys = load( flfile( fsf_path ), "fs" ); fs_ephys = fs_ephys.fs;
+Ns_intan = [tf_paths.bytes]' ./ 4; % 2 signals x 2 bytes per sample.
+Texp_ephys = Ns_intan ./ fs_ephys;
+
+
 if ~iemty(dlcFiles)
     behPttrn = "BehaveSignals%s%s.mat";
     endng = "DLC" + string(extractBetween(dlcFiles(1).name, "DLC", ".csv"));
@@ -199,13 +208,30 @@ if ~iemty(dlcFiles)
         end
         vidTx = arrayfun(@(x) readCSV( flfile( x ) ), fid_paths, fnOpts{:} );
         vidTx = cellfun(@(x) x.Var2/1e9, vidTx, fnOpts{:} ); % nanoseconds
+        Texp_vid = cellfun(@(x) diff( x([1,end]) ), vidTx );
+        
+        % Difference between intan signals and the video
+        delta_tiv = Texp_ephys - Texp_vid; 
+        delta_tiv( delta_tiv < 0 ) = 0;
+        % delta_tiv = cumsum( delta_tiv );
+
         dlcTables = arrayfun(@(x) readDLCData(flfile(x)), dlcFiles, fnOpts{:});
         a_bodyParts = cellfun(@(x) getBehaviourSignals(x), ...
             dlcTables, fnOpts{:});
         behStruct = cellfun(@(x) getWhiskANoseFromTable(x), a_bodyParts);
         % Butter order 3 low-pass filter 35 Hz cut off frequency @ 3 dB
         [b, a] = butter(3, 70/fr, 'low');
-        behDLCSignals = cat(1, behStruct(:).Signals);
+        
+        % Adding how many frames fell out to the next experiment segment
+        behDLCSignals = arrayfun(@(x) padarray( behStruct(x).Signals, ...
+            round( [delta_tiv(x), 0] * fr ), "replicate", "post" ), ...
+            1:length( vidTx ), fnOpts{:} );
+
+        % Concatenating both experiment segments
+        % behDLCSignals = cat(1, behStruct(:).Signals);
+        behDLCSignals = cat( 1, behDLCSignals{:} );
+        
+        % Filter and save the results
         dlcNames = behStruct(1).Names; clearvars behStruct;
         behDLCSignals = filtfilt(b, a, behDLCSignals);
         save(behPath, dlcVars{:})
@@ -582,26 +608,26 @@ if Nccond > 1
     cs = 4; prms = nchoosek(1:Nccond,2);
     getDistTravel = @(c) squeeze(sum(abs(behStack{cs}(brFlag, ...
         xtf(:, cs, c))), 1));
-    dstTrav = arrayfun(getDistTravel, 1:Nccond, fnOpts{:});
+    dstTrav = arrayfun( getDistTravel, 1:Nccond, fnOpts{:} );
     if all(~cellfun(@isempty, dstTrav),"all")
         [pd, hd] = arrayfun(@(p) ranksum(dstTrav{prms(p,1)}, ...
             dstTrav{prms(p,2)}), 1:size(prms,1), fnOpts{:});
         [pm, hm] = arrayfun(@(p) ranksum(mvpt{prms(p,1), cs}, ...
             mvpt{prms(p,2), cs}), 1:size(prms,1), fnOpts{:});
-        rsstPttrn = "Results %s %s%s"+rwKey+" EX%s%s.mat";
-        rsstName = sprintf(rsstPttrn, behNames(cs), sprintf("%s ", ...
-            consCondNames{:}), sprintf("%.2f ", pm{:}), sprintf("%d ", ...
-            Nex(cs,:)), thrshStrs(cs));
+        rsstPttrn = "Results %s %s%s" + rwKey + " EX%s%s.mat";
+        rsstName = sprintf( rsstPttrn, behNames(cs), sprintf("%s ", ...
+            consCondNames{:} ), sprintf( "%.2f ", pm{:} ), sprintf("%d ", ...
+            Nex(cs,:) ), thrshStrs(cs) );
         rsstPath = behHere(rsstName);
         if ~exist(rsstPath, "file")
             try
-                save(rsstPath,"pd", "hd", "pm", "hm");
+                save( rsstPath,"pd", "hd", "pm", "hm" );
             catch
-                rsstName = sprintf(rsstPttrn, behNames(cs), sprintf("%d ", ...
-                    numel(consCondNames)), sprintf("%.2f ", pm{:}), sprintf("%d ", ...
-                    Nex(cs,:)), thrshStrs(cs));
-                rsstPath = behHere(rsstName);
-                save(rsstPath,"pd", "hd", "pm", "hm");
+                rsstName = sprintf( rsstPttrn, behNames(cs), sprintf("%d ", ...
+                    numel(consCondNames) ), sprintf( "%.2f ", pm{:}), sprintf("%d ", ...
+                    Nex(cs,:)), thrshStrs(cs) );
+                rsstPath = behHere( rsstName );
+                save( rsstPath,"pd", "hd", "pm", "hm" );
             end
         end
     end
