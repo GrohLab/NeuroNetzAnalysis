@@ -2,9 +2,10 @@ function [summStruct, figureDir, behData, aInfo] = ...
     analyseBehaviour(behDir, varargin)
 %UNTITLED2 Summary of this function goes here
 %   Detailed explanation goes here
+
 %% Auxiliary variables
 % 'Software' version
-softVer = 2.02;
+softVer = 2.03;
 % Input files
 dlcPttrn = 'roller*filtered.csv';
 % rpPttrn = "Roller_position*.csv"; vdPttrn = "roller*.avi";
@@ -31,6 +32,7 @@ getSEM = @(x, idx) [mean(x(:,idx),2), std(x(:,idx),1,2)./sqrt(sum(idx))];
 % q2patch = @(x) [x(:,1);x(end:-1:1,3)];
 getThreshCross = @(x) sum(x)/size(x,1);
 m = 1e-3; k = 1/m;
+
 %% Input validation
 p = inputParser;
 
@@ -144,8 +146,8 @@ end
 
 %% Create or read output files
 if verbose
-    fprintf(1,'Time window: %.2f - %.2f ms\n',bvWin*k)
-    fprintf(1,'Response window: %.2f - %.2f ms\n',brWin*k)
+    fprintf( 1, 'Time window: %.2f - %.2f ms\n', bvWin*k )
+    fprintf( 1, 'Response window: %.2f - %.2f ms\n', brWin*k )
 end
 
 if iemty(dir(behHere(afPttrn)))
@@ -488,11 +490,11 @@ pfPttrn = "%s %s move probability %.2f ";
 mvdPttrn = "%s dist ";
 ttPttrn = "%s in %d from %d trials";
 if metaNameFlag
-    bfPttrn = bfPttrn+vwKey+" "+rwKey;
-    mbfPttrn = mbfPttrn+vwKey+" "+rwKey;
-    mpfPttrn = mpfPttrn+rwKey;
-    pfPttrn = pfPttrn+rwKey;
-    mvdPttrn = mvdPttrn+vwKey+" "+rwKey;
+    bfPttrn = bfPttrn + vwKey + " " + rwKey;
+    mbfPttrn = mbfPttrn + vwKey + " " + rwKey;
+    mpfPttrn = mpfPttrn + rwKey;
+    pfPttrn = pfPttrn + rwKey;
+    mvdPttrn = mvdPttrn + vwKey + " " + rwKey;
 end
 bfPttrn = bfPttrn + " EX%d %s";
 mbfPttrn = mbfPttrn + " EX%s%s";
@@ -501,34 +503,41 @@ pfPttrn = pfPttrn + " EX%d %s";
 mvdPttrn = mvdPttrn + " EX%s%s";
 
 % summPttrn = "Summary";
-clMap = lines(Nccond);
+clMap = lines( Nccond );
+
 % Turning condition flag per trial flags into a page.
-pageTrialFlag = reshape(pairedStim, size(pairedStim, 1), 1, []);
+pageTrialFlag = reshape( pairedStim, size( pairedStim, 1 ), 1, [] );
+
 % Exclusion flags + paired stimulation/experimental conditions control
 % Used trial flags shape #Trial x Behavioural signals x #Conditions
 xtf = ~excFlag & pageTrialFlag; 
+
 % Final number of trials
-Na = reshape(sum(xtf, 1), Nbs, Nccond);
+Na = reshape( sum( xtf, 1 ), Nbs, Nccond );
+
 % Excluded flags: #behSign x #Conditions
-Nex = reshape(sum(xor(xtf, pageTrialFlag)),Nbs, Nccond);
+Nex = reshape( sum( xor( xtf, pageTrialFlag ) ), Nbs, Nccond );
 
 % Exporting data 
-behData = struct('Data', cat(3, behStack{:}), 'Conditions', pairedStim, ...
+behData = struct( 'Data', cat( 3, behStack{:} ), 'Conditions', pairedStim, ...
     'ConditionNames', string(consCondNames), 'Considered', xtf, ...
-    'ZValues', [mu_dlc(:), sig_dlc(:); mu_r(:), sig_r(:)]);
+    'ZValues', [mu_dlc(:), sig_dlc(:); mu_r(:), sig_r(:)] );
 
 % Figure names for all signals and conditions
-bfNames = arrayfun(@(y) arrayfun(@(x) sprintf(bfPttrn, behNames(x), ...
-        consCondNames{y}, Nex(x,y), thrshStrs(x)), 1:Nbs), ...
-        1:Nccond, fnOpts{:});
-bfNames = cat(1, bfNames{:});
+bfNames = arrayfun( @(y) arrayfun( @(x) sprintf( bfPttrn, behNames(x), ...
+        consCondNames{y}, Nex(x,y), thrshStrs(x)), 1:Nbs ), ...
+        1:Nccond, fnOpts{:} );
+bfNames = cat( 1, bfNames{:} );
+
 % Figure names for mean trials per condition
-mbfNames = arrayfun(@(s) sprintf(mbfPttrn, behNames(s), ...
-    sprintf("%s ", consCondNames{:}), sprintf("%d ", Nex(s,:)), ...
-    thrshStrs(s)), 1:Nbs);
+mbfNames = arrayfun(@(s) sprintf( mbfPttrn, behNames(s), ...
+    sprintf("%s ", consCondNames{:} ), sprintf("%d ", Nex(s,:) ), ...
+    thrshStrs(s) ), 1:Nbs );
+
 % Figure names for max value per trial boxchart
 mvdNames = arrayfun(@(s) sprintf(mvdPttrn, behNames(s), sprintf("%d ", ...
     Nex(s,:)), thrshStrs(s)), 1:Nbs);
+
 % Computing the SEM and quantiles from the signals per condition.
 behSgnls = arrayfun(@(y) arrayfun(@(x) getSEM(behStack{x}, ...
     xtf(:, x, y)), 1:Nbs, fnOpts{:}), 1:Nccond, fnOpts{:});
@@ -536,6 +545,7 @@ behSgnls = cat(1, behSgnls{:});
 % qSgnls = arrayfun(@(y) arrayfun(@(x) getQs(behStack{x}, xtf(:, x, y)), ...
 %     1:Nbs, fnOpts{:}), 1:Nccond, fnOpts{:});
 % qSgnls = cat(1, qSgnls{:});
+
 % Getting maximum speed per trial
 mvpt = arrayfun(@(c) arrayfun( @(b) ...
     getMaxAbsPerTrial( behStack{b}(:, xtf(:, b, c)), brWin(b,:), behTx ), ...
@@ -648,6 +658,7 @@ for cbs = 1:Nbs
     tptFigs(cbs) = figure('Name', behNames(cbs), 'Color', 'w', ...
         'Visible', spFlag);
     for ccond = 1:Nccond
+
         % Equal (random) trials for all conditions
         ttax(ccond) = subplot(1, Nccond, ccond, axOpts{:}, ...
             'Parent', tptFigs(cbs)); image(ttax(ccond), behTx*k, [], ...
@@ -656,6 +667,7 @@ for cbs = 1:Nbs
         ylim(ttax(ccond), [0.5,Nma(cbs)+0.5]); 
         xlim(ttax(ccond), behTx([1,end])*k); 
         colormap(ttax(ccond),bwg_cm(256))
+
         % Each trial and mean overlaid
         figTtl = sprintf("%s %s", behNames(cbs), consCondNames{ccond});
         allTrialFigs(ccond, cbs) = figure('Name', figTtl, 'Color', 'w',...
@@ -679,6 +691,7 @@ for cbs = 1:Nbs
     colorbar(ttax(Nccond), axOpts{1:2}, 'Location', 'west', ...
         'TickDirection', 'none', 'Ticks', [13, 243], 'TickLabels', ...
         {'Backward', 'Forward'}, 'AxisLocation', 'out');
+
     % Mean for the considered trials
     muTrialFigs(cbs) = figure('Name', "Mean "+behNames(cbs), ...
         "Color", "w", 'Visible', spFlag);
@@ -690,6 +703,7 @@ for cbs = 1:Nbs
         1:Nccond); lgObj = legend(pObj); set(lgObj, lgOpts{:}); xlim(cax, ...
         bvWin*k); xlabel(cax, "Time [ms]"); ylabel(cax, yLabels(cbs)); 
     title(cax, "Mean: "+behNames(cbs))
+
     % Movement probability for all conditions
     mppcFigs(cbs) = figure('Name', "Move prob "+behNames(cbs), ...
         "Color", "w", 'Visible', spFlag);
@@ -699,6 +713,7 @@ for cbs = 1:Nbs
     title(cax, sprintf("Move probability for %s", behNames(cbs)))
     lgObj = legend(ccnMP(:,cbs)); set(lgObj, lgOpts{:});
     ylim(cax, [0, 1])
+
     % Boxplot for maximum value per condition
     bpfFigs(cbs) = figure('Name', ...
         join( ["Maximum value per trial", behNames(cbs)] ), ...
