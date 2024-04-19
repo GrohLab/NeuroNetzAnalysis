@@ -15,7 +15,7 @@ afPttrn = "ArduinoTriggers*.mat"; rfPttrn = "RollerSpeed*.mat";
 dlcVars = {'behDLCSignals', 'dlcNames', 'vidTx', 'fr'};
 % lPttrn = "Laser*.csv"; pPttrn = "Puff*.csv";
 % Functional cell array
-fnOpts = {'UniformOutput', false}; 
+fnOpts = {'UniformOutput', false};
 % Aesthetic cell arrays
 axOpts = {'Box', 'off', 'Color', 'none', 'NextPlot', 'add'};
 lgOpts = cat(2, axOpts{1:4}, {'Location', 'best'});
@@ -117,7 +117,7 @@ end
 awConfStruct = struct('Condition', chCond, 'Triggers', trigSubs, ...
     'ViewingWindow', bvWin, 'ResponseWindow', brWin, 'SpeedTh', spTh, ...
     'Thresholds', struct('SpontSigma', sigTh, 'SpontMedian', sMedTh, ...
-    'MedianTh', tMedTh)); %#ok<NASGU> 
+    'MedianTh', tMedTh)); %#ok<NASGU>
 
 % Validation of the figure directory
 [figParentDir, ~] = fileparts(figureDir);
@@ -217,9 +217,9 @@ if ~iemty(dlcFiles)
         vidTx = arrayfun(@(x) readCSV( flfile( x ) ), fid_paths, fnOpts{:} );
         vidTx = cellfun(@(x) x.Var2/1e9, vidTx, fnOpts{:} ); % nanoseconds
         Texp_vid = cellfun(@(x) diff( x([1,end]) ), vidTx );
-        
+
         % Difference between intan signals and the video
-        delta_tiv = Texp_ephys - Texp_vid; 
+        delta_tiv = Texp_ephys - Texp_vid;
         delta_tiv( delta_tiv < 0 ) = 0;
         % delta_tiv = cumsum( delta_tiv );
 
@@ -229,7 +229,7 @@ if ~iemty(dlcFiles)
         behStruct = cellfun(@(x) getWhiskANoseFromTable(x), a_bodyParts);
         % Butter order 3 low-pass filter 35 Hz cut off frequency @ 3 dB
         [b, a] = butter(3, 70/fr, 'low');
-        
+
         % Adding how many frames fell out to the next experiment segment
         behDLCSignals = arrayfun(@(x) padarray( behStruct(x).Signals, ...
             round( [delta_tiv(x), 0] * fr ), "replicate", "post" ), ...
@@ -238,7 +238,7 @@ if ~iemty(dlcFiles)
         % Concatenating both experiment segments
         % behDLCSignals = cat(1, behStruct(:).Signals);
         behDLCSignals = cat( 1, behDLCSignals{:} );
-        
+
         % Filter and save the results
         dlcNames = behStruct(1).Names; clearvars behStruct;
         behDLCSignals = filtfilt(b, a, behDLCSignals);
@@ -401,7 +401,7 @@ end
 [~, dlcStack] = getStacks(false, round(itTimes{iSub}(trigSubs,:)*fr), 'on', ...
     bvWin, fr, fr, [], [behDLCSignals, set_point]');
 [~, dlcDiffStack] = getStacks(false, round(itTimes{iSub}(trigSubs,:)*fr), 'on', ...
-bvWin, fr, fr, [], diff(behDLCSignals,1,1)');
+    bvWin, fr, fr, [], diff(behDLCSignals,1,1)');
 
 behStack = cat(1, dlcStack(1:Nbs,:,:), vStack);
 Nbs = size(behStack, 1);
@@ -437,7 +437,6 @@ behTx = ((1:Nbt)'.^[1,0])*tmdl;
 % Spontaneous flags
 bsWin = -flip(brWin);
 bsFlag = behTx < bsWin; bsFlag = xor(bsFlag(:,1), bsFlag(:,2));
-brFlag = behTx < brWin; brFlag = xor(brFlag(:,1), brFlag(:,2));
 
 brWin_aux = brWin;
 if brWin(1) < 0.12
@@ -529,7 +528,7 @@ pageTrialFlag = reshape( pairedStim, size( pairedStim, 1 ), 1, [] );
 
 % Exclusion flags + paired stimulation/experimental conditions control
 % Used trial flags shape #Trial x Behavioural signals x #Conditions
-xtf = ~excFlag & pageTrialFlag; 
+xtf = ~excFlag & pageTrialFlag;
 
 % Final number of trials
 Na = reshape( sum( xtf, 1 ), Nbs, Nccond );
@@ -539,8 +538,8 @@ Nex = reshape( sum( xor( xtf, pageTrialFlag ) ), Nbs, Nccond );
 
 % Figure names for all signals and conditions
 bfNames = arrayfun( @(y) arrayfun( @(x) sprintf( bfPttrn, behNames(x), ...
-        consCondNames{y}, Nex(x,y), thrshStrs(x)), 1:Nbs ), ...
-        1:Nccond, fnOpts{:} );
+    consCondNames{y}, Nex(x,y), thrshStrs(x)), 1:Nbs ), ...
+    1:Nccond, fnOpts{:} );
 bfNames = cat( 1, bfNames{:} );
 
 % Figure names for mean trials per condition
@@ -590,8 +589,8 @@ mpfNames = arrayfun(@(s) sprintf(mpfPttrn, behNames(s), ...
     sprintf("%s ", ccnMP(:,s)), thrshStrs(s)), 1:Nbs);
 % Trial crossing plot per condition and signals
 pfNames = arrayfun(@(y) arrayfun(@(x) sprintf(pfPttrn, behNames(x), ...
-        consCondNames{y}, mov_prob(y, x), Nex(x,y), thrshStrs(x)), ...
-        1:Nbs), 1:Nccond, fnOpts{:});
+    consCondNames{y}, mov_prob(y, x), Nex(x,y), thrshStrs(x)), ...
+    1:Nbs), 1:Nccond, fnOpts{:});
 pfNames = cat(1, pfNames{:});
 
 % Auxiliary variables for trial-by-trial plot. Choosing the same number of
@@ -611,7 +610,7 @@ Nae = sum(pairedStim, 1);
 movProb = cell2mat(arrayfun(@(ms) sum(ms.MovmentFlags)./Nae, ...
     movStruct, fnOpts{:}));
 ms = mat2cell(movStruct, ones(size(movStruct)));
-summStruct = cell2mat(arrayfun(@(x) ...
+summStruct = cell2mat( arrayfun(@(x) ...
     struct('ConditionName', consCondNames(x), ...
     'Results', struct('BehSigName', cellstr(behNames), ...
     'MaxValuePerTrial', mvpt(x,:), ...
@@ -641,7 +640,7 @@ if exist(summFile,"file")
 else
     save(summFile, "summStruct", "aInfo", "-v7.3")
 end
-% Tests for roller movement only 
+% Tests for roller movement only
 if Nccond > 1
     cs = 4; prms = nchoosek(1:Nccond,2);
     getDistTravel = @(c) squeeze(sum(abs(behStack{cs}(brFlag(:, cs), ...
@@ -685,9 +684,9 @@ for cbs = 1:Nbs
         ttax(ccond) = subplot(1, Nccond, ccond, axOpts{:}, ...
             'Parent', tptFigs(cbs)); image(ttax(ccond), behTx*k, [], ...
             128+(behStack{cbs}(:,stSubs{cbs, ccond})'*(128/mvprt(cbs))))
-        title(ttax(ccond), consCondNames{ccond}); 
-        ylim(ttax(ccond), [0.5,Nma(cbs)+0.5]); 
-        xlim(ttax(ccond), behTx([1,end])*k); 
+        title(ttax(ccond), consCondNames{ccond});
+        ylim(ttax(ccond), [0.5,Nma(cbs)+0.5]);
+        xlim(ttax(ccond), behTx([1,end])*k);
         colormap(ttax(ccond),bwg_cm(256))
 
         % Each trial and mean overlaid
@@ -695,7 +694,7 @@ for cbs = 1:Nbs
         allTrialFigs(ccond, cbs) = figure('Name', figTtl, 'Color', 'w',...
             'Visible', spFlag);
         cax = axes('Parent', allTrialFigs(ccond, cbs), axOpts{:});
-        plot(cax, behTx*k, behStack{cbs}(:, xtf(:, cbs, ccond)), ptOpts{1,:}); 
+        plot(cax, behTx*k, behStack{cbs}(:, xtf(:, cbs, ccond)), ptOpts{1,:});
         title(cax, figTtl + " Ex:" + string(Nex(cbs, ccond)));
         mtpObj = plot(cax, behTx*k, behSgnls{ccond, cbs}(:,1), ptOpts{2,:});
         lgObj = legend(mtpObj, behNames(cbs)); set(lgObj, lgOpts{:});
@@ -708,7 +707,7 @@ for cbs = 1:Nbs
         title(cax, sprintf("Trial proportion %s %.3f", figTtl, ...
             mov_prob(ccond, cbs)))
     end
-    xlabel(ttax, "Time [ms]"); ylabel(ttax(1), "Trials"); 
+    xlabel(ttax, "Time [ms]"); ylabel(ttax(1), "Trials");
     ttax(Nccond).YAxis.Visible = 'off';
     colorbar(ttax(Nccond), axOpts{1:2}, 'Location', 'west', ...
         'TickDirection', 'none', 'Ticks', [13, 243], 'TickLabels', ...
@@ -723,7 +722,7 @@ for cbs = 1:Nbs
     pObj = arrayfun(@(c) plot(cax, k*behTx, behSgnls{c, cbs}(:,1), "Color", ...
         clMap(c,:), "LineWidth", 1.5, "DisplayName", consCondNames{c}), ...
         1:Nccond); lgObj = legend(pObj); set(lgObj, lgOpts{:}); xlim(cax, ...
-        bvWin*k); xlabel(cax, "Time [ms]"); ylabel(cax, yLabels(cbs)); 
+        bvWin*k); xlabel(cax, "Time [ms]"); ylabel(cax, yLabels(cbs));
     title(cax, "Mean: "+behNames(cbs))
 
     % Movement probability for all conditions
@@ -731,7 +730,7 @@ for cbs = 1:Nbs
         "Color", "w", 'Visible', spFlag);
     cax = axes("Parent", mppcFigs(cbs), "Colormap", clMap, axOpts{:});
     plot(cax, thSet{cbs}, movSgnls{cbs}, "LineWidth", 0.7)
-    xlabel(cax, yLabels(cbs)); ylabel(cax, "Trial crossing"); 
+    xlabel(cax, yLabels(cbs)); ylabel(cax, "Trial crossing");
     title(cax, sprintf("Move probability for %s", behNames(cbs)))
     lgObj = legend(ccnMP(:,cbs)); set(lgObj, lgOpts{:});
     ylim(cax, [0, 1])
@@ -751,7 +750,7 @@ for cbs = 1:Nbs
     end
     ylim(cax, [cax.YLim(1), mxLevl]); ylabel(cax, yLabels(cbs));
     title(cax, join( [behNames(cbs), "L\infty", ...
-        sprintf("%.2f - %.2f ms", brWin(cbs,:) * k )] ) ); 
+        sprintf("%.2f - %.2f ms", brWin(cbs,:) * k )] ) );
 end
 % Saving the plots
 figDir = @(x) fullfile(figureDir, x);
