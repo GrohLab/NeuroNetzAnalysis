@@ -439,11 +439,24 @@ bsWin = -flip(brWin);
 bsFlag = behTx < bsWin; bsFlag = xor(bsFlag(:,1), bsFlag(:,2));
 brFlag = behTx < brWin; brFlag = xor(brFlag(:,1), brFlag(:,2));
 
-brWin_aux = [0, diff( brWin )] + 0.12; 
-if brWin_aux(2) > bvWin(2) 
+brWin_aux = brWin;
+if brWin(1) < 0.12
+    brWin_aux = brWin + 0.1;
+end
+
+if brWin_aux(2) > bvWin(2)
+    if verbose
+        fprintf(1, "WARNING! The response window for the stimulated");
+        fprintf(1, " whisker gets out of the viewing window!\n");
+        fprintf(1, "Reconsider the span of these windows!\n");
+    end
     brWin_aux(2) = bvWin(2);
 end
 brWin = [brWin_aux; repmat( brWin, 3, 1)];
+
+brFlag = arrayfun(@(x) behTx < brWin(x,:), 1:Nbs, fnOpts{:} );
+brFlag = cellfun(@(x) xor(x(:,1), x(:,2) ), brFlag, fnOpts{:} );
+brFlag = cat( 2, brFlag{:} );
 
 % Set-point median for the whiskers and nose
 % Spontaneous
@@ -628,7 +641,7 @@ end
 % Tests for roller movement only 
 if Nccond > 1
     cs = 4; prms = nchoosek(1:Nccond,2);
-    getDistTravel = @(c) squeeze(sum(abs(behStack{cs}(brFlag, ...
+    getDistTravel = @(c) squeeze(sum(abs(behStack{cs}(brFlag(:, cs), ...
         xtf(:, cs, c))), 1));
     dstTrav = arrayfun( getDistTravel, 1:Nccond, fnOpts{:} );
     if all(~cellfun(@isempty, dstTrav),"all")
