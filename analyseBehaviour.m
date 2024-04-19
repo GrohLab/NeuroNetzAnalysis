@@ -460,7 +460,7 @@ excFlag = false(Ntr, Nbs);
 
 %% Organising figures in subfolders
 vwKey = sprintf("V%.2f - %.2f s", bvWin);
-rwKey = sprintf("R%.2f - %.2f ms", brWin*k);
+rwKey = sprintf("R%.2f - %.2f ms", brWin(2,:)*k);
 subFig = "Beh %s %s";
 % Configuration subfolder
 subfigDir = fullfile(figureDir, sprintf(subFig, vwKey, rwKey));
@@ -537,9 +537,9 @@ behSgnls = cat(1, behSgnls{:});
 %     1:Nbs, fnOpts{:}), 1:Nccond, fnOpts{:});
 % qSgnls = cat(1, qSgnls{:});
 % Getting maximum speed per trial
-mvpt = arrayfun(@(c) arrayfun(@(b) ...
-    getMaxAbsPerTrial(behStack{b}(:, xtf(:, b, c)), brWin, behTx), ...
-    1:Nbs, fnOpts{:}), 1:Nccond, fnOpts{:});
+mvpt = arrayfun(@(c) arrayfun( @(b) ...
+    getMaxAbsPerTrial( behStack{b}(:, xtf(:, b, c)), brWin(b,:), behTx ), ...
+    1:Nbs, fnOpts{:}), 1:Nccond, fnOpts{:} );
 mvpt = cat(1, mvpt{:});
 % Crossing thresholds and movement probability
 mvFlags = arrayfun(@(y) arrayfun(@(x) compareMaxWithThresh(mvpt{y, x}, ...
@@ -700,9 +700,10 @@ for cbs = 1:Nbs
     lgObj = legend(ccnMP(:,cbs)); set(lgObj, lgOpts{:});
     ylim(cax, [0, 1])
     % Boxplot for maximum value per condition
-    bpfFigs(cbs) = figure('Name', "Maximum value per trial "+behNames(cbs), ...
-        'Color',"w", 'Visible', spFlag);
-    cax = axes("Parent", bpfFigs(cbs), axOpts{:});
+    bpfFigs(cbs) = figure('Name', ...
+        join( ["Maximum value per trial", behNames(cbs)] ), ...
+        'Color', "w", 'Visible', spFlag);
+    cax = axes("Parent", bpfFigs(cbs), axOpts{:} );
     arrayfun(@(c) boxchart(cax, c*ones(size(mvpt{c,cbs})), ...
         mvpt{c, cbs}, 'Notch', 'on'), 1:Nccond)
     xticks(cax, 1:Nccond); xticklabels(cax, consCondNames)
@@ -712,7 +713,8 @@ for cbs = 1:Nbs
         mxLevl = cax.YLim(2);
     end
     ylim(cax, [cax.YLim(1), mxLevl]); ylabel(cax, yLabels(cbs));
-    title(cax, behNames(cbs)+" max val distribution"); 
+    title(cax, join( [behNames(cbs), "L\inf", ...
+        sprintf("%.2f - %.2f ms", brWin(cbs,:) )] ) ); 
 end
 % Saving the plots
 figDir = @(x) fullfile(figureDir, x);
