@@ -728,8 +728,8 @@ for cbs = 1:Nbs
         mxLevl = cax.YLim(2);
     end
     ylim(cax, [cax.YLim(1), mxLevl]); ylabel(cax, yLabels(cbs));
-    title(cax, join( [behNames(cbs), "L\inf", ...
-        sprintf("%.2f - %.2f ms", brWin(cbs,:) )] ) ); 
+    title(cax, join( [behNames(cbs), "L\infty", ...
+        sprintf("%.2f - %.2f ms", brWin(cbs,:) * k )] ) ); 
 end
 % Saving the plots
 figDir = @(x) fullfile(figureDir, x);
