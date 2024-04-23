@@ -8,13 +8,13 @@ lsrInt = zeros( Nf, 1, 'single' );
 
 frameByte = ht * wd * 3;
 
-% try
-%     mem = memory; maxMem = mem.MemAvailableAllArrays;
-%     bufferFrames = floor( (maxMem/frameByte) * 0.4 );
-% catch
-% No memory module installed. Considering 32 GB of RAM memory
-bufferFrames = floor( (32e9/frameByte) * 0.5 );
-% end
+try
+    [~, mem] = memory; maxMem = mem.PhysicalMemory.Available;
+    bufferFrames = floor( (maxMem/frameByte) * 0.8 );
+catch
+    % No memory module installed. Considering 32 GB of RAM memory
+    bufferFrames = floor( (32e9/frameByte) * 0.5 );
+end
 
 frames = zeros(ht, wd, 3, bufferFrames, 'uint8');
 [X, Y] = meshgrid( 1:wd, 1:ht );
