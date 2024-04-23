@@ -21,7 +21,7 @@ frames = zeros(ht, wd, 3, bufferFrames, 'uint8');
 
 frCount = 0;
 while frCount < Nf
-    
+
     if frCount + bufferFrames > Nf
         bufferFrames = Nf - frCount;
     elseif frCount == Nf
@@ -30,12 +30,10 @@ while frCount < Nf
     mu_lcoords = mean( dlc_table.laser(frCount + [1, bufferFrames], [1,2]) );
     lroi = 8 > sqrt( ( X - mu_lcoords(1) ).^2 + ( Y - mu_lcoords(2) ).^2 );
     [xroi, yroi] = find( lroi );
-    fprintf(1, 'Reading %d-%d out of %d frames...\n', ...
+    fprintf(1, 'Reading %d to %d out of %d frames...\n', ...
         frCount + [1,bufferFrames], Nf)
     frames(:,:,:,1:bufferFrames) = read( video_obj, ...
         frCount + [1, bufferFrames]);
-    %frames(:,:,[2,3],:) = [];
-    %frames = squeeze(frames);
     lsrInt(frCount + (1:bufferFrames)) = ...
         mean( squeeze( frames( xroi, yroi, 1, 1:bufferFrames ) ), [1, 2] );
     frCount = frCount + bufferFrames;
