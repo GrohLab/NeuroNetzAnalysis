@@ -222,7 +222,11 @@ if ~iemty(dlcFiles)
         delta_tiv = Texp_ephys - Texp_vid;
         delta_tiv( delta_tiv < 0 ) = 0;
         % delta_tiv = cumsum( delta_tiv );
-
+        if verbose
+            fprintf(1, "Correcting by")
+            fprintf(1, " %.2f", delta_tiv * k)
+            fprintf(1, " ms\n")
+        end
         dlcTables = arrayfun(@(x) readDLCData(flfile(x)), dlcFiles, fnOpts{:});
         a_bodyParts = cellfun(@(x) getBehaviourSignals(x), ...
             dlcTables, fnOpts{:});
