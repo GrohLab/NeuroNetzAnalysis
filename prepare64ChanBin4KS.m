@@ -255,9 +255,15 @@ end
 
 function dataBuff = removeArtifacts(dataBuff, triggSubs, triggSpred)
 triggSubs = cat(1, triggSubs{:}); triggSubs = sort(triggSubs(:), 'ascend');
-triggWin = -triggSpred:triggSpred;
+triggWin = -triggSpred:triggSpred; reshapeFlag = false;
+fprintf(1, "Trigger window: %d samples\n", length(triggWin) )
 Sw = blackmanharris(numel(triggWin));
 for ct = triggSubs'
+    if any( (ct + triggWin) > length(dataBuff) )
+        triggWin( (ct + triggWin) > length(dataBuff) ) = [];
+        fprintf(1, "Trigger window unfit\nReducing to %d samples\n", length(triggWin) )
+        reshapeFlag = true;
+    end
     for cch = 1:64 % Careful with files with other channel number!
         segm = double(dataBuff(cch, ct + triggWin));
         m = (segm(end) - segm(1))./(triggSpred*2);
@@ -266,6 +272,11 @@ for ct = triggSubs'
             ( ( 1 - Sw(:) ) + Sw(:).*exp(-zscore(double(segm(:))).^2) ) + ...
             Sw(:).*L(:)/2 ) );
         dataBuff(cch, ct + triggWin) = segm;
+    end
+    if reshapeFlag
+        triggWin = -triggSpred:triggSpred;
+        fprintf(1, "Returning to %d samples\n", length(triggWin) )
+        reshapeFlag = false;
     end
 end
 end
