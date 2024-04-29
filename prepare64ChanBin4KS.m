@@ -261,7 +261,12 @@ Sw = blackmanharris(numel(triggWin));
 for ct = triggSubs'
     if any( (ct + triggWin) > length(dataBuff) )
         triggWin( (ct + triggWin) > length(dataBuff) ) = [];
-        fprintf(1, "Trigger window unfit\nReducing to %d samples\n", length(triggWin) )
+        if numel(triggSubs)
+            fprintf(1, "Trigger window unfit\nReducing to %d samples\n", ...
+                length( triggWin ) )
+        else
+            continue;
+        end
         reshapeFlag = true;
     end
     for cch = 1:64 % Careful with files with other channel number!
