@@ -261,7 +261,7 @@ Sw = blackmanharris(numel(triggWin));
 for ct = triggSubs'
     if any( (ct + triggWin) > length(dataBuff) )
         triggWin( (ct + triggWin) > length(dataBuff) ) = [];
-        if numel(triggSubs)
+        if numel(triggSubs) == 0
             fprintf(1, "Trigger window unfit\nReducing to %d samples\n", ...
                 length( triggWin ) )
         else
