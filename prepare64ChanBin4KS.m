@@ -265,6 +265,8 @@ for ct = triggSubs'
             fprintf(1, "Trigger window unfit\nReducing to %d samples\n", ...
                 length( triggWin ) )
         else
+            triggWin = -triggSpred:triggSpred;
+            reshapeFlag = false;
             continue;
         end
         reshapeFlag = true;
