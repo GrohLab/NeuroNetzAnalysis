@@ -10,10 +10,11 @@ function [a_bodyParts, refStruct] = getBehaviourSignals(dlcTable)
 %       a_bodyParts - table containing the
 %Emilio Isaias-Camacho @GrohLab 2022
 
+fnOpts = {'UniformOutput', false};
 % Mean pixel position of the headplate and the nose to draw the middle
 % reference line.
-hnCoords = reshape(mean(dlcTable{:,{'headplate', 'nose'}}(:,[1,2,4,5])),...
-    2, []);
+hnCoords = reshape( mean( dlcTable{:,{'headplate', 'nose'}}(:,[1,2,4,5]) ),...
+    2, [] );
 % Choosing the point with furthest distance from the origin. Should be the
 % nose.
 [~, noseSel] = max(vecnorm(hnCoords, 2, 2));
@@ -37,9 +38,9 @@ a_bodyParts = angleBetweenLines(mdl(1), m_bodyParts, 'deg');
 % Unwrapping jumps from ±90 degrees using a variation from MATLAB unwrap
 % function.
 a_bodyParts = arrayfun(@(x) unwrapDLC(a_bodyParts(:,x), 90), 1:sum(avFlags),...
-    'UniformOutput', false);
+    fnOpts{:} );
 % Wrapping up the results in a table.
-a_bodyParts = table(a_bodyParts{:},'VariableNames', avNames);
+a_bodyParts = table( a_bodyParts{:}, 'VariableNames', avNames );
 end
 % Local function taken from the MATLAB implementation of the unwrap
 % function LocalUnwrap.
