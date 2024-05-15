@@ -19,6 +19,9 @@ end
 frames = zeros(ht, wd, 3, bufferFrames, 'uint8');
 [X, Y] = meshgrid( 1:wd, 1:ht );
 
+% Dot product between normalised likelihood and positions to get the most
+% certain position in the given time period
+weighted_mean = @(x) x(:,[1,2])' * ( x(:,3) ./ vecnorm( x(:,3), 1) );
 frCount = 0;
 while frCount < Nf
 
@@ -27,7 +30,8 @@ while frCount < Nf
     elseif frCount == Nf
         bufferFrames = 1;
     end
-    mu_lcoords = mean( dlc_table.laser(frCount + [1, bufferFrames], [1,2]) );
+    mu_lcoords = weighted_mean( ...
+        dlc_table.laser(frCount + [1, bufferFrames], :) ) ;
     lroi = 8 > sqrt( ( X - mu_lcoords(1) ).^2 + ( Y - mu_lcoords(2) ).^2 );
     [xroi, yroi] = find( lroi );
     fprintf(1, 'Reading %d to %d out of %d frames...\n', ...
