@@ -5,9 +5,9 @@ function [summStruct, figureDir, behData, aInfo] = ...
 
 %% Auxiliary variables
 % 'Software' version
-softVer = 2.04;
+softVer = 3.0;
 % Input files
-dlcPttrn = 'roller*filtered.csv';
+dlcPttrn = 'roller*shuffle2*filtered.csv';
 % rpPttrn = "Roller_position*.csv"; vdPttrn = "roller*.avi";
 % Output files
 afPttrn = "ArduinoTriggers*.mat"; rfPttrn = "RollerSpeed*.mat";
@@ -191,7 +191,7 @@ dlcFiles = dir( behHere( dlcPttrn ) );
 fid_paths = dir( behHere( "FrameID*.csv" ) );
 
 if ~iemty(dlcFiles)
-    behPttrn = "BehaveSignals%s%s.mat";
+    behPttrn = "BehaviourSignals%s%s.mat";
     endng = "DLC" + string(extractBetween(dlcFiles(1).name, "DLC", ".csv"));
     behPath = joinBehDates(dlcFiles, "roller", behHere(behPttrn), ...
         endng);
@@ -228,7 +228,7 @@ if ~iemty(dlcFiles)
             fprintf(1, " ms\n")
         end
         dlcTables = arrayfun(@(x) readDLCData(flfile(x)), dlcFiles, fnOpts{:});
-        a_bodyParts = cellfun(@(x) getBehaviourSignals(x), ...
+        [a_bodyParts, refStruct] = cellfun(@(x) getBehaviourSignals(x), ...
             dlcTables, fnOpts{:});
         behStruct = cellfun(@(x) getWhiskANoseFromTable(x), a_bodyParts);
         % Butter order 3 low-pass filter 35 Hz cut off frequency @ 3 dB
