@@ -8,8 +8,9 @@ function [a_bodyParts, refStruct] = getBehaviourSignals(dlcTable)
 %       dlcTable - obtained from function readDLCData.
 % OUTPUTS
 %       a_bodyParts - table containing the
-%Emilio Isaias-Camacho @GrohLab 2022
+%Emilio Isaias-Camacho @GrohLab 2022 v1
 
+%{
 fnOpts = {'UniformOutput', false};
 % Mean pixel position of the headplate and the nose to draw the middle
 % reference line.
@@ -41,7 +42,109 @@ a_bodyParts = arrayfun(@(x) unwrapDLC(a_bodyParts(:,x), 90), 1:sum(avFlags),...
     fnOpts{:} );
 % Wrapping up the results in a table.
 a_bodyParts = table( a_bodyParts{:}, 'VariableNames', avNames );
+%}
+
+%% New analysis prototype
+%Emilio Isaias-Camacho @GrohLab 2024 v2
+% Number of 
+Nframes = uint32( size( dlcTable, 1 ) );
+rotMat = @(theta) [cos(theta), -sin(theta); ...
+    sin(theta), cos(theta)];
+rotateBy = @(A, theta) rotMat(theta) * A;
+
+whisk_cols = cellfun(@(c) ~isempty(c), regexp( ...
+    dlcTable.Properties.VariableNames, '[lr]w\d' ) );
+circle_bodyparts = cellfun(@(c) ~isempty(c), ...
+    regexp( dlcTable.Properties.VariableNames, '([lr]w\d|^[n])' ) );
+proj_bodyparts = contains( dlcTable.Properties.VariableNames, ...
+    {'nose', 'ueye'} );
+
+eye2nose = zeros( Nframes, 1, "single" );
+middle_snout = zeros( Nframes, 2, "single" );
+mdl_yx = zeros( Nframes, 2, "single" );
+nangle = zeros( Nframes, 1, "single" );
+wangles = zeros( Nframes, 8, "single" );
+
+circ_tbl = dlcTable{:, circle_bodyparts}(:, setdiff( 1:end, 3:3:end ) );
+x_circ_coord = circ_tbl(:,1:2:end);
+y_circ_coord = circ_tbl(:,2:2:end);
+
+hp_tbl = dlcTable{:, 'headplate'}(:, setdiff( 1:end, 3:3:end ) );
+x_hp_coord = hp_tbl(:,1:2:end);
+y_hp_coord = hp_tbl(:,2:2:end);
+
+proj_tbl = dlcTable{:, proj_bodyparts}(:, setdiff( 1:end, 3:3:end ) );
+x_proj_coord = proj_tbl(:,1:2:end);
+y_proj_coord = proj_tbl(:,2:2:end);
+
+wx = dlcTable{:,whisk_cols}(:, 1:3:end);
+wy = dlcTable{:,whisk_cols}(:, 2:3:end);
+nx = dlcTable{:,"nose"}(:, 1:3:end);
+ny = dlcTable{:,"nose"}(:, 2:3:end);
+
+% Not general implementation! Only with the yx coordinate system!
+angleWRTn = @(x,y,n) acosd( ([y(:), x(:)] * n(:)) ./ ...
+    vecnorm( [x(:), y(:)], 2, 2 ) );
+
+% Golden ratio
+gr = ( ( 1 + sqrt(5) )/2 );
+
+% Objective function for circle fit
+sseval = @(theta, xdata, ydata) sum( ( sqrt( (xdata - theta(1)).^2 + ...
+    (ydata - theta(2)).^2) - theta(3) ).^2 );
+
+parfor cf = 1:Nframes
+    
+    % Fitting a circle to the whiskers and nose
+    circTheta = fminsearch( @(x) sseval( x, x_circ_coord(cf,:)', ...
+        y_circ_coord(cf,:)' ), [x_hp_coord(cf), y_hp_coord(cf), 40] );
+    
+    % Centre coordinates
+    c_coords = circTheta(1:2);
+
+    % Fitting a more stable line with a 90° rotation.
+    mdl_yx(cf,:) = fit_poly( ... 
+        [circTheta(2), y_hp_coord(cf)], ... Y coordinate
+        [circTheta(1), x_hp_coord(cf)], 1)'; % X coordinate
+
+    p_i = [y_proj_coord(cf,:)', x_proj_coord(cf,:)'];
+
+    [n, d] = getHesseLineForm( mdl_yx(cf,:)' );
+    p_p = p_i - ( n * (p_i * n - d)' )';
+
+    % Golden ration from nose to the cicle centre
+    wpivot_nose_d = pdist( [p_p(1,:); c_coords([2,1])] ) / gr;
+    % Orthogonal vector to n
+    n_orth = rotateBy( n, pi/2 );
+    % Pivotal point for all whiskers
+    w_pivot = p_p(1,:) + ( n_orth * wpivot_nose_d )';
+    % Centering on the pivotal point
+    wx_c = ( wx(cf,:) - w_pivot(2) ); wy_c = ( wy(cf,:) - w_pivot(1) );
+    nx_c = ( nx(cf,:) - w_pivot(2) ); ny_c = ( ny(cf,:) - w_pivot(1) );
+
+    % Getting angles of all whiskers w.r.t. the rotated n vector
+    wangles(cf,:) = angleWRTn( wx_c, wy_c, n_orth )';
+    % Angle of the nose w.r.t. the n vector
+    nangle(cf) = angleWRTn( nx_c, ny_c, n );
+
+    % Validation and verification variables
+    eye2nose(cf) = pdist( p_p, "euclidean" );
+    for ii = 1:2
+        middle_snout(cf, ii) = circTheta(ii);
+    end
 end
+
+avNames = { dlcTable.Properties.VariableNames{whisk_cols}, 'nose' };
+a_bodyParts = table( 'Size', [Nframes, 9], ...
+    'VariableTypes', repmat( "double", 1, 9 ) );
+a_bodyParts{:,:} = [wangles, nangle];
+a_bodyParts.Properties.VariableNames = avNames;
+
+refStruct = struct( 'LinearEq', mdl_yx, 'Eye2NoseDist', eye2nose, ...
+    'CircleCentre', middle_snout );
+
+end
+
 % Local function taken from the MATLAB implementation of the unwrap
 % function LocalUnwrap.
 function p = unwrapDLC(p, cutoff)
