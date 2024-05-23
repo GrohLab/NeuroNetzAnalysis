@@ -12,7 +12,7 @@ dlcPttrn = 'roller*shuffle2*filtered.csv';
 % Output files
 afPttrn = "ArduinoTriggers*.mat"; rfPttrn = "RollerSpeed*.mat";
 % DLC variables
-dlcVars = {'behDLCSignals', 'dlcNames', 'vidTx', 'fr'};
+dlcVars = {'behDLCSignals', 'dlcNames', 'vidTx', 'fr', 'refStruct'};
 % lPttrn = "Laser*.csv"; pPttrn = "Puff*.csv";
 % Functional cell array
 fnOpts = {'UniformOutput', false};
@@ -214,13 +214,18 @@ if ~iemty(dlcFiles)
         if verbose
             fprintf(1, "Computing signals... \n")
         end
+
         vidTx = arrayfun(@(x) readCSV( flfile( x ) ), fid_paths, fnOpts{:} );
         vidTx = cellfun(@(x) x.Var2/1e9, vidTx, fnOpts{:} ); % nanoseconds
-        Texp_vid = cellfun(@(x) diff( x([1,end]) ), vidTx );
+        if ~isempty(vidTx)
+            Texp_vid = cellfun(@(x) diff( x([1,end]) ), vidTx );
 
-        % Difference between intan signals and the video
-        delta_tiv = Texp_ephys - Texp_vid;
-        delta_tiv( delta_tiv < 0 ) = 0;
+            % Difference between intan signals and the video
+            delta_tiv = Texp_ephys - Texp_vid;
+            delta_tiv( delta_tiv < 0 ) = 0;
+        else
+            delta_tiv = zeros( numel(dlcFiles), 1 );
+        end
         % delta_tiv = cumsum( delta_tiv );
         if verbose
             fprintf(1, "Correcting by")
@@ -234,10 +239,14 @@ if ~iemty(dlcFiles)
         % Butter order 3 low-pass filter 35 Hz cut off frequency @ 3 dB
         [b, a] = butter(3, 70/fr, 'low');
 
-        % Adding how many frames fell out to the next experiment segment
-        behDLCSignals = arrayfun(@(x) padarray( behStruct(x).Signals, ...
-            round( [delta_tiv(x), 0] * fr ), "replicate", "post" ), ...
-            1:length( vidTx ), fnOpts{:} );
+        if any( delta_tiv ~= 0 )
+            % Adding how many frames fell out to the next experiment segment
+            behDLCSignals = arrayfun(@(x) padarray( behStruct(x).Signals, ...
+                round( [delta_tiv(x), 0] * fr ), "replicate", "post" ), ...
+                1:length( vidTx ), fnOpts{:} );
+        else
+            behDLCSignals = {behStruct.Signals};
+        end
 
         % Concatenating both experiment segments
         % behDLCSignals = cat(1, behStruct(:).Signals);
@@ -246,9 +255,12 @@ if ~iemty(dlcFiles)
         % Filter and save the results
         dlcNames = behStruct(1).Names; clearvars behStruct;
         behDLCSignals = filtfilt(b, a, behDLCSignals);
+        if verbose
+            fprintf(1, 'Saving... ')
+        end
         save(behPath, dlcVars{:})
         if verbose
-            fprintf(1, "Saving... Done!\n")
+            fprintf(1, "Done!\n")
         end
     else
         if verbose
