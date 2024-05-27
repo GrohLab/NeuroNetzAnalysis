@@ -255,6 +255,18 @@ if ~iemty(dlcFiles)
         % Filter and save the results
         dlcNames = behStruct(1).Names; clearvars behStruct;
         behDLCSignals = filtfilt(b, a, behDLCSignals);
+
+        if ~isreal( behDLCSignals )
+            if verbose
+                fprintf(1, 'Some signals turned out to be complex. ')
+                fprintf(1, 'Transforming to real values...')
+            end
+            behDLCSignals = real( behDLCSignals );
+            if verbose
+                fprintf(1, ' Done!\n')
+            end
+        end
+
         if verbose
             fprintf(1, 'Saving... ')
         end
