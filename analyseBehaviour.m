@@ -411,8 +411,11 @@ end
 behTx_all = (0:size(behDLCSignals, 1) - 1)/fr;
 spFile = fullfile(behDir, "SetPoint2.mat");
 if ~exist(spFile, "file")
-    set_point = arrayfun(@(x) fitSpline(behTx_all, behDLCSignals(:,x), 1, ...
-        0.3, 0.95, verbose), 1:size(behDLCSignals,2), fnOpts{:});
+    set_point = cell( Nbs, 1 );
+    parfor cs = 1:size( behDLCSignals, 2 )
+        set_point{cs} = fitSpline( behTx_all, behDLCSignals( :, cs ), 1, ...
+            0.3, 0.95, verbose );
+    end
     set_point = [set_point{:}];
     if ~isempty(set_point)
         save(spFile, "set_point")
