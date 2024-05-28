@@ -606,13 +606,13 @@ mvpt = arrayfun(@(c) arrayfun( @(b) ...
 mvpt = cat(1, mvpt{:});
 
 % Crossing thresholds and movement probability
-ctrl_cond = contains( consCondNames, "Control" ); up_pc = 1.1;
+ctrl_cond = contains( consCondNames, "Control" ); up_pc = 1.15;
 if all( ~ctrl_cond )
     % No control condition found
-    mvps = round( max( cellfun( @(x) max( x ), mvpt ) ) * up_pc );
+    mvps = round( max( cellfun( @(x) max( x ), mvpt ) ) * up_pc, 1 );
 else
     % Found a control condition
-    mvps = round( cellfun( @(x) max( x ), mvpt(ctrl_cond, :) ) * up_pc );
+    mvps = round( cellfun( @(x) max( x ), mvpt(ctrl_cond, :) ) * up_pc, 1 );
 end
 mvps( mvps == 0 ) = 1;
 
