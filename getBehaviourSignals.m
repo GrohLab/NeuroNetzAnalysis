@@ -98,7 +98,8 @@ parfor cf = 1:Nframes
     
     % Fitting a circle to the whiskers and nose
     circTheta = fminsearch( @(x) sseval( x, x_circ_coord(cf,:)', ...
-        y_circ_coord(cf,:)' ), [x_hp_coord(cf), y_hp_coord(cf), 40] );
+        y_circ_coord(cf,:)' ), [mean( x_circ_coord(cf,:) ), ...
+        mean( y_circ_coord(cf,:) ), 40] );
     
     % Centre coordinates
     c_coords = circTheta(1:2);
