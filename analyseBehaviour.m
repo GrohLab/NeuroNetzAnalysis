@@ -748,12 +748,12 @@ for cbs = 1:Nbs
     for ccond = 1:Nccond
         % Equal (random) trials for all conditions
         ttax(ccond) = subplot(1, Nccond, ccond, axOpts{:}, ...
-            'Parent', tptFigs(cbs)); image(ttax(ccond), behTx*k, [], ...
-            128+(behStack{cbs}(:,stSubs{cbs, ccond})'*(128/mvprt(cbs))))
+            'Parent', tptFigs(cbs)); imagesc(ttax(ccond), behTx*k, [], ...
+            behStack{cbs}(:,stSubs{cbs, ccond})'/mvprt(cbs) )
         title(ttax(ccond), consCondNames{ccond});
         ylim(ttax(ccond), [0.5,Nma(cbs)+0.5]);
         xlim(ttax(ccond), behTx([1,end])*k);
-        colormap(ttax(ccond),bwg_cm(256))
+        colormap( ttax(ccond), bwg_cm(256) )
 
         % Each trial and mean overlaid
         figTtl = sprintf("%s %s", behNames(cbs), consCondNames{ccond});
@@ -795,7 +795,7 @@ for cbs = 1:Nbs
     mppcFigs(cbs) = figure('Name', "Move prob "+behNames(cbs), ...
         "Color", "w", 'Visible', spFlag);
     cax = axes("Parent", mppcFigs(cbs), "Colormap", clMap, axOpts{:});
-    plot(cax, thSet{cbs}, movSgnls{cbs}, "LineWidth", 0.7)
+    plot(cax, thSet{cbs}, movSgnls{cbs}, "LineWidth", 0.7); 
     xlabel(cax, yLabels(cbs)); ylabel(cax, "Trial crossing");
     title(cax, sprintf("Move probability for %s", behNames(cbs)))
     lgObj = legend(ccnMP(:,cbs)); set(lgObj, lgOpts{:});
