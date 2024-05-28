@@ -50,15 +50,21 @@ txOpts = {'HorizontalAlignment','center', 'VerticalAlignment', 'middle', ...
     'Rotation'};
 vFig = figure('Name', figName, 'Color', 'w'); 
 ax = axes('Parent', vFig, 'NextPlot', 'add', axOpts{:});
-plot([zeros(size(bAxis)), real(bAxis)]', ...
-    [zeros(size(bAxis)), imag(bAxis)]', 'LineWidth', 0.3, ...
-    'Color', 0.3*ones(1,3), 'LineStyle', ':'); 
+grayLvl = 0.75; gridThick = 0.1;
+% R-grid
+line([zeros(size(bAxis)), real(bAxis)]', ...
+    [zeros(size(bAxis)), imag(bAxis)]', 'LineWidth', gridThick, ...
+    'Color', grayLvl*ones(1,3));
+% Theta-grid
+tcks = (1:4)/4; th = 0:pi/50:2*pi; 
+x_circ = tcks(:) .* cos(th); y_circ = tcks(:) .* sin(th);
+line( x_circ', y_circ', 'LineWidth', gridThick, 'Color', grayLvl*ones(1,3) )
 arrayfun(@(c,t,a) text(real(c)*1.1, imag(c)*1.1, t, txOpts{:}, a ), ...
     bAxis, string( bsNames(:) ), (180*angle( bAxis )/pi) - 90 );
-tcks = (1:4)/4;
-arrayfun(@(r) text(real(bAxis(r))*tcks, imag(bAxis(r))*tcks,sprintf("%c",743), ...
-    txOpts{:}, rad2deg(angle(bAxis(r)))), 1:size(bAxis,1));
-text(tcks, zeros(numel(tcks),1), string(tcks), txOpts{1:3}, 'top' )
+
+% arrayfun(@(r) text(real(bAxis(r))*tcks, imag(bAxis(r))*tcks,sprintf("%c",743), ...
+%     txOpts{:}, rad2deg(angle(bAxis(r)))), 1:size(bAxis,1));
+text(tcks, zeros(numel(tcks),1), string(tcks), txOpts{3}, 'top' )
 set(ax, axOpts{:})
 fpd = @plotData;
     function pAreas = plotData(vertices, clrMp, consCondNames)
