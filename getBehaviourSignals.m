@@ -148,6 +148,7 @@ refStruct = struct( 'LinearEq', mdl_yx, 'Eye2NoseDist', eye2nose, ...
 
 end
 
+%{
 % Local function taken from the MATLAB implementation of the unwrap
 % function LocalUnwrap.
 function p = unwrapDLC(p, cutoff)
@@ -179,3 +180,4 @@ dp_corr(abs(dp) < cutoff) = 0;
 % taking the full range into consideration
 p(2:m,:) = p(2:m,:) - (2*cutoff)*cumsum(sign(dp_corr),1);
 end
+%}
