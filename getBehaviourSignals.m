@@ -64,6 +64,7 @@ middle_snout = zeros( Nframes, 2, "single" );
 mdl_yx = zeros( Nframes, 2, "single" );
 nangle = zeros( Nframes, 1, "single" );
 wangles = zeros( Nframes, 8, "single" );
+pivot = zeros( Nframes, 2, "single" );
 
 circ_tbl = dlcTable{:, circle_bodyparts}(:, setdiff( 1:end, 3:3:end ) );
 x_circ_coord = circ_tbl(:,1:2:end);
@@ -118,6 +119,7 @@ parfor cf = 1:Nframes
     n_orth = rotateBy( n, pi/2 );
     % Pivotal point for all whiskers
     w_pivot = p_p(1,:) + ( n_orth * wpivot_nose_d )';
+    pivot(cf,:) = w_pivot;
     % Centering on the pivotal point
     wx_c = ( wx(cf,:) - w_pivot(2) ); wy_c = ( wy(cf,:) - w_pivot(1) );
     nx_c = ( nx(cf,:) - w_pivot(2) ); ny_c = ( ny(cf,:) - w_pivot(1) );
@@ -141,7 +143,7 @@ a_bodyParts{:,:} = [wangles, nangle];
 a_bodyParts.Properties.VariableNames = avNames;
 
 refStruct = struct( 'LinearEq', mdl_yx, 'Eye2NoseDist', eye2nose, ...
-    'CircleCentre', middle_snout );
+    'CircleCentre', middle_snout, 'PivotPt', pivot );
 
 end
 
