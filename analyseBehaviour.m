@@ -619,7 +619,7 @@ mvps( mvps == 0 ) = 1;
 [mvFlags, thSet] = arrayfun( @(y) arrayfun( @(x) ...
     compareMaxWithThresh( mvpt{y, x}, mvps(x) ), 1:Nbs, fnOpts{:} ), ...
     1:Nccond, fnOpts{:} );
-thSet = cat( 1, thSet{:} ); thSet = cellfun(@(x) x{:}, thSet, fnOpts{:} );
+thSet = cat( 1, thSet{:} ); thSet = cellfun(@(x) x{:}, thSet(1,:), fnOpts{:} );
 mvFlags = cat(1, mvFlags{:}); mov_prob = cellfun( @getAUC, mvFlags );
 mov_prob(isnan(mov_prob)) = 0;
 
@@ -799,7 +799,7 @@ for cbs = 1:Nbs
     xlabel(cax, yLabels(cbs)); ylabel(cax, "Trial crossing");
     title(cax, sprintf("Move probability for %s", behNames(cbs)))
     lgObj = legend(ccnMP(:,cbs)); set(lgObj, lgOpts{:});
-    ylim(cax, [0, 1])
+    axis( cax, [thSet{cbs}([1, end]); 0; 1] )
 
     % Boxplot for maximum value per condition
     bpfFigs(cbs) = figure('Name', ...
