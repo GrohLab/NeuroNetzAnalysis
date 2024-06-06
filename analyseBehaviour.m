@@ -742,13 +742,18 @@ end
 allTrialFigs = gobjects(Nccond, Nbs); muTrialFigs = gobjects(Nbs, 1);
 mpFigs = allTrialFigs; mppcFigs = muTrialFigs; bpfFigs = mppcFigs;
 tptFigs = gobjects(Nbs,1); ttax = gobjects(Nccond,1);
+createtiles = @(f, r, c) tiledlayout( f, r, c, ...
+    'TileSpacing', 'Compact', 'Padding', 'tight');
 for cbs = 1:Nbs
     tptFigs(cbs) = figure('Name', behNames(cbs), 'Color', 'w', ...
         'Visible', spFlag);
-    for ccond = 1:Nccond
+    ttpt = createtiles( tptFigs(cbs), 1, Nccond );
+    for ccond = 1:Nccond 
         % Equal (random) trials for all conditions
-        ttax(ccond) = subplot(1, Nccond, ccond, axOpts{:}, ...
-            'Parent', tptFigs(cbs)); imagesc(ttax(ccond), behTx*k, [], ...
+        ttax(ccond) = nexttile(ttpt); set( ttax(ccond), axOpts{:} )
+            %subplot(1, Nccond, ccond, axOpts{:}, ...
+            %'Parent', tptFigs(cbs)); 
+        imagesc(ttax(ccond), behTx*k, [], ...
             behStack{cbs}(:,stSubs{cbs, ccond})'/mvprt(cbs) )
         title(ttax(ccond), consCondNames{ccond});
         ylim(ttax(ccond), [0.5,Nma(cbs)+0.5]);
@@ -759,7 +764,9 @@ for cbs = 1:Nbs
         figTtl = sprintf("%s %s", behNames(cbs), consCondNames{ccond});
         allTrialFigs(ccond, cbs) = figure('Name', figTtl, 'Color', 'w',...
             'Visible', spFlag);
-        cax = axes('Parent', allTrialFigs(ccond, cbs), axOpts{:});
+        tatf = createtiles( allTrialFigs(ccond, cbs), 1, 1);
+        % cax = axes('Parent', allTrialFigs(ccond, cbs), axOpts{:});
+        cax = nexttile( tatf ); set( cax, axOpts{:} )
         plot(cax, behTx*k, behStack{cbs}(:, xtf(:, cbs, ccond)), ptOpts{1,:});
         title(cax, figTtl + " Ex:" + string(Nex(cbs, ccond)));
         mtpObj = plot(cax, behTx*k, behSgnls{ccond, cbs}(:,1), ptOpts{2,:});
@@ -782,7 +789,9 @@ for cbs = 1:Nbs
     % Mean for the considered trials
     muTrialFigs(cbs) = figure('Name', "Mean "+behNames(cbs), ...
         "Color", "w", 'Visible', spFlag);
-    cax = axes("Parent", muTrialFigs(cbs), axOpts{:});
+    tmtf = createtiles( muTrialFigs(cbs), 1, 1);
+    %cax = axes("Parent", muTrialFigs(cbs), axOpts{:});
+    cax = nexttile( tmtf ); set( cax, axOpts{:} );
     arrayfun(@(c) patch(cax, k*behTx([1:end, end:-1:1]),...
         mat2ptch(behSgnls{c, cbs}), 1, phOpts{:}, clMap(c,:)), 1:Nccond)
     pObj = arrayfun(@(c) plot(cax, k*behTx, behSgnls{c, cbs}(:,1), "Color", ...
@@ -794,7 +803,9 @@ for cbs = 1:Nbs
     % Movement probability for all conditions
     mppcFigs(cbs) = figure('Name', "Move prob "+behNames(cbs), ...
         "Color", "w", 'Visible', spFlag);
-    cax = axes("Parent", mppcFigs(cbs), "Colormap", clMap, axOpts{:});
+    tmppc = createtiles( mppcFigs(cbs), 1, 1 );
+    % cax = axes("Parent", mppcFigs(cbs), "Colormap", clMap, axOpts{:});
+    cax = nexttile(tmppc); set( cax, "Colormap", clMap, axOpts{:});
     plot(cax, thSet{cbs}, movSgnls{cbs}, "LineWidth", 0.7); 
     xlabel(cax, yLabels(cbs)); ylabel(cax, "Trial crossing");
     title(cax, sprintf("Move probability for %s", behNames(cbs)))
@@ -805,7 +816,9 @@ for cbs = 1:Nbs
     bpfFigs(cbs) = figure('Name', ...
         join( ["Maximum value per trial", behNames(cbs)] ), ...
         'Color', "w", 'Visible', spFlag);
-    cax = axes("Parent", bpfFigs(cbs), axOpts{:} );
+    tbpf = createtiles( bpfFigs(cbs), 1, 1 );
+    %cax = axes("Parent", bpfFigs(cbs), axOpts{:} );
+    cax = nexttile(tbpf); set( cax, axOpts{:} );
     arrayfun(@(c) boxchart(cax, c*ones(size(mvpt{c,cbs})), ...
         mvpt{c, cbs}, 'Notch', 'on'), 1:Nccond)
     xticks(cax, 1:Nccond); xticklabels(cax, consCondNames)
@@ -821,13 +834,13 @@ end
 % Saving the plots
 figDir = @(x) fullfile(figureDir, x);
 arrayfun(@(c) arrayfun(@(s) saveFigure(allTrialFigs(c, s), ...
-    figDir(bfNames(c, s)), 1), 1:Nbs), 1:Nccond);
+    figDir(bfNames(c, s)), 1, 1), 1:Nbs), 1:Nccond);
 arrayfun(@(c) arrayfun(@(s) saveFigure(mpFigs(c, s), figDir(pfNames(c, s)), ...
-    1), 1:Nbs), 1:Nccond);
-arrayfun(@(s) saveFigure(muTrialFigs(s), figDir(mbfNames(s)), 1), 1:Nbs);
-arrayfun(@(s) saveFigure(mppcFigs(s), figDir(mpfNames(s)), 1), 1:Nbs);
-arrayfun(@(s) saveFigure(bpfFigs(s), figDir(mvdNames(s)), 1), 1:Nbs);
-arrayfun(@(s) saveFigure(tptFigs(s), figDir(ttNames(s)), 1), 1:Nbs);
+    1, 1), 1:Nbs), 1:Nccond);
+arrayfun(@(s) saveFigure(muTrialFigs(s), figDir(mbfNames(s)), 1, 1), 1:Nbs);
+arrayfun(@(s) saveFigure(mppcFigs(s), figDir(mpfNames(s)), 1, 1), 1:Nbs);
+arrayfun(@(s) saveFigure(bpfFigs(s), figDir(mvdNames(s)), 1, 1), 1:Nbs);
+arrayfun(@(s) saveFigure(tptFigs(s), figDir(ttNames(s)), 1, 1), 1:Nbs);
 
 %{
 TODO: 
