@@ -749,11 +749,11 @@ for cbs = 1:Nbs
     tptFigs(cbs) = figure('Name', behNames(cbs), 'Color', 'w', ...
         'Visible', spFlag);
     ttpt = createtiles( tptFigs(cbs), 1, Nccond );
-    for ccond = 1:Nccond 
+    for ccond = 1:Nccond
         % Equal (random) trials for all conditions
         ttax(ccond) = nexttile(ttpt); set( ttax(ccond), axOpts{:} )
-            %subplot(1, Nccond, ccond, axOpts{:}, ...
-            %'Parent', tptFigs(cbs)); 
+        %subplot(1, Nccond, ccond, axOpts{:}, ...
+        %'Parent', tptFigs(cbs));
         imagesc(ttax(ccond), behTx*k, [], ...
             behStack{cbs}(:,stSubs{cbs, ccond})'/mvprt(cbs) )
         title(ttax(ccond), consCondNames{ccond});
@@ -807,7 +807,7 @@ for cbs = 1:Nbs
     tmppc = createtiles( mppcFigs(cbs), 1, 1 );
     % cax = axes("Parent", mppcFigs(cbs), "Colormap", clMap, axOpts{:});
     cax = nexttile(tmppc); set( cax, "Colormap", clMap, axOpts{:});
-    plot(cax, thSet{cbs}, movSgnls{cbs}, "LineWidth", 0.7); 
+    plot(cax, thSet{cbs}, movSgnls{cbs}, "LineWidth", 0.7);
     xlabel(cax, yLabels(cbs)); ylabel(cax, "Trial crossing");
     title(cax, sprintf("Move probability for %s", behNames(cbs)))
     lgObj = legend(ccnMP(:,cbs)); set(lgObj, lgOpts{:});
