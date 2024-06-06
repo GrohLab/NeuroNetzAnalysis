@@ -196,6 +196,13 @@ if ~iemty(dlcFiles)
     behPath = joinBehDates(dlcFiles, "roller", behHere(behPttrn), ...
         endng);
 
+    if ~exist(behPath, "file")
+        if verbose
+            fprintf(1, "Computing signals... \n")
+        end
+        varsInLsr = {'lsrInt', 'delta_tiv', 'Texp_vid', 'Texp_ephys'};
+        %{
+        % 
     exp_path = getParentDir( behDir, 1);
     tf_paths = dir( fullfile( behDir, "TriggerSignals*.bin") );
     fsf_path = dir( fullfile( behDir, "*_sampling_frequency.mat") );
@@ -209,23 +216,17 @@ if ~iemty(dlcFiles)
     fs_ephys = load( flfile( fsf_path ), "fs" ); fs_ephys = fs_ephys.fs;
     Ns_intan = [tf_paths.bytes]' ./ 4; % 2 signals x 2 bytes per sample.
     Texp_ephys = Ns_intan ./ fs_ephys;
-
-    if ~exist(behPath, "file")
-        if verbose
-            fprintf(1, "Computing signals... \n")
-        end
-
-        vidTx = arrayfun(@(x) readCSV( flfile( x ) ), fid_paths, fnOpts{:} );
-        vidTx = cellfun(@(x) x.Var2/1e9, vidTx, fnOpts{:} ); % nanoseconds
-        if ~isempty(vidTx)
-            Texp_vid = cellfun(@(x) diff( x([1,end]) ), vidTx );
-
-            % Difference between intan signals and the video
+    vidTx = arrayfun(@(x) readCSV( flfile( x ) ), fid_paths, fnOpts{:} );
+    vidTx = cellfun(@(x) x.Var2/1e9, vidTx, fnOpts{:} ); % nanoseconds
+    if ~isempty(vidTx)
+         Texp_vid = cellfun(@(x) diff( x([1,end]) ), vidTx );
+           % Difference between intan signals and the video
             delta_tiv = Texp_ephys - Texp_vid;
             delta_tiv( delta_tiv < 0 ) = 0;
         else
             delta_tiv = zeros( numel(dlcFiles), 1 );
         end
+        %}
         % delta_tiv = cumsum( delta_tiv );
         if verbose
             fprintf(1, "Correcting by")
