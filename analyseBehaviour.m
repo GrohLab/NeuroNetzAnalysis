@@ -200,7 +200,7 @@ if ~iemty(dlcFiles)
         if verbose
             fprintf(1, "Computing signals... \n")
         end
-        varsInLsr = {'lsrInt', 'delta_tiv', 'Texp_vid', 'Texp_ephys'};
+        % varsInLsr = {'lsrInt', 'delta_tiv', 'Texp_vid', 'Texp_ephys'};
         %{
         % 
     exp_path = getParentDir( behDir, 1);
@@ -228,19 +228,16 @@ if ~iemty(dlcFiles)
         end
         %}
 
-        vid_int_path = behHere( "VideoLaserIntensity_shuffle2.mat" );
-        if exist(vid_int_path, "file")
-            load( vid_int_path, varsInLsr{:} )
-        else
-            [lsrInt, delta_tiv] = extractLaserFromVideos( behPath );
-        end
+        [lsrInt, delta_tiv, ~, ~, trig, dlcTables, fs] = ...
+            extractLaserFromVideos( behDir );
+        mean_delay = alignVideoWithEphys( lsrInt, trig, fs, behDir );
         % delta_tiv = cumsum( delta_tiv );
         if verbose
             fprintf(1, "Correcting by")
             fprintf(1, " %.2f", delta_tiv * k)
             fprintf(1, " ms\n")
         end
-        dlcTables = arrayfun(@(x) readDLCData(flfile(x)), dlcFiles, fnOpts{:});
+        % dlcTables = arrayfun(@(x) readDLCData(flfile(x)), dlcFiles, fnOpts{:});
         [a_bodyParts, refStruct] = cellfun(@(x) getBehaviourSignals(x), ...
             dlcTables, fnOpts{:});
         behStruct = cellfun(@(x) getWhiskANoseFromTable(x), a_bodyParts);
