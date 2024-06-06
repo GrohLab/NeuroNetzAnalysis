@@ -227,6 +227,13 @@ if ~iemty(dlcFiles)
             delta_tiv = zeros( numel(dlcFiles), 1 );
         end
         %}
+
+        vid_int_path = behHere( "VideoLaserIntensity_shuffle2.mat" );
+        if exist(vid_int_path, "file")
+            load( vid_int_path, varsInLsr{:} )
+        else
+            [lsrInt, delta_tiv] = extractLaserFromVideos( behPath );
+        end
         % delta_tiv = cumsum( delta_tiv );
         if verbose
             fprintf(1, "Correcting by")
