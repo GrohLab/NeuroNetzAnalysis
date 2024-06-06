@@ -10,10 +10,10 @@ frameByte = ht * wd * 3;
 
 try
     [~, mem] = memory; maxMem = mem.PhysicalMemory.Available;
-    bufferFrames = floor( (maxMem/frameByte) * 0.6 );
+    bufferFrames = floor( (maxMem/frameByte) * 0.45 );
 catch
     % No memory module installed. Considering 32 GB of RAM memory
-    bufferFrames = floor( (32e9/frameByte) * 0.5 );
+    bufferFrames = floor( (32e9/frameByte) * 0.45 );
 end
 
 frames = zeros(ht, wd, 3, bufferFrames, 'uint8');
