@@ -186,9 +186,9 @@ if numel(rfFiles) == 1
 end
 
 % DLC signals
-readCSV = @(x) readtable(x, "Delimiter", ",");
+%readCSV = @(x) readtable(x, "Delimiter", ",");
 dlcFiles = dir( behHere( dlcPttrn ) );
-fid_paths = dir( behHere( "FrameID*.csv" ) );
+%fid_paths = dir( behHere( "FrameID*.csv" ) );
 
 if ~iemty(dlcFiles)
     behPttrn = "BehaviourSignals%s%s.mat";
@@ -228,29 +228,43 @@ if ~iemty(dlcFiles)
         end
         %}
 
-        [lsrInt, delta_tiv, ~, ~, trig, dlcTables, fs] = ...
-            extractLaserFromVideos( behDir );
+        [lsrInt, delta_tiv, ~, ~, vidTx, trig, dlcTables, fs] = ...
+            extractLaserFromVideos( behDir ); %#ok<ASGLU>
         mean_delay = alignVideoWithEphys( lsrInt, trig, fs, behDir );
-        % delta_tiv = cumsum( delta_tiv );
+
+        unfeas_delay_flag = abs( mean_delay ) > 0.1;
+        mean_delay( unfeas_delay_flag ) = delta_tiv( unfeas_delay_flag );
         if verbose
             fprintf(1, "Correcting by")
-            fprintf(1, " %.2f", delta_tiv * k)
+            fprintf(1, " %.2f", mean_delay * k)
             fprintf(1, " ms\n")
         end
         % dlcTables = arrayfun(@(x) readDLCData(flfile(x)), dlcFiles, fnOpts{:});
         [a_bodyParts, refStruct] = cellfun(@(x) getBehaviourSignals(x), ...
-            dlcTables, fnOpts{:});
+            dlcTables, fnOpts{:}); %#ok<ASGLU>
         behStruct = cellfun(@(x) getWhiskANoseFromTable(x), a_bodyParts);
         % Butter order 3 low-pass filter 35 Hz cut off frequency @ 3 dB
         [b, a] = butter(3, 70/fr, 'low');
 
-        if any( delta_tiv ~= 0 )
-            % Adding how many frames fell out to the next experiment segment
-            behDLCSignals = arrayfun(@(x) padarray( behStruct(x).Signals, ...
-                round( [delta_tiv(x), 0] * fr ), "replicate", "post" ), ...
-                1:length( vidTx ), fnOpts{:} );
-        else
-            behDLCSignals = {behStruct.Signals};
+        % Adding how many frames fell out to the next experiment segment
+        behDLCSignals = cell( numel( behStruct ), 1 );
+        for x = 1:numel( behStruct )
+            if mean_delay(x) > 0
+                behDLCSignals{x} = padarray( behStruct(x).Signals, ...
+                    round( [mean_delay(x), 0] * fr ), "symmetric", "pre" );
+            elseif mean_delay(x) < 0
+                behDLCSignals{x} = behStruct(x).Signals( ...
+                    round( -mean_delay(x) * fr ):end, : );
+            else
+                behDLCSignals{x} = behStruct(x).Signals;
+            end
+            tmDf = length(trig{x})/fs - length(behDLCSignals{x})/fr;
+            if tmDf < 0
+                behDLCSignals{x} = behDLCSignals{x}(1:end+round( tmDf*fr ),:);
+            elseif tmDf > 0
+                behDLCSignals{x} = padarray( behDLCSignals{x}, ...
+                    round( [tmDf, 0] * fr ), "symmetric", "post" );
+            end
         end
 
         % Concatenating both experiment segments
