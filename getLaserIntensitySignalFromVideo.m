@@ -3,6 +3,7 @@ function lsrInt = getLaserIntensitySignalFromVideo( video_obj, dlc_table )
 Nf = video_obj.NumFrames;
 wd = video_obj.Width;
 ht = video_obj.Height;
+fr = video_obj.FrameRate;
 
 lsrInt = zeros( Nf, 1, 'single' );
 
@@ -36,8 +37,19 @@ while frCount < Nf
     [xroi, yroi] = find( lroi );
     fprintf(1, 'Reading %d to %d out of %d frames...\n', ...
         frCount + [1,bufferFrames], Nf)
-    frames(:,:,:,1:bufferFrames) = read( video_obj, ...
-        frCount + [1, bufferFrames]);
+    try
+        frames(:,:,:,1:bufferFrames) = read( video_obj, ...
+            frCount + [1, bufferFrames]);
+    catch
+        Nf = round( video_obj.CurrentTime * fr );
+        fprintf(1, "Error while calculating frames in video!\n")
+        bufferFrames = ...
+            Nf - frCount;
+        fprintf(1, 'Reading %d to %d out of %d frames...\n', ...
+            frCount + [1,bufferFrames], Nf)
+        frames(:,:,:,1:bufferFrames) = read( video_obj, ...
+            frCount + [1, bufferFrames]);
+    end
     lsrInt(frCount + (1:bufferFrames)) = ...
         mean( squeeze( frames( xroi, yroi, 1, 1:bufferFrames ) ), [1, 2] );
     frCount = frCount + bufferFrames;
