@@ -852,15 +852,15 @@ for cbs = 1:Nbs
 end
 % Saving the plots
 figDir = @(x) fullfile(figureDir, x);
+owFlag = true;
 arrayfun(@(c) arrayfun(@(s) saveFigure(allTrialFigs(c, s), ...
-    figDir(bfNames(c, s)), 1), 1:Nbs), 1:Nccond);
+    figDir(bfNames(c, s)), 1, owFlag ), 1:Nbs), 1:Nccond);
 arrayfun(@(c) arrayfun(@(s) saveFigure(mpFigs(c, s), figDir(pfNames(c, s)), ...
-    1), 1:Nbs), 1:Nccond);
-arrayfun(@(s) saveFigure(muTrialFigs(s), figDir(mbfNames(s)), 1), 1:Nbs);
-arrayfun(@(s) saveFigure(mppcFigs(s), figDir(mpfNames(s)), 1), 1:Nbs);
-arrayfun(@(s) saveFigure(bpfFigs(s), figDir(mvdNames(s)), 1), 1:Nbs);
-arrayfun(@(s) saveFigure(tptFigs(s), figDir(ttNames(s)), 1), 1:Nbs);
-
+    1, owFlag), 1:Nbs), 1:Nccond);
+arrayfun(@(s) saveFigure(muTrialFigs(s), figDir(mbfNames(s)), 1, owFlag ), 1:Nbs);
+arrayfun(@(s) saveFigure(mppcFigs(s), figDir(mpfNames(s)), 1, owFlag ), 1:Nbs);
+arrayfun(@(s) saveFigure(bpfFigs(s), figDir(mvdNames(s)), 1, owFlag ), 1:Nbs);
+arrayfun(@(s) saveFigure(tptFigs(s), figDir(ttNames(s)), 1, owFlag ), 1:Nbs);
 %{
 TODO: 
 1.- Organise parameters in structures:
