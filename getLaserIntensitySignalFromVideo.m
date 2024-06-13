@@ -1,4 +1,12 @@
-function lsrInt = getLaserIntensitySignalFromVideo( video_obj, dlc_table )
+function lsrInt = getLaserIntensitySignalFromVideo( video_obj, dlc_table, varargin )
+
+
+defaultMemOcc = 1/3;
+checkMemOcc = @(x) isscalar(x) && isnumeric(x) && x > 0 && x < 0.5;
+
+p = inputParser;
+
+addRequired(p, "video_obj", )
 
 Nf = video_obj.NumFrames;
 wd = video_obj.Width;
@@ -11,10 +19,10 @@ frameByte = ht * wd * 3;
 
 try
     [~, mem] = memory; maxMem = mem.PhysicalMemory.Available;
-    bufferFrames = floor( (maxMem/frameByte) * 0.45 );
+    bufferFrames = floor( (maxMem/frameByte) * 1/3 );
 catch
     % No memory module installed. Considering 32 GB of RAM memory
-    bufferFrames = floor( (32e9/frameByte) * 0.45 );
+    bufferFrames = floor( (32e9/frameByte) * 1/3 );
 end
 
 frames = zeros(ht, wd, 3, bufferFrames, 'uint8');
