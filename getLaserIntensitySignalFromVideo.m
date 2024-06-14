@@ -6,7 +6,15 @@ checkMemOcc = @(x) isscalar(x) && isnumeric(x) && x > 0 && x < 0.5;
 
 p = inputParser;
 
-addRequired(p, "video_obj", )
+addRequired(p, "video_obj", @(x) isa(x, 'VideoReader' ) );
+addRequired(p, "dlc_table", @(x) isa(x, 'table' ) );
+addParameter(p, "mem_occ", defaultMemOcc, checkMemOcc );
+
+parse(p, video_obj, dlc_table, varargin{:} );
+
+video_obj = p.Results.video_obj;
+dlc_table = p.Results.dlc_table;
+mem_occ = p.Results.mem_occ;
 
 Nf = video_obj.NumFrames;
 wd = video_obj.Width;
@@ -16,13 +24,12 @@ fr = video_obj.FrameRate;
 lsrInt = zeros( Nf, 1, 'single' );
 
 frameByte = ht * wd * 3;
-
 try
     [~, mem] = memory; maxMem = mem.PhysicalMemory.Available;
-    bufferFrames = floor( (maxMem/frameByte) * 1/3 );
+    bufferFrames = floor( (maxMem/frameByte) * mem_occ );
 catch
     % No memory module installed. Considering 32 GB of RAM memory
-    bufferFrames = floor( (32e9/frameByte) * 1/3 );
+    bufferFrames = floor( (32e9/frameByte) * mem_occ );
 end
 
 frames = zeros(ht, wd, 3, bufferFrames, 'uint8');
