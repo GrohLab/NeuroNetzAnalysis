@@ -5,7 +5,7 @@ function [summStruct, figureDir, behData, aInfo] = ...
 
 %% Auxiliary variables
 % 'Software' version
-softVer = 3.0;
+softVer = 3.01;
 % Input files
 dlcPttrn = 'roller*shuffle2*filtered.csv';
 % rpPttrn = "Roller_position*.csv"; vdPttrn = "roller*.avi";
@@ -77,6 +77,7 @@ addParameter(p, 'MedianTh', defMed, checkTH)
 addParameter(p, 'FigureDirectory', "Figures", istxt)
 addParameter(p, 'verbose', true, checkLogicFlags)
 addParameter(p, 'showPlots', true, checkLogicFlags)
+addParameter(p, 'figOverWrite', false, checkLogicFlags)
 
 parse(p, behDir, varargin{:})
 
@@ -94,6 +95,7 @@ tMedTh = p.Results.MedianTh;
 figureDir = p.Results.FigureDirectory;
 verbose = p.Results.verbose;
 spFlag = p.Results.showPlots;
+owFlag = p.Results.figOverWrite;
 
 if bvWin(1) > brWin(1) || bvWin(2) < brWin(2)
     if verbose
@@ -234,6 +236,7 @@ if ~iemty(dlcFiles)
 
         unfeas_delay_flag = abs( mean_delay ) > 0.1;
         mean_delay( unfeas_delay_flag ) = delta_tiv( unfeas_delay_flag );
+        mean_delay( mean_delay == 0 ) = mean( mean_delay(mean_delay ~= 0) );
         if verbose
             fprintf(1, "Correcting by")
             fprintf(1, " %.2f", mean_delay * k)
@@ -852,7 +855,7 @@ for cbs = 1:Nbs
 end
 % Saving the plots
 figDir = @(x) fullfile(figureDir, x);
-owFlag = true;
+
 arrayfun(@(c) arrayfun(@(s) saveFigure(allTrialFigs(c, s), ...
     figDir(bfNames(c, s)), 1, owFlag ), 1:Nbs), 1:Nccond);
 arrayfun(@(c) arrayfun(@(s) saveFigure(mpFigs(c, s), figDir(pfNames(c, s)), ...
