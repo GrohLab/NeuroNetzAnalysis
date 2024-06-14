@@ -1,7 +1,7 @@
 function lsrInt = getLaserIntensitySignalFromVideo( video_obj, dlc_table, varargin )
 
 
-defaultMemOcc = 1/3;
+defaultMemOcc = 1/4;
 checkMemOcc = @(x) isscalar(x) && isnumeric(x) && x > 0 && x < 0.5;
 
 p = inputParser;
