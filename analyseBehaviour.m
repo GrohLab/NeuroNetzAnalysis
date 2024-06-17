@@ -238,6 +238,9 @@ if ~iemty(dlcFiles)
         mean_delay( unfeas_delay_flag ) = delta_tiv( unfeas_delay_flag );
         mean_delay( mean_delay == 0 ) = mean( mean_delay(mean_delay ~= 0) );
         
+        if all( isnan( mean_delay) )
+            mean_delay = delta_tiv;
+        end
         % dlcTables = arrayfun(@(x) readDLCData(flfile(x)), dlcFiles, fnOpts{:});
         [a_bodyParts, refStruct] = cellfun(@(x) getBehaviourSignals(x), ...
             dlcTables, fnOpts{:}); %#ok<ASGLU>
