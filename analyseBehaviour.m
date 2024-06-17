@@ -244,7 +244,7 @@ if ~iemty(dlcFiles)
         % dlcTables = arrayfun(@(x) readDLCData(flfile(x)), dlcFiles, fnOpts{:});
         [a_bodyParts, refStruct] = cellfun(@(x) getBehaviourSignals(x), ...
             dlcTables, fnOpts{:}); %#ok<ASGLU>
-        behStruct = cellfun(@(x) getWhiskANoseFromTable(x), a_bodyParts);
+        behStruct = cellfun(@(x) getWhiskANoseFromTable(x), a_bodyParts );
         % Butter order 3 low-pass filter 35 Hz cut off frequency @ 3 dB
         [b, a] = butter(3, 70/fr, 'low');
 
