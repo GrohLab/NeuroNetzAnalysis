@@ -237,17 +237,19 @@ if ~iemty(dlcFiles)
         unfeas_delay_flag = abs( mean_delay ) > 0.1;
         mean_delay( unfeas_delay_flag ) = delta_tiv( unfeas_delay_flag );
         mean_delay( mean_delay == 0 ) = mean( mean_delay(mean_delay ~= 0) );
-        if verbose
-            fprintf(1, "Correcting by")
-            fprintf(1, " %.2f", mean_delay * k)
-            fprintf(1, " ms\n")
-        end
+        
         % dlcTables = arrayfun(@(x) readDLCData(flfile(x)), dlcFiles, fnOpts{:});
         [a_bodyParts, refStruct] = cellfun(@(x) getBehaviourSignals(x), ...
             dlcTables, fnOpts{:}); %#ok<ASGLU>
         behStruct = cellfun(@(x) getWhiskANoseFromTable(x), a_bodyParts);
         % Butter order 3 low-pass filter 35 Hz cut off frequency @ 3 dB
         [b, a] = butter(3, 70/fr, 'low');
+
+        if verbose
+            fprintf(1, "Correcting by")
+            fprintf(1, " %.2f", mean_delay * k)
+            fprintf(1, " ms\n")
+        end
 
         % Adding how many frames fell out to the next experiment segment
         behDLCSignals = cell( numel( behStruct ), 1 );
