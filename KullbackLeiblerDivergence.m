@@ -2,9 +2,9 @@ function kbd = KullbackLeiblerDivergence(P1,P2)
 % KULLBACKLEIBLERDIVERGENCE returns the similarity measure between two
 % probability distributions
 P1 = checkDist( P1 );
+P2 = checkDist( P2 );
 if length(P1) == length(P2)
     N = length(P1);
-    P2 = checkDist( P2 );
 else
     kbd = NaN;
     fprintf('! The distributions have different resolutions (different length)!\n')
@@ -21,8 +21,6 @@ end
 end
 
 function P = checkDist(P)
-if abs(sum(P) - 1.0) > 1e-5 || sum(~P)
-    P(P == 0) = range(P)*1e-6;
-    P = P/sum(P);
-end
+P(P == 0) = range(P)*1e-6;
+P = P/sum(P);
 end
