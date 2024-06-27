@@ -16,7 +16,14 @@ video_obj = p.Results.video_obj;
 dlc_table = p.Results.dlc_table;
 mem_occ = p.Results.mem_occ;
 
-Nf = video_obj.NumFrames;
+nonzero_table = @(x) nnz( x(:,1) );
+Nf = cellfun(@(x) nonzero_table( dlc_table.(x) ), ...
+    dlc_table.Properties.VariableNames );
+if std(Nf)
+    Nf = min( Nf );
+else
+    Nf = mean( Nf );
+end
 wd = video_obj.Width;
 ht = video_obj.Height;
 fr = video_obj.FrameRate;
@@ -39,7 +46,7 @@ frames = zeros(ht, wd, 3, bufferFrames, 'uint8');
 % certain position in the given time period
 weighted_mean = @(x) x(:,[1,2])' * ( x(:,3) ./ vecnorm( x(:,3), 1) );
 frCount = 0;
-while frCount < Nf
+while frCount < Nf && hasFrame( video_obj )
 
     if frCount + bufferFrames > Nf
         bufferFrames = Nf - frCount;
@@ -56,17 +63,26 @@ while frCount < Nf
         frames(:,:,:,1:bufferFrames) = read( video_obj, ...
             frCount + [1, bufferFrames]);
     catch
-        Nf = round( video_obj.CurrentTime * fr );
         fprintf(1, "Error while calculating frames in video!\n")
-        bufferFrames = ...
-            Nf - frCount;
-        fprintf(1, 'Reading %d to %d out of %d frames...\n', ...
-            frCount + [1,bufferFrames], Nf)
-        frames(:,:,:,1:bufferFrames) = read( video_obj, ...
-            frCount + [1, bufferFrames]);
+        try
+            video_obj.CurrentTime = frCount / fr;
+            cf = 1;
+            while hasFrame( video_obj )
+                frames(:,:,:,cf) = readFrame( video_obj );
+                frCount = frCount + 1; cf = cf + 1;
+            end
+        catch
+        end
+        % Nf = frCount;
+        bufferFrames = cf;
+        fprintf(1, "File limit: %d\n", frCount)
+        % frames(:,:,:,1:bufferFrames) = read( video_obj, ...
+        %     frCount + [1, bufferFrames]);
     end
+
     lsrInt(frCount + (1:bufferFrames)) = ...
         mean( squeeze( frames( xroi, yroi, 1, 1:bufferFrames ) ), [1, 2] );
+    frames = zeros(ht, wd, 3, bufferFrames, 'uint8');
     frCount = frCount + bufferFrames;
 end
 
