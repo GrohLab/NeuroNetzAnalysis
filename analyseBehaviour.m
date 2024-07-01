@@ -232,8 +232,8 @@ if ~iemty(dlcFiles)
 
         [lsrInt, delta_tiv, ~, ~, vidTx, trig, dlcTables, fs] = ...
             extractLaserFromVideos( behDir ); %#ok<ASGLU>
-        mean_delay = alignVideoWithEphys( lsrInt, trig, fs, behDir );
-
+        [mean_delay, lsrInt] = alignVideoWithEphys( lsrInt, trig, fs, behDir );
+        figure; plot( cat( 1, lsrInt{:} ) );
         unfeas_delay_flag = abs( mean_delay ) > 0.1;
         mean_delay( unfeas_delay_flag ) = delta_tiv( unfeas_delay_flag );
         mean_delay( mean_delay == 0 ) = mean( mean_delay(mean_delay ~= 0) );
