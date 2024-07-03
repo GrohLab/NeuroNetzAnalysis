@@ -256,7 +256,7 @@ if ~iemty(dlcFiles)
 
         % Adding how many frames fell out to the next experiment segment
         behDLCSignals = cell( numel( behStruct ), 1 );
-        for x = 1:numel( behStruct )
+        parfor x = 1:numel( behStruct )
             if mean_delay(x) > 0
                 behDLCSignals{x} = padarray( behStruct(x).Signals, ...
                     round( [mean_delay(x), 0] * fr ), "symmetric", "pre" );
