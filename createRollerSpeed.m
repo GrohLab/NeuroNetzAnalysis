@@ -117,5 +117,5 @@ if std(fr) < 1e-4
 else
     fprintf(1, "Frame rates heterogeneous!\n")
 end
-save(rsName, "vf","Texp","Ns","rp","rollTx","fr"); iOk = true;
+save( rsName, "vf", "Texp", "Ns", "rp", "rollTx", "fr" ); iOk = true;
 end
