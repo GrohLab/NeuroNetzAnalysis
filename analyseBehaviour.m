@@ -647,8 +647,27 @@ mvps( mvps == 0 ) = 1;
     compareMaxWithThresh( mvpt{y, x}, mvps(x) ), 1:Nbs, fnOpts{:} ), ...
     1:Nccond, fnOpts{:} );
 thSet = cat( 1, thSet{:} ); thSet = cellfun(@(x) x{:}, thSet(1,:), fnOpts{:} );
-mvFlags = cat(1, mvFlags{:}); mov_prob = cellfun( @getAUC, mvFlags );
+mvFlags = cat(1, mvFlags{:}); 
+% mov_prob = cellfun( @getAUC, mvFlags );
+mov_prob = arrayfun(@(b) cellfun(@(c) mean( c/mvps(b) ), ...
+    mvpt(:,b) ), 1:Nbs , fnOpts{:} ); mov_prob = cat( 2, mov_prob{:} );
 mov_prob(isnan(mov_prob)) = 0;
+
+n = arrayfun(@(b) cellfun(@(c) histcounts( c/mvps(b), ...
+    "Normalization", "cdf", "BinLimits", [0,1], "BinWidth", 1/32 ), ...
+    mvpt(:,b), fnOpts{:} ), 1:Nbs , fnOpts{:}); n = cat( 2, n{:} );
+xdom = (1:32)/32 - 1/64; permSubs = nchoosek( 1:Nccond, 2 );
+
+if size(n, 1) > 1
+    % Area in between CDFs of different condition
+    tvd_mat = zeros( size( permSubs, 1 ), Nbs );
+    for cps = 1:size( permSubs, 1 )
+        tvd_mat(cps,:) = arrayfun(@(b) area( ...
+            polyshape( [xdom, flip( xdom )], ...
+            [n{permSubs(cps,1), b}, flip( n{permSubs(cps,2), b} )], ...
+            "Simplify", true ) ), 1:Nbs );
+    end
+end
 
 % Testing joint amplitude -- CAUTION! Assuming first condition as control!!
 [~, mu_ctr, sig_ctr] = cellfun(@(c) zscore( c, 1 ), mvpt(ctrl_cond,:), ...
@@ -800,12 +819,12 @@ for cbs = 1:Nbs
         lgObj = legend(mtpObj, behNames(cbs)); set(lgObj, lgOpts{:});
         xlabel(cax, "Time [ms]"); ylabel(cax, yLabels(cbs)); xlim(cax, ...
             bvWin*k)
-        mpFigs(ccond, cbs) = plotThetaProgress(mvFlags(ccond, cbs), ...
-            thSet(cbs), string(consCondNames{ccond}), 'showPlots', spFlag);
-        cax = get(mpFigs(ccond, cbs), "CurrentAxes");
-        set(cax, axOpts{:}); xlabel(cax, "\theta "+yLabels(cbs))
-        title(cax, sprintf("Trial proportion %s %.3f", figTtl, ...
-            mov_prob(ccond, cbs)))
+        % mpFigs(ccond, cbs) = plotThetaProgress(mvFlags(ccond, cbs), ...
+        %     thSet(cbs), string(consCondNames{ccond}), 'showPlots', spFlag);
+        % cax = get(mpFigs(ccond, cbs), "CurrentAxes");
+        % set(cax, axOpts{:}); xlabel(cax, "\theta "+yLabels(cbs))
+        % title(cax, sprintf("Trial proportion %s %.3f", figTtl, ...
+        %     mov_prob(ccond, cbs)))
     end
     xlabel(ttax, "Time [ms]"); ylabel(ttax(1), "Trials");
     ttax(Nccond).YAxis.Visible = 'off';
@@ -835,9 +854,9 @@ for cbs = 1:Nbs
     cax = nexttile(tmppc); set( cax, "Colormap", clMap, axOpts{:});
     plot(cax, thSet{cbs}, movSgnls{cbs}, "LineWidth", 0.7);
     xlabel(cax, yLabels(cbs)); ylabel(cax, "Trial crossing");
-    title(cax, sprintf("Move probability for %s", behNames(cbs)))
+    title( cax, sprintf("Move probability for %s", behNames(cbs) ) )
     lgObj = legend(ccnMP(:,cbs)); set(lgObj, lgOpts{:});
-    axis( cax, [thSet{cbs}([1, end]); 0; 1] )
+    axis( cax, [0;thSet{cbs}(end); 0; 1] )
 
     % Boxplot for maximum value per condition
     bpfFigs(cbs) = figure('Name', ...
@@ -868,7 +887,7 @@ parfor cbp = 1:Nbs
     saveFigure( tptFigs(cbp), figDir(ttNames(cbp)), 1, owFlag )
     for cc = 1:Nccond
         saveFigure( allTrialFigs(cc, cbp), figDir(bfNames(cc, cbp)), true, owFlag )
-        saveFigure( mpFigs(cc, cbp), figDir(pfNames(cc, cbp)), true, owFlag )
+        % saveFigure( mpFigs(cc, cbp), figDir(pfNames(cc, cbp)), true, owFlag )
     end
 end
 % arrayfun(@(c) arrayfun(@(s) saveFigure(allTrialFigs(c, s), ...
