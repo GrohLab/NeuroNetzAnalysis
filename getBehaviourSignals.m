@@ -51,6 +51,9 @@ Nframes = uint32( size( dlcTable, 1 ) );
 rotMat = @(theta) [cos(theta), -sin(theta); ...
     sin(theta), cos(theta)];
 rotateBy = @(A, theta) rotMat(theta) * A;
+% Not general implementation! Only with the yx coordinate system!
+angleWRTn = @(x,y,n) acosd( ([y(:), x(:)] * n(:)) ./ ...
+    vecnorm( [x(:), y(:)], 2, 2 ) );
 
 whisk_cols = cellfun(@(c) ~isempty(c), regexp( ...
     dlcTable.Properties.VariableNames, '[lr]w\d' ) );
@@ -83,10 +86,6 @@ wy = dlcTable{:,whisk_cols}(:, 2:3:end);
 nx = dlcTable{:,"nose"}(:, 1:3:end);
 ny = dlcTable{:,"nose"}(:, 2:3:end);
 
-% Not general implementation! Only with the yx coordinate system!
-angleWRTn = @(x,y,n) acosd( ([y(:), x(:)] * n(:)) ./ ...
-    vecnorm( [x(:), y(:)], 2, 2 ) );
-
 % Golden ratio
 gr = ( ( 1 + sqrt(5) )/2 );
 
@@ -110,7 +109,7 @@ parfor cf = 1:Nframes
         [circTheta(1), x_hp_coord(cf)], 1)'; % X coordinate
 
     p_i = [y_proj_coord(cf,:)', x_proj_coord(cf,:)'];
-
+    % Projecting nose and upper eyelid to the reference line (mdl_yx)
     [n, d] = getHesseLineForm( mdl_yx(cf,:)' );
     p_p = p_i - ( n * (p_i * n - d)' )';
 
