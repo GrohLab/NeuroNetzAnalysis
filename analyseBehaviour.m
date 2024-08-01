@@ -641,10 +641,12 @@ mvpt = cat(1, mvpt{:});
 ctrl_cond = contains( consCondNames, "Control" ); up_pc = 1.15;
 if all( ~ctrl_cond )
     % No control condition found
-    mvps = round( max( cellfun( @(x) max( x ), mvpt ) ) * up_pc, 1 );
+    mvps = round( cellfun( @(x) max( x ), mvpt ) .* up_pc, 1 );
+    % % CAUTION! Assuming first condition as control!!
+    ctrl_cond = 1;
 else
     % Found a control condition
-    mvps = round( cellfun( @(x) max( x ), mvpt(ctrl_cond, :) ) * up_pc, 1 );
+    mvps = round( cellfun( @(x) max( x ), mvpt(ctrl_cond, :) ) .* up_pc, 1 );
 end
 mvps( mvps == 0 ) = 1;
 
