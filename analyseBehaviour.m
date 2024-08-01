@@ -177,6 +177,9 @@ if numel(rfFiles) == 1
             en2cm = ((2*pi)/((2^15)-1))*((14.85/2)^2)*fsRoll;
             fr = fsRoll;
         end
+        if exist( "fr", "var" ) && ~isempty( fr ) && fr ~= 0
+            save( rfName, 'fr', '-append' )
+        end
     end
     if ~exist('Texp','var')
         if exist('Nt','var')
