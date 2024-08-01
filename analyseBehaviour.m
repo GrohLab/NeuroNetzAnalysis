@@ -663,9 +663,10 @@ mov_prob(isnan(mov_prob)) = 0;
 n = arrayfun(@(b) cellfun(@(c) histcounts( c/mvps(b), ...
     "Normalization", "cdf", "BinLimits", [0,1], "BinWidth", 1/32 ), ...
     mvpt(:,b), fnOpts{:} ), 1:Nbs , fnOpts{:}); n = cat( 2, n{:} );
-xdom = (1:32)/32 - 1/64; permSubs = nchoosek( 1:Nccond, 2 );
+xdom = (1:32)/32 - 1/64; 
 
 if size(n, 1) > 1
+    permSubs = nchoosek( 1:Nccond, 2 );
     % Area in between CDFs of different condition
     tvd_mat = zeros( size( permSubs, 1 ), Nbs );
     for cps = 1:size( permSubs, 1 )
