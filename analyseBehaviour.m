@@ -481,6 +481,8 @@ movStruct = computeMovementProbability(behStack, pairedStim, bvWin, fr);
 % Whiskers, nose, and roller speed
 
 %TODO: include user input for the thresholds for whiskers and nose signals.
+%{
+------------------------------------------------------------ Unused!!
 if Nbs>1
     % Probability thresholds
     thSet = [repmat({0.5:0.5:40},2,1); {0.4:0.4:20}; spTh];
@@ -491,6 +493,9 @@ if Nbs>1
 else
     thSet = spTh; sigThSet = sigTh;
 end
+------------------------------------------------------------
+%}
+
 tmdl = fit_poly([1,Nbt], bvWin + [1,-1] * (1/(fr*2)), 1);
 behTx = ((1:Nbt)'.^[1,0])*tmdl;
 
@@ -694,10 +699,14 @@ mpfNames = arrayfun(@(s) sprintf( mpfPttrn, behNames(s), ...
 % pfNames = arrayfun(@(y) arrayfun(@(x) sprintf(pfPttrn, behNames(x), ...
 %     consCondNames{y}, mov_prob(y, x), Nex(x,y), thrshStrs(x)), ...
 %     1:Nbs), 1:Nccond, fnOpts{:});
+%{
+------------------------------------------------------------ Unused!!
 pfNames = arrayfun(@(y) arrayfun(@(x) sprintf( pfPttrn, behNames(x), ...
     consCondNames{y}, mov_prob(y, x), Nex(x,y) ), ...
     1:Nbs), 1:Nccond, fnOpts{:});
 pfNames = cat(1, pfNames{:});
+------------------------------------------------------------
+%}
 
 % Auxiliary variables for trial-by-trial plot. Choosing the same number of
 % trials per condition for a given behavioural signal
