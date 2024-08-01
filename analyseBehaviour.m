@@ -570,20 +570,20 @@ end
 bfPttrn = "%s %s ";
 mbfPttrn = "Mean %s %s";
 mpfPttrn = "Move probability %s %s";
-pfPttrn = "%s %s move probability %.2f ";
+% pfPttrn = "%s %s move probability %.2f ";
 mvdPttrn = "%s dist ";
 ttPttrn = "%s in %d from %d trials";
 if metaNameFlag
     bfPttrn = bfPttrn + vwKey + " " + rwKey;
     mbfPttrn = mbfPttrn + vwKey + " " + rwKey;
     mpfPttrn = mpfPttrn + rwKey;
-    pfPttrn = pfPttrn + rwKey;
+    % pfPttrn = pfPttrn + rwKey;
     mvdPttrn = mvdPttrn + vwKey + " " + rwKey;
 end
 bfPttrn = bfPttrn + " EX%d %s";
 mbfPttrn = mbfPttrn + " EX%s%s";
 mpfPttrn = mpfPttrn + " %s";
-pfPttrn = pfPttrn + " EX%d %s";
+% pfPttrn = pfPttrn + " EX%d %s";
 mvdPttrn = mvdPttrn + " EX%s%s";
 
 % summPttrn = "Summary";
