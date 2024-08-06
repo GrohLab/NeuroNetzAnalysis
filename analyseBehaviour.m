@@ -244,6 +244,10 @@ if ~iemty(dlcFiles)
         if all( isnan( mean_delay) )
             mean_delay = delta_tiv;
         end
+        % Validation for unresolvable shifts
+        if any( mean_delay < (1/fr) )
+            mean_delay( mean_delay < (1/fr) ) = 1/fr;
+        end
         % dlcTables = arrayfun(@(x) readDLCData(flfile(x)), dlcFiles, fnOpts{:});
         [a_bodyParts, refStruct] = cellfun(@(x) getBehaviourSignals(x), ...
             dlcTables, fnOpts{:}); %#ok<ASGLU>
