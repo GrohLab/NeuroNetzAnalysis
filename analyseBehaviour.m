@@ -240,7 +240,7 @@ if ~iemty(dlcFiles)
         unfeas_delay_flag = abs( mean_delay ) > 0.1;
         mean_delay( unfeas_delay_flag ) = delta_tiv( unfeas_delay_flag );
         mean_delay( mean_delay == 0 ) = mean( mean_delay(mean_delay ~= 0) );
-        
+
         if all( isnan( mean_delay) )
             mean_delay = delta_tiv;
         end
@@ -661,7 +661,7 @@ mvps( mvps == 0 ) = 1;
     compareMaxWithThresh( mvpt{y, x}, mvps(x) ), 1:Nbs, fnOpts{:} ), ...
     1:Nccond, fnOpts{:} );
 thSet = cat( 1, thSet{:} ); thSet = cellfun(@(x) x{:}, thSet(1,:), fnOpts{:} );
-mvFlags = cat(1, mvFlags{:}); 
+mvFlags = cat(1, mvFlags{:});
 % mov_prob = cellfun( @getAUC, mvFlags );
 mov_prob = arrayfun(@(b) cellfun(@(c) mean( c/mvps(b) ), ...
     mvpt(:,b) ), 1:Nbs , fnOpts{:} ); mov_prob = cat( 2, mov_prob{:} );
@@ -670,7 +670,7 @@ mov_prob(isnan(mov_prob)) = 0;
 n = arrayfun(@(b) cellfun(@(c) histcounts( c/mvps(b), ...
     "Normalization", "cdf", "BinLimits", [0,1], "BinWidth", 1/32 ), ...
     mvpt(:,b), fnOpts{:} ), 1:Nbs , fnOpts{:}); n = cat( 2, n{:} );
-xdom = (1:32)/32 - 1/64; 
+xdom = (1:32)/32 - 1/64;
 
 if size(n, 1) > 1
     permSubs = nchoosek( 1:Nccond, 2 );
