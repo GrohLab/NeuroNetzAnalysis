@@ -272,11 +272,13 @@ foFiles = look4this('*_fileOrder.txt');
 if ~isempty(foFiles) && numel(foFiles) == 1
     binFile = readlines(expandName(foFiles));
     binFile = binFile(end);
+    %{
     fID = fopen(expandName(foFiles), "r");
     if fID >= 3
-        binFile = textscan(fID,"%s\n"); fclose(fID);
+        binFile = textscan(fID,"%s"); fclose(fID);
         binFile = string(binFile{:}); binFile = binFile(end);
     end
+    %}
 else
     if numel(binFile) > 1
         [answ, iOk] = listdlg(...
