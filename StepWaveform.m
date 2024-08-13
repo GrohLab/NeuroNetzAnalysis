@@ -84,7 +84,7 @@ classdef StepWaveform < DiscreteWaveform
                     end
                     %rostd = range(data)./std(data);
                     %if zs2 < 0.9 %&& rostd < 7
-                    if log10(Dkl) > -1
+                    if log10(Dkl) > -0.85
                         rise = false(obj.NSamples,1);    % Rising edge times
                         fall = rise;                    % Falling edge times
                         % Maximum value divided by three
