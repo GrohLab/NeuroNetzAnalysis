@@ -13,13 +13,13 @@ pfn = ["LogPSTH", "Log10TimeAxis", "TimeAxis", "ConditionNames",...
 checkStruct = @(x) all([isstruct(x), isfield(x, pfn)]);
 
 % Required parameters
-% none so far
+p.addRequired('PSTHstruct', checkStruct);
 
 % Optional parameters
 % none so far, maybe ordering or selecting different dimensions from the
 % matrix (specific clusters and or conditions?)
 
-p.addRequired('PSTHstruct', checkStruct);
+
 
 p.KeepUnmatched = true;
 
@@ -83,6 +83,7 @@ else
 end
 xtks = xticks(natAx(Ncond + 1)); 
 lgnd = legend(natAx(Ncond + 1), PSTHstruct.ConditionNames.cellstr);
+consCondNames = cellstr(PSTHstruct.ConditionNames);
 set(lgnd, lgOpts{:}); set(natAx(Ncond + 1), axOpts{:}); 
 % Plotting PSTH per cluster
 tx = PSTHstruct.Log10TimeAxis; mxClr = max(PSTHstruct.LogPSTH(:));
@@ -147,7 +148,7 @@ if Ncond > 1
         yline(prmAx(miSpSub), MImu(cperm),'--','Color', 0.15*ones(1,3)); 
         title("Mean MI: "+string(MImu(cperm)))
     end
-    permFig.UserData = [permCond, MImu];
+    permFig.UserData = {consCondNames{permCond}, MImu};
     ylabel(prmAx(1), 'Clusters')
     arrayfun(@(x) xlim(x, PSTHstruct.Log10TimeAxis([1,Nbin])), prmAx(1:Nperm*2));
     arrayfun(@(x) set(x.XAxis,'Visible','off'), prmAx(1:Nperm));
