@@ -139,7 +139,7 @@ for cf = 1:Nf
             oldTotalTime = totalTime;
             totalTime = heads(1).stop - heads(1).start;
             fprintf(1,'The length of the signals in the file seem to ')
-            fprintf(1,'differ (%.3f s \\delta (%.3f ms)).\nConsidering %.3f seconds\n',...
+            fprintf(1,'differ (%.3f s delta %.3f ms).\nConsidering %.3f seconds\n',...
                 oldTotalTime, 1e3*(oldTotalTime - totalTime), totalTime)
         end
         while cw < totalTime
