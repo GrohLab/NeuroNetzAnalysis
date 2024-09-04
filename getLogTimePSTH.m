@@ -124,8 +124,7 @@ permCond = []; Nperm = 0; MI = [];
 if Ncond > 1
     permCond = nchoosek(1:Ncond,2); Nperm = size(permCond,1);
     MI = arrayfun(@(p) getMI( logPSTH(:,:,permCond(p,:)), 3 ), (1:Nperm)', ...
-        fnOpts{:} );
-    MI = cat( 3, MI{:} );
+        fnOpts{:} ); MI = cat( 3, MI{:} ); MI(isnan( MI )) = 0;
 end
 
 PSTHstruct = struct('LogPSTH',logPSTH, 'Log10TimeAxis', binCenters,...
