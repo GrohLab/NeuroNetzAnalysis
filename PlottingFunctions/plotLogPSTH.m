@@ -116,6 +116,7 @@ natFig.Visible = 'on';
 figs(1) = natFig;
 %% Figure for displaying a comparison between condition permutations
 if Ncond > 1
+    getMI = @(x,d) diff(x, 1, d)./sum(x, d);
     posBar = {'FaceColor', 'g', 'EdgeColor', 'none'};
     negBar = {'FaceColor', 'r', 'EdgeColor', 'none'};
     permFig = figure(figOpts{:}); permP = {'Parent', permFig};
