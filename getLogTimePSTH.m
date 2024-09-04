@@ -85,6 +85,7 @@ if verbose
 end
 %% Auxiliary variables
 fnOpts = {'UniformOutput', false};
+getMI = @(x, d) diff(x,1,d)./sum(x,d,'omitnan');
 if strcmpi(normStr, 'prob')
     hstOpts = {'Normalization','probability'};
     divsr = ones(1, size(relSpkTms(:),1));
@@ -119,11 +120,18 @@ for ccond = 1:Ncond
     end
 end
 logPSTH = logPSTH./reshape(divsr, [1, 1, Ncond]);
+permCond = []; Nperm = 0; MI = [];
+if Ncond > 1
+    permCond = nchoosek(1:Ncond,2); Nperm = size(permCond,1);
+    MI = arrayfun(@(p) getMI( logPSTH(:,:,permCond(p,:)), 3 ), (1:Nperm)', ...
+        fnOpts{:} );
+    MI = cat( 3, MI{:} );
+end
 
 PSTHstruct = struct('LogPSTH',logPSTH, 'Log10TimeAxis', binCenters,...
     'TimeAxis', 10.^binCenters, 'ConditionNames', string(conditionNames),...
     'DeltaLogStep', deltaLogT, 'Normalization', normStr, ...
-    'Log10BinEdges', binEdges);
+    'Log10BinEdges', binEdges, 'Log10MI', MI, 'indexMIComparison', permCond);
 if verbose
     fprintf(1, ' done!\n')
 end

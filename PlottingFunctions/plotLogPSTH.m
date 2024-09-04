@@ -33,7 +33,7 @@ fnOpts = {'UniformOutput',false};
 figOpts = {'Visible','on','Color','w'};
 lgOpts = {'Location','best','Box','off'};
 axOpts = [lgOpts(3:4)', figOpts(3:4)'];
-getMI = @(x, d) diff(x,1,d)./sum(x,d,'omitnan');
+
 
 [Ncl, Nbin, Ncond] = size(PSTHstruct.LogPSTH);
 tmWinMS = PSTHstruct.TimeAxis([1,Nbin])*1e3;
@@ -120,13 +120,13 @@ if Ncond > 1
     negBar = {'FaceColor', 'r', 'EdgeColor', 'none'};
     permFig = figure(figOpts{:}); permP = {'Parent', permFig};
     % Comparison between conditions
-    permCond = nchoosek(1:Ncond,2); Nperm = size(permCond,1);
+    permCond = PSTHstruct.indexMIComparison; Nperm = size( permCond, 1 );
     prmAx = gobjects(Nperm*2,1); MImu = zeros(Nperm, 1);
     for cperm = 1:Nperm
         % MI per cluster
         imgMat = [cperm, 0; cperm, Nperm];
         prmAx(cperm) = subplot(3, Nperm, imgMat * [1;1], permP{:});
-        cMI = getMI(PSTHstruct.LogPSTH(:,:,permCond(cperm,:)),3);
+        cMI = PSTHstruct.Log10MI(:,:,cperm);
         cMI(isnan(cMI)) = 0; 
         imagesc(prmAx(cperm), 'XData', tx, 'YData', 1:Ncl, 'CData', cMI);
         colormap(prmAx(cperm), traffic(101)); ylim(prmAx(cperm), [1,Ncl]);
