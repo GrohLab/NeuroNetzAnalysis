@@ -159,6 +159,7 @@ if Ncond > 1
     lgnd = legend(prmAx(Nperm*2), [bP, bN]); set(lgnd, lgOpts{:})
     ylabel(prmAx(Nperm+1), 'Modulation Index')
     permFig.Visible = 'on';
+    ylim( prmAx(1:2:end), [0, Ncl] + 0.5 )
     figs(2) = permFig;
 end
 end
