@@ -9,7 +9,8 @@ Ncond = length(relSpkStrct);
 [Ncl, Na] = arrayfun(@(x) size(x.SpikeTimes), relSpkStrct);
 timeLapse = confgStruct.Viewing_window_s;
 Npsth = round(diff(timeLapse)/confgStruct.BinSize_s);
-mdl = fit_poly([1,Npsth], timeLapse, 1);
+mdl = fit_poly([1,Npsth], ...
+    timeLapse + [1,-1]*(confgStruct.BinSize_s / 2), 1);
 psthTx = ((1:Npsth).^[1;0])'*mdl;
 
 PSTH = arrayfun(@(x) arrayfun(@(y) histcounts(catClSpks(relSpkStrct(x), y),...
