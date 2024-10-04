@@ -3,7 +3,7 @@ verbose = true;
 fnOpts = {'UniformOutput', false};
 tocol = @(x) x(:);
 getAbsPath = @(x) string( fullfile( x.folder, x.name ) );
-
+ovwFlag = true;
 eph_path = dir( fullfile( data_path, "ephys*" ) );
 if ~isempty( eph_path )
     eph_path = getAbsPath( eph_path );
@@ -54,6 +54,13 @@ Nu = numel( spike_times );
 Ns = size( behSignals, 2 );
 wtx = (del_win(1) + bin_size/2):bin_size:(del_win(2) - bin_size/2);
 ttx = (rel_win(1) + bin_size/2):bin_size:(rel_win(2) - bin_size/2);
+
+analysis_key = sprintf( analysis_pttrn, rel_win/m, del_win/m, bin_size/m );
+regFile = fullfile( data_path,  join( ["Regression", analysis_key + ".mat"] ) );
+% if exist(regFile, "file")
+%     load( regFile )
+%     return
+% end
 %%
 bin_edges = 0:bin_size:stop_time;
 bin_centres = mean( [bin_edges(1:end-1); bin_edges(2:end)] );
@@ -96,7 +103,8 @@ end
 X = reshape( auX, Nb*Nr, Nu*Nd ); clearvars auX;
 Xp = [ ones( Nb*Nr, 1), X];
 
-
+params.Nb = Nb; params.Nr = Nr; params.Ns = Ns; params.Nd = Nd;
+params.Nu = Nu;
 %% Multivariate regression response matrix
 y = zeros( Nb*Nr, Ns);
 for r = 1:Nr
@@ -168,7 +176,7 @@ arrayfun(@(x) set( get( x, "YAxis" ), "Visible", "off" ), ...
 arrayfun(@(x) set( get( x, "XAxis" ), "Visible", "off" ), axs(5:8) )
 
 saveFigure( figWeight, fullfile( eph_path, "Figures", ...
-    join( ["Regression weights", analysis_key] ) ), true )
+    join( ["Regression weights", analysis_key] ) ), true, ovwFlag )
 %%
 errFig = figure("color", "w"); t = createtiles( errFig, 1, 1 );
 ax = nexttile(t);
@@ -181,7 +189,7 @@ ylabel( ax, 'Normalised error' )
 title( ax, sprintf( '%d-fold cross-validated error', cvk ) )
 
 saveFigure( errFig, fullfile( eph_path, "Figures", ...
-    join( [sprintf( "%d-fold cv error", cvk ), analysis_key] ) ), true )
+    join( [sprintf( "%d-fold cv error", cvk ), analysis_key] ) ), true, ovwFlag )
 %% Delay
 delay_sub = cellfun(@(x) ~isempty(x), regexp( string( {Conditions.name} ), ...
     'Delay \d\.\d+\ss\s\+\sL' ) );
@@ -210,6 +218,8 @@ end
 X = reshape( auX, Nb*Nr, Nu*Nd ); clearvars auX;
 Xl = [ ones( Nb*Nr, 1), X];
 
+%%
+clearvars *fig* ax* cbObj 
 DX = {y, Xp, Xl};
 save( fullfile( data_path,  join( ["Regression", analysis_key + ".mat"] ) ), ...
     "-v7.3" )
