@@ -36,6 +36,11 @@ bp_names = ["Stim-whisker mean", "Stim-whisker fan arc", ...
     "Interwhisker arc", "Symmetry", "Nose", "Roller speed"];
 
 analysis_pttrn = "CW%.2f-%.2fms DW%.2f-%.2f BZ%.2f";
+
+figOpts = {'Visible','on'};
+if ~strcmp(computer, 'PCWIN64')
+    figOpts{2} = 'off';
+end
 %%
 behSignals = [behDLCSignals, vf];
 mdl_btx = fit_poly( [1, size( behSignals, 1 )], [0, size( behSignals, 1 )/fr] + [1,-1] * (1/fr), 1 );
@@ -164,7 +169,8 @@ end
 createtiles = @(f,nr,nc) tiledlayout( f, nr, nc, ...
     'TileSpacing', 'Compact', 'Padding', 'tight');
 cleanAxis = @(x) set( x, "Box", "off", "Color", "none" );
-figWeight = figure('Color', 'w'); t = createtiles( figWeight, 2, 4 );
+figWeight = figure('Color', 'w', figOpts{:});
+t = createtiles( figWeight, 2, 4 );
 mdlAll_ind_norm = [mdlAll_ind(1,:,:);
     mdlAll_ind(2:end,:,:) ./ vecnorm( mdlAll_ind(2:end,:,:), 2, 1 )];
 mdl_mu = squeeze( mean( mdlAll_ind_norm, 2 ) );
