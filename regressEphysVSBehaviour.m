@@ -41,6 +41,7 @@ figOpts = {'Visible','on'};
 if ~strcmp(computer, 'PCWIN64')
     figOpts{2} = 'off';
 end
+vars2save = {'mdlAll_ind', 'params', 'DX', 'analysis_key'};
 %%
 behSignals = [behDLCSignals, vf];
 mdl_btx = fit_poly( [1, size( behSignals, 1 )], [0, size( behSignals, 1 )/fr] + [1,-1] * (1/fr), 1 );
@@ -240,5 +241,5 @@ Xl = [ ones( Nb*Nr, 1), X];
 clearvars *fig* ax* cbObj 
 DX = {y, Xp, Xl};
 save( fullfile( data_path,  join( ["Regression", analysis_key + ".mat"] ) ), ...
-    "-v7.3" )
+    vars2save{:}, "-v7.3" )
 end
