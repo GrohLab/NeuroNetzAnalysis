@@ -5,6 +5,7 @@ tocol = @(x) x(:);
 getAbsPath = @(x) string( fullfile( x.folder, x.name ) );
 ovwFlag = true;
 eph_path = dir( fullfile( data_path, "ephys*" ) );
+mdlAll_ind = nan; DX = {};
 if ~isempty( eph_path )
     eph_path = getAbsPath( eph_path );
 else
@@ -28,7 +29,7 @@ if any( ~arrayfun(@(x) exist( getAbsPath(x), "file" ), efs_paths ) )
     return
 end
 for x = efs_paths, load( getAbsPath( x ) ), end
-
+DX = {};
 stop_time = length( Triggers.Whisker )/ fs;
 bp_names = ["Stim-whisker mean", "Stim-whisker fan arc", ...
     "Nonstim-whisker mean", "Nonstim-whisker fan arc", ...
@@ -117,6 +118,10 @@ end
 
 %% Linear regression for all behavioural signals using matrix multiplication
 cvk = params.kfold;
+if Nr <= cvk
+    cvk = round( Nr*0.75 );
+    params.kfold = cvk;
+end
 cvObj = cvpartition( Nr, "KFold", cvk );
 tr_ID = tocol( ones( Nb, 1 ) * (1:Nr) );
 rmseAll_ind = zeros( cvk, Ns );
@@ -145,6 +150,10 @@ parfor ii = 1:cvk
 end
 if verbose
     fprintf(1, "\n")
+end
+if (sum(isnan(mdlAll_ind),"all") / numel( mdlAll_ind ))  > 0.1
+    fprintf(1, 'This regression is not possible. Many NaN values returned\n')
+    return
 end
 analysis_key = sprintf( analysis_pttrn, rel_win/m, del_win/m, bin_size/m );
 params.fit_error = rmseAll_ind;
@@ -193,6 +202,9 @@ saveFigure( errFig, fullfile( eph_path, "Figures", ...
 %% Delay
 delay_sub = cellfun(@(x) ~isempty(x), regexp( string( {Conditions.name} ), ...
     'Delay \d\.\d+\ss\s\+\sL' ) );
+if all(~delay_sub)
+    return
+end
 
 time_limits = Conditions(delay_sub).Triggers(:,1)./fs + rel_win;
 Nr = size( time_limits, 1 );
