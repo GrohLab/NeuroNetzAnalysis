@@ -3,7 +3,7 @@ verbose = true;
 fnOpts = {'UniformOutput', false};
 tocol = @(x) x(:);
 getAbsPath = @(x) string( fullfile( x.folder, x.name ) );
-ovwFlag = true;
+ovwFlag = false;
 eph_path = dir( fullfile( data_path, "ephys*" ) );
 mdlAll_ind = nan; DX = {};
 if ~isempty( eph_path )
