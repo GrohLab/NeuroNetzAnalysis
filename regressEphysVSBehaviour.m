@@ -43,7 +43,14 @@ if ~strcmp(computer, 'PCWIN64')
 end
 vars2save = {'mdlAll_ind', 'params', 'DX', 'analysis_key'};
 %%
-behSignals = [behDLCSignals, vf];
+try
+    behSignals = [behDLCSignals, vf];
+catch
+    fprintf(1, 'Dimensions of roller speed and other behaviour signals')
+    fprintf(1, ' mismatch!\n')
+    fprintf(1, "%s", data_path )
+    return
+end
 mdl_btx = fit_poly( [1, size( behSignals, 1 )], [0, size( behSignals, 1 )/fr] + [1,-1] * (1/fr), 1 );
 btx = (1:size( behSignals, 1 ))'.^[1,0] * mdl_btx;
 my_xor = @(x) xor( x(:,1), x(:,2) );
