@@ -15,7 +15,7 @@ if isvector(zPopPSTH) && isrow(zPopPSTH)
 end
 Mxe = max(zPopPSTH, [], "all"); Mne = min(zPopPSTH, [], "all");
 figOpts = {'Visible', 'on'};
-if strcmp( computer, 'PCWIN64' )
+if ~strcmp( computer, 'PCWIN64' )
     figOpts(2) = {'off'};
 end
 ppFig = figure('Color', 'w', 'Name', 'Conditions PSTH', figOpts{:} );
