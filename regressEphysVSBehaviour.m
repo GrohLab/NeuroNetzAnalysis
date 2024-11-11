@@ -23,7 +23,13 @@ end
 for x = bfs_paths, load( getAbsPath( x ) ), end
 
 eph_pttrns = ["*_Spike_Times.mat", "*analysis.mat"];
-efs_paths = arrayfun(@(pt) dir( fullfile( eph_path, pt) ), eph_pttrns );
+try
+    efs_paths = arrayfun(@(pt) dir( fullfile( eph_path, pt) ), eph_pttrns );
+catch
+    fprintf(1, "Seems like no in-depth analysis was run in this directory\n")
+    fprintf(1, "%s\n", data_path )
+    return
+end
 if any( ~arrayfun(@(x) exist( getAbsPath(x), "file" ), efs_paths ) )
     fprintf(1, 'Not all necessary ephys files exist!\n')
     return
@@ -48,7 +54,7 @@ try
 catch
     fprintf(1, 'Dimensions of roller speed and other behaviour signals')
     fprintf(1, ' mismatch!\n')
-    fprintf(1, "%s", data_path )
+    fprintf(1, "%s\n", data_path )
     return
 end
 mdl_btx = fit_poly( [1, size( behSignals, 1 )], [0, size( behSignals, 1 )/fr] + [1,-1] * (1/fr), 1 );
