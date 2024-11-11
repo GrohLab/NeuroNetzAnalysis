@@ -14,7 +14,11 @@ if isvector(zPopPSTH) && isrow(zPopPSTH)
     zPopPSTH = zPopPSTH(:);
 end
 Mxe = max(zPopPSTH, [], "all"); Mne = min(zPopPSTH, [], "all");
-ppFig = figure('Color', 'w', 'Name', 'Conditions PSTH');
+figOpts = {'Visible', 'on'};
+if strcmp( computer, 'PCWIN64' )
+    figOpts(2) = {'off'};
+end
+ppFig = figure('Color', 'w', 'Name', 'Conditions PSTH', figOpts{:} );
 axs = gobjects(Nccond+1,1); 
 
 try

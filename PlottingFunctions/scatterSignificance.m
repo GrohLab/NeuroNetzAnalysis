@@ -93,6 +93,8 @@ for cr = 1:Nr
         lgnd.Location = 'best';
     end
 end
-set(Figs,'Visible','on')
+if strcmp( computer, 'PCWIN64' )
+    set(Figs,'Visible','on')
+end
 end
 

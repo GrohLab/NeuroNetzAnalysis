@@ -31,13 +31,14 @@ PSTHstruct = p.Results.PSTHstruct;
 expSubs = @(x) x(1):x(2);
 fnOpts = {'UniformOutput',false};
 figOpts = {'Visible','on','Color','w'};
+if strcmp( computer, 'PCWIN64' )
+    figOpts(2) = {'off'};
+end
 lgOpts = {'Location','best','Box','off'};
 axOpts = [lgOpts(3:4)', figOpts(3:4)'];
 
-
 [Ncl, Nbin, Ncond] = size(PSTHstruct.LogPSTH);
 tmWinMS = PSTHstruct.TimeAxis([1,Nbin])*1e3;
-
 
 %% Figure and axes for displaying PSTHs per condition
 natFig = figure(figOpts{:}); natAx = gobjects(Ncond+1,1);
