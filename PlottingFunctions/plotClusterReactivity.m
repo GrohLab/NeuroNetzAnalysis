@@ -43,7 +43,7 @@ end
 % Normalizing the PSTH to the maximal value on each cluster.
 PSTHn = PSTH./max(PSTH,[],2);
 figOpts = {'Visible', 'on'};
-if strcmp( computer, 'PCWIN64' )
+if ~strcmp( computer, 'PCWIN64' )
     figOpts(2) = {'off'};
 end
 fig = figure('Name',expName,'Color','w', figOpts{:} );

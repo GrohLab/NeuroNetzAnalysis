@@ -31,7 +31,7 @@ PSTHstruct = p.Results.PSTHstruct;
 expSubs = @(x) x(1):x(2);
 fnOpts = {'UniformOutput',false};
 figOpts = {'Visible','on','Color','w'};
-if strcmp( computer, 'PCWIN64' )
+if ~strcmp( computer, 'PCWIN64' )
     figOpts(2) = {'off'};
 end
 lgOpts = {'Location','best','Box','off'};
