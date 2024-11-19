@@ -152,8 +152,9 @@ else
 end
 
 %% Linear regression for all behavioural signals using matrix multiplication
-if ~exist('mdlAll_ind', 'var') || any( size( mdlAll_ind ) ~= ...
-        [1 + Nu*Nd, params.kfold, Ns] )
+if ~exist('mdlAll_ind', 'var') || ...
+        numel(mdlAll_ind)<prod([1 + Nu*Nd, params.kfold, Ns]) %|| ...
+        %any( size( mdlAll_ind ) ~= [1 + Nu*Nd, params.kfold, Ns] )
     cvk = params.kfold;
     if Nr <= cvk
         cvk = round( Nr*0.75 );
