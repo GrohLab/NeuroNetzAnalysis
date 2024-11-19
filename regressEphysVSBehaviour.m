@@ -49,7 +49,7 @@ if ~strcmp(computer, 'PCWIN64')
     figOpts{2} = 'off';
     ofgOpts{2} = 'invisible';
 end
-vars2save = {'mdlAll_ind', 'params', 'params2', 'DX', 'analysis_key', ...
+vars2save = {'mdlAll_ind', 'params', 'DX', 'analysis_key', ...
     'binned_spikes', 'binned_beh'};
 %%
 try
@@ -282,7 +282,7 @@ if ~exist( 'DX', 'var' ) || any( size( DX{3} ) ~= [Nb*Nr, 1 + Nu*Nd] )
     X = reshape( auX, Nb*Nr, Nu*Nd ); clearvars auX;
     Xl = [ ones( Nb*Nr, 1), X];
     DX{3} = Xl;
-    params2 = struct( 'Nr', Nr, 'Nd', Nd );
+    params.Laser = struct( 'Nr', Nr, 'Nd', Nd );
 else
     Xl = DX{3};
 end
