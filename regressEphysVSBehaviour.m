@@ -213,7 +213,7 @@ if ~exist( fwPath + ".fig" , "file" )
     mdl_mu = squeeze( mean( mdlAll_ind_norm, 2 ) );
     for cb = 1:Ns
         ax = nexttile(t);
-        imagesc( ax, wtx/m, [], reshape( mdl_mu(2:end,cb), Nu, Nd ) )
+        imagesc( ax, wtx/m, [], reshape( mdl_mu(2:end, cb), Nu, Nd ) )
         cleanAxis( ax ); yticks( ax, 1:Nu ); title( ax, bp_names( cb ) );
         colormap( traffic );
         clim( 1.3*max( abs( mdl_mu(2:end,cb) ) )*[-1,1] )
@@ -229,7 +229,7 @@ if ~exist( fwPath + ".fig" , "file" )
 
     saveFigure( figWeight, fwPath, true, ovwFlag )
 else
-    openfig( fwPath + ".fig", ofgOpts{:} )
+    openfig( fwPath + ".fig", ofgOpts{:} );
 end
 %%
 efPath = fullfile( eph_path, "Figures", ...
@@ -247,7 +247,7 @@ if ~exist( efPath + ".fig", 'file' )
 
     saveFigure( errFig, efPath, true, ovwFlag )
 else
-    openfig( efPath + ".fig", ofgOpts{:} )
+    openfig( efPath + ".fig", ofgOpts{:} );
 end
 %% Delay
 delay_sub = cellfun(@(x) ~isempty(x), regexp( string( {Conditions.name} ), ...
@@ -283,8 +283,8 @@ if ~exist( 'DX', 'var' ) || any( size( DX{3} ) ~= [Nb*Nr, 1 + Nu*Nd] )
     Xl = [ ones( Nb*Nr, 1), X];
     DX{3} = Xl;
     params.Laser = struct( 'Nr', Nr, 'Nd', Nd );
-else
-    Xl = DX{3};
+% else
+%     Xl = DX{3};
 end
 
 %% Multivariate regression response matrix (Laser)
@@ -300,9 +300,9 @@ if ~exist( 'DX', 'var' ) || numel(DX)<4 || any( size( DX{4} ) ~= [Nb*Nr, Ns] )
         yl(idx,:) = aux;
     end
     DX{4} = yl;
-else
-    yl = DX{4};
-    ylFlag = true;
+% else
+%     yl = DX{4};
+%     ylFlag = true;
 end
 %%
 clearvars *fig* ax* cbObj 
