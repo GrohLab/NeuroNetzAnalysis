@@ -39,7 +39,7 @@ Nccond = numel(behRes);
 mvPr = cat(1, medi{:});
 Nb = size(mvPr, 2); radAxis = (0:Nb-1)*(2*pi/Nb); 
 bAxis = exp(1i*radAxis(:));
-vertices = arrayfun(@(c) mvPr(c,:).*transp(bAxis), 1:Nccond, fnOpts{:});
+vertices = arrayfun(@(c) mvPr(c,:).*(bAxis.'), 1:Nccond, fnOpts{:});
 vertices = cat(1, vertices{:});
 end
 
