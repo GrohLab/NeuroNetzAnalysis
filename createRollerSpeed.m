@@ -12,7 +12,7 @@ if ~exist(behDir, "dir")
     fprintf(1, "%s doesn't exist!\n", behDir); return
 end
 eFiles = search4This("Roller_position*.csv");
-vFiles = search4This("*.avi"); fFiles = search4This("FrameID*.csv");
+vFiles = search4This("roller*.avi"); fFiles = search4This("FrameID*.csv");
 aFiles = search4This("ArduinoTriggers*.mat");
 Ne = numel(eFiles); Nv = numel(vFiles); Na = numel(aFiles); 
 Nf = numel(fFiles);
