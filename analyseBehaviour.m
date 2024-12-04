@@ -408,7 +408,7 @@ if isnumeric(trigSubs)
         trigSubs(triggPassFlag) = [];
     end
 elseif istxt(trigSubs) && strcmpi(trigSubs, "all")
-    trigSubs = 1:size(atTimes{aSub},1);
+    trigSubs = (1:size( itTimes{iSub}, 1 ))';
 end
 
 % Roller speed
@@ -441,6 +441,7 @@ end
 [~, mu_dlc, sig_dlc] = zscore( behDLCSignals, 0, 1);
 if rsFlag
     [~, mu_r, sig_r] = zscore( vf*en2cm , 0, 1 );
+    mu_dlc = [mu_dlc, mu_r]; sig_dlc = [sig_dlc, sig_r];
 end
 
 % Whiskers and nose; video data
@@ -454,7 +455,7 @@ if istxt(pairedStim) && strcmpi(pairedStim, "none")
     % Stand alone function without stimulus pairing
     pairedStim = true(Ntr, 1);
     Nccond = 1;
-    consCondNames = cellstr(atNames(aSub));
+    consCondNames = cellstr(itNames(iSub));
 elseif islogical(pairedStim)
     % Connected to DE_Jittering
     %NTa = sum(pairedStim(:));
@@ -496,7 +497,7 @@ else
 end
 
 if size(behNames,2)>1
-    yLabels = [repmat("Angle [°]", 1, Nbs-1), rollYL];
+    yLabels = [repmat("Angle [°]", 1, Nbs-rsFlag), rollYL];
     sym_flag = contains( behNames, "symmetry", "IgnoreCase", true );
     yLabels(sym_flag) = "Symmetry [a.u.]";
 else
@@ -597,24 +598,24 @@ else
     end
 end
 %% Going through the conditions and signals
-bfPttrn = "%s %s ";
+bfPttrn = "%s %s";
 mbfPttrn = "Mean %s %s";
 mpfPttrn = "Move probability %s %s";
 % pfPttrn = "%s %s move probability %.2f ";
-mvdPttrn = "%s dist ";
+mvdPttrn = "%s dist";
 ttPttrn = "%s in %d from %d trials";
 if metaNameFlag
-    bfPttrn = bfPttrn + vwKey + " " + rwKey;
-    mbfPttrn = mbfPttrn + vwKey + " " + rwKey;
-    mpfPttrn = mpfPttrn + rwKey;
+    bfPttrn = join( [bfPttrn, vwKey, rwKey] );
+    mbfPttrn = join( [mbfPttrn, vwKey, rwKey] );
+    mpfPttrn = join( [mpfPttrn, rwKey] );
     % pfPttrn = pfPttrn + rwKey;
-    mvdPttrn = mvdPttrn + vwKey + " " + rwKey;
+    mvdPttrn = join( [mvdPttrn, vwKey, rwKey] );
 end
-bfPttrn = bfPttrn + " EX%d %s";
-mbfPttrn = mbfPttrn + " EX%s%s";
-mpfPttrn = mpfPttrn + " %s";
+bfPttrn = join( [bfPttrn, "EX%d %s"] );
+mbfPttrn = join( [mbfPttrn, "EX%s%s"] );
+mpfPttrn = join( [mpfPttrn, "%s"] );
 % pfPttrn = pfPttrn + " EX%d %s";
-mvdPttrn = mvdPttrn + " EX%s%s";
+mvdPttrn = join( [mvdPttrn, "EX%s%s"] );
 
 % summPttrn = "Summary";
 clMap = lines( Nccond );
@@ -772,8 +773,8 @@ summFile = behHere("Simple summary.mat");
 % Exporting data
 behData = struct( 'Data', cat( 3, behStack{:} ), 'Conditions', pairedStim, ...
     'ConditionNames', string(consCondNames), 'Considered', xtf, ...
-    'ZWhole', [mu_dlc(:), sig_dlc(:); mu_r(:), sig_r(:)], ...
-    'Zms', [mu_ctr; sig_ctr], 'MaxVals', mvps );
+    'ZWhole', [mu_dlc(:), sig_dlc(:)], 'Zms', [mu_ctr; sig_ctr], ...
+    'MaxVals', mvps );
 
 aInfo = struct('AnalysisTime', datetime(), 'Version', softVer, ...
     'Evoked', rwKey, 'VieWin', vwKey);
