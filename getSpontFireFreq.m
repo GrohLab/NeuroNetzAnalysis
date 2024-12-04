@@ -1,4 +1,4 @@
-function [firingRatePerCluster, deltaTrigTimeSum, sponSpks, sponIsi] =...
+function [firingRatePerCluster, deltaTrigTimeSum, sponSpks, sponIsi, deltaTrig] =...
     getSpontFireFreq(spks, trigs, consTime, fs, bufTime)
 %GETSPONTFIREFREQ computes the firing rate outside of the specified
 %triggers leaving a time buffer around the pulse. 
@@ -39,10 +39,12 @@ compareTimes =@(x) arrayfun(@(z) any(trigs(:,1) < z &...
 evokSpksFlags = cellfun(@(x) compareTimes(x), consSpks, fnOpts{:});
 NSpkSpont = cellfun(@(x) sum(~x), evokSpksFlags);
 trigs = trigs(trigs(:,2) <= round(consTime(2) * fs),:);
-deltaTrigTimeSum = sum([trigs(:,1); round(consTime(2) * fs)] -...
-    [round(consTime(1) * fs); trigs(:,2)])/fs;
+deltaTrig = [trigs(:,1)/fs; consTime(2)] - [consTime(1); trigs(:,2)/fs];
+deltaTrigTimeSum = sum(deltaTrig(deltaTrig>0));
+
 firingRatePerCluster = NSpkSpont./deltaTrigTimeSum;
 sponSpks = cellfun(@(x,y) x(~y), consSpks, evokSpksFlags, fnOpts{:});
 sponIsi = cellfun(@(x,y) x(~y(1:numel(x))), consIsi, evokSpksFlags,...
     fnOpts{:});
+
 end
