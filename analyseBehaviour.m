@@ -161,7 +161,7 @@ if iemty(dir(behHere(afPttrn)))
 end
 % Roller speed
 rfFiles = dir(behHere(rfPttrn));
-if iemty(rfFiles)
+if iemty(rfFiles) 
     [~, vf, ~, fr, Texp] = createRollerSpeed(behDir);
     rfFiles = dir(behHere(rfPttrn));
 end
@@ -412,8 +412,43 @@ elseif istxt(trigSubs) && strcmpi(trigSubs, "all")
 end
 
 % Roller speed
-[~, vStack] = getStacks(false, round(atTimes{aSub}(trigSubs)*fr), 'on', bvWin,...
-    fr, fr, [], vf*en2cm); [~, Nbt, Ntr] = size(vStack);
+vStack = [];
+rsFlag = false;
+if all( cellfun(@(x) ~isempty(x), atTimes) )
+    [~, vStack] = getStacks(false, round(atTimes{aSub}(trigSubs)*fr), 'on', bvWin,...
+        fr, fr, [], vf*en2cm); % [~, Nbt, Ntr] = size(vStack);
+    rsFlag = true;
+end
+
+% Estimating the setpoint for whiskers and nose signals.
+behTx_all = (0:size(behDLCSignals, 1) - 1)/fr;
+spFile = fullfile(behDir, "SetPoint2.mat");
+if ~exist(spFile, "file")
+    set_point = cell( Nbs, 1 );
+    parfor cs = 1:size( behDLCSignals, 2 )
+        set_point{cs} = fitSpline( behTx_all, behDLCSignals( :, cs ), 1, ...
+            0.3, 0.95, verbose );
+    end
+    set_point = [set_point{:}];
+    if ~isempty(set_point)
+        save(spFile, "set_point")
+    end
+else
+    set_point = load(spFile,"set_point"); set_point = set_point.set_point;
+end
+
+% Mean and standard deviation of all signals
+[~, mu_dlc, sig_dlc] = zscore( behDLCSignals, 0, 1);
+if rsFlag
+    [~, mu_r, sig_r] = zscore( vf*en2cm , 0, 1 );
+end
+
+% Whiskers and nose; video data
+[~, dlcStack] = getStacks(false, round(itTimes{iSub}(trigSubs,:)*fr), 'on', ...
+    bvWin, fr, fr, [], [behDLCSignals, set_point]');
+[~, dlcDiffStack] = getStacks(false, round(itTimes{iSub}(trigSubs,:)*fr), 'on', ...
+    bvWin, fr, fr, [], diff(behDLCSignals,1,1)');
+[Nbt, Ntr] = size( dlcStack, [2, 3] );
 % Connection to DE_Jittering or as a stand-alone function.
 if istxt(pairedStim) && strcmpi(pairedStim, "none")
     % Stand alone function without stimulus pairing
@@ -446,39 +481,20 @@ elseif islogical(pairedStim)
         end
     end
 end
-% Estimating the setpoint for whiskers and nose signals.
-behTx_all = (0:size(behDLCSignals, 1) - 1)/fr;
-spFile = fullfile(behDir, "SetPoint2.mat");
-if ~exist(spFile, "file")
-    set_point = cell( Nbs, 1 );
-    parfor cs = 1:size( behDLCSignals, 2 )
-        set_point{cs} = fitSpline( behTx_all, behDLCSignals( :, cs ), 1, ...
-            0.3, 0.95, verbose );
-    end
-    set_point = [set_point{:}];
-    if ~isempty(set_point)
-        save(spFile, "set_point")
-    end
-else
-    set_point = load(spFile,"set_point"); set_point = set_point.set_point;
-end
-
-% Mean and standard deviation of all signals
-[~, mu_dlc, sig_dlc] = zscore( behDLCSignals, 0, 1);
-[~, mu_r, sig_r] = zscore( vf*en2cm , 0, 1 );
-
-% Whiskers and nose; video data
-[~, dlcStack] = getStacks(false, round(itTimes{iSub}(trigSubs,:)*fr), 'on', ...
-    bvWin, fr, fr, [], [behDLCSignals, set_point]');
-[~, dlcDiffStack] = getStacks(false, round(itTimes{iSub}(trigSubs,:)*fr), 'on', ...
-    bvWin, fr, fr, [], diff(behDLCSignals,1,1)');
 
 behStack = cat(1, dlcStack(1:Nbs,:,:), vStack);
 Nbs = size(behStack, 1);
 behStack = arrayfun(@(x) squeeze(behStack(x, :, :)), (1:size(behStack,1))',...
     fnOpts{:});
-behNames = [dlcNames, "Roller speed"]; behNames(~strlength(behNames))=[];
-rollYL = "Roller speed [cm/s]";
+
+if rsFlag
+    behNames = [dlcNames, "Roller speed"];
+    rollYL = "Roller speed [cm/s]";
+else
+    behNames = dlcNames;
+    rollYL = "";
+end
+
 if size(behNames,2)>1
     yLabels = [repmat("Angle [°]", 1, Nbs-1), rollYL];
     sym_flag = contains( behNames, "symmetry", "IgnoreCase", true );
@@ -486,6 +502,8 @@ if size(behNames,2)>1
 else
     yLabels = rollYL;
 end
+behNames(~strlength(behNames))=[];
+yLabels(~strlength(yLabels)) = [];
 
 % Movement probability
 movStruct = computeMovementProbability(behStack, pairedStim, bvWin, fr);

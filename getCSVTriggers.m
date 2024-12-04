@@ -9,14 +9,17 @@ if exist(fPath, 'file')
     trigTime = datetime(clean4Date(lns{:}), dtOpts{:});
     trigTime = second(trigTime, "secondofday");
     udVal = arrayfun(@str2num, lower(string(clean4LV(lns{:}))));
-    if sum(udVal) == sum(~udVal)
-        trigTime = cat(2, trigTime(udVal), trigTime(~udVal));
-    else
-        trigTime = arrayfun(@(x) trigTime(xor(udVal, x)), [false true], fnOpts{:});
-        fprintf(1, "Trigger onset and offset unmatched!\n")
-    end
-    if ~udVal(1)
-        trigTime = flip(trigTime,2);
+    if ~isempty( udVal )
+        if sum(udVal) == sum(~udVal)
+            trigTime = cat(2, trigTime(udVal), trigTime(~udVal));
+        else
+            trigTime = arrayfun(@(x) trigTime(xor(udVal, x)), ...
+                [false true], fnOpts{:});
+            fprintf(1, "Trigger onset and offset unmatched!\n")
+        end
+        if ~udVal(1)
+            trigTime = flip(trigTime,2);
+        end
     end
     [~, trigName, ~] = fileparts(fPath); trigName = extract(trigName,1);
 end

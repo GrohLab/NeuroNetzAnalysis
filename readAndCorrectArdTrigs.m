@@ -63,11 +63,12 @@ fs = 3e4; % FIX! Sampling frequency from file or somewhere robust.
         itTimes = cellfun(@(x) x./3e4, tSubs, fnOpts{:});
         % Registering and deleting the empty triggers
         eiFlag = cellfun(@(x) isempty(x), itTimes); itTimes(eiFlag) = [];
+        itNames(eiFlag) = [];
         if size(itTimes,1) ~= size(atTimes,2)
             atTimes(flip(eiFlag)) = [];
             fprintf(1, "%s was a false detection!\n", atNames(flip(eiFlag)))
             atNames(flip(eiFlag)) = [];
-            itNames(eiFlag) = [];
+            %itNames(eiFlag) = [];
         end
     end
 % Function to compute 2 matrices: similarity between trigger intervals
@@ -368,7 +369,7 @@ for cfp = 1:numel(rpFiles) % "c"urrent "f"ile "p"ath
         % Read trigger signals and extracet subs from the *intan* trigger
         % signals
         tfName = fobPthIdx(itFiles, cfp); tSubs = readTriggerFile(tfName);
-        if isempty(atTimes{1})
+        if isempty(atTimes{1}) && ~isempty( lcFiles ) && ~isempty( pcFiles )
             Nti = cellfun(@(x) size(x, 1), tSubs(:));
             % Old version without trigger times in the roller position
             trigFls = [lcFiles(cfp), pcFiles(cfp)];
@@ -382,7 +383,7 @@ for cfp = 1:numel(rpFiles) % "c"urrent "f"ile "p"ath
                 second(rpDates(cfp), "secondofday")), atTimes, ...
                 num2cell(trm)', fnOpts{:});
             itTimes = detectFalseAlarms(); Nt = Ns/fs;
-        else
+        elseif ~isempty( atTimes{1} )
             if ~all(itNames == atNames)
                 flipFlag = true;
             end
@@ -392,6 +393,10 @@ for cfp = 1:numel(rpFiles) % "c"urrent "f"ile "p"ath
             [ddm, dm] = computeSimilarityMatrices();
             correctAnomalities();
             [iS, aS, itNames] = matchOrder(atNames, itNames); 
+        else
+            itTimes = detectFalseAlarms(); Nt = Ns/fs; minOfSt = 0;
+            save( atFileName, var2save{:} );
+            continue
         end
         ofSts = arrayfun(@(x) itTimes{iS(x)}(1,1) - atTimes{aS(x)}(1), ...
             1:size(atNames)); minOfSt = min(ofSts);

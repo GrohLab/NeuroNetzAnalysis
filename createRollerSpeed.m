@@ -1,6 +1,6 @@
 function [iOk, vf, rollTx, fr, Texp] = createRollerSpeed(behDir)
+vf = []; iOk = false; rollTx = [];
 %% Auxiliary variables and functions
-iOk = false;
 fnOpts = {'UniformOutput', false};
 crtName = @(x) fullfile(behDir, x);
 getName = @(x, y) crtName(x(y).name);
@@ -16,6 +16,7 @@ vFiles = search4This("roller*.avi"); fFiles = search4This("FrameID*.csv");
 aFiles = search4This("ArduinoTriggers*.mat");
 Ne = numel(eFiles); Nv = numel(vFiles); Na = numel(aFiles); 
 Nf = numel(fFiles);
+afFlag = true;
 function minOfSt= getArd_IntOffset()
         % Trigger correspondance between cells
         [iS, aS] = arrayfun(@(x) find(x.atNames == x.itNames), tStruct, ...
@@ -35,7 +36,6 @@ if Ne ~= Na
     fprintf(1, "# encoder files different from Trigger files!\n")
     fprintf(1, "Encoder %d Triggers %d\n", Ne, Na)
     fprintf(1, "Run 'readAndCorrectArdTrigs' first to create Trigger files\n")
-    return
 end
 fiFlag = true;
 if Ne ~= Nf
@@ -44,7 +44,11 @@ if Ne ~= Nf
     fprintf(1, "The framerate estimation is better with these files\n");
     fiFlag = false;
 end
-    
+
+if ~Na
+    fprintf(1, 'No "ArduinoTriggers" file!\n')
+    afFlag = false;
+end
 %% Read and create roller 
 [dt, dateFormStr] = getDates(eFiles, 'Roller_position');
 dy = dt(1); dy.Format = 'yyyy-MM-dd'; dt.Format = '''T''HH_mm_ss';
@@ -60,7 +64,13 @@ if exist(rsName,"file")
     fprintf(1, "File exists! No new file created!\n")
     return
 end
-tStruct = arrayfun(@(x) load(flfa(x),vars2load{:}), aFiles);
+if afFlag
+    tStruct = arrayfun(@(x) load(flfa(x), vars2load{:}), aFiles);
+else
+    % No arduino times in folder
+    tStruct = struct('Nt', [], 'atTimes', [], 'atNames', [], ...
+        'itTimes', [], 'itNames', [], 'minOfSt', [] );
+end
 fr = arrayfun(@(x) VideoReader(getName(vFiles,x)), 1:Nv, fnOpts{:});
 % Reading the camera metadata and estimating a frame rate.
 if fiFlag
@@ -93,7 +103,8 @@ switch rpFrmt
             vf = arrayfun(@(x) padarray(vf{x}, [0, ...
                 round(minOfSt(x)*fr(x))], 0, 'pre'), 1:Ne, fnOpts{:});
         else
-            vf = arrayfun(@(x) vf{x}(round(abs(minOfSt(x))*fr(x)):end), 1:Ne, ...
+            vf = arrayfun(@(x) vf{x}(round(abs(minOfSt(x))*fr(x)):end), ...
+                setdiff(1:Ne, find( cellfun(@(x) ~isempty(x), vf) ) ), ...
                 fnOpts{:});
         end
     case "table"
@@ -102,8 +113,11 @@ switch rpFrmt
         vf = cellfun(@(x, y) x(~y(1:end-1)), vf, ibFlags, fnOpts{:});
     otherwise
 end
-Texp = arrayfun(@(x) size(vf{x}, 2)/fr(x), 1:Ne);
-if isfield(tStruct, 'Nt')
+% Texp = arrayfun(@(x) size(vf{x}, 2)/fr(x), ...
+%     setdiff(1:Ne, find( cellfun(@(x) ~isempty(x), vf) ) ) );
+Texp = cellfun(@numel, vf)./fr;
+
+if isfield(tStruct, 'Nt') && numel(Texp) > 1
     vf = arrayfun(@(x) padarray(vf{x}, [0, round(abs(Texp(x) - ...
         tStruct(x).Nt)*fr(x))], 0, 'post'), 1:Ne, fnOpts{:});
     Texp = arrayfun(@(x) length(vf{x})/fr(x), 1:Ne);
