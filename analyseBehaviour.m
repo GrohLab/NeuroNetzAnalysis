@@ -1,11 +1,11 @@
-function [summStruct, figureDir, behData, aInfo] = ...
+function [behRes, figureDir, behData, aInfo] = ...
     analyseBehaviour(behDir, varargin)
 %analyseBehaviour Summary of this function goes here
 %   Detailed explanation goes here
 
 %% Auxiliary variables
 % 'Software' version
-softVer = 3.01;
+softVer = 3.03;
 % Input files
 dlcPttrn = 'roller*shuffle2*filtered.csv';
 % rpPttrn = "Roller_position*.csv"; vdPttrn = "roller*.avi";
@@ -447,8 +447,8 @@ end
 % Whiskers and nose; video data
 [~, dlcStack] = getStacks(false, round(itTimes{iSub}(trigSubs,:)*fr), 'on', ...
     bvWin, fr, fr, [], [behDLCSignals, set_point]');
-[~, dlcDiffStack] = getStacks(false, round(itTimes{iSub}(trigSubs,:)*fr), 'on', ...
-    bvWin, fr, fr, [], diff(behDLCSignals,1,1)');
+% [~, dlcDiffStack] = getStacks(false, round(itTimes{iSub}(trigSubs,:)*fr), 'on', ...
+%     bvWin, fr, fr, [], diff(behDLCSignals,1,1)');
 [Nbt, Ntr] = size( dlcStack, [2, 3] );
 % Connection to DE_Jittering or as a stand-alone function.
 if istxt(pairedStim) && strcmpi(pairedStim, "none")
@@ -616,6 +616,8 @@ mbfPttrn = join( [mbfPttrn, "EX%s%s"] );
 mpfPttrn = join( [mpfPttrn, "%s"] );
 % pfPttrn = pfPttrn + " EX%d %s";
 mvdPttrn = join( [mvdPttrn, "EX%s%s"] );
+summPttrn = join( ["BehaviourResults", vwKey, rwKey] );
+summFile = behHere( summPttrn + ".mat" );
 
 % summPttrn = "Summary";
 clMap = lines( Nccond );
@@ -759,7 +761,7 @@ Nae = sum(pairedStim, 1);
 movProb = cell2mat(arrayfun(@(ms) sum(ms.MovmentFlags)./Nae, ...
     movStruct, fnOpts{:}));
 ms = mat2cell(movStruct, ones(size(movStruct)));
-summStruct = cell2mat( arrayfun(@(x) ...
+behRes = cell2mat( arrayfun(@(x) ...
     struct('ConditionName', consCondNames(x), ...
     'Results', struct('BehSigName', cellstr(behNames), ...
     'MaxValuePerTrial', mvpt(x,:), ...
@@ -768,7 +770,6 @@ summStruct = cell2mat( arrayfun(@(x) ...
     'MovProbability', num2cell(movProb(:,x)'),...
     'MovStrucure', ms(:)'), ...
     'NTrials', Nae(x)), 1:Nccond, fnOpts{:}));
-summFile = behHere("Simple summary.mat");
 
 % Exporting data
 behData = struct( 'Data', cat( 3, behStack{:} ), 'Conditions', pairedStim, ...
@@ -782,12 +783,12 @@ if exist(summFile,"file")
     behFile = load(summFile);
     if ~any(contains(fieldnames(behFile), 'aInfo')) || ...
             ~compareSoftVers(behFile.aInfo, aInfo)
-        save(summFile, "summStruct", "aInfo", "-append")
+        save(summFile, "behRes", "behData", "aInfo", "-append")
     else
         fprintf(1, "File exists, not saving summary numbers.\n")
     end
 else
-    save(summFile, "summStruct", "aInfo", "-v7.3")
+    save(summFile, "behRes", "behData", "aInfo", "-v7.3")
 end
 % Tests for roller movement only
 if Nccond > 1
