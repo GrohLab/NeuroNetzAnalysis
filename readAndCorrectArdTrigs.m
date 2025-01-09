@@ -395,6 +395,7 @@ for cfp = 1:numel(rpFiles) % "c"urrent "f"ile "p"ath
             [iS, aS, itNames] = matchOrder(atNames, itNames); 
         else
             itTimes = detectFalseAlarms(); Nt = Ns/fs; minOfSt = 0;
+            [iS, aS, itNames] = matchOrder(atNames, itNames);
             save( atFileName, var2save{:} );
             continue
         end
