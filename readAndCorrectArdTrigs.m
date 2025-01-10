@@ -392,13 +392,13 @@ for cfp = 1:numel(rpFiles) % "c"urrent "f"ile "p"ath
             % arduino and intan
             [ddm, dm] = computeSimilarityMatrices();
             correctAnomalities();
-            [iS, aS, itNames] = matchOrder(atNames, itNames); 
+            % [iS, aS, itNames] = matchOrder(atNames, itNames); 
         else
             itTimes = detectFalseAlarms(); Nt = Ns/fs; minOfSt = 0;
-            [iS, aS, itNames] = matchOrder(atNames, itNames);
             save( atFileName, var2save{:} );
             continue
         end
+        [iS, aS, itNames] = matchOrder(atNames, itNames);
         ofSts = arrayfun(@(x) itTimes{iS(x)}(1,1) - atTimes{aS(x)}(1), ...
             1:size(atNames)); minOfSt = min(ofSts);
         fprintf(1, "Correcting arduino triggers by %.3f seconds\n", minOfSt)
