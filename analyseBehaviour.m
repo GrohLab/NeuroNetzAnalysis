@@ -122,8 +122,8 @@ end
 %     'MedianTh', tMedTh)); %#ok<NASGU>
 awConfStruct = struct('Condition', chCond, 'Triggers', trigSubs, ...
     'ViewingWindow', bvWin, 'ResponseWindow', brWin, 'SpeedTh', spTh); %#ok<NASGU>
-    %'Thresholds', struct('SpontSigma', sigTh, 'SpontMedian', sMedTh, ...
-    %'MedianTh', tMedTh)); 
+%'Thresholds', struct('SpontSigma', sigTh, 'SpontMedian', sMedTh, ...
+%'MedianTh', tMedTh));
 
 % Validation of the figure directory
 [figParentDir, ~] = fileparts(figureDir);
@@ -157,13 +157,19 @@ if verbose
 end
 
 if iemty(dir(behHere(afPttrn)))
-    readAndCorrectArdTrigs(behDir);
+    try
+        readAndCorrectArdTrigs(behDir);
+    catch
+    end
 end
 % Roller speed
 rfFiles = dir(behHere(rfPttrn));
-if iemty(rfFiles) 
-    [~, vf, ~, fr, Texp] = createRollerSpeed(behDir);
-    rfFiles = dir(behHere(rfPttrn));
+if iemty(rfFiles)
+    try
+        [~, vf, ~, fr, Texp] = createRollerSpeed(behDir);
+        rfFiles = dir(behHere(rfPttrn));
+    catch
+    end
 end
 if numel(rfFiles) == 1
     rfName = flfile(rfFiles);
