@@ -155,20 +155,24 @@ if verbose
     fprintf( 1, 'Time window: %.2f - %.2f ms\n', bvWin*k )
     fprintf( 1, 'Response window: %.2f - %.2f ms\n', brWin*k )
 end
-
+rpfCorrupt = false;
 if iemty(dir(behHere(afPttrn)))
     try
         readAndCorrectArdTrigs(behDir);
     catch
+        fprintf(1, 'Roller_position file might be corrupt!\n')
+        rpfCorrupt = true;
     end
 end
 % Roller speed
 rfFiles = dir(behHere(rfPttrn));
-if iemty(rfFiles)
+if iemty(rfFiles) || ~rpfCorrupt
     try
         [~, vf, ~, fr, Texp] = createRollerSpeed(behDir);
         rfFiles = dir(behHere(rfPttrn));
     catch
+        fprintf(1, 'Unable to create roller speed!\n')
+        rpfCorrupt = true;
     end
 end
 if numel(rfFiles) == 1
@@ -198,6 +202,8 @@ if numel(rfFiles) == 1
             Texp = length(vf)/fr;
         end
     end
+elseif isempty(rfFiles)
+    fprintf('No roller speed information for this experiment!\n')
 end
 
 % DLC signals
@@ -245,7 +251,7 @@ if ~iemty(dlcFiles)
 
         [lsrInt, delta_tiv, ~, ~, vidTx, trig, dlcTables, fs] = ...
             extractLaserFromVideos( behDir ); %#ok<ASGLU>
-        [mean_delay, lsrInt] = alignVideoWithEphys( lsrInt, trig, fs, behDir );
+        [mean_delay, lsrInt, fr] = alignVideoWithEphys( lsrInt, trig, fs, behDir );
         figure; plot( cat( 1, lsrInt{:} ) );
         unfeas_delay_flag = abs( mean_delay ) > 0.1;
         mean_delay( unfeas_delay_flag ) = delta_tiv( unfeas_delay_flag );
@@ -340,7 +346,7 @@ Nbs = size(behDLCSignals, 2);
 atVar = {'atTimes', 'atNames', 'itTimes', 'itNames'};
 afFiles = dir(behHere(afPttrn));
 
-if ~iemty(afFiles)
+if ~iemty(afFiles) 
     jointArdPttrn = "JointArduinoTriggers%s%s.mat";
     jointArdOut = behHere(jointArdPttrn);
     jointArdPath = joinBehDates(afFiles, extractBefore(afPttrn,"*"), ...
@@ -397,10 +403,53 @@ if ~iemty(afFiles)
 end
 
 %% Cutting the behavioural signals
-aSub = strcmpi(atNames, chCond);
+if ~rpfCorrupt
+    aSub = strcmpi(atNames, chCond);
+else
+    expandPath = @(x) fullfile( x.folder, x.name);
+    cellcat = @(x,d) cat( d, x{:} );
+    readCSV = @(x) readtable(x, "Delimiter", ",");
+    exp_path = getParentDir( behDir, 1 );
+    if ~exist( 'fs', 'var' )
+        fsf_path = dir( fullfile( exp_path, 'ephys*', "*_sampling_frequency.mat") );
+        load( expandPath( fsf_path ), 'fs' );
+    end
+
+    itNames = {'P','L'};
+    tfPath = dir( fullfile( exp_path, '*', 'TriggerSignals*.bin' ) );
+    fIDs = arrayfun(@(x) fopen( expandPath( x ), 'r' ), tfPath );
+    trigs = cellcat( arrayfun(@(x) fread( x, [2, Inf], 'uint16=>int32' ), ...
+        fIDs, fnOpts{:} ), 2 ); arrayfun(@(x) fclose(x), fIDs );
+    trigs = int16( trigs - median( trigs, 2 ) );
+    trigs(1,:) = -trigs(1,:);
+    tObj = arrayfun(@(x) StepWaveform(trigs(x,:), fs, 'verbose', false ), ...
+        [1;2] ); tSubs = arrayfun(@(x) x.subTriggers, tObj, fnOpts{:});
+    tObj(2).MinIEI = 0.8; fot = tObj(2).FirstOfTrain;
+    % if the laser signal has no frequency, fot will be populated by
+    % zeroes.
+    if sum(fot)
+        tSubs(2) = {tSubs{2}(fot,:)};
+    end
+    itTimes = cellfun( @(c) c ./ fs, tSubs, fnOpts{:} );
+
+    frName = "RollerFrameRate.mat";
+    frPath = fullfile( behDir, frName );
+    if ~exist( frPath, 'file' )
+        fidPaths = dir( fullfile( exp_path, '*', 'FrameID*.csv') );
+        vidTx = arrayfun( @(x) readCSV(expandPath(x)), fidPaths, fnOpts{:} );
+        vidTx = cellfun( @(x) x.Var2/1e9, vidTx, fnOpts{:} ); % nanoseconds
+        fr = mean( cellfun( @(x) median( 1 ./ diff(x) ), vidTx ) );
+        if rpfCorrupt && ~isempty(frPath)
+            save( frPath, "fr" )
+        end
+    end
+    if ~exist('fr', 'var')
+        load( frPath, 'fr' )
+    end
+end
 iSub = strcmpi(itNames, chCond);
 if isnumeric(trigSubs)
-    Ntrig = size(atTimes{aSub},1);
+    Ntrig = size(itTimes{iSub},1);
     triggPassFlag = Ntrig < trigSubs;
     if any(triggPassFlag)
         if verbose
@@ -420,7 +469,7 @@ end
 % Roller speed
 vStack = [];
 rsFlag = false;
-if all( cellfun(@(x) ~isempty(x), atTimes) )
+if ~rpfCorrupt && all( cellfun(@(x) ~isempty(x), atTimes) )
     [~, vStack] = getStacks(false, round(atTimes{aSub}(trigSubs)*fr), 'on', bvWin,...
         fr, fr, [], vf*en2cm); % [~, Nbt, Ntr] = size(vStack);
     rsFlag = true;
@@ -797,7 +846,7 @@ else
     save(summFile, "behRes", "behData", "aInfo", "-v7.3")
 end
 % Tests for roller movement only
-if Nccond > 1
+if Nccond > 1 && rsFlag
     cs = contains( behNames, "Roller" );
     prms = nchoosek(1:Nccond,2);
     getDistTravel = @(c) squeeze(sum(abs(behStack{cs}(brFlag(:, cs), ...
