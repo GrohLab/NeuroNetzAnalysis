@@ -71,7 +71,11 @@ else
     tStruct = struct('Nt', [], 'atTimes', [], 'atNames', [], ...
         'itTimes', [], 'itNames', [], 'minOfSt', [] );
 end
-fr = arrayfun(@(x) VideoReader(getName(vFiles,x)), 1:Nv, fnOpts{:});
+hpcFlag = true;
+if strcmpi( computer, 'PCWIN64' )
+    fr = arrayfun(@(x) VideoReader(getName(vFiles,x)), 1:Nv, fnOpts{:});
+    hpcFlag = false;
+end
 % Reading the camera metadata and estimating a frame rate.
 if fiFlag
     vidTx = arrayfun(@(x) readCSV(flfa(x)), fFiles, fnOpts{:});
@@ -83,9 +87,13 @@ if fiFlag
 else
     estFr = cellfun(@(x) x.NumFrames/x.Duration, fr);
 end
-fr = cellfun(@(x) x.FrameRate, fr);
-if any(fr(:) ~= estFr(:))
-    fr(fr(:) ~= estFr(:)) = estFr(fr(:) ~= estFr(:));
+if hpcFlag
+    fr = cellfun(@(x) x.FrameRate, fr);
+    if any(fr(:) ~= estFr(:))
+        fr(fr(:) ~= estFr(:)) = estFr(fr(:) ~= estFr(:));
+    end
+else
+    fr = estFr;
 end
 efName = string(arrayfun(@(x) getName(eFiles, x), 1:Ne, fnOpts{:}));
 rp = arrayfun(@(x) readRollerPositionsFile(x), efName, fnOpts{:});
