@@ -159,7 +159,11 @@ rpfCorrupt = false;
 if iemty(dir(behHere(afPttrn)))
     try
         readAndCorrectArdTrigs(behDir);
-    catch
+    catch ME
+        disp( ME.message )
+        disp( ME.identifier )
+        disp( ME.cause )
+        disp( ME.stack )
         fprintf(1, 'Roller_position file might be corrupt!\n')
         rpfCorrupt = true;
     end
@@ -170,7 +174,11 @@ if iemty(rfFiles) || ~rpfCorrupt
     try
         [~, vf, ~, fr, Texp] = createRollerSpeed(behDir);
         rfFiles = dir(behHere(rfPttrn));
-    catch
+    catch ME
+        disp( ME.message )
+        disp( ME.identifier )
+        disp( ME.cause )
+        disp( ME.stack )
         fprintf(1, 'Unable to create roller speed!\n')
         rpfCorrupt = true;
     end
@@ -340,6 +348,7 @@ else
     behDLCSignals = [];
     dlcNames = "";
 end
+
 Nbs = size(behDLCSignals, 2);
 
 % Triggers
