@@ -85,9 +85,11 @@ if fiFlag
     % estFr = cellfun(@(x) mean( [ mode( 1 ./ diff( x ) ), ...
     % median( 1 ./ diff( x ) ) ] ), vidTx );
 else
-    estFr = cellfun(@(x) x.NumFrames/x.Duration, fr);
+    if ~hpcFlag
+        estFr = cellfun(@(x) x.NumFrames/x.Duration, fr);
+    end
 end
-if hpcFlag
+if ~hpcFlag
     fr = cellfun(@(x) x.FrameRate, fr);
     if any(fr(:) ~= estFr(:))
         fr(fr(:) ~= estFr(:)) = estFr(fr(:) ~= estFr(:));
