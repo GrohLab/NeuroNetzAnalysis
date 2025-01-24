@@ -36,6 +36,7 @@ p.addParameter('AllBinFiles', defAllBinFiles, checkABF);
 p.addParameter('RemoveArtifacts', defRemArt, checkRA);
 p.addParameter('TriggerWindow', defTrigWin, checkTW);
 p.addParameter('verbose', true, checkRA);
+p.addParameter('Overwrite', false, checkMF);
 
 parse(p, dataDir, varargin{:});
 
@@ -48,6 +49,7 @@ abfFlag = p.Results.AllBinFiles;
 raFlag = p.Results.RemoveArtifacts;
 triggSpread = p.Results.TriggerWindow;
 verbose = p.Results.verbose;
+owFlag = p.Results.Overwrite;
 
 %% Validation of inputs
 iOk = false;
@@ -72,7 +74,9 @@ if ~contains(outBinName, ".bin")
 else
     outFullName = fullfile(dataDir, outBinName);
 end
-if exist(outFullName,'file')
+
+exFlag = exist(outFullName,'file');
+if exFlag && all( ~cellfun(@(x) strcmpi( x, 'Overwrite' ), varargin ) )
     ovwtAns = questdlg(...
         sprintf('Warning! File %s exists. Overwrite?',outFullName),...
         'Overwrite?','Yes','No','No');
@@ -80,8 +84,13 @@ if exist(outFullName,'file')
         fprintf('No file written.\n')
         return
     end
-
+elseif exFlag && ~owFlag
+    fprintf( 1, 'File exists. Not overwriting.\n')
+    return
+elseif exFlag && owFlag
+    fprintf(1, 'File exists. Overwriting... \n')
 end
+
 %% Processing files
 % How many files are in the folder
 Nrf = numel(recFiles);
