@@ -61,6 +61,7 @@ auxStr = join( string( dt ) , "+");
 dt.Format = dateFormStr;
 rsName = crtName(sprintf('RollerSpeed%s%s.mat', dy, auxStr));
 if exist(rsName,"file")
+    load( rsName, "vf", "Texp", "rollTx", "fr" ); iOk = true;
     fprintf(1, "File exists! No new file created!\n")
     return
 end
