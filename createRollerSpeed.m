@@ -14,10 +14,10 @@ end
 eFiles = search4This("Roller_position*.csv");
 vFiles = search4This("roller*.avi"); fFiles = search4This("FrameID*.csv");
 aFiles = search4This("ArduinoTriggers*.mat");
-Ne = numel(eFiles); Nv = numel(vFiles); Na = numel(aFiles); 
+Ne = numel(eFiles); Nv = numel(vFiles); Na = numel(aFiles);
 Nf = numel(fFiles);
 afFlag = true;
-function minOfSt= getArd_IntOffset()
+    function minOfSt= getArd_IntOffset()
         % Trigger correspondance between cells
         [iS, aS] = arrayfun(@(x) find(x.atNames == x.itNames), tStruct, ...
             fnOpts{:});
@@ -49,7 +49,7 @@ if ~Na
     fprintf(1, 'No "ArduinoTriggers" file!\n')
     afFlag = false;
 end
-%% Read and create roller 
+%% Read and create roller
 [dt, dateFormStr] = getDates(eFiles, 'Roller_position');
 dy = dt(1); dy.Format = 'yyyy-MM-dd'; dt.Format = '''T''HH_mm_ss';
 % auxStr = [];
@@ -83,7 +83,7 @@ if fiFlag
     estFr = cellfun(@(x) median( 1 ./ diff(x) ), vidTx);
     % estFr = cellfun(@(x) mode( 1 ./ diff( x ) ), vidTx);
     % estFr = cellfun(@(x) mean( [ mode( 1 ./ diff( x ) ), ...
-        % median( 1 ./ diff( x ) ) ] ), vidTx );
+    % median( 1 ./ diff( x ) ) ] ), vidTx );
 else
     estFr = cellfun(@(x) x.NumFrames/x.Duration, fr);
 end
