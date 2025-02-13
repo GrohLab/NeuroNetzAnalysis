@@ -29,14 +29,19 @@ PSTHstruct = p.Results.PSTHstruct;
 
 %% Auxiliary variables
 expSubs = @(x) x(1):x(2);
+getSEM = @(x, d) [mean( x, d, "omitmissing" ); ...
+    std( x, 1, d ,"omitmissing" )./sqrt( size( x, d ) )];
+mat2ptch = @(x) [x(1:end,:)*[1;1]; x(end:-1:1,:)*[1;-1]];
+
 fnOpts = {'UniformOutput',false};
 figOpts = {'Visible','on','Color','w'};
 if ~strcmp( computer, 'PCWIN64' )
     figOpts(2) = {'off'};
 end
 lgOpts = {'Location','best','Box','off'};
+phOpts = {'EdgeColor', 'none', 'FaceAlpha', 0.25, 'FaceColor'};
 axOpts = [lgOpts(3:4)', figOpts(3:4)'];
-
+m = 1e-3; k = 1/m;
 [Ncl, Nbin, Ncond] = size(PSTHstruct.LogPSTH);
 tmWinMS = PSTHstruct.TimeAxis([1,Nbin])*1e3;
 
@@ -44,32 +49,47 @@ tmWinMS = PSTHstruct.TimeAxis([1,Nbin])*1e3;
 natFig = figure(figOpts{:}); natAx = gobjects(Ncond+1,1);
 natP = {'Parent', natFig};
 % Plotting the mean PSTH for all conditions at the bottom of the figure
-condPsth = squeeze(mean(PSTHstruct.LogPSTH, 1, 'omitnan')); 
+condPsth = getSEM( PSTHstruct.LogPSTH, 1 );
+
+%{
+condPsth = squeeze( mean( PSTHstruct.LogPSTH, 1, 'omitnan' ) );
+condCI = squeeze( std( PSTHstruct.LogPSTH, 0, 1, "omitmissing") )/ ...
+    sqrt( size( PSTHstruct.LogPSTH, 1 ) );
+%}
 if strcmpi(PSTHstruct.Normalization, 'prob')
     % Probability
-    condPsth = condPsth./sum(condPsth, 'omitnan');
+    condPsth = condPsth ./ sum( condPsth(1,:,:), 'omitnan' );
+
 else
     % Firing rate with inhomogenous bin sizes
     [~, lgEdg] = prepareLogBinEdges(PSTHstruct.TimeAxis([1,Nbin]), Nbin);
     tmBinWdth = diff(10.^lgEdg(:));
+    %{
     if isrow(condPsth)
         condPsth = condPsth';
     end
-    condPsth = condPsth./tmBinWdth;
+    %}
+    condPsth = condPsth./tmBinWdth';
 end
 logMeanEdges = [2,1; 3,0]*[Ncond;1];
 natAx(Ncond + 1) = subplot(3, Ncond, expSubs(logMeanEdges), natP{:});
-semilogx(natAx(Ncond + 1), PSTHstruct.TimeAxis*1e3, condPsth, ...
-    'LineWidth', 1.3);
 try
     % Decreasing the contrast of colormap since the highest value is a
     % bright yellow that is almost invisible
-    natAx(Ncond + 1).ColorOrder = plasma( ceil( Ncond *1.1));
+    clrMap = plasma( ceil( Ncond *1.1));
 catch
     fprintf(1, "tsipkens/cmap repository not in MATLAB's path!\n")
     fprintf(1, "Using copper colormap.\n")
-    natAx(Ncond + 1).ColorOrder = copper(Ncond);
+    clrMap = copper(Ncond);
 end
+
+semilogx(natAx(Ncond + 1), PSTHstruct.TimeAxis*k, ...
+    permute( condPsth(1,:,:), [2,3,1] ), 'LineWidth', 1.3);
+natAx(Ncond + 1).ColorOrder = clrMap; hold( natAx(Ncond + 1), 'on' )
+arrayfun(@(c) patch( natAx(Ncond + 1 ), k*PSTHstruct.TimeAxis([1:end,end:-1:1]), ...
+    mat2ptch( permute( condPsth(:,:,c), [2,1,3] ) ), 1, phOpts{:}, ...
+    clrMap(c,:) ), 1:Ncond )
+
 xticklabels(natAx(Ncond + 1), xticks(natAx(Ncond + 1)));
 xlim(natAx(Ncond + 1), tmWinMS); xlabel(natAx(Ncond + 1), 'Log time [ms]');
 if strcmpi(PSTHstruct.Normalization, 'prob')
@@ -112,7 +132,8 @@ ylabel(natAx(1), 'Clusters');
 arrayfun(@(x) xlim(x, PSTHstruct.Log10TimeAxis([1,Nbin])), natAx(1:Ncond));
 arrayfun(@(x) set(x.YAxis, 'Visible', 'off'),...
     natAx(setdiff(1:(Ncond + 1), [1, Ncond + 1])), fnOpts{:});
-arrayfun(@(x) set(x,axOpts{:}), natAx);
+cleanAxis( natAx ); set( natAx, 'TickDir', 'out' )
+ytickangle( natAx, 90 )
 natFig.Visible = 'on';
 figs(1) = natFig;
 %% Figure for displaying a comparison between condition permutations
@@ -137,7 +158,8 @@ if Ncond > 1
         % MI per condition all clusters
         miSpSub = Nperm + cperm;
         prmAx(miSpSub) = subplot(3, Nperm, [2, cperm]*[Nperm;1], permP{:});
-        condMI = getMI(condPsth(:,permCond(cperm,:)),2);
+        condMI = getMI( permute( condPsth(1,:,permCond(cperm,:)), ...
+            [2,3,1] ), 2 );
         condMI(isnan(condMI)) = 0; MImu(cperm) = mean(condMI,"omitnan");
         bP = bar(prmAx(miSpSub), tx(condMI>0), condMI(condMI>0), posBar{:}, ...
             'DisplayName', 'Potentiation');
@@ -155,12 +177,13 @@ if Ncond > 1
     arrayfun(@(x) xlim(x, PSTHstruct.Log10TimeAxis([1,Nbin])), prmAx(1:Nperm*2));
     arrayfun(@(x) set(x.XAxis,'Visible','off'), prmAx(1:Nperm));
     arrayfun(@(x) set(x.YAxis,'Visible','off'), prmAx(2:Nperm));
-    arrayfun(@(x) box(x, 'off'), prmAx);
+    cleanAxis( prmAx );
     linkaxes(prmAx, 'x'); linkaxes(prmAx(Nperm+1:Nperm*2), 'xy')
     lgnd = legend(prmAx(Nperm*2), [bP, bN]); set(lgnd, lgOpts{:})
     ylabel(prmAx(Nperm+1), 'Modulation Index')
     permFig.Visible = 'on';
     ylim( prmAx(1:Nperm), [0, Ncl] + 0.5 )
+    ytickangle( prmAx, 90 );
     figs(2) = permFig;
 end
 end

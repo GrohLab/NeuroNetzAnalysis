@@ -97,10 +97,15 @@ Ncond = numel(relSpkTms);
 conditionNames = arrayfun(@(x) x.name, relSpkTms, fnOpts{:});
 [binCenters, binEdges, ~, deltaLogT] = prepareLogBinEdges(tmWin, Nbin);
 % Matrix holding the logbin counts.
-logPSTH = zeros(sum(responseFlags), Nbin, Ncond);
+if islogical( responseFlags )
+    responseFlags = find( responseFlags );
+end
+Nccl = numel( responseFlags );
+
+logPSTH = zeros(Nccl, Nbin, Ncond);
 if verbose
     fprintf(1, '%d responsive clusters out of %d in structure\n',...
-        sum(responseFlags), size(relSpkTms(1).SpikeTimes,1))
+        Nccl, size(relSpkTms(1).SpikeTimes,1))
 end
 
 %% Main loop
@@ -109,7 +114,7 @@ if verbose
 end
 for ccond = 1:Ncond
     spkTms = arrayfun(@(x) cat(2, relSpkTms(ccond).SpikeTimes{x,:})+ofst,...
-        (1:sum(responseFlags))', fnOpts{:});
+        responseFlags, fnOpts{:});
     spkTms = cellfun(@(x) x(x > tmWin(1) & x <= tmWin(2)), spkTms,...
         fnOpts{:});
     binCount = cellfun(@(x) histcounts(log10(x), binEdges, hstOpts{:}),...
