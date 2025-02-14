@@ -51,6 +51,13 @@ if ~strcmp(computer, 'PCWIN64')
 end
 vars2save = {'mdlAll_ind', 'params', 'DX', 'analysis_key', ...
     'binned_spikes', 'binned_beh'};
+
+delay_sub = cellfun(@(x) ~isempty(x), regexp( string( {Conditions.name} ), ...
+    'Delay \d\.\d+\ss\s\+\sL' ) );
+if all(~delay_sub)
+    fprintf( 1, 'No laser in frequency used!\nAborting.\n')
+    return
+end
 %%
 try
     behSignals = [behDLCSignals, vf];
@@ -252,11 +259,6 @@ else
     openfig( efPath + ".fig", ofgOpts{:} );
 end
 %% Delay
-delay_sub = cellfun(@(x) ~isempty(x), regexp( string( {Conditions.name} ), ...
-    'Delay \d\.\d+\ss\s\+\sL' ) );
-if all(~delay_sub)
-    return
-end
 
 time_limits = Conditions(delay_sub).Triggers(:,1)./fs + rel_win;
 Nr = size( time_limits, 1 );
