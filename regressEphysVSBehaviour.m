@@ -130,7 +130,7 @@ if ~exist( 'DX', 'var' ) || any( size( DX{2} ) ~= [Nb*Nr, 1 + Nu*Nd] )
 
     parfor r = 1:(Nr*Nb)
         tempC = my_cat( arrayfun( @(u) interp1( bin_centres, binned_spikes(u,:), ...
-            bin_ax(r,:) ), 1:Nu, fnOpts{:} ), 1);
+            bin_ax(r,:) ), 1:Nu, 'UniformOutput', false ), 1);
         auX( r, :, :) = tempC;
     end
 
@@ -226,7 +226,7 @@ if ~exist( fwPath + ".fig" , "file" )
         cleanAxis( ax ); yticks( ax, 1:Nu ); title( ax, bp_names( cb ) );
         colormap( traffic );
         clim( 1.3*max( abs( mdl_mu(2:end,cb) ) )*[-1,1] )
-        cbObj = colorbar( 'Box', 'off', 'AxisLocation', 'out', ...
+        colorbar( 'Box', 'off', 'AxisLocation', 'out', ...
             'TickDirection', 'out', 'Location', 'northoutside' );
     end
     xlabel(ax, 'Time [ms]'); axs = findobj( t, "Type", "Axes" );
