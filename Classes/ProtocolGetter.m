@@ -19,6 +19,10 @@ classdef ProtocolGetter < handle
     properties (SetAccess = 'private',GetAccess = 'protected')
         awaken logical = false;
     end
+
+    properties (Constant)
+        fnOpts = {'UniformOutput', false};
+    end
     
     methods
         function obj = ProtocolGetter(directory, varargin)
@@ -449,19 +453,29 @@ classdef ProtocolGetter < handle
             if ~isempty(lSub) && ~isempty(wSub)
                 % Quick fix for association/conditioning trials
                 if obj.onff == "on"
-                    dm = distmatrix(lSub(:,1)/obj.fs,wSub(:,1)/obj.fs);
+                    % dm = distmatrix(lSub(:,1)/obj.fs,wSub(:,1)/obj.fs);
+                    dm = (wSub(:,1)' - lSub(:,1))/obj.fs;
                 else
-                    dm = distmatrix(lSub(:,2)/obj.fs,wSub(:,1)/obj.fs);
+                    % dm = distmatrix(lSub(:,2)/obj.fs,wSub(:,1)/obj.fs);
+                    dm = (wSub(:,1)' - lSub(:,2))/obj.fs;
                 end
-                [strDelay, whr] = sort(dm(:),'ascend');
+                [strDelay, whr] = sort( abs( dm(:) ), 'ascend' );
+                strDelay = strDelay .* sign( dm( whr ) );
                 [lSubOrd, wSubOrd] = ind2sub(size(dm),whr(1:mxPulses));
                 timeDelay = strDelay(1:mxPulses);
                 % The delay will usually be milliseconds long, so a logarithmic
                 % scale will be useful.
                 logDel = log10(timeDelay); logMD = log10(mxDel);
                 logDel = logDel(logDel < logMD);
-                tol = abs((1e-2*~obj.awaken + 0.1*obj.awaken)/max(logDel));
-                delays = 10.^uniquetol(logDel, tol);
+
+                tol = abs((1e-2*~obj.awaken + 0.1*obj.awaken)/max(real(logDel)));
+                [~, ~, dmshp] = uniquetol( real(logDel) , tol );
+                [~, ~, nop] = unique( imag( logDel ) );
+                delays = arrayfun(@(x) arrayfun(@(y) mean( ...
+                    timeDelay( dmshp == x & nop == y ) ), unique( nop ) ), ...
+                    unique( dmshp ), obj.fnOpts{:} );
+                delays = cat( 1, delays{:} );
+                delays(isnan(delays) ) = [];
                 % Removing delays that are greater than 1 second.
                 delays(delays > mxDel) = [];
                 if std(delays.*1e3) < (1*~obj.awaken + 20*obj.awaken)
@@ -484,7 +498,7 @@ classdef ProtocolGetter < handle
                     tol = 1e-6;
                 end
                 lgDst = log10(timeDelay(:)./delays(:)');
-                lsDel = abs(lgDst) < 0.25;
+                lsDel = abs( lgDst ) < 0.25;
                 for cdl = 1:Ndel
                     % Starting from the last condition on
                     fprintf(1,' %.1f',delays(cdl)*1e3)
