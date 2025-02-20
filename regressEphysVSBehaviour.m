@@ -1,5 +1,35 @@
-function [mdlAll_ind, params, DX] = regressEphysVSBehaviour( data_path, params )
-verbose = true;
+function [mdlAll_ind, params, DX] = regressEphysVSBehaviour( data_path, params, varargin )
+%% Input parsing
+p = inputParser;
+my_xor = @(x) xor( x(:,1), x(:,2) );
+
+defCond = 'freq';
+cont_exp = '^Delay\s\d\.\d+\ss';
+freq_exp = [cont_exp, '\s\+\sL'];
+checkCondSel = @(x) (isstring(x) | ischar(x)) & ...
+    my_xor(string(x) == ["freq", "cont"]);
+param_fields = {'relative_window', 'delay_window', 'bin_size', 'kfold'};
+
+checkParams = @(x) isstruct( x ) & all( isfield( x, param_fields ) );
+
+addParameter( p, 'Condition', defCond, checkCondSel )
+addParameter( p, 'Verbose', true, @(x) islogical(x) & isscalar(x) )
+addRequired( p, 'data_path', @(x) exist(data_path, "dir") )
+addRequired( p, 'params', checkParams )
+
+parse(p, data_path, params, varargin{:} )
+
+selCond = p.Results.Condition;
+verbose = p.Results.Verbose;
+data_path = p.Results.data_path;
+params = p.Results.params;
+
+cond_exp = freq_exp;
+if ~strcmp( selCond, "freq" )
+    cond_exp = cont_exp;
+end
+%% 
+
 fnOpts = {'UniformOutput', false};
 tocol = @(x) x(:);
 getAbsPath = @(x) string( fullfile( x.folder, x.name ) );
@@ -53,7 +83,8 @@ vars2save = {'mdlAll_ind', 'params', 'DX', 'analysis_key', ...
     'binned_spikes', 'binned_beh'};
 
 delay_sub = cellfun(@(x) ~isempty(x), regexp( string( {Conditions.name} ), ...
-    'Delay \d\.\d+\ss\s\+\sL' ) );
+    cond_exp ) );
+
 if all(~delay_sub)
     fprintf( 1, 'No laser in frequency used!\nAborting.\n')
     return
