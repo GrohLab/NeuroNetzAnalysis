@@ -183,32 +183,34 @@ if iemty(rfFiles) || ~rpfCorrupt
         rpfCorrupt = true;
     end
 end
-if numel(rfFiles) == 1
+if isscalar(rfFiles)
     rfName = flfile(rfFiles);
 
-    load(rfName) %#ok<LOAD>
+    rfStruct = load(rfName);
+    vf = rfStruct.vf;
     try
         %              Encoder steps  Radius^2
-        en2cm = ((2*pi)/((2^15)-1))*((14.85/2)^2)*fr;
+        fr = rfStruct.fr;
     catch
         try
             %              Encoder steps  Radius^2
-            en2cm = ((2*pi)/((2^15)-1))*((14.85/2)^2)*rollFs;
-            fr = rollFs;
+            fr = rfStruct.rollFs;
         catch
-            en2cm = ((2*pi)/((2^15)-1))*((14.85/2)^2)*fsRoll;
-            fr = fsRoll;
+            fr = rfStruct.fsRoll;
         end
         if exist( "fr", "var" ) && ~isempty( fr ) && fr ~= 0
             save( rfName, 'fr', '-append' )
         end
     end
-    if ~exist('Texp','var')
-        if exist('Nt','var')
+    en2cm = ((2*pi)/((2^15)-1))*((14.85/2)^2)*fr;
+    if ~isfield(rfStruct,'Texp')
+        if isfield(rfStruct,'Nt')
             Texp = Nt;
         else
             Texp = length(vf)/fr;
         end
+    else
+        Texp = rfStruct.Texp;
     end
 elseif isempty(rfFiles)
     fprintf('No roller speed information for this experiment!\n')
