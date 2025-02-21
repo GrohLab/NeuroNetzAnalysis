@@ -675,11 +675,11 @@ if metaNameFlag
     % pfPttrn = pfPttrn + rwKey;
     mvdPttrn = join( [mvdPttrn, vwKey, rwKey] );
 end
-bfPttrn = join( [bfPttrn, "EX%d %s"] );
-mbfPttrn = join( [mbfPttrn, "EX%s%s"] );
+% bfPttrn = join( [bfPttrn, "EX%d %s"] );
+% mbfPttrn = join( [mbfPttrn, "EX%s%s"] );
 mpfPttrn = join( [mpfPttrn, "%s"] );
 % pfPttrn = pfPttrn + " EX%d %s";
-mvdPttrn = join( [mvdPttrn, "EX%s%s"] );
+% mvdPttrn = join( [mvdPttrn, "EX%s%s"] );
 summPttrn = join( ["BehaviourResults", vwKey, rwKey] );
 summFile = behHere( summPttrn + ".mat" );
 
@@ -704,7 +704,7 @@ Nex = reshape( sum( xor( xtf, pageTrialFlag ) ), Nbs, Nccond );
 %     consCondNames{y}, Nex(x,y), thrshStrs(x)), 1:Nbs ), ...
 %     1:Nccond, fnOpts{:} );
 bfNames = arrayfun( @(y) arrayfun( @(x) sprintf( bfPttrn, behNames(x), ...
-    consCondNames{y}, Nex(x,y) ), 1:Nbs ), 1:Nccond, fnOpts{:} );
+    consCondNames{y} ), 1:Nbs ), 1:Nccond, fnOpts{:} );
 bfNames = cat( 1, bfNames{:} );
 
 % Figure names for mean trials per condition
@@ -712,13 +712,14 @@ bfNames = cat( 1, bfNames{:} );
 %     sprintf("%s ", consCondNames{:} ), sprintf("%d ", Nex(s,:) ), ...
 %     thrshStrs(s) ), 1:Nbs );
 mbfNames = arrayfun(@(s) sprintf( mbfPttrn, behNames(s), ...
-    sprintf("%s ", consCondNames{:} ), sprintf("%d ", Nex(s,:) ) ), 1:Nbs );
+    sprintf("%s ", consCondNames{:} ) ), 1:Nbs );
 
 % Figure names for max value per trial boxchart
 % mvdNames = arrayfun(@(s) sprintf( mvdPttrn, behNames(s), sprintf("%d ", ...
 %     Nex(s,:)), thrshStrs(s) ), 1:Nbs);
-mvdNames = arrayfun(@(s) sprintf( mvdPttrn, behNames(s), sprintf("%d ", ...
-    Nex(s,:) ) ), 1:Nbs);
+% mvdNames = arrayfun(@(s) sprintf( mvdPttrn, behNames(s), sprintf("%d ", ...
+%     Nex(s,:) ) ), 1:Nbs);
+mvdNames = arrayfun(@(s) sprintf( mvdPttrn, behNames(s) ), 1:Nbs);
 
 % Computing the SEM and quantiles from the signals per condition.
 behSgnls = arrayfun(@(y) arrayfun(@(x) getSEM( behStack{x}, ...
@@ -817,8 +818,9 @@ Nma = min(Na, [], 2); rtSubs = arrayfun(@(b) arrayfun(@(c) ...
     1:Nbs, fnOpts{:}); rtSubs = cat(1, rtSubs{:});
 stSubs = cellfun(@(x, y) x(y), psSubs, rtSubs, fnOpts{:});
 mvprt = max(cellfun(@(x, y) max(x(y)), mvpt, rtSubs'),[],1);
-ttNames = arrayfun(@(b) sprintf(ttPttrn, behNames(b), Nma(b), ...
-    Nma(b)+Nex(b)), 1:Nbs);
+% ttNames = arrayfun(@(b) sprintf(ttPttrn, behNames(b), Nma(b), ...
+%     Nma(b)+Nex(b)), 1:Nbs);
+ttNames = arrayfun(@(b) sprintf(ttPttrn, behNames(b), Nma(b), Nma(b) ), 1:Nbs);
 
 % Structuring output of the movement
 Nae = sum(pairedStim, 1);
@@ -870,9 +872,11 @@ if Nccond > 1 && rsFlag
         % rsstName = sprintf( rsstPttrn, behNames(cs), sprintf("%s ", ...
         %     consCondNames{:} ), sprintf( "%.2f ", pm{:} ), sprintf("%d ", ...
         %     Nex(cs,:) ), thrshStrs(cs) );
+        % rsstName = sprintf( rsstPttrn, behNames(cs), sprintf("%s ", ...
+        %     consCondNames{:} ), sprintf( "%.2f ", pm{:} ), sprintf("%d ", ...
+        %     Nex(cs,:) ) );
         rsstName = sprintf( rsstPttrn, behNames(cs), sprintf("%s ", ...
-            consCondNames{:} ), sprintf( "%.2f ", pm{:} ), sprintf("%d ", ...
-            Nex(cs,:) ) );
+            consCondNames{:} ), sprintf( "%.2f ", pm{:} ) );
         rsstPath = behHere(rsstName);
         if ~exist(rsstPath, "file")
             try
@@ -883,7 +887,7 @@ if Nccond > 1 && rsFlag
                 %     Nex(cs,:)), thrshStrs(cs) );
                 rsstName = sprintf( rsstPttrn, behNames(cs), ...
                     sprintf( "%d ", numel(consCondNames) ), ...
-                    sprintf( "%.2f ", pm{:}), sprintf( "%d ", Nex(cs,:) ) );
+                    sprintf( "%.2f ", pm{:}) );
                 rsstPath = behHere( rsstName );
                 save( rsstPath,"pd", "hd", "pm", "hm" );
             end
@@ -922,7 +926,7 @@ for cbs = 1:Nbs
         % cax = axes('Parent', allTrialFigs(ccond, cbs), axOpts{:});
         cax = nexttile( tatf ); set( cax, axOpts{:} )
         plot(cax, behTx*k, behStack{cbs}(:, xtf(:, cbs, ccond)), ptOpts{1,:});
-        title(cax, figTtl + " Ex:" + string(Nex(cbs, ccond)));
+        title(cax, figTtl );% + " Ex:" + string(Nex(cbs, ccond)));
         mtpObj = plot(cax, behTx*k, behSgnls{ccond, cbs}(:,1), ptOpts{2,:});
         lgObj = legend(mtpObj, behNames(cbs)); set(lgObj, lgOpts{:});
         xlabel(cax, "Time [ms]"); ylabel(cax, yLabels(cbs)); xlim(cax, ...
@@ -985,19 +989,46 @@ for cbs = 1:Nbs
     title(cax, join( [behNames(cbs), "L\infty", ...
         sprintf("%.2f - %.2f ms", brWin(cbs,:) * k )] ) );
 end
-% Saving the plots
-figDir = @(x) fullfile(figureDir, x);
+
+%% Saving the plots
+fig_path = @(x) fullfile(figureDir, x);
+cell_behNames = cellstr(behNames);
+abb_behNames = {'SWM','SWF','NWM','NWF','WA','S','N','RS'};
+
+for cbp = 1:Nbs
+    mbfNames(cbp) = shortenPath(mbfNames(cbp));
+    mpfNames(cbp) = shortenPath(mpfNames(cbp));
+    mvdNames(cbp) = shortenPath(mvdNames(cbp));
+    ttNames(cbp) = shortenPath(ttNames(cbp));
+    for cc = 1:Nccond
+        bfNames(cc, cbp) = shortenPath(bfNames(cc, cbp));
+    end
+end
 
 parfor cbp = 1:Nbs
-    saveFigure( muTrialFigs(cbp), figDir(mbfNames(cbp)), 1, owFlag )
-    saveFigure( mppcFigs(cbp), figDir(mpfNames(cbp)), 1, owFlag )
-    saveFigure( bpfFigs(cbp), figDir(mvdNames(cbp)), 1, owFlag )
-    saveFigure( tptFigs(cbp), figDir(ttNames(cbp)), 1, owFlag )
+    saveFigure( muTrialFigs(cbp), fig_path(mbfNames(cbp)), 1, owFlag )
+    saveFigure( mppcFigs(cbp), fig_path(mpfNames(cbp)), 1, owFlag )
+    saveFigure( bpfFigs(cbp), fig_path(mvdNames(cbp)), 1, owFlag )
+    saveFigure( tptFigs(cbp), fig_path(ttNames(cbp)), 1, owFlag )
     for cc = 1:Nccond
-        saveFigure( allTrialFigs(cc, cbp), figDir(bfNames(cc, cbp)), true, owFlag )
+        saveFigure( allTrialFigs(cc, cbp), fig_path(bfNames(cc, cbp)), true, owFlag )
         % saveFigure( mpFigs(cc, cbp), figDir(pfNames(cc, cbp)), true, owFlag )
     end
 end
+
+    function [name] = shortenPath(name)
+        %UNTITLED Summary of this function goes here
+        %   Detailed explanation goes here
+        figDir = @(x) fullfile(figureDir, x);
+        shortenString = @(x) strtrim( replace( x, ...
+            [{'Control'},{'Delay '},{' s '},{'+ '},{'  '}, cell_behNames(:)' ], ...
+            [{'Ctrl'},{'D'},{'s'},{'+'},{' '}, abb_behNames(:)' ] ) );
+        winOS_lim = 260; overlimit = @(x) strlength( x ) > winOS_lim;
+        
+        if overlimit( figDir( name ) )
+            name = shortenString( name );
+        end
+    end
 % arrayfun(@(c) arrayfun(@(s) saveFigure(allTrialFigs(c, s), ...
 %     figDir(bfNames(c, s)), 1, owFlag ), 1:Nbs), 1:Nccond);
 % arrayfun(@(c) arrayfun(@(s) saveFigure(mpFigs(c, s), figDir(pfNames(c, s)), ...
