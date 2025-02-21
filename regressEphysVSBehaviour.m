@@ -342,12 +342,14 @@ end
 %%
 clearvars *fig* ax* cbObj 
 % DX = {y, Xp, Xl, yl};
-vrs = whos('-file', regFile);
-vrsInFile = string({vrs(:).name});
 if ~rfeFlag
     save( regFile, vars2save{:}, "-v7.3" )
-elseif any( ~contains( vrsInFile, vars2save ) ) || ...
-        prod(vrs(arrayfun(@(x) strcmp( 'DX', x.name ), vrs )).size) < numel(DX)
-    save( regFile, vars2save{:}, '-append' )
+else
+    vrs = whos('-file', regFile);
+    vrsInFile = string({vrs(:).name});
+    if any( ~contains( vrsInFile, vars2save ) ) || ...
+            prod(vrs(arrayfun(@(x) strcmp( 'DX', x.name ), vrs )).size) < numel(DX)
+        save( regFile, vars2save{:}, '-append' )
+    end
 end
 end
