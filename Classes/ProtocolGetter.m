@@ -466,7 +466,7 @@ classdef ProtocolGetter < handle
                 % The delay will usually be milliseconds long, so a logarithmic
                 % scale will be useful.
                 logDel = log10(timeDelay); logMD = log10(mxDel);
-                logDel = logDel(logDel < logMD);
+                logDel = logDel(real(logDel) < logMD);
 
                 tol = abs((1e-2*~obj.awaken + 0.1*obj.awaken)/max(real(logDel)));
                 [~, ~, dmshp] = uniquetol( real(logDel) , tol );
