@@ -793,7 +793,9 @@ classdef ProtocolGetter < handle
                 % Logical index pointing at the first pulse of a frequency
                 % train
                 fstSubs = StepWaveform.firstOfTrain(tms, minIpi);
-                freqCond = round(uniquetol(pulsFreq, 0.9/max(pulsFreq)), 1);
+                % Removing spurious frequencies
+                freqCond = round(uniquetol(pulsFreq(fstSubs(1:end-1)), ...
+                    0.9/max(pulsFreq)), 1);
                 freqCond = freqCond(freqCond >= 1); % Empty for no frequency
             else
                 fprintf(1, 'No triggers found for the given signal.\n')
