@@ -1022,6 +1022,7 @@ end
         %UNTITLED Summary of this function goes here
         %   Detailed explanation goes here
         figDir = @(x) fullfile(figureDir, x);
+        abb_behNames = abb_behNames(1:numel(cell_behNames));
         shortenString = @(x) strtrim( replace( x, ...
             [{'Control'},{'Delay '},{' s '},{'+ '},{'  '}, cell_behNames(:)' ], ...
             [{'Ctrl'},{'D'},{'s'},{'+'},{' '}, abb_behNames(:)' ] ) );
