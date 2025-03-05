@@ -92,7 +92,7 @@ classdef StepWaveform < DiscreteWaveform
                         rise = StepWaveform.cleanEdges(rise);
                         fall(1:end-1) = ds < min(ds)/3;
                         fall = StepWaveform.cleanEdges(fall);
-                        if sum(rise) ~= sum(fall)
+                        if nnz(rise) ~= nnz(fall)
                             if verbose
                                 warning('The cardinality of the rising edges is different for the falling edges')
                             end
