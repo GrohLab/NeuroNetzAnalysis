@@ -369,40 +369,53 @@ for cfp = 1:numel(rpFiles) % "c"urrent "f"ile "p"ath
         % Read trigger signals and extracet subs from the *intan* trigger
         % signals
         tfName = fobPthIdx(itFiles, cfp); tSubs = readTriggerFile(tfName);
-        if isempty(atTimes{1}) && ~isempty( lcFiles ) && ~isempty( pcFiles )
-            Nti = cellfun(@(x) size(x, 1), tSubs(:));
-            % Old version without trigger times in the roller position
-            trigFls = [lcFiles(cfp), pcFiles(cfp)];
-            [atTimes, atNames] = arrayfun(@getCSVTriggers,...
-                arrayfun(@(x) string(fobPth(x)),trigFls), fnOpts{:});
-            atNames = cat(2, atNames{:});
-            [iS, aS, itNames] = matchOrder(atNames, itNames);
-            Nta = cellfun(@(x) size(x, 1), atTimes(:)); 
-            trm = Nta(aS) - Nti(iS);
-            atTimes = cellfun(@(x,y) x(y+1:end,1) - (10 + ...
-                second(rpDates(cfp), "secondofday")), atTimes, ...
-                num2cell(trm)', fnOpts{:});
-            itTimes = detectFalseAlarms(); Nt = Ns/fs;
-        elseif ~isempty( atTimes{1} )
-            if ~all(itNames == atNames)
-                flipFlag = true;
+        ntFlag = cellfun( "isempty", tSubs );
+        if all( ~ntFlag )
+            if isempty(atTimes{1}) && ~isempty( lcFiles ) && ~isempty( pcFiles )
+                Nti = cellfun(@(x) size(x, 1), tSubs(:));
+                % Old version without trigger times in the roller position
+                trigFls = [lcFiles(cfp), pcFiles(cfp)];
+                [atTimes, atNames] = arrayfun(@getCSVTriggers,...
+                    arrayfun(@(x) string(fobPth(x)),trigFls), fnOpts{:});
+                atNames = cat(2, atNames{:});
+                [iS, aS, itNames] = matchOrder(atNames, itNames);
+                Nta = cellfun(@(x) size(x, 1), atTimes(:));
+                trm = Nta(aS) - Nti(iS);
+                atTimes = cellfun(@(x,y) x(y+1:end,1) - (10 + ...
+                    second(rpDates(cfp), "secondofday")), atTimes, ...
+                    num2cell(trm)', fnOpts{:});
+                itTimes = detectFalseAlarms(); 
+            elseif ~isempty( atTimes{1} )
+                if ~all(itNames == atNames)
+                    flipFlag = true;
+                end
+                itTimes = detectFalseAlarms();
+                % Computing the similarity between the trigger intervals from
+                % arduino and intan
+                [ddm, dm] = computeSimilarityMatrices();
+                correctAnomalities();
+                % [iS, aS, itNames] = matchOrder(atNames, itNames);
+            else
+                itTimes = detectFalseAlarms(); minOfSt = 0;
+                save( atFileName, var2save{:} );
+                continue
             end
-            itTimes = detectFalseAlarms(); Nt = Ns/fs;
-            % Computing the similarity between the trigger intervals from
-            % arduino and intan
-            [ddm, dm] = computeSimilarityMatrices();
-            correctAnomalities();
-            % [iS, aS, itNames] = matchOrder(atNames, itNames); 
+            
         else
-            itTimes = detectFalseAlarms(); Nt = Ns/fs; minOfSt = 0;
-            save( atFileName, var2save{:} );
-            continue
+            fprintf(1,'Empty %s!\n', itFiles(cfp).name )
+            atTimes = cell( size( atNames ) );
+            itTimes = tSubs;
         end
+        Nt = Ns/fs;
         [iS, aS, itNames] = matchOrder(atNames, itNames);
-        ofSts = arrayfun(@(x) itTimes{iS(x)}(1,1) - atTimes{aS(x)}(1), ...
-            1:size(atNames)); minOfSt = min(ofSts);
-        fprintf(1, "Correcting arduino triggers by %.3f seconds\n", minOfSt)
-        atTimes = cellfun(@(x) x+minOfSt, atTimes, fnOpts{:});
+        if all( ~ntFlag )
+            ofSts = arrayfun(@(x) itTimes{iS(x)}(1,1) - atTimes{aS(x)}(1), ...
+                1:size(atNames)); minOfSt = min(ofSts);
+            fprintf(1, "Correcting arduino triggers by %.3f seconds\n", minOfSt)
+            atTimes = cellfun(@(x) x+minOfSt, atTimes, fnOpts{:});
+        else
+            minOfSt = 0;
+        end
         fprintf(1, "Saving %s...\n", atFileName)
         save(atFileName, var2save{:});
     else
