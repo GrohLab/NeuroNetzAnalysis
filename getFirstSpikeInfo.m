@@ -12,7 +12,7 @@ checkRelSpkTmsStruct = @(x) isstruct(x) & all(contains(fieldnames(x), ...
     {'name', 'SpikeTimes'}));
 
 defRes = 5e-4;
-checkRes = @(x) isnumeric(x) & numel(x) == 1 & x > 0;
+checkRes = @(x) isnumeric(x) & isscalar(x) & x > 0;
 
 if checkRelSpkTmsStruct(relSpkTmsStr)
     % Condition number
