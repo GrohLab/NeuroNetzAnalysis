@@ -151,8 +151,13 @@ fs = 3e4; % FIX! Sampling frequency from file or somewhere robust.
             % [bC, bE] = prepareLogBinEdges(dstPrs, 64);
             % bN = histcounts(log10(abs(dstPrs)), bE, 'Normalization','pdf');
             % Kernel distribution
+            bndWdth = floor(range(dstPrs)/sqrt(sum(pairFlags)*pi));
+            if bndWdth <= 0
+                bndWdth = [];
+            end
             dstDist2 = ksdensity(dstPrs, dstDom, "Bandwidth", ...
-                floor(range(dstPrs)/sqrt(sum(pairFlags)*pi)));
+                bndWdth);
+
             % Estimation for the most repeated delay (the actual delay
             % between intan and arduino)
             loPks = arrayfun(@(x) fminsearch(@(y) -interp1(dstDom, ...
