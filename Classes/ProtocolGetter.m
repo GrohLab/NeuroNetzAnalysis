@@ -466,7 +466,7 @@ classdef ProtocolGetter < handle
                 % The delay will usually be milliseconds long, so a logarithmic
                 % scale will be useful.
                 logDel = log10(timeDelay); logMD = log10(mxDel);
-                logDel = logDel(logDel < logMD);
+                logDel = logDel(real(logDel) < logMD);
 
                 tol = abs((1e-2*~obj.awaken + 0.1*obj.awaken)/max(real(logDel)));
                 [~, ~, dmshp] = uniquetol( real(logDel) , tol );
@@ -793,7 +793,9 @@ classdef ProtocolGetter < handle
                 % Logical index pointing at the first pulse of a frequency
                 % train
                 fstSubs = StepWaveform.firstOfTrain(tms, minIpi);
-                freqCond = round(uniquetol(pulsFreq, 0.9/max(pulsFreq)), 1);
+                % Removing spurious frequencies
+                freqCond = round(uniquetol(pulsFreq(fstSubs(1:end-1)), ...
+                    0.9/max(pulsFreq)), 1);
                 freqCond = freqCond(freqCond >= 1); % Empty for no frequency
             else
                 fprintf(1, 'No triggers found for the given signal.\n')

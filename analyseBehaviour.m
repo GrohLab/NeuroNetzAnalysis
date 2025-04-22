@@ -880,20 +880,20 @@ if Nccond > 1 && rsFlag
         rsstName = sprintf( rsstPttrn, behNames(cs), sprintf("%s ", ...
             consCondNames{:} ), sprintf( "%.2f ", pm{:} ) );
         rsstPath = behHere(rsstName);
-        if ~exist(rsstPath, "file")
-            try
-                save( rsstPath,"pd", "hd", "pm", "hm" );
-            catch
-                % rsstName = sprintf( rsstPttrn, behNames(cs), sprintf("%d ", ...
-                %     numel(consCondNames) ), sprintf( "%.2f ", pm{:}), sprintf("%d ", ...
-                %     Nex(cs,:)), thrshStrs(cs) );
-                rsstName = sprintf( rsstPttrn, behNames(cs), ...
-                    sprintf( "%d ", numel(consCondNames) ), ...
-                    sprintf( "%.2f ", pm{:}) );
-                rsstPath = behHere( rsstName );
-                save( rsstPath,"pd", "hd", "pm", "hm" );
-            end
-        end
+        % if ~exist(rsstPath, "file")
+        %     try
+        %         save( rsstPath,"pd", "hd", "pm", "hm" );
+        %     catch
+        %         % rsstName = sprintf( rsstPttrn, behNames(cs), sprintf("%d ", ...
+        %         %     numel(consCondNames) ), sprintf( "%.2f ", pm{:}), sprintf("%d ", ...
+        %         %     Nex(cs,:)), thrshStrs(cs) );
+        %         rsstName = sprintf( rsstPttrn, behNames(cs), ...
+        %             sprintf( "%d ", numel(consCondNames) ), ...
+        %             sprintf( "%.2f ", pm{:}) );
+        %         rsstPath = behHere( rsstName );
+        %         save( rsstPath,"pd", "hd", "pm", "hm" );
+        %     end
+        % end
     end
 end
 
@@ -1022,6 +1022,7 @@ end
         %UNTITLED Summary of this function goes here
         %   Detailed explanation goes here
         figDir = @(x) fullfile(figureDir, x);
+        abb_behNames = abb_behNames(1:numel(cell_behNames));
         shortenString = @(x) strtrim( replace( x, ...
             [{'Control'},{'Delay '},{' s '},{'+ '},{'  '}, cell_behNames(:)' ], ...
             [{'Ctrl'},{'D'},{'s'},{'+'},{' '}, abb_behNames(:)' ] ) );
