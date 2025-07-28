@@ -5,7 +5,7 @@ function [behRes, figureDir, behData, aInfo] = ...
 
 %% Auxiliary variables
 % 'Software' version
-softVer = 3.03;
+softVer = 3.04;
 % Input files
 dlcPttrn = 'roller*shuffle2*filtered.csv';
 % rpPttrn = "Roller_position*.csv"; vdPttrn = "roller*.avi";
@@ -699,7 +699,7 @@ xtf = ~excFlag & pageTrialFlag;
 Na = reshape( sum( xtf, 1 ), Nbs, Nccond );
 
 % Excluded flags: #behSign x #Conditions
-Nex = reshape( sum( xor( xtf, pageTrialFlag ) ), Nbs, Nccond );
+% Nex = reshape( sum( xor( xtf, pageTrialFlag ) ), Nbs, Nccond );
 
 % Figure names for all signals and conditions
 % bfNames = arrayfun( @(y) arrayfun( @(x) sprintf( bfPttrn, behNames(x), ...
@@ -738,7 +738,8 @@ mvpt = arrayfun(@(c) arrayfun( @(b) ...
 mvpt = cat(1, mvpt{:});
 
 % Crossing thresholds and movement probability
-ctrl_cond = contains( consCondNames, "Control" ); up_pc = 1.15;
+ctrl_cond = contains( consCondNames, "Control" ); %up_pc = 1.15;
+up_pc = 1;
 if all( ~ctrl_cond )
     % No control condition found
     mvps = round( cellfun( @(x) max( x ), mvpt ) .* up_pc, 1 );
