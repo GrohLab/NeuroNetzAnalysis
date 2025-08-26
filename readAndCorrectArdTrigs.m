@@ -407,9 +407,9 @@ for cfp = 1:numel(rpFiles) % "c"urrent "f"ile "p"ath
             end
             
         else
-            fprintf(1,'Empty %s!\n', itFiles(cfp).name )
-            atTimes = cell( size( atNames ) );
-            itTimes = tSubs;
+            fprintf(1,'%d empty signal in %s!\n', sum(ntFlag), itFiles(cfp).name )
+            % atTimes = cell( size( atNames ) );
+            itTimes = cellfun(@(x) x./3e4, tSubs, fnOpts{:} );
         end
         Nt = Ns/fs;
         [iS, aS, itNames] = matchOrder(atNames, itNames);
