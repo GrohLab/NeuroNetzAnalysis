@@ -387,11 +387,11 @@ if ~iemty(afFiles)
         record_trig_cont_ID = arrayfun(@(x) ...
             contains(atV(record_most_trigs).atNames, x.atNames), ...
             atV(1:Nrecs), fnOpts{:}); outCell = cell(Nrecs, max_trigs);
-        it_selector = arrayfun(@(x) ...
-            contains(atV(record_most_trigs).itNames, x.itNames), ...
-            atV(1:Nrecs), fnOpts{:});
-        iS = arrayfun(@(x) matchOrder(x.atNames, x.itNames), ...
-            atV, fnOpts{:} );
+        % it_selector = arrayfun(@(x) ...
+        %     contains(atV(record_most_trigs).itNames, x.itNames), ...
+        %     atV(1:Nrecs), fnOpts{:});
+        % iS = arrayfun(@(x) matchOrder(x.atNames, x.itNames), ...
+        %     atV, fnOpts{:} );
         for cr = 1:Nrecs
             outCell(cr,record_trig_cont_ID{cr}) = atT{cr};
         end
@@ -405,11 +405,12 @@ if ~iemty(afFiles)
         outCell = cell(Nrecs, max_trigs);
         for cr = 1:Nrecs
             % Beware of laser only first!
-            outCell(cr,record_trig_cont_ID{cr}) = itT{cr}(iS{cr}(it_selector{cr}));
+            %outCell(cr,record_trig_cont_ID{cr}) = itT{cr}(iS{cr}(it_selector{cr}));
+            outCell(cr,:) = itT{cr};
         end
         itTimes = arrayfun(@(x) cat(1, outCell{:,x}), 1:size(outCell,2), ...
             fnOpts{:});
-        itNames = atV(record_most_trigs).itNames(iS{record_most_trigs});
+        itNames = atV(record_most_trigs).itNames;
         if numel(afFiles) > 1
             if verbose
                 fprintf(1, "Saving %s...\n", auxFile)
