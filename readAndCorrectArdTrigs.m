@@ -76,8 +76,16 @@ fs = 3e4; % FIX! Sampling frequency from file or somewhere robust.
     function [ddm, dm] = computeSimilarityMatrices()
         atDelta = cellfun(derv, atTimes, fnOpts{:}, erOpts{:}); % Time distances between arduino pulses: delta arduino
         itDelta = cellfun(derv, itTimes, fnOpts{:}, erOpts{:}); % Time distances between intan pulses: delta intan
-        ddm = cellfun(dsmt, itDelta, flip(atDelta'), fnOpts{:}); % Difference between delta arduino and delta intan
-        dm = cellfun(@(x,y) y-x(:,1)', itTimes, flip(atTimes'),fnOpts{:}); % Difference between arduino and intan pulses
+        Nat = numel( atTimes ); Nit = numel( itTimes );
+        at_empty = cellfun( 'isempty', atTimes );
+        it_empty = cellfun( 'isempty', itTimes );
+        if Nat ~= Nit
+            ddm = cellfun( dsmt, itDelta(~it_empty), flip( atDelta(~at_empty)' ), fnOpts{:} ); % Difference between delta arduino and delta intan
+            dm = cellfun( @(x,y) y-x(:,1)', itTimes(~it_empty), flip( atTimes(~at_empty)' ), fnOpts{:} ); % Difference between arduino and intan pulses
+        else
+            ddm = cellfun(dsmt, itDelta, flip(atDelta'), fnOpts{:}); % Difference between delta arduino and delta intan
+            dm = cellfun(@(x,y) y-x(:,1)', itTimes, flip(atTimes'),fnOpts{:}); % Difference between arduino and intan pulses
+        end
     end
 % Read the trigger file and compute the triggers directly without keeping
 % the trigger signals in memory
@@ -410,6 +418,8 @@ for cfp = 1:numel(rpFiles) % "c"urrent "f"ile "p"ath
             fprintf(1,'%d empty signal in %s!\n', sum(ntFlag), itFiles(cfp).name )
             % atTimes = cell( size( atNames ) );
             itTimes = cellfun(@(x) x./3e4, tSubs, fnOpts{:} );
+            [ddm, dm] = computeSimilarityMatrices();
+            correctAnomalities();
         end
         Nt = Ns/fs;
         [iS, aS, itNames] = matchOrder(atNames, itNames);
