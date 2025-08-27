@@ -392,18 +392,19 @@ if ~iemty(afFiles)
         end
         atTimes = arrayfun(@(x) cat(1, outCell{:,x}), 1:size(outCell,2), ...
             fnOpts{:});
-        atNames = atV(1).atNames;
+        atNames = atV(record_most_trigs).atNames;
         % Intan
         itT = arrayfun(@(x, z) cellfun(@(y, a) y+a, ...
             x.itTimes, repmat(z,size(x.itTimes)), fnOpts{:}), atV', ...
             num2cell(cumsum([0, Texp(1:end-1)])), fnOpts{:});
         outCell = cell(Nrecs, max_trigs);
         for cr = 1:Nrecs
-            outCell(cr,record_trig_cont_ID{cr}) = itT{cr};
+            % outCell(cr,record_trig_cont_ID{cr}) = itT{cr};
+            outCell(cr,:) = itT{cr};
         end
         itTimes = arrayfun(@(x) cat(1, outCell{:,x}), 1:size(outCell,2), ...
             fnOpts{:});
-        itNames = atV(1).itNames;
+        itNames = atV(record_most_trigs).itNames;
         if numel(afFiles) > 1
             if verbose
                 fprintf(1, "Saving %s...\n", auxFile)
