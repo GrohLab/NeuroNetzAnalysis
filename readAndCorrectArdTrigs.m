@@ -409,7 +409,7 @@ for cfp = 1:numel(rpFiles) % "c"urrent "f"ile "p"ath
         else
             fprintf(1,'%d empty signal(s) in %s!\n', sum( ntFlag ), ...
                 itFiles(cfp).name )
-            atTimes = cell( size( atNames ) );
+            % atTimes = cell( size( atNames ) );
             itTimes = cellfun( @(x) x./3e4, tSubs, fnOpts{:} );
         end
         Nt = Ns/fs;
