@@ -357,7 +357,7 @@ Nbs = size(behDLCSignals, 2);
 atVar = {'atTimes', 'atNames', 'itTimes', 'itNames'};
 afFiles = dir(behHere(afPttrn));
 
-if ~iemty(afFiles) 
+if ~iemty(afFiles)
     jointArdPttrn = "JointArduinoTriggers%s%s.mat";
     jointArdOut = behHere(jointArdPttrn);
     jointArdPath = joinBehDates(afFiles, extractBefore(afPttrn,"*"), ...
@@ -387,6 +387,11 @@ if ~iemty(afFiles)
         record_trig_cont_ID = arrayfun(@(x) ...
             contains(atV(record_most_trigs).atNames, x.atNames), ...
             atV(1:Nrecs), fnOpts{:}); outCell = cell(Nrecs, max_trigs);
+        it_selector = arrayfun(@(x) ...
+            contains(atV(record_most_trigs).itNames, x.itNames), ...
+            atV(1:Nrecs), fnOpts{:});
+        iS = arrayfun(@(x) matchOrder(x.atNames, x.itNames), ...
+            atV, fnOpts{:} );
         for cr = 1:Nrecs
             outCell(cr,record_trig_cont_ID{cr}) = atT{cr};
         end
@@ -399,12 +404,12 @@ if ~iemty(afFiles)
             num2cell(cumsum([0, Texp(1:end-1)])), fnOpts{:});
         outCell = cell(Nrecs, max_trigs);
         for cr = 1:Nrecs
-            % outCell(cr,record_trig_cont_ID{cr}) = itT{cr};
-            outCell(cr,:) = itT{cr};
+            % Beware of laser only first!
+            outCell(cr,record_trig_cont_ID{cr}) = itT{cr}(iS{cr}(it_selector{cr}));
         end
         itTimes = arrayfun(@(x) cat(1, outCell{:,x}), 1:size(outCell,2), ...
             fnOpts{:});
-        itNames = atV(record_most_trigs).itNames;
+        itNames = atV(record_most_trigs).itNames(iS{record_most_trigs});
         if numel(afFiles) > 1
             if verbose
                 fprintf(1, "Saving %s...\n", auxFile)
@@ -1029,7 +1034,7 @@ end
             [{'Control'},{'Delay '},{' s '},{'+ '},{'  '}, cell_behNames(:)' ], ...
             [{'Ctrl'},{'D'},{'s'},{'+'},{' '}, abb_behNames(:)' ] ) );
         winOS_lim = 260; overlimit = @(x) strlength( x ) > winOS_lim;
-        
+
         if overlimit( figDir( name ) )
             name = shortenString( name );
         end
