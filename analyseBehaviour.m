@@ -5,7 +5,7 @@ function [behRes, figureDir, behData, aInfo] = ...
 
 %% Auxiliary variables
 % 'Software' version
-softVer = 3.04;
+softVer = 3.05;
 % Input files
 dlcPttrn = 'roller*shuffle2*filtered.csv';
 % rpPttrn = "Roller_position*.csv"; vdPttrn = "roller*.avi";
@@ -739,10 +739,11 @@ behSgnls = cat( 1, behSgnls{:} );
 % qSgnls = cat(1, qSgnls{:});
 
 % Getting maximum speed per trial
-mvpt = arrayfun(@(c) arrayfun( @(b) ...
+[mvpt, ~, bl_lvl] = arrayfun(@(c) arrayfun( @(b) ...
     getMaxAbsPerTrial( behStack{b}(:, xtf(:, b, c)), brWin(b,:), bsWin, behTx ), ...
     1:Nbs, fnOpts{:} ), 1:Nccond, fnOpts{:} );
 mvpt = cat(1, mvpt{:});
+bl_lvl = cat(1, bl_lvl{:});
 
 % Crossing thresholds and movement probability
 ctrl_cond = contains( consCondNames, "Control" ); %up_pc = 1.15;
@@ -752,6 +753,10 @@ if all( ~ctrl_cond )
     mvps = round( cellfun( @(x) max( x ), mvpt ) .* up_pc, 1 );
     % % CAUTION! Assuming first condition as control!!
     ctrl_cond = 1;
+    if verbose
+       fprintf(1, 'Caution! Selected %s as control condition!', ...
+           consCondNames(ctrl_cond) ) 
+    end
 else
     % Found a control condition
     mvps = round( cellfun( @(x) max( x ), mvpt(ctrl_cond, :) ) .* up_pc, 1 );
@@ -844,7 +849,8 @@ behRes = cell2mat( arrayfun(@(x) ...
     'Z_Amplitude', zmvpt(x,:), ...
     'AmplitudeIndex', num2cell(mov_prob(x,:)), ...
     'MovProbability', num2cell(movProb(:,x)'),...
-    'MovStrucure', ms(:)'), ...
+    'MovStrucure', ms(:)', ...
+    'Baseline', bl_lvl(x,:) ), ...
     'NTrials', Nae(x)), 1:Nccond, fnOpts{:}));
 
 % Exporting data
