@@ -758,7 +758,7 @@ classdef ProtocolGetter < handle
             
             % Intan signals corrections
             init = 1;
-            fin = size(stSgStruct.LFP);
+            fin = length(stSgStruct.LFP);
             flds = fieldnames(stSgStruct);
             lfpFlag = contains(flds, 'lfp', 'IgnoreCase', 1);
             flds(lfpFlag) = [];
