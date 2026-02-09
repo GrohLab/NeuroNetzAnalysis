@@ -16,7 +16,7 @@ Q = p.Results.Q;
 
 fnOpts = {'UniformOutput', false};
 
-wo = 50:50:(sampling_frequency/2);
+wo = 50:50:(sampling_frequency/2); wo(wo == sampling_frequency/2) = [];
 [b, a] = arrayfun(@(w) iirnotch( w, (2*w)/Q ... Notch bandwidth using a 'Q' factor.
     ), (2*wo)/sampling_frequency, fnOpts{:} );
 
