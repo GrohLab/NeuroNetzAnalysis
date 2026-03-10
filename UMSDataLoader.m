@@ -184,7 +184,7 @@ classdef UMSDataLoader < handle
             % goodSpks = lbls(:,2) == 2 | lbls(:,2) ~= 4;
             goodID = UMSDataLoader.getClustersID(obj.SpikeUMSStruct,'clType',...
                 'good');
-            if numel(goodID) == 1
+            if isscalar(goodID)
                 spkTms = spikes.spiketimes(spikes.assigns == goodID);
             elseif numel(goodID) > 1
                 Ncls = 1;
