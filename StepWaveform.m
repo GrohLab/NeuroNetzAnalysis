@@ -2,13 +2,13 @@ classdef StepWaveform < DiscreteWaveform
     %STEPWAVEFORM is derived from the DiscreteWaveform class and contains
     %only the extra necessary properties to produce time stamps for
     %triggering or anyother desired method.
-    
+
     properties (SetAccess = 'private')
         Triggers
         % Reminder: Size and validator functions not supported for
         % properties defined as abstract in superclasses
     end
-    
+
     methods
         % Constructor
         function obj = StepWaveform(data, samplingFreq, varargin)
@@ -23,26 +23,26 @@ classdef StepWaveform < DiscreteWaveform
             addOptional(p, 'title', defTitle);
             addOptional(p, 'verbose', true, @(x) islogical(x));
             parse(p, data, samplingFreq, varargin{:});
-            
+
             data = p.Results.data;
             samplingFreq = p.Results.samplingFreq;
             units = p.Results.units;
             title = p.Results.title;
             verbose = p.Results.verbose;
-            
+
             obj@DiscreteWaveform(data,samplingFreq, units,title);
             obj.Triggers = computeTriggers(obj, verbose);
         end
-        
+
         % Rising and falling edges
         function RaF = get.Triggers(obj)
             RaF = obj.Triggers;
-        end 
-        
+        end
+
         function subRaF = subTriggers(obj)
             try
                 subRaF = [find(obj.Triggers(:,1)),find(obj.Triggers(:,2))];
-            catch 
+            catch
                 subRaF = [];
                 return
             end
@@ -50,7 +50,10 @@ classdef StepWaveform < DiscreteWaveform
             if any(invertedFlags)
                 fprintf(1,'%d Downwards pulses detected!\n',...
                     sum(invertedFlags))
-                subRaF(invertedFlags,:) = flip(subRaF(invertedFlags,:),2);
+                % subRaF(invertedFlags,:) = flip(subRaF(invertedFlags,:),2);
+                temp = sort(subRaF(:),"ascend");
+                temp = reshape(temp,2,[]);
+                subRaF = temp';
             end
         end
 
@@ -80,7 +83,7 @@ classdef StepWaveform < DiscreteWaveform
                     zdata = zscore(data); [Zh, zdom] = ksdensity(zdata);
                     zDist = fitdist(zdata(:), 'Normal');
                     Dkl = KullbackLeiblerDivergence(Zh, pdf(zDist, zdom));
-                    if verbose; fprintf(1,'KL divergence is %.2f\n',Dkl); 
+                    if verbose; fprintf(1,'KL divergence is %.2f\n',Dkl);
                     end
                     %rostd = range(data)./std(data);
                     %if zs2 < 0.9 %&& rostd < 7
@@ -103,27 +106,41 @@ classdef StepWaveform < DiscreteWaveform
                                 fprintf(1,'Perhaps it is a truncated pulse...\n')
                             end
                             r = find(rise); f = find(fall);
-                            dm = distmatrix(r,f); [Nr, Nf] = size(dm);     
-                            Nsft = abs(Nr-Nf); dgSubs = -Nsft:Nsft;
-                            dgdm = arrayfun(@(x) diag(dm, x), dgSubs, ...
-                                fnOpts{:});
-                            dgdm = cat(1, dgdm{:});
-                            Ev = arrayfun(@(x) getEntropyFromPDF( ...
-                                histcounts(diag(dm, x), 'BinLimits', ...
-                                [min(dgdm(:)),max(dgdm(:))])), dgSubs);
-                            ffact = arrayfun(@(x) fanoFact(diag(dm, x)), ...
-                                dgSubs);
-                            qdist = arrayfun(@(x) diff(quantile( ...
-                                diag(dm, x), [0.25, 0.75])), dgSubs);
-                            [~,eSub] = min(vecnorm([Ev;ffact;qdist],2,1));
-                            nSubs = 1:min(Nr, Nf);
-                            if Nf > Nr
-                                f = f(nSubs+abs(dgSubs(eSub)));
-                                fall = false(size(rise)); fall(f) = true;
+                            % Removing spurious edge detections
+                            r([false;zscore(log10(diff(r)))<-1.65])=[];
+                            f([false;zscore(log10(diff(f)))<-1.65])=[];
+                            r([false;diff(r)<(5e-3)*obj.SamplingFreq])=[];
+                            f([false;diff(f)<(5e-3)*obj.SamplingFreq])=[];
+                            if numel(r) ~= numel(f)
+                                dm = distmatrix(r,f); [Nr, Nf] = size(dm);
+                                Nsft = abs(Nr-Nf); dgSubs = -Nsft:Nsft;
+                                dgdm = arrayfun(@(x) diag(dm, x), dgSubs, ...
+                                    fnOpts{:});
+                                dgdm = cat(1, dgdm{:});
+                                Ev = arrayfun(@(x) getEntropyFromPDF( ...
+                                    histcounts(diag(dm, x), 'BinLimits', ...
+                                    [min(dgdm(:)),max(dgdm(:))])), dgSubs);
+                                ffact = arrayfun(@(x) fanoFact(diag(dm, x)), ...
+                                    dgSubs);
+                                qdist = arrayfun(@(x) diff(quantile( ...
+                                    diag(dm, x), [0.25, 0.75])), dgSubs);
+                                [~,eSub] = min(vecnorm([Ev;ffact;qdist],2,1));
+                                nSubs = 1:min(Nr, Nf);
+                                if Nf > Nr
+                                    f = f(nSubs+abs(dgSubs(eSub)));
+                                    % fall = false(size(rise)); fall(f) = true;
+                                else
+                                    r = r(nSubs+abs(dgSubs(eSub)));
+                                    % rise = false(size(fall)); rise(r) = true;
+                                end % Nf > Nr
+                                rise = false(obj.NSamples,1); rise(r) = true;
+                                fall = false(obj.NSamples,1); fall(f) = true;
                             else
-                                r = r(nSubs+abs(dgSubs(eSub)));
-                                rise = false(size(fall)); rise(r) = true;
-                            end % Nf > Nr
+                                rise = false(size(rise));
+                                fall = false(size(fall));
+                                rise(r) = true;
+                                fall(f) = true;
+                            end
                         end % sum(rise) ~= sum(fall)
                         try
                             RaF = [rise, fall];
@@ -146,7 +163,7 @@ classdef StepWaveform < DiscreteWaveform
                     RaF = obj.Data;
                 end % sum(ds>0) ~= numel(obj.Data)-1 -- Triggers given?
                 obj.Triggers = RaF;
-                
+
             elseif isa(obj.Data,'logical')
                 % Boolean step function
                 aux = obj.Data(1:end-1) - obj.Data(2:end);
@@ -181,19 +198,21 @@ classdef StepWaveform < DiscreteWaveform
             end % isa double/logical ?
         end
     end
-    
+
     %% Static methods
     methods (Static, Access = 'private')
         function edgeOut = cleanEdges(edgeIn)
-            doubleEdge = edgeIn(1:end-1) + edgeIn(2:end);
-            repeatIdx = doubleEdge > 1;
-            edgeOut = edgeIn;
-            if sum(repeatIdx)
-                edgeOut(repeatIdx) = false;
-            end
+            % doubleEdge = edgeIn(1:end-1) + edgeIn(2:end);
+            % repeatIdx = doubleEdge > 1;
+            % edgeOut = edgeIn;
+            % if sum(repeatIdx)
+            %     edgeOut(repeatIdx) = false;
+            % end
+            rising_edge = diff(edgeIn);
+            edgeOut = rising_edge>0;
         end
     end
-    
-    
+
+
 end
 
