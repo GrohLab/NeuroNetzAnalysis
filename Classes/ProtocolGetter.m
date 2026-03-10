@@ -46,9 +46,15 @@ classdef ProtocolGetter < handle
             [~,binBaseNames] = getBaseNames(dir(fullfile(directory, '*.bin')));
             smrxFiles = dir(fullfile(directory, '*.smrx'));
             subfolderFlag = false;
+            x_flag = true;
             if isempty(smrxFiles)
                 subfolderFlag = true;
                 smrxFiles = dir(fullfile(directory,'*\*.smrx'));
+                if isempty(smrxFiles)
+                    x_flag = false;
+                    subfolderFlag = false;
+                    smrxFiles = dir(fullfile(directory,'*.smr'));
+                end
             end
             [~,smrxBaseNames] = getBaseNames(smrxFiles);
             merFiles = dir(fullfile(directory, ['*', foStr, '.txt']));
@@ -234,7 +240,12 @@ classdef ProtocolGetter < handle
                         obj.fileOrder = string(binBaseNames{binRecordFile})...
                             + ".bin";
                     else
-                        obj.fileOrder = string(smrxBaseNames) + ".smrx";
+                        if x_flag
+                            temp = ".smrx";
+                        else
+                            temp = ".smr";
+                        end
+                        obj.fileOrder = string(smrxBaseNames) + temp;
                     end
                 end
             else
@@ -294,7 +305,7 @@ classdef ProtocolGetter < handle
                     fID = fopen(fullfile(obj.dataDir, obj.fileOrder(csf)),'r');
                     getConditionSignalsBF(fID);
                 end
-                obj.condSigFiles = extractBefore(obj.fileOrder,".smrx") +...
+                obj.condSigFiles = extractBefore(obj.fileOrder,".smr") +...
                     "_CondSig.mat";
             end
         end
