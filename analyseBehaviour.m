@@ -863,11 +863,23 @@ aInfo = struct('AnalysisTime', datetime(), 'Version', softVer, ...
     'Evoked', rwKey, 'VieWin', vwKey);
 if exist(summFile,"file")
     behFile = load(summFile);
-    if ~any(contains(fieldnames(behFile), 'aInfo')) || ...
+    if ~any(contains(fieldnames(behFile), {'aInfo','behData','behRes'})) || ...
             ~compareSoftVers(behFile.aInfo, aInfo)
+        fprintf(1,'Saving results... ')
         save(summFile, "behRes", "behData", "aInfo", "-append")
+        fprintf(1,'done!\n')
     else
-        fprintf(1, "File exists, not saving summary numbers.\n")
+        size_in_file = size(behFile.behRes);
+        size_current = size(behRes);
+        if size_in_file(2) ~= size_current(2)
+            same_cond_flags = behFile.behData.ConditionNames == ...
+                behData.ConditionNames';
+            if ~any(same_cond_flags,"all")
+                behFile.behData
+            end
+        else
+            fprintf(1, "No additional condition added.\n")
+        end
     end
 else
     save(summFile, "behRes", "behData", "aInfo", "-v7.3")
