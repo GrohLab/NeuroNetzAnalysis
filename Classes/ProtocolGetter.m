@@ -329,6 +329,7 @@ classdef ProtocolGetter < handle
                 end
             else
                 mStimStruct = struct();
+                n_files = size(obj.condSigFiles,1);
                 for csf = 1:size(obj.condSigFiles,1)
                     % Load the channel variables
                     stimSig = load(...
@@ -356,8 +357,9 @@ classdef ProtocolGetter < handle
                 [wSubs, lSubs] = ProtocolGetter.extractSignalEdges(mStimStruct,...
                     obj.fs);
                 subs = {wSubs,lSubs};
+                signal_names = fieldnames(mStimStruct);
                 for cstr = 1:2
-                    obj.Edges(cstr).Name = titles{idMat(:,cstr)};
+                    obj.Edges(cstr).Name = signal_names{cstr};
                     obj.Edges(cstr).Subs = subs{cstr};
                 end
             end
@@ -674,7 +676,8 @@ classdef ProtocolGetter < handle
                     checkSignal(titles{chead},'puff') |...
                     checkSignal(titles{chead},'mech');
                 laserFlag(chead) = checkSignal(titles{chead},'laser');
-                lfpFlag(chead) = checkSignal(titles{chead},'lfp');
+                lfpFlag(chead) = checkSignal(titles{chead},'lfp') | ...
+                    checkSignal(titles{chead},'vm 2');
             end
             idMat = [whiskFlag, laserFlag, lfpFlag];
         end
@@ -705,7 +708,8 @@ classdef ProtocolGetter < handle
             if any(laserFlag)
                 laserSubs = find(laserFlag);
             end
-            while sum(laserFlag) ~= 1
+            lSub = 1;
+            while sum(laserFlag) ~= 1 && ~isempty(lSub)
                 lSub = listdlg('ListString',titles(laserSubs),...
                     'PromptString','Select the laser TTL',...
                     'SelectionMode','single');
@@ -713,11 +717,15 @@ classdef ProtocolGetter < handle
                     laserFlag = false(size(laserFlag));
                     laserFlag(lSub) = true;
                 else
-                    fprintf(1,'Please select one of the displayed signals!\n')
+                    fprintf(1,'Empty laser signal!\n')
                 end
             end
-            laser = stimSig.(fields{chanSubs(laserFlag)});
-            
+            if (sum(laserFlag) < 1) && isempty(lSub)
+                laser = zeros(size(whisk),'single');
+            else
+                laser = stimSig.(fields{chanSubs(laserFlag)});
+            end
+
             if any(lfpFlag)
                 lfpSubs = find(lfpFlag);
             end
