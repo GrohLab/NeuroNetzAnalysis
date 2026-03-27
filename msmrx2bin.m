@@ -70,6 +70,12 @@ end
 fID = fopen(outFullName,'w');
 m = (2^32)/100;
 fs = zeros(Nf,1);
+n_channels = zeros(Nf,1);
+file_names = arrayfun(@(x) fullfile(x.folder, x.name), smrxFiles, fnOpts{:});
+file_info_structs = cellfun(@(x) SONXFileHeader(x), file_names);
+file_info_structs = arrayfun(@(x) setfield(x,'SamplingFrequency',[]), ...
+    file_info_structs);
+% channel_names_per_file = cell(Nf,1);
 for cf = 1:Nf
     cfName = fullfile(smrxFiles(cf).folder,smrxFiles(cf).name);
     FileInfo = SONXFileHeader(cfName);
@@ -105,6 +111,7 @@ for cf = 1:Nf
         heads = arrayfun(@(x) setfield(heads(x), "FileChannel", x),...
             (1:size(heads,1))');
 
+<<<<<<< Updated upstream
         chanNames = string({heads.title}');
         desChans = contains(chanNames, chanGroup);
         heads = heads(desChans);
@@ -187,6 +194,96 @@ for cf = 1:Nf
             %         ftell(fID)
             %         fclose(fID);
         end
+=======
+    chanNames = string({heads.title}');
+    desChans = contains(chanNames, chanGroup, 'IgnoreCase', true);
+    heads = heads(desChans);
+    chanList = chanList(chTypes == 1); chanList = chanList(desChans);
+    chead = numel(heads);
+    while chead >= 1 && x_flag
+        if ~xor(isnan(str2double(heads(chead).title)),...
+                ~contains(heads(chead).title,impStr))
+            heads(chead) = [];
+            chanList(chead) = [];
+        end
+        chead = chead - 1;
+    end
+    % if ~x_flag
+    %     spike_channel = arrayfun(@(x) contains(x, 'spikes', ...
+    %         'IgnoreCase', true), chanNames);
+    %     heads = heads(spike_channel);
+    %     chanList = chanList(spike_channel);
+    % end
+    % head_total_times = arrayfun(@(x) x.stop - x.start, heads);
+    n_channels(cf) = numel(chanList);
+    multiplexerFactor = heads(1).ChanDiv;
+    fs(cf) = 1 / (FileInfo.usPerTime * multiplexerFactor);
+    FileInfo.SamplingFrequency = fs(cf);
+    file_info_structs(cf) = FileInfo;
+    display(FileInfo)
+
+    % Determining the necessary array size to occupy approximately the
+    % 75% of the available memory given that the array is int16
+    memStruct = memory;
+    BuffSize = 3 * memStruct.MemAvailableAllArrays / 4;
+    dataPointsExp = (BuffSize / (numel(chanList) * 2));
+    if heads(1).npoints < dataPointsExp
+        dataPointsExp = heads(1).npoints;
+    end
+    wwidth = double(dataPointsExp)/fs;
+    % dataPointsExp = ceil(log10(fs)+2);
+    % wwidth = 10^ceil(log10(fs)+2)/fs;
+    is = 1./fs;
+    cw = 0;
+    if abs(totalTime-(heads(1).stop - heads(1).start))
+        oldTotalTime = totalTime;
+        totalTime = heads(1).stop - heads(1).start;
+        fprintf(1,'The length of the signals in the file seem to ')
+        fprintf(1,'differ (%.3f s delta %.3f ms).\nConsidering %.3f seconds\n',...
+            oldTotalTime, 1e3*(oldTotalTime - totalTime), totalTime)
+    end
+    FileInfo.TotalTime = totalTime;
+    while cw < totalTime
+        dataBuff = zeros(numel(chanList), dataPointsExp, 'int16');
+        if cw <= totalTime - wwidth
+            timeSegment = [cw, cw + wwidth];
+        else
+            timeSegment = [cw, totalTime];
+            cw = totalTime * 2;
+            dataBuff = zeros(numel(chanList),int32(diff(timeSegment)*fs(cf)),...
+                'int16');
+        end
+        shortFlag = false;
+        fprintf(1,'Reading... ')
+        for ch = 1:numel(chanList)
+            [Npts, chanAux, ~] = ...
+                SONXGetWaveformChannelSegment(fhand, chanList(ch), ...
+                timeSegment, heads(ch)); %#ok<ASGLU>
+            dat = int16(chanAux * m);
+            try
+                dataBuff(ch,:) = dat;
+            catch
+                dataBuff(ch,1:length(dat)) = dat;
+                shortFlag = true;
+            end
+        end
+
+        fprintf(1,'done!\n')
+        cw = cw + wwidth + is;
+        fprintf(1,'Writting... ')
+        if shortFlag
+            dataBuff(:,length(dat)+1:dataPointsExp) = [];
+        end
+        % Removing the median of all channels.
+        % TODO: 1.- save median per experiment
+        % 2.- ask user for removing median.
+        buffMedian = median(dataBuff);
+        dataBuff = dataBuff - buffMedian;
+        fwrite(fID,dataBuff,'int16');
+        fprintf(1,' done!\n')
+        %         ftell(fID)
+        %         fclose(fID);
+>>>>>>> Stashed changes
     end
     CEDS64Close(fhand);
 end
