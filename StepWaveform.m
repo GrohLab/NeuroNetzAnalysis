@@ -91,26 +91,24 @@ classdef StepWaveform < DiscreteWaveform
                         rise = false(obj.NSamples,1);    % Rising edge times
                         fall = rise;                    % Falling edge times
                         % Maximum value divided by three
-                        rise(2:end) = ds > max(abs(ds))/3;
+                        rise(2:end) = zscore(ds) > 1.96;
                         rise = StepWaveform.cleanEdges(rise);
-                        fall(1:end-1) = ds < min(ds)/3;
+                        fall(1:end-1) = zscore(ds) < -1.96;
                         fall = StepWaveform.cleanEdges(fall);
                         if nnz(rise) ~= nnz(fall)
                             if verbose
                                 warning('The cardinality of the rising edges is different for the falling edges')
+                                fprintf(1,'Perhaps it is a truncated pulse...\n')
                             end
                             % Determining the missing edges (normally would
                             % be at the extreme cases; at the beginning or
                             % at the end of the time series)
-                            if verbose
-                                fprintf(1,'Perhaps it is a truncated pulse...\n')
-                            end
                             r = find(rise); f = find(fall);
                             % Removing spurious edge detections
                             r([false;zscore(log10(diff(r)))<-1.65])=[];
                             f([false;zscore(log10(diff(f)))<-1.65])=[];
-                            r([false;diff(r)<(5e-3)*obj.SamplingFreq])=[];
-                            f([false;diff(f)<(5e-3)*obj.SamplingFreq])=[];
+                            r([false;diff(r)/obj.SamplingFreq<1e-2])=[];
+                            f([false;diff(f)/obj.SamplingFreq<1e-2])=[];
                             if numel(r) ~= numel(f)
                                 dm = distmatrix(r,f); [Nr, Nf] = size(dm);
                                 Nsft = abs(Nr-Nf); dgSubs = -Nsft:Nsft;
