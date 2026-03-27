@@ -70,12 +70,15 @@ end
 fID = fopen(outFullName,'w');
 m = (2^32)/100;
 fs = zeros(Nf,1);
+<<<<<<< Updated upstream
+=======
 n_channels = zeros(Nf,1);
 file_names = arrayfun(@(x) fullfile(x.folder, x.name), smrxFiles, fnOpts{:});
 file_info_structs = cellfun(@(x) SONXFileHeader(x), file_names);
 file_info_structs = arrayfun(@(x) setfield(x,'SamplingFrequency',[]), ...
     file_info_structs);
 % channel_names_per_file = cell(Nf,1);
+>>>>>>> Stashed changes
 for cf = 1:Nf
     cfName = fullfile(smrxFiles(cf).folder,smrxFiles(cf).name);
     FileInfo = SONXFileHeader(cfName);
