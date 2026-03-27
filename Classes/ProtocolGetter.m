@@ -738,17 +738,14 @@ classdef ProtocolGetter < handle
                     fprintf(1,'Please select one of the displayed signals!\n')
                 end
             end
-<<<<<<< Updated upstream
-            laser = stimSig.(fields{chanSubs(laserFlag)});
-            
-=======
+
             if (sum(laserFlag) < 1) && isempty(lSub)
                 laser = zeros(n_samples,1,'single');
             else
                 laser = stimSig.(fields{chanSubs(laserFlag)});
             end
+            
             % LFP
->>>>>>> Stashed changes
             if any(lfpFlag)
                 lfpSubs = find(lfpFlag);
             end
