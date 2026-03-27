@@ -22,6 +22,8 @@ classdef ProtocolGetter < handle
 
     properties (Constant)
         fnOpts = {'UniformOutput', false};
+        m = 1e-3;
+        k = 1e3;
     end
     
     methods
@@ -341,7 +343,13 @@ classdef ProtocolGetter < handle
                     % Variable assignment
                     [stSgStruct, idMat] = ProtocolGetter.assign2StimulationSignals(...
                         stimSig, idMat, titles, fields);
-                    wHead = stimSig.(headers(idMat(:,1)));
+                    if any(idMat(:,1))
+                        wHead = stimSig.(headers(idMat(:,1)));
+                    elseif any(idMat(:,2))
+                        wHead = stimSig.(headers(idMat(:,2)));
+                    elseif any(idMat(:,3))
+                        wHead = stimSig.(headers(idMat(:,3)));
+                    end
                     try
                         eHead = stimSig.(headers(idMat(:,3)));
                         stSgStruct = ProtocolGetter.correctLFPLength(...
@@ -462,6 +470,7 @@ classdef ProtocolGetter < handle
             % signals
             mxPulses = min(size(lSub,1),size(wSub,1));
             if ~isempty(lSub) && ~isempty(wSub)
+                aux_flag = true;
                 % Quick fix for association/conditioning trials
                 if obj.onff == "on"
                     % dm = distmatrix(lSub(:,1)/obj.fs,wSub(:,1)/obj.fs);
@@ -470,7 +479,8 @@ classdef ProtocolGetter < handle
                     % dm = distmatrix(lSub(:,2)/obj.fs,wSub(:,1)/obj.fs);
                     dm = (wSub(:,1)' - lSub(:,2))/obj.fs;
                 end
-                [strDelay, whr] = sort( abs( dm(:) ), 'ascend' );
+                [strDelay, whr] = sort(log(abs(dm(:))), 'ascend' );
+                strDelay = exp(strDelay);
                 strDelay = strDelay .* sign( dm( whr ) );
                 [lSubOrd, wSubOrd] = ind2sub(size(dm),whr(1:mxPulses));
                 timeDelay = strDelay(1:mxPulses);
@@ -508,10 +518,12 @@ classdef ProtocolGetter < handle
                 if isinf(tol)
                     tol = 1e-6;
                 end
-                lgDst = log10(timeDelay(:)./delays(:)');
-                lsDel = abs( lgDst ) < 0.25;
+                lgDst = log(timeDelay(:)) - log(delays(:)');
+                [~, lsMem] = min(lgDst, [], 2);
+                lsDel = false(size(lgDst, 1), Ndel);
                 for cdl = 1:Ndel
                     % Starting from the last condition on
+                    lsDel(:,cdl) = lsMem == cdl;
                     fprintf(1,' %.1f',delays(cdl)*1e3)
                     % Assign the boolean membership
                     % lsDel(:,cdl) = ismembertol(log10(timeDelay),log10(delays(cdl)),...
@@ -687,10 +699,15 @@ classdef ProtocolGetter < handle
             whiskFlag = idMat(:,1); laserFlag = idMat(:,2);
             lfpFlag = idMat(:,3);
             chanSubs = find(contains(fields,'chan'));
+            n_samples = cellfun(@(x) numel(stimSig.(x)), fields);
+            n_samples = n_samples(n_samples>1);
+            n_samples = min(n_samples);
+            % Whisker
             if any(whiskFlag)
                 whiskSubs = find(whiskFlag);
             end
-            while sum(whiskFlag) ~= 1
+            wSub = 1;
+            while sum(whiskFlag) ~= 1 && ~isempty(wSub)
                 wSub = listdlg('ListString',titles(whiskSubs),...
                     'PromptString','Select the mechanical TTL',...
                     'SelectionMode','single');
@@ -698,10 +715,15 @@ classdef ProtocolGetter < handle
                     whiskFlag = false(size(whiskFlag));
                     whiskFlag(wSub) = true;
                 else
-                    fprintf(1,'Please select one of the displayed signals!\n')
+                    fprintf(1,'Empty whisker signal!\n')
                 end
             end
-            whisk = stimSig.(fields{chanSubs(whiskFlag)});
+            if (sum(whiskFlag) < 1) && isempty(wSub)
+                whisk = zeros(n_samples,1,'single');
+            else
+                whisk = stimSig.(fields{chanSubs(whiskFlag)});
+            end
+            % Laser
             if any(laserFlag)
                 laserSubs = find(laserFlag);
             end
@@ -734,7 +756,7 @@ classdef ProtocolGetter < handle
             if iOk
                 lfp = stimSig.(fields{chanSubs(lfpFlag)});
             else
-                lfp = 0;
+                lfp = zeros(n_samples,1,'single');
             end
             stSgStruct = struct('Whisker',whisk,'Laser',laser,'LFP',lfp);
             idMat(:,1) = whiskFlag;
@@ -807,7 +829,7 @@ classdef ProtocolGetter < handle
                 % Removing spurious frequencies
                 freqCond = round(uniquetol(pulsFreq(fstSubs(1:end-1)), ...
                     0.9/max(pulsFreq)), 1);
-                freqCond = freqCond(freqCond >= 1); % Empty for no frequency
+                freqCond = freqCond(freqCond >= (1/minIpi)); % Empty for no frequency
             else
                 fprintf(1, 'No triggers found for the given signal.\n')
             end
